@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/alrayyes/hush-hush/compare/v0.9.0...v0.10.0) (2026-08-28)
+
+
+### Features
+
+* build and publish a container image on release ([#66](https://github.com/alrayyes/hush-hush/issues/66)) ([5764284](https://github.com/alrayyes/hush-hush/commit/5764284354d877536f09c0692742a73f309db0c9))
+
 ## [0.9.0](https://github.com/alrayyes/hush-hush/compare/v0.8.0...v0.9.0) (2026-08-28)
 
 
