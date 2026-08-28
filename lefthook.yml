@@ -8,12 +8,15 @@
 # commit should not fail over a quote style a tool can settle by itself.
 pre-commit:
   jobs:
-    - name: gofmt
+    # gofumpt (a gofmt superset) is what .golangci.yml's formatters actually
+    # run - calling plain gofmt here too would be two formatters arguing over
+    # the same bytes, the exact thing rules/go-lint.md says not to do.
+    - name: golangci-lint fmt
       glob: "*.go"
-      run: gofmt -w {staged_files}
+      run: golangci-lint fmt {staged_files}
       stage_fixed: true
 
-    - name: golangci-lint
+    - name: golangci-lint run
       glob: "*.go"
       run: golangci-lint run ./...
 
