@@ -5,7 +5,7 @@
 
 ## 2. Server: Storage Foundation
 
-- [ ] 2.1 Define the SQLite schema for objects, used_by, and the audit log, and verify migrations apply cleanly to a fresh database
+- [x] 2.1 Define the SQLite schema for objects, used_by, and the audit log, and verify migrations apply cleanly to a fresh database
 - [ ] 2.2 Implement the create endpoint (bearer-token gated) and verify a sealed object round-trips through storage unchanged
 - [ ] 2.3 Implement the get endpoint (unauthenticated) and verify it returns stored ciphertext exactly as sealed, and returns not-found for an unknown id
 - [ ] 2.4 Implement used_by storage and query support and verify a stored object's used_by list is retrievable
