@@ -102,6 +102,20 @@ from whatever the consumer test most recently produced in the same run.
 Regenerate and commit it in the same pull request as any change to
 `internal/client`'s request or response handling.
 
+## Container integration test
+
+`integration/` boots the actual built Docker image with
+[testcontainers-go](https://golang.testcontainers.org) and proves it serves
+real requests - the layer none of `internal/api`'s or `internal/store`'s
+tests reach, since they run the server's Go code directly rather than the
+packaged distroless artifact someone actually pulls and runs. Behind the
+`integration` build tag (needs a Docker daemon, not part of the ordinary
+`go test ./...` run):
+
+```sh
+go test -tags=integration ./integration/... -v
+```
+
 ## Commit messages
 
 [Conventional Commits](https://www.conventionalcommits.org/):

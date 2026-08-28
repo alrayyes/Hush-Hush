@@ -37,6 +37,7 @@
       "rulesets",
       "semver",
       "hush-hush",
+      "testcontainers-go",
       "testify",
       "toolchain",
       "toolchains",

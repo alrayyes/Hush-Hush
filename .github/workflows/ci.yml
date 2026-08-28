@@ -142,6 +142,19 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: hadolint Dockerfile
 
+  # No container: block, deliberately - testcontainers-go needs a real
+  # Docker daemon to build and run against, which the bare runner already
+  # has; a nested container job would need its own Docker-outside-of-Docker
+  # setup for no benefit over just not nesting at all.
+  container-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - run: go test -tags=integration ./integration/... -v
+
   # Layout and structure. Style and mechanics are prose.yml — see its header
   # comment for why they're split out.
   prose:
