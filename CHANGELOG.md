@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/alrayyes/hush-hush/compare/v0.5.0...v0.6.0) (2026-08-28)
+
+
+### Features
+
+* implement the delete endpoint ([#55](https://github.com/alrayyes/hush-hush/issues/55)) ([8457e36](https://github.com/alrayyes/hush-hush/commit/8457e362c690c40a4ae658d2139c3d829494f814))
+
 ## [0.5.0](https://github.com/alrayyes/hush-hush/compare/v0.4.0...v0.5.0) (2026-08-28)
 
 
