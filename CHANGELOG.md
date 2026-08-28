@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/alrayyes/hush-hush/compare/v0.6.0...v0.7.0) (2026-08-28)
+
+
+### Features
+
+* add an optional X-Caller header for audit log attribution ([#57](https://github.com/alrayyes/hush-hush/issues/57)) ([9eaf2a6](https://github.com/alrayyes/hush-hush/commit/9eaf2a6b4be3bc8dfe560b23cf950b1e0699cfc6))
+
 ## [0.6.0](https://github.com/alrayyes/hush-hush/compare/v0.5.0...v0.6.0) (2026-08-28)
 
 
