@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testWriterToken = "test-writer-token" //nolint:gosec // test fixture, not a real credential
+const testWriterToken = "test-writer-token"
 
 // newTestMux and its backing store are shared by every handler test in this
 // package - each test gets its own in-memory database.

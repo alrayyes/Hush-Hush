@@ -14,10 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/viper"
-
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
+	"github.com/spf13/viper"
 )
 
 // version is stamped in at build time by goreleaser, from the tag. "dev" is
@@ -38,9 +37,11 @@ type config struct {
 // useless state. An empty writer token isn't a safe default to fall back
 // on - requireBearerToken treats "" as never matching, so it would mean
 // every write request is rejected forever.
+var errWriterTokenRequired = errors.New("WRITER_TOKEN is required")
+
 func (c config) validate() error {
 	if c.WriterToken == "" {
-		return errors.New("WRITER_TOKEN is required")
+		return errWriterTokenRequired
 	}
 	return nil
 }
