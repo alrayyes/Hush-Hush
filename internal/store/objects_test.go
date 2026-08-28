@@ -95,3 +95,25 @@ func TestUpdateObjectUnknownID(t *testing.T) {
 	err := s.UpdateObject(context.Background(), "nope", []byte("v"))
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestDeleteObjectRemovesIt(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("v"), nil))
+
+	require.NoError(t, s.DeleteObject(ctx, "mattermost_deploy_webhook"))
+
+	_, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestDeleteObjectUnknownID(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.DeleteObject(context.Background(), "nope")
+	require.ErrorIs(t, err, store.ErrNotFound)
+}

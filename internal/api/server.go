@@ -21,6 +21,7 @@ func NewMux(s *store.Store, writerToken string) *http.ServeMux {
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{id}", requireBearerToken(writerToken, handleUpdateObject(s)))
+	mux.HandleFunc("DELETE /objects/{id}", requireBearerToken(writerToken, handleDeleteObject(s)))
 
 	return mux
 }
