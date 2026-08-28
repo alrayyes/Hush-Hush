@@ -14,8 +14,10 @@ package integration
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -26,42 +28,61 @@ import (
 
 const containerWriterToken = "container-test-token"
 
-func TestContainerServesHealthzAndACreateGetRoundTrip(t *testing.T) {
+// containerEndpoint is set once by TestMain - the image takes on the
+// order of a minute to build, so every test in this package shares one
+// running container rather than each paying that cost separately.
+var containerEndpoint string
+
+func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	req := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{
-			Context:    "..",
-			Dockerfile: "Dockerfile",
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			FromDockerfile: testcontainers.FromDockerfile{
+				Context:    "..",
+				Dockerfile: "Dockerfile",
+			},
+			ExposedPorts: []string{"8080/tcp"},
+			Env: map[string]string{
+				"WRITER_TOKEN": containerWriterToken,
+				"DB_PATH":      ":memory:",
+			},
+			WaitingFor: wait.ForHTTP("/healthz").WithStartupTimeout(2 * time.Minute),
 		},
-		ExposedPorts: []string{"8080/tcp"},
-		Env: map[string]string{
-			"WRITER_TOKEN": containerWriterToken,
-			"DB_PATH":      ":memory:",
-		},
-		WaitingFor: wait.ForHTTP("/healthz").WithStartupTimeout(2 * time.Minute),
+		Started: true,
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
+	containerEndpoint, err = container.Endpoint(ctx, "http")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	code := m.Run()
+
+	if err := container.Terminate(context.Background()); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	os.Exit(code)
+}
+
+func TestContainerHealthz(t *testing.T) {
+	resp, err := http.Get(containerEndpoint + "/healthz") //nolint:noctx // fixed test URL, no request-scoped context needed
 	require.NoError(t, err)
 
-	t.Cleanup(func() {
-		require.NoError(t, container.Terminate(context.Background()))
-	})
+	defer func() { require.NoError(t, resp.Body.Close()) }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
 
-	endpoint, err := container.Endpoint(ctx, "http")
-	require.NoError(t, err)
+func TestContainerCreateGetRoundTrip(t *testing.T) {
+	ctx := context.Background()
 
-	healthResp, err := http.Get(endpoint + "/healthz") //nolint:noctx // fixed test URL, no request-scoped context needed
-	require.NoError(t, err)
-
-	defer func() { require.NoError(t, healthResp.Body.Close()) }()
-	require.Equal(t, http.StatusOK, healthResp.StatusCode)
-
-	createReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/objects",
+	createReq, err := http.NewRequestWithContext(ctx, http.MethodPost, containerEndpoint+"/objects",
 		bytes.NewReader([]byte(`{"id":"container_smoke_test","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
 	require.NoError(t, err)
 
@@ -74,7 +95,7 @@ func TestContainerServesHealthzAndACreateGetRoundTrip(t *testing.T) {
 	defer func() { require.NoError(t, createResp.Body.Close()) }()
 	require.Equal(t, http.StatusCreated, createResp.StatusCode)
 
-	getResp, err := http.Get(endpoint + "/objects/container_smoke_test") //nolint:noctx // fixed test URL, no request-scoped context needed
+	getResp, err := http.Get(containerEndpoint + "/objects/container_smoke_test") //nolint:noctx // fixed test URL, no request-scoped context needed
 	require.NoError(t, err)
 
 	defer func() { require.NoError(t, getResp.Body.Close()) }()
