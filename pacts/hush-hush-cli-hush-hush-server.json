@@ -1,0 +1,166 @@
+{
+  "consumer": {
+    "name": "hush-hush-cli"
+  },
+  "interactions": [
+    {
+      "description": "a request to create an object",
+      "pending": false,
+      "request": {
+        "body": {
+          "content": {
+            "id": "new_secret",
+            "used_by": [
+              "homelab/vps-docker"
+            ],
+            "value": "c2VhbGVkLWNpcGhlcnRleHQ="
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Authorization": [
+            "Bearer test-token"
+          ],
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/objects"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "id": "new_secret",
+            "used_by": [
+              "homelab/vps-docker"
+            ]
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 201
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to delete an object",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "an object exists"
+        }
+      ],
+      "request": {
+        "headers": {
+          "Authorization": [
+            "Bearer test-token"
+          ]
+        },
+        "method": "DELETE",
+        "path": "/objects/mattermost_deploy_webhook"
+      },
+      "response": {
+        "status": 204
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to fetch an object",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "an object exists"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/objects/mattermost_deploy_webhook"
+      },
+      "response": {
+        "body": {
+          "content": "c2VhbGVkLWNpcGhlcnRleHQ=",
+          "contentType": "application/octet-stream",
+          "encoded": "base64"
+        },
+        "headers": {
+          "Content-Type": [
+            "application/octet-stream"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to update an object's value",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "an object exists"
+        }
+      ],
+      "request": {
+        "body": {
+          "content": {
+            "value": "bmV3LXNlYWxlZC1jaXBoZXJ0ZXh0"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Authorization": [
+            "Bearer test-token"
+          ],
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "PUT",
+        "path": "/objects/mattermost_deploy_webhook"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "id": "mattermost_deploy_webhook"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-go": {
+      "version": "2.7.1"
+    },
+    "pactRust": {
+      "ffi": "0.5.6",
+      "mockserver": "2.2.5",
+      "models": "1.3.14"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "hush-hush-server"
+  }
+}
