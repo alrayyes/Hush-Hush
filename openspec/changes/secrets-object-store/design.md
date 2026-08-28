@@ -45,6 +45,9 @@ This follows the project's spec-first convention for web services and avoids eit
 **`get` returns exactly one decrypted value to stdout per call - never an assembled file.**
 Alternative considered: an assembled `.env`-style output covering multiple objects at once. Rejected after input from a real consumer's deploy tooling, whose own mapping is the single source of truth for which secret goes where, in what shape, at what file permissions - an assembled file from this service would create a second, competing source of truth for exactly that mapping.
 
+**CLI-server contract verified with Pact (pact-go), introduced once the CLI's HTTP client exists (not before) - tracked in alrayyes/hush-hush#27.**
+A local pact file, no broker: the CLI-side consumer test writes it, the server-side provider verification test reads it directly from the same repo. A broker is unwarranted until a separate consumer repo also needs to verify against this contract. This is in addition to, not instead of, the OpenAPI spec - the spec describes the shape upfront; Pact verifies real request/response behaviour once both sides exist.
+
 ## Risks / Trade-offs
 
 - [Risk] A leaked write bearer token grants full write access (create/update/delete on any object) → [Mitigation] Deliberate v1 simplification; rotate it like any other credential. Every write is audit-logged, giving visibility if it's misused. Scoped write tokens are a natural v2 extension if this proves insufficient.

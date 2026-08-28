@@ -54,3 +54,5 @@ hoc
 README
 README's
 SQLite
+CLI
+CLI's

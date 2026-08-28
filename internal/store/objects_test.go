@@ -1,0 +1,65 @@
+package store_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/alrayyes/hush-hush/internal/store"
+	"github.com/stretchr/testify/require"
+)
+
+func openTestStore(t *testing.T) *store.Store {
+	t.Helper()
+
+	s, err := store.Open(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	return s
+}
+
+func TestCreateObjectRoundTripsUnchanged(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	value := []byte("sealed-ciphertext")
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", value, []string{"homelab/vps-docker"}))
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, value, obj.Value)
+	require.Equal(t, []string{"homelab/vps-docker"}, obj.UsedBy)
+}
+
+func TestCreateObjectWithoutUsedBy(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, s.CreateObject(ctx, "no_consumers_yet", []byte("v"), nil))
+
+	obj, err := s.GetObject(ctx, "no_consumers_yet")
+	require.NoError(t, err)
+	require.Empty(t, obj.UsedBy)
+}
+
+func TestCreateObjectRejectsDuplicateID(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, s.CreateObject(ctx, "dup", []byte("first"), nil))
+
+	err := s.CreateObject(ctx, "dup", []byte("second"), nil)
+	require.ErrorIs(t, err, store.ErrAlreadyExists)
+
+	// The original value must survive the rejected create.
+	obj, err := s.GetObject(ctx, "dup")
+	require.NoError(t, err)
+	require.Equal(t, []byte("first"), obj.Value)
+}
+
+func TestGetObjectUnknownID(t *testing.T) {
+	s := openTestStore(t)
+
+	_, err := s.GetObject(context.Background(), "nope")
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
