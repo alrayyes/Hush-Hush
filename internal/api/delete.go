@@ -11,14 +11,27 @@ import (
 // the same id returns 404.
 func handleDeleteObject(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := s.DeleteObject(r.Context(), r.PathValue("id"))
+		id := r.PathValue("id")
+
+		err := s.DeleteObject(r.Context(), id)
 		switch {
 		case err == nil:
-			w.WriteHeader(http.StatusNoContent)
 		case errors.Is(err, store.ErrNotFound):
 			writeError(w, r, http.StatusNotFound, "unknown object")
+
+			return
 		default:
 			writeInternalError(w, r, err)
+
+			return
 		}
+
+		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionDelete, callerFrom(r)); err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

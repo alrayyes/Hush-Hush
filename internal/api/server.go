@@ -41,6 +41,13 @@ func requireBearerToken(token string, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// callerFrom returns the caller's self-presented identity, or "" if none
+// was given. X-Caller is a courtesy label, not a verified identity -
+// api/openapi.yaml's `caller` parameter.
+func callerFrom(r *http.Request) string {
+	return r.Header.Get("X-Caller")
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

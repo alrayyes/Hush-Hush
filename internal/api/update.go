@@ -54,6 +54,12 @@ func handleUpdateObject(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionUpdate, callerFrom(r)); err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
 		writeJSON(w, http.StatusOK, ObjectMetadata{ID: obj.ID, UsedBy: obj.UsedBy})
 	}
 }
