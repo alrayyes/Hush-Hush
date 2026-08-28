@@ -87,17 +87,17 @@ jobs:
 
   # goreleaser's config is validated here without cutting a release - a typo
   # in .goreleaser.yml otherwise only surfaces the day a release actually
-  # runs.
+  # runs. No container/Go toolchain needed: `check` only reads the config,
+  # and goreleaser-action fetches a prebuilt, checksum-verified binary
+  # instead of `go install`-ing the whole tool from source on every run.
   goreleaser:
     runs-on: ubuntu-latest
-    container:
-      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
-      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: go install github.com/goreleaser/goreleaser/v2@v2.17.1
-      - run: goreleaser check
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.17.1
+          args: check
 
   # hadolint runs as the job's own container rather than via `docker run`
   # from inside another one — no Docker-outside-of-Docker needed at all.

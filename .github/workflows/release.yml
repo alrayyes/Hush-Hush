@@ -44,15 +44,17 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: goreleaser
+      # goreleaser-action fetches a prebuilt, checksum-verified binary
+      # instead of `go install`-ing the whole tool from source on every run.
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.17.1
+          args: release --clean
         env:
           # goreleaser's GitHub-shaped defaults resolve here without any
           # override block - unlike the gitea_urls/force_token this repo
           # needed when it lived on Forgejo (see FORGEJO.md).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          go install github.com/goreleaser/goreleaser/v2@v2.17.1
-          goreleaser release --clean
 
       # Free SLSA Build L2 provenance tying these binaries to this workflow
       # run - releases.md: adopt unconditionally, no cosign/SBOM needed yet.
