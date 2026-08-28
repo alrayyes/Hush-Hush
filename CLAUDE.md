@@ -13,12 +13,12 @@ each was chosen over the alternatives - lives in
 `openspec/changes/secrets-object-store/design.md`. The task breakdown for
 implementing it is in that same change's `tasks.md`.
 
-Bootstrapped from `alrayyes/scaffold-go-api` (git.higherlearning.eu), then
-ported from that scaffold's Forgejo-hosted form to GitHub-primary tooling
-(release-please instead of semantic-release, Dependabot instead of
-Renovate, `.github/workflows/` instead of `.forgejo/workflows/`) - see
-`FORGEJO.md` for the reasoning behind each swap, kept here in case this repo
-ever needs to move the other way.
+Bootstrapped from `alrayyes/scaffold-go-api`, then ported from that
+scaffold's self-hosted-forge form to GitHub-primary tooling (release-please
+instead of semantic-release, Dependabot instead of Renovate,
+`.github/workflows/` instead of a self-hosted forge's workflow directory) -
+see `FORGEJO.md` for the reasoning behind each swap, kept here in case this
+repo ever needs to move the other way.
 
 ## Commands
 
@@ -47,7 +47,11 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
 - **`LICENSE` is GPL-3.0**, decided when this repo was created from the
   scaffold (the scaffold itself ships unlicensed on purpose - that's a
   decision each stamped project makes for itself).
+- **`release-please-config.json` pins `"release-as": "0.0.1"`** so the first
+  release lands there instead of wherever default semver bumping would put
+  it. Remove that pin once the first release has actually shipped - it's a
+  one-time override, not permanent config.
 - **Dependabot raises the dependency pull requests here**, not Renovate -
   GitHub-primary repos use GitHub-native Dependabot
-  (`.github/dependabot.yml`); Renovate is the git.higherlearning.eu-side
-  answer instead, per `FORGEJO.md`.
+  (`.github/dependabot.yml`); Renovate is the answer on a Forgejo instance
+  instead, per `FORGEJO.md`.

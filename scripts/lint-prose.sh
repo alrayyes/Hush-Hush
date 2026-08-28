@@ -12,6 +12,13 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
+# actions/checkout's own dubious-ownership fix only lives in a temporary HOME
+# for its own step; a later step in the same container (running as root) has
+# an unpatched ~/.gitconfig and git refuses to touch a tree it doesn't own.
+# Independent of whatever CI already did, or this breaks identically on the
+# next runner image that changes the same way.
+git config --global --add safe.directory "$(pwd)"
+
 # Vale ships no opinions of its own; the styles it checks against are
 # downloaded rather than committed. Without them it reports nothing at all and
 # exits 0, which reads exactly like a pass.
@@ -21,9 +28,17 @@ if [ ! -d styles/Google ] || [ ! -d styles/proselint ]; then
 fi
 
 # The prose this repository wrote. A bare `vale .` also reads the generated
-# changelog and the README of every downloaded style package, and holds all of
-# them to house rules they were never written to.
-files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$')
+# changelog, Claude Code's own installed skill/command definitions, and the
+# README of every downloaded style package, and holds all of them to house
+# rules they were never written to.
+files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/')
+
+# An empty list means something upstream broke, not that there is nothing to
+# check - see lint-mechanics.sh for the failure mode this avoids.
+if [ -z "$files" ]; then
+  echo "no markdown files found to check - git ls-files returned nothing" >&2
+  exit 1
+fi
 
 echo "Checking:"
 echo "$files"

@@ -13,3 +13,7 @@ CHANGELOG.md
 # Vale's downloaded style packages.
 styles/Google/
 styles/proselint/
+
+# Claude Code's own installed skill/command definitions, not this repo's
+# content to reformat.
+.claude/
