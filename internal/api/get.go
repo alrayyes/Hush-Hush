@@ -14,13 +14,13 @@ func handleGetObject(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		obj, err := s.GetObject(r.Context(), r.PathValue("id"))
 		if errors.Is(err, store.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "unknown object")
+			writeError(w, r, http.StatusNotFound, "unknown object")
 
 			return
 		}
 
 		if err != nil {
-			writeInternalError(w, err)
+			writeInternalError(w, r, err)
 
 			return
 		}

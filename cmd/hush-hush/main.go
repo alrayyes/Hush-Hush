@@ -80,6 +80,10 @@ func main() {
 }
 
 func run() int {
+	// JSON on stdout, set before anything else logs - a container's log
+	// collector reads structured lines, not slog's default text form.
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	cfg, err := loadConfig()
 	if err != nil {
 		slog.Error("config", "error", err)

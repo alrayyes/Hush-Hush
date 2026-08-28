@@ -30,7 +30,7 @@ func requireBearerToken(token string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || token == "" || subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
-			writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+			writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token")
 
 			return
 		}
@@ -44,20 +44,24 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// writeError writes the Error body every documented error response carries
-// (components.schemas.Error in api/openapi.yaml). Handlers go through this
-// rather than building Error{} literals inline, so the shape can't drift
-// between them.
-func writeError(w http.ResponseWriter, status int, msg string) {
+// writeError writes the Error body every documented 4xx response carries
+// (components.schemas.Error in api/openapi.yaml) and logs it at Warn - a
+// bad payload, a missing token, an unknown id, or a conflicting write is
+// the caller's own mistake, one the service handles and moves past, not a
+// failure to investigate. Only method, path, and status go in the log
+// line: nothing here ever carries the Authorization header or request
+// body a caller sent.
+func writeError(w http.ResponseWriter, r *http.Request, status int, msg string) {
+	slog.WarnContext(r.Context(), "request rejected",
+		"method", r.Method, "path", r.URL.Path, "status", status, "reason", msg)
 	writeJSON(w, status, Error{Error: msg})
 }
 
 // writeInternalError logs err at Error level and writes a generic 500 - the
 // client gets no detail on a failure that's this service's own, but an
-// operator needs the real cause, which the generic body never carries. A
-// 4xx is the caller's own mistake and goes through writeError instead,
-// unlogged: it's expected control flow, not a failure to investigate.
-func writeInternalError(w http.ResponseWriter, err error) {
-	slog.Error("internal error", "error", err)
-	writeError(w, http.StatusInternalServerError, "internal error")
+// operator needs the real cause, which the generic body never carries.
+func writeInternalError(w http.ResponseWriter, r *http.Request, err error) {
+	slog.ErrorContext(r.Context(), "internal error",
+		"method", r.Method, "path", r.URL.Path, "error", err)
+	writeJSON(w, http.StatusInternalServerError, Error{Error: "internal error"})
 }
