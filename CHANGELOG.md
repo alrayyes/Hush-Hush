@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/alrayyes/hush-hush/compare/v0.8.0...v0.9.0) (2026-08-28)
+
+
+### Features
+
+* implement the audit log query endpoint ([#64](https://github.com/alrayyes/hush-hush/issues/64)) ([ee6bbfa](https://github.com/alrayyes/hush-hush/commit/ee6bbfa08deb1a3b0c58a837541f254a401986a3))
+
 ## [0.8.0](https://github.com/alrayyes/hush-hush/compare/v0.7.0...v0.8.0) (2026-08-28)
 
 
