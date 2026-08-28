@@ -18,7 +18,7 @@
 
 ## 5. Server: used_by Lineage (alrayyes/hush-hush#33)
 
-- [ ] 5.1 Implement used_by storage and query support and verify a stored object's used_by list is retrievable
+- [x] 5.1 Implement used_by storage and query support and verify a stored object's used_by list is retrievable
 
 ## 6. Server: Update Endpoint (alrayyes/hush-hush#9)
 

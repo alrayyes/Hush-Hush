@@ -19,6 +19,7 @@ func NewMux(s *store.Store, writerToken string) *http.ServeMux {
 	mux.HandleFunc("GET /healthz", handleHealth)
 	mux.HandleFunc("POST /objects", requireBearerToken(writerToken, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
+	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
 
 	return mux
 }
