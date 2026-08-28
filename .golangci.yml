@@ -19,6 +19,7 @@ linters:
     - perfsprint
     - revive
     - sqlclosecheck
+    - testifylint
     - unconvert
     - unparam
     - usestdlibvars
@@ -37,6 +38,11 @@ linters:
     nolintlint:
       require-explanation: true
       require-specific: true
+    # enable-all covers every checker, including the ones motivating this -
+    # expected-actual, require-error, error-nil, len, empty, bool-compare,
+    # suite-thelper - so there's nothing left to name individually.
+    testifylint:
+      enable-all: true
 
 formatters:
   enable:
