@@ -43,6 +43,7 @@ func (c config) validate() error {
 	if c.WriterToken == "" {
 		return errWriterTokenRequired
 	}
+
 	return nil
 }
 
@@ -82,12 +83,14 @@ func run() int {
 	cfg, err := loadConfig()
 	if err != nil {
 		slog.Error("config", "error", err)
+
 		return 1
 	}
 
 	s, err := store.Open(cfg.DBPath)
 	if err != nil {
 		slog.Error("open store", "error", err)
+
 		return 1
 	}
 	defer func() {
@@ -117,6 +120,7 @@ func run() int {
 	slog.Info("starting", "version", version, "addr", cfg.Addr, "db", cfg.DBPath)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("server stopped", "error", err)
+
 		return 1
 	}
 
