@@ -124,3 +124,24 @@ func (s *Store) UpdateObject(ctx context.Context, id string, value []byte) error
 
 	return nil
 }
+
+// DeleteObject permanently removes id, its used_by rows cascading with it
+// (schema.sql's ON DELETE CASCADE). It returns ErrNotFound if no object
+// exists under id.
+func (s *Store) DeleteObject(ctx context.Context, id string) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM objects WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete object: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}

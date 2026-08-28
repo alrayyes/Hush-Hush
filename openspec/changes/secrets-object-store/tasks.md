@@ -27,8 +27,8 @@
 
 ## 7. Server: Delete Endpoint (alrayyes/hush-hush#10)
 
-- [ ] 7.1 Implement the delete endpoint (bearer-token gated) and verify a deleted object's subsequent get returns not-found
-- [ ] 7.2 Verify delete rejects requests that lack a valid bearer token
+- [x] 7.1 Implement the delete endpoint (bearer-token gated) and verify a deleted object's subsequent get returns not-found
+- [x] 7.2 Verify delete rejects requests that lack a valid bearer token
 
 ## 8. Server: Audit Logging (alrayyes/hush-hush#11)
 
