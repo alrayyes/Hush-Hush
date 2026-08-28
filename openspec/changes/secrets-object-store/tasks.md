@@ -32,8 +32,8 @@
 
 ## 8. Server: Audit Log Recording (alrayyes/hush-hush#58)
 
-- [ ] 8.1 Implement audit log recording wired into create, read, update, and delete, and verify every one of the four produces an entry with object id, timestamp, and the X-Caller header's value if presented
-- [ ] 8.2 Verify audit log entries cannot be modified or deleted once recorded
+- [x] 8.1 Implement audit log recording wired into create, read, update, and delete, and verify every one of the four produces an entry with object id, timestamp, and the X-Caller header's value if presented
+- [x] 8.2 Verify audit log entries cannot be modified or deleted once recorded
 
 ## 9. Server: Audit Log Query Endpoint (alrayyes/hush-hush#59)
 
