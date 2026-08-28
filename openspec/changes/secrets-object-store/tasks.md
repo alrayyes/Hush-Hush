@@ -37,7 +37,7 @@
 
 ## 9. Server: Audit Log Query Endpoint (alrayyes/hush-hush#59)
 
-- [ ] 9.1 Implement audit log query support filtered by object id, caller identity, and time range, and verify each filter in isolation
+- [x] 9.1 Implement audit log query support filtered by object id, caller identity, and time range, and verify each filter in isolation
 
 ## 10. CLI: Inject Command (alrayyes/hush-hush#34)
 
