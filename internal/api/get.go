@@ -20,7 +20,7 @@ func handleGetObject(s *store.Store) http.HandlerFunc {
 		}
 
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeInternalError(w, err)
 
 			return
 		}

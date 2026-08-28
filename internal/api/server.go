@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/subtle"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -49,4 +50,14 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 // between them.
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, Error{Error: msg})
+}
+
+// writeInternalError logs err at Error level and writes a generic 500 - the
+// client gets no detail on a failure that's this service's own, but an
+// operator needs the real cause, which the generic body never carries. A
+// 4xx is the caller's own mistake and goes through writeError instead,
+// unlogged: it's expected control flow, not a failure to investigate.
+func writeInternalError(w http.ResponseWriter, err error) {
+	slog.Error("internal error", "error", err)
+	writeError(w, http.StatusInternalServerError, "internal error")
 }
