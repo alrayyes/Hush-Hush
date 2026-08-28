@@ -35,13 +35,13 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateObjectRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "malformed request body")
+			writeError(w, r, http.StatusBadRequest, "malformed request body")
 
 			return
 		}
 
 		if req.ID == "" || len(req.Value) == 0 {
-			writeError(w, http.StatusBadRequest, "id and value are required")
+			writeError(w, r, http.StatusBadRequest, "id and value are required")
 
 			return
 		}
@@ -51,9 +51,9 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 		case err == nil:
 			writeJSON(w, http.StatusCreated, ObjectMetadata{ID: req.ID, UsedBy: req.UsedBy})
 		case errors.Is(err, store.ErrAlreadyExists):
-			writeError(w, http.StatusConflict, "object already exists")
+			writeError(w, r, http.StatusConflict, "object already exists")
 		default:
-			writeInternalError(w, err)
+			writeInternalError(w, r, err)
 		}
 	}
 }
