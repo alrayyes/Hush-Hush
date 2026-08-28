@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/alrayyes/hush-hush/compare/v0.3.0...v0.4.0) (2026-08-28)
+
+
+### Features
+
+* log every rejected and failed request, as structured JSON ([#49](https://github.com/alrayyes/hush-hush/issues/49)) ([2d8b6ab](https://github.com/alrayyes/hush-hush/commit/2d8b6ab63a13706ceac2d368360dc924d7651ef7))
+
 ## [0.3.0](https://github.com/alrayyes/hush-hush/compare/v0.2.0...v0.3.0) (2026-08-28)
 
 
