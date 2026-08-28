@@ -34,6 +34,54 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# Two per-arch images, joined into one multi-arch manifest below - both
+# built from the same Dockerfile hadolint already lints, not a second copy
+# that could drift. arm64 runs under QEMU emulation (release.yml sets that
+# up), since the release runner itself is amd64.
+dockers:
+  - image_templates:
+      - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile
+    goarch: amd64
+    # The Dockerfile builds from source rather than copying goreleaser's
+    # own compiled binary in, so its build context needs the actual
+    # source tree - not just the binary goreleaser would otherwise hand
+    # it alone.
+    extra_files:
+      - go.mod
+      - go.sum
+      - cmd
+      - internal
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+  - image_templates:
+      - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-arm64"
+    use: buildx
+    dockerfile: Dockerfile
+    goarch: arm64
+    extra_files:
+      - go.mod
+      - go.sum
+      - cmd
+      - internal
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+
+docker_manifests:
+  - name_template: "ghcr.io/alrayyes/hush-hush:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-amd64"
+      - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/alrayyes/hush-hush:latest"
+    image_templates:
+      - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-amd64"
+      - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-arm64"
+
 # release-please already wrote the notes, curated from the same commits, and
 # created the release carrying them. A second shortlog generated here would
 # put them on twice, and `release.mode: replace` would throw the curated copy
