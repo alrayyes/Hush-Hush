@@ -7,11 +7,16 @@ before:
     - go mod download
 
 builds:
-  - main: ./cmd/hush-hush
+  - id: hush-hush
+    main: ./cmd/hush-hush
+    # Explicit rather than relying on the project_name default - once a
+    # second build exists below, that default would name both binaries
+    # "hush-hush" inside their own, differently-named archives.
+    binary: hush-hush
     env:
       - CGO_ENABLED=0
-    # Linux only, unlike a CLI scaffold's wider matrix: this is a deployed
-    # service, meant to run in a container on a server, not on someone's own
+    # Linux only, unlike hush-hush-cli below: this is a deployed service,
+    # meant to run in a container on a server, not on someone's own
     # machine.
     goos:
       - linux
@@ -26,10 +31,40 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
+  - id: hush-hush-cli
+    main: ./cmd/hush-hush-cli
+    binary: hush-hush-cli
+    env:
+      - CGO_ENABLED=0
+    # The writer's and every consumer's own machine, unlike hush-hush
+    # above - a laptop or a CI runner, any of the three major OSes.
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # Negligible real-world demand, and Go's own windows/arm64 support
+      # is comparatively new next to the other five combinations here.
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
 archives:
-  - formats:
-      - tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: hush-hush
+    ids: [hush-hush]
+    formats: [tar.gz]
+    name_template: "hush-hush_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: hush-hush-cli
+    ids: [hush-hush-cli]
+    formats: [tar.gz]
+    name_template: "hush-hush-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt
@@ -43,6 +78,10 @@ dockers:
       - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-amd64"
     use: buildx
     dockerfile: Dockerfile
+    # Disambiguates against hush-hush-cli, which now also builds
+    # linux/amd64 and linux/arm64 - without this, goreleaser has two
+    # matching builds to pick from for the same platform.
+    ids: [hush-hush]
     goarch: amd64
     # The Dockerfile builds from source rather than copying goreleaser's
     # own compiled binary in, so its build context needs the actual
@@ -61,6 +100,7 @@ dockers:
       - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-arm64"
     use: buildx
     dockerfile: Dockerfile
+    ids: [hush-hush]
     goarch: arm64
     extra_files:
       - go.mod
