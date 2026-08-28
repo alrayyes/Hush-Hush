@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/alrayyes/hush-hush/compare/v0.2.0...v0.3.0) (2026-08-28)
+
+
+### Features
+
+* implement the get endpoint ([#46](https://github.com/alrayyes/hush-hush/issues/46)) ([9f110f7](https://github.com/alrayyes/hush-hush/commit/9f110f7a6f33c4f2b3f25510e46adeb28d43403f))
+
+
+### Bug Fixes
+
+* log a handler's 500s instead of swallowing the cause ([#48](https://github.com/alrayyes/hush-hush/issues/48)) ([59d68ba](https://github.com/alrayyes/hush-hush/commit/59d68bab321851ea225bbcca5c1987dbf3347a39))
+
 ## [0.2.0](https://github.com/alrayyes/hush-hush/compare/v0.1.0...v0.2.0) (2026-08-28)
 
 
