@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/alrayyes/hush-hush/compare/v0.4.0...v0.5.0) (2026-08-28)
+
+
+### Features
+
+* implement the update endpoint ([#54](https://github.com/alrayyes/hush-hush/issues/54)) ([a674dbb](https://github.com/alrayyes/hush-hush/commit/a674dbb764373a59980e5ba28370ae946f857cea))
+* implement used_by lineage query ([#52](https://github.com/alrayyes/hush-hush/issues/52)) ([6167ab3](https://github.com/alrayyes/hush-hush/commit/6167ab328c73963168ecaf30b0e5929198b1b525))
+
 ## [0.4.0](https://github.com/alrayyes/hush-hush/compare/v0.3.0...v0.4.0) (2026-08-28)
 
 
