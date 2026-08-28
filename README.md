@@ -57,16 +57,43 @@ first if you're replacing the example resource with a real one.
 
 ### Docker
 
-The [Dockerfile](Dockerfile) builds a static binary into a distroless,
-non-root image:
+Every tagged release publishes a multi-arch (`linux/amd64`, `linux/arm64`)
+image to GitHub Container Registry:
+
+```sh
+docker pull ghcr.io/alrayyes/hush-hush:latest
+docker run --rm -p 8080:8080 -e WRITER_TOKEN=change-me -e DB_PATH=:memory: \
+  --cap-drop=ALL --security-opt=no-new-privileges --read-only \
+  --memory=64m --cpus=0.5 \
+  ghcr.io/alrayyes/hush-hush:latest
+curl localhost:8080/healthz
+```
+
+Pin an exact version (`ghcr.io/alrayyes/hush-hush:0.7.0`) rather than
+`latest` for anything other than trying it out. `--read-only` needs
+`DB_PATH=:memory:` or a volume mounted at wherever `DB_PATH` points -
+the default `hush-hush.db` has nowhere to write on a read-only file
+system.
+
+The [Dockerfile](Dockerfile) builds a static binary into the same
+distroless, non-root image - build it yourself the same way goreleaser
+does:
 
 ```sh
 docker build -t hush-hush .
-docker run --rm -p 8080:8080 \
+docker run --rm -p 8080:8080 -e WRITER_TOKEN=change-me -e DB_PATH=:memory: \
   --cap-drop=ALL --security-opt=no-new-privileges --read-only \
   --memory=64m --cpus=0.5 \
   hush-hush
 curl localhost:8080/healthz
+```
+
+[`compose.yaml`](compose.yaml) wraps the same flags:
+
+```sh
+cp .env.example .env  # then set a real WRITER_TOKEN
+docker compose up          # pulls the published image
+docker compose up --build  # or builds the local Dockerfile instead
 ```
 
 ## Contributing

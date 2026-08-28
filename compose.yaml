@@ -1,0 +1,27 @@
+# `docker compose up` pulls the published image; `docker compose up --build`
+# rebuilds from the local Dockerfile instead and tags it the same way -
+# both flows the README documents work through this one file.
+#
+# DB_PATH stays :memory: here, matching the README's own "try it out"
+# example: the image runs as a distroless nonroot user (UID 65532), and a
+# fresh named volume is created root-owned, so mounting one for persistence
+# needs its ownership fixed first (`docker run --rm -v hush-hush-data:/data
+# busybox chown 65532:65532 /data`, or an init container that does the
+# same) - a real deployment's concern, not this quick-start's.
+services:
+  hush-hush:
+    image: ghcr.io/alrayyes/hush-hush:latest
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      WRITER_TOKEN: ${WRITER_TOKEN:?set WRITER_TOKEN in .env - see .env.example}
+      DB_PATH: ":memory:"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    mem_limit: 64m
+    cpus: 0.5

@@ -10,3 +10,6 @@ styles/proselint/
 dist/
 coverage.out
 *.md
+
+# Never bake a real secret into an image layer.
+.env
