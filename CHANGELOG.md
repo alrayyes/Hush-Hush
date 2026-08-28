@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.0](https://github.com/alrayyes/hush-hush/compare/v0.0.1...v0.1.0) (2026-08-28)
+
+
+### Features
+
+* add OpenAPI spec for the secret-objects, audit-log, and cli capabilities ([#23](https://github.com/alrayyes/hush-hush/issues/23)) ([d93c355](https://github.com/alrayyes/hush-hush/commit/d93c355cb9fb7cfbd87080bff9cb9e0ac6bd9e81))
+* add SQLite schema for objects, used_by, and audit log ([#25](https://github.com/alrayyes/hush-hush/issues/25)) ([4e7a57a](https://github.com/alrayyes/hush-hush/commit/4e7a57a001418dae9cc7ca445b8e999ab30f204e))
+
 ## 0.0.1 (2026-08-28)
 
 
