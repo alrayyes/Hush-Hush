@@ -32,9 +32,9 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Gotchas
 
-- **Branch protection isn't turned on yet**, though it's free on this repo
-  (public, GitHub). Until it is, the PR-only discipline is enforced by
-  nobody but whoever's committing — never push straight to `main`.
+- **Branch protection on `main`** requires a pull request before merging
+  (`enforce_admins: false`, so the repo owner can still bypass in a genuine
+  emergency - that's not licence to make bypassing routine).
 - **`internal/api` holds the handler, `cmd/hush-hush` starts it.** Per
   `go.md`'s "a server keeps everything in `internal/` and its commands in
   `cmd/`" — there's nothing here worth exporting, since the API this
@@ -47,10 +47,10 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
 - **`LICENSE` is GPL-3.0**, decided when this repo was created from the
   scaffold (the scaffold itself ships unlicensed on purpose - that's a
   decision each stamped project makes for itself).
-- **`release-please-config.json` pins `"release-as": "0.0.1"`** so the first
-  release lands there instead of wherever default semver bumping would put
-  it. Remove that pin once the first release has actually shipped - it's a
-  one-time override, not permanent config.
+- **GitHub's "Allow GitHub Actions to create and approve pull requests"
+  setting is on** (`can_approve_pull_request_reviews: true` via the Actions
+  permissions API) - release-please can't open its release PR without it,
+  and it's off by default on a new repo.
 - **Dependabot raises the dependency pull requests here**, not Renovate -
   GitHub-primary repos use GitHub-native Dependabot
   (`.github/dependabot.yml`); Renovate is the answer on a Forgejo instance
