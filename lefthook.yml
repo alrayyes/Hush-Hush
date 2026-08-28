@@ -128,7 +128,9 @@ pre-push:
     - name: redocly
       run: bun run lint:api
 
-    # Proves the image still builds before anyone pushes, without publishing
-    # anything.
-    - name: docker-build
-      run: docker build -t hush-hush:pre-push-check .
+    # A strict superset of a bare `docker build`: testcontainers-go builds
+    # the same Dockerfile, then actually starts the container and proves
+    # it serves real requests - the packaged distroless artifact, not the
+    # server's Go code run directly the way every other test here does.
+    - name: container-integration
+      run: go test -tags=integration ./integration/... -v

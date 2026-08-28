@@ -56,3 +56,4 @@ README's
 SQLite
 CLI
 CLI's
+testcontainers-go
