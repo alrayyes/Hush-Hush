@@ -36,6 +36,7 @@ jobs:
             apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
           fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: golangci-lint
         run: golangci-lint run
       - name: gofmt
@@ -50,6 +51,7 @@ jobs:
     steps:
       - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: go test
         # -coverpkg=./..., not the default: without it, coverage only counts
         # each package's own tests, and a thin handler package under-reports
@@ -67,6 +69,7 @@ jobs:
     steps:
       - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: go build ./...
 
   # No check-only flag on `go mod edit -fmt`, so this is the pre-commit
@@ -78,6 +81,7 @@ jobs:
     steps:
       - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: go mod edit -fmt
         run: go mod edit -fmt go.mod && git diff --exit-code go.mod
 
@@ -91,6 +95,7 @@ jobs:
     steps:
       - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: go install github.com/goreleaser/goreleaser/v2@v2.17.1
       - run: goreleaser check
 
@@ -105,6 +110,7 @@ jobs:
     steps:
       - run: apk add --no-cache nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: hadolint Dockerfile
 
   # Layout and structure. Style and mechanics are prose.yml — see its header
@@ -117,6 +123,7 @@ jobs:
     steps:
       - run: apk add --no-cache ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: bun install
         # Frozen, so a drifted lockfile fails the job rather than silently
         # resolving to something nobody committed. --ignore-scripts skips
@@ -139,6 +146,7 @@ jobs:
     steps:
       - run: apk add --no-cache ca-certificates git nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: redocly lint
         run: bun run lint:api
@@ -156,6 +164,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: commitlint
         run: |

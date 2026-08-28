@@ -15,11 +15,13 @@ Secrets currently reach CI pipelines and deploy scripts through a mix of a git+s
 ## Capabilities
 
 ### New Capabilities
+
 - `secret-objects`: CRUD lifecycle for sealed secret objects - create, read, update, delete, `used_by` lineage tracking, and the bearer-token write-path auth model.
 - `audit-log`: per-action audit trail for every create/read/update/delete call, queryable by object, caller, and time range.
 - `cli`: command-line client (`inject`/`get`/`update`/`delete`) implementing the service's API, usable directly inside CI jobs with no bespoke wrapper.
 
 ### Modified Capabilities
+
 None - this is a new, standalone service with no pre-existing specs in this repo.
 
 ## Impact

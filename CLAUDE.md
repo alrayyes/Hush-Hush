@@ -47,7 +47,11 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
 - **`LICENSE` is GPL-3.0**, decided when this repo was created from the
   scaffold (the scaffold itself ships unlicensed on purpose - that's a
   decision each stamped project makes for itself).
+- **`release-please-config.json` pins `"release-as": "0.0.1"`** so the first
+  release lands there instead of wherever default semver bumping would put
+  it. Remove that pin once the first release has actually shipped - it's a
+  one-time override, not permanent config.
 - **Dependabot raises the dependency pull requests here**, not Renovate -
   GitHub-primary repos use GitHub-native Dependabot
-  (`.github/dependabot.yml`); Renovate is the git.higherlearning.eu-side
-  answer instead, per `FORGEJO.md`.
+  (`.github/dependabot.yml`); Renovate is the answer on
+  git.higherlearning.eu instead, per `FORGEJO.md`.

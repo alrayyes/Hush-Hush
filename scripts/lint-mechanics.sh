@@ -10,6 +10,13 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
+# actions/checkout's own dubious-ownership fix only lives in a temporary HOME
+# for its own step; a later step in the same container (running as root) has
+# an unpatched ~/.gitconfig and git refuses to touch a tree it doesn't own.
+# Independent of whatever CI already did, or this breaks identically on the
+# next runner image that changes the same way.
+git config --global --add safe.directory "$(pwd)"
+
 # Pinned, and the same version the workflow installs. When these two disagree
 # the hook passes and the pipeline fails, which is the failure this whole
 # arrangement exists to avoid.
@@ -41,9 +48,19 @@ if [ -z "$jdk" ]; then
 fi
 export JAVA_HOME="$jdk"
 
-# CHANGELOG.md is written by the release job; correcting it is not this
-# script's business.
-files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$')
+# CHANGELOG.md is written by the release job, and .claude/ is Claude Code's
+# own installed skill/command definitions - neither is this repo's authored
+# prose to correct.
+files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/')
+
+# An empty list means something upstream broke (git, the working directory,
+# ls-files itself) - not that there is nothing to check. Failing loudly here
+# is what stops that from being misread as "ltex found grammar or spelling
+# problems" further down, which is a different failure with a different fix.
+if [ -z "$files" ]; then
+  echo "no markdown files found to check - git ls-files returned nothing" >&2
+  exit 1
+fi
 
 echo "Checking:"
 echo "$files"
