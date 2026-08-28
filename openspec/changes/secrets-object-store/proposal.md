@@ -4,7 +4,7 @@ Secrets currently reach CI pipelines and deploy scripts through a mix of a git+s
 
 ## What Changes
 
-- New standalone Go service exposing CRUD over sealed secret objects: each object is encrypted (age) to whichever public key(s) are chosen at write time, multi-recipient when a secret is genuinely shared across several consumers.
+- New standalone Go service exposing CRUD over sealed secret objects: each object is encrypted (age) to one or more public keys chosen at write time, multi-recipient when a secret is genuinely shared across several consumers.
 - New CLI (`inject`, `get`, `update`, `delete`) implementing the same operations end to end - the writer's only interface to the service, and the same binary every consumer (CI job, deploy script) runs to fetch and decrypt a value locally. The service itself never computes or returns plaintext.
 - Every create/read/update/delete call is recorded to an audit log (object id, timestamp, caller identity if presented), queryable by object, caller, and time range.
 - v1 read path is flat: no pre-fetch authorization check. The audit log is what answers "did anyone fetch this" during a rotation or incident - it is a deliberate v1 scope decision, not an oversight, with per-consumer read authorization deferred to a later change.
@@ -27,6 +27,6 @@ None - this is a new, standalone service with no pre-existing specs in this repo
 ## Impact
 
 - New repository content: a Go HTTP service and a Go CLI, both built against one OpenAPI contract.
-- New dependencies: `age` encryption (e.g. `filippo.io/age`), SQLite via `modernc.org/sqlite` (pure Go, no cgo, to keep single-binary cross-compilation trivial).
+- New dependencies: `age` encryption (for example `filippo.io/age`), SQLite via `modernc.org/sqlite` (pure Go, no cgo, to keep single-binary cross-compilation trivial).
 - No plaintext ever transits or persists on the service; only sealed ciphertext.
 - Downstream: every repo currently consuming a secret through the prior ad hoc means will need to migrate to fetching from this service - tracked as separate migration work per consuming repo, not part of this change's implementation.

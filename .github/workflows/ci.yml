@@ -108,9 +108,10 @@ jobs:
     container:
       image: hadolint/hadolint:v2.15.1-alpine@sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552
     steps:
+      # hadolint never shells out to git, so unlike every other job here it
+      # doesn't need the safe.directory fix (or git installed at all).
       - run: apk add --no-cache nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: hadolint Dockerfile
 
   # Layout and structure. Style and mechanics are prose.yml — see its header

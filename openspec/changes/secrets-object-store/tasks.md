@@ -24,7 +24,7 @@
 
 ## 5. CLI: inject & get
 
-- [ ] 5.1 Implement inject: seal a value to configured recipient key(s) and call the create endpoint, and verify a new object appears on the server afterward
+- [ ] 5.1 Implement inject: seal a value to one or more configured recipient keys and call the create endpoint, and verify a new object appears on the server afterward
 - [ ] 5.2 Implement get: fetch and decrypt one value to stdout per call, and verify it prints the correct plaintext for an object it holds a matching key for
 - [ ] 5.3 Verify get reports a clear decryption failure, not silent incorrect output, when the CLI holds no matching private key
 - [ ] 5.4 Verify get and inject both run correctly inside a CI job using only normal environment/config, with no CI-specific code path

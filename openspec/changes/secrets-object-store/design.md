@@ -37,7 +37,7 @@ Alternatives considered:
 - `mattn/go-sqlite3` specifically was avoided over `modernc.org/sqlite` because it needs cgo, which complicates single-binary cross-compilation.
 
 **CI is a normal consumer; there is no server-mediated decrypt path.**
-Alternative considered: the server decrypting on behalf of a strongly-verified ephemeral CI identity (e.g. via OIDC), for objects flagged as CI-bound. Rejected once it became clear CI can simply hold its own decrypting private key, delivered through whatever secret storage its own CI platform already provides - the same pattern as any other consumer. This avoids a second trust model, a special object "kind," and an OIDC integration that isn't needed once CI just holds a decrypting key like anyone else.
+Alternative considered: the server decrypting on behalf of a strongly verified ephemeral CI identity (for example via OIDC), for objects flagged as CI-bound. Rejected once it became clear CI can simply hold its own decrypting private key, delivered through whatever secret storage its own CI platform already provides - the same pattern as any other consumer. This avoids a second trust model, a special object "kind," and an OIDC integration that isn't needed once CI just holds a decrypting key like anyone else.
 
 **API-first: the OpenAPI spec is the reviewed design surface; CLI and server are built concurrently against it.**
 This follows the project's spec-first convention for web services and avoids either side silently drifting from an agreed contract during implementation.
