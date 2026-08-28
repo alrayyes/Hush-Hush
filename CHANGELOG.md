@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/alrayyes/hush-hush/compare/v0.7.0...v0.8.0) (2026-08-28)
+
+
+### Features
+
+* record an audit log entry for every create, read, update, and delete ([#62](https://github.com/alrayyes/hush-hush/issues/62)) ([7009bb4](https://github.com/alrayyes/hush-hush/commit/7009bb4b1a82fae1c43a7211c8849036925458a8))
+
 ## [0.7.0](https://github.com/alrayyes/hush-hush/compare/v0.6.0...v0.7.0) (2026-08-28)
 
 
