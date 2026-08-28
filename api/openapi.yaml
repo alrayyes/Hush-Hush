@@ -1,18 +1,26 @@
 # The contract, and the only machine-readable description of it. Hand-written
-# and committed rather than generated from handler annotations — the spec is
-# reviewed as the design, and the handler in cmd/hush-hush and the
-# scaffold_go_api package (PR #4b) is written against it, not the other way
-# round.
+# and committed rather than generated from handler annotations - the spec is
+# reviewed as the design, and the handlers in internal/api are written
+# against it, not the other way round. See
+# openspec/changes/secrets-object-store/ for the design this implements.
 openapi: 3.1.0
 
 info:
   title: hush-hush
-  summary: The example API this scaffold ships.
+  summary: A standalone secrets object store.
   description: |
-    A starting point, not a product. It answers a health check and one
-    example resource, so the whole chain — spec, handler, tests, hooks, CI —
-    has something real to run before a project stamped from this template
-    replaces the resource with its first real one.
+    A writer only ever needs the service's public key to add or rotate a
+    value; a consumer only ever needs an object id to fetch it. Every
+    object is sealed (age) to one or more recipients chosen at write time -
+    the service stores and serves ciphertext only, and never computes or
+    returns plaintext.
+
+    v1's read path is deliberately flat: fetching an object's ciphertext
+    needs no authorization, only its id. The confidentiality boundary is
+    entirely "who holds a matching private key" - every fetch is recorded
+    to the audit log instead, which is what answers "did anyone access
+    this" during a rotation or incident. Writes (create, update, delete)
+    are gated by a bearer token.
   version: 0.1.0
   contact:
     name: hush-hush
@@ -21,9 +29,8 @@ info:
 servers:
   - url: "{scheme}://{host}"
     description: |
-      There's no canonical host — this is a template for a self-hosted
-      service, so the variables below are the shape of the answer rather
-      than the answer.
+      No canonical host - this is meant to run anywhere, not just one
+      environment.
     variables:
       scheme:
         default: https
@@ -37,8 +44,10 @@ security: []
 tags:
   - name: health
     description: Liveness, for whatever supervises the process.
-  - name: widgets
-    description: The example resource this scaffold ships.
+  - name: objects
+    description: Sealed secret objects - create, fetch, update, delete.
+  - name: audit-log
+    description: The record of every read and write against an object.
 
 paths:
   /healthz:
@@ -47,8 +56,7 @@ paths:
       summary: Liveness
       description: |
         Answers 200 unconditionally. There's nothing behind this service to
-        be unavailable — replace this description the day there is, and add
-        the check that would make this answer something other than "ok".
+        be unavailable.
       tags: [health]
       responses:
         "200":
@@ -60,61 +68,299 @@ paths:
               example:
                 status: ok
 
-  /widgets/{id}:
-    get:
-      operationId: getWidget
-      summary: Fetch a widget by id
+  /objects:
+    post:
+      operationId: createObject
+      summary: Create a new sealed object
       description: |
-        The example resource. It's an in-memory map, not a database — this
-        is a scaffold, and the first real resource earns the persistence
-        layer this one doesn't need.
-      tags: [widgets]
-      parameters:
-        - $ref: "#/components/parameters/id"
+        Stores an already-sealed value under a new object id. The value is
+        opaque ciphertext to this service - it is never decrypted, and the
+        service has no notion of which recipients it was sealed to.
+      tags: [objects]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateObjectRequest"
+            example:
+              id: mattermost_deploy_webhook
+              value: YWdlLWVuY3J5cHRpb24ub3JnL3Yx
+              used_by: [homelab/vps-docker]
       responses:
-        "200":
-          description: The widget.
+        "201":
+          description: The object was created.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Widget"
-              example:
-                id: hammer
-                name: Claw hammer
-        "404":
-          description: No widget is registered under that id.
+                $ref: "#/components/schemas/ObjectMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: An object already exists under that id.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
               example:
-                error: unknown widget
+                error: object already exists
+
+  /objects/{id}:
+    get:
+      operationId: getObject
+      summary: Fetch an object's sealed ciphertext
+      description: |
+        Returns the stored ciphertext exactly as sealed, byte for byte -
+        the service never decrypts it. Needs no authorization beyond
+        knowing the id: v1's confidentiality boundary is entirely "who
+        holds a matching private key," and every fetch is recorded to the
+        audit log regardless of who made it.
+      tags: [objects]
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: The sealed object.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      operationId: updateObject
+      summary: Rotate an object's value
+      description: |
+        Replaces the stored ciphertext for an existing object. The
+        object's id and used_by metadata are preserved unchanged - this
+        endpoint only ever touches the value.
+      tags: [objects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateObjectRequest"
+            example:
+              value: YWdlLWVuY3J5cHRpb24ub3JnL3Yx
+      responses:
+        "200":
+          description: The object's value was replaced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteObject
+      summary: Remove an object
+      description: |
+        Permanently removes an object. A subsequent fetch by this id
+        returns 404.
+      tags: [objects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "204":
+          description: The object was removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /objects/{id}/used-by:
+    get:
+      operationId: getObjectUsedBy
+      summary: Query what depends on an object
+      description: |
+        Returns the recorded list of consumers (repos or hosts) for an
+        object - the "what depends on this" mapping, kept queryable rather
+        than left as an implied convention.
+      tags: [objects]
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: The object's recorded consumers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsedBy"
+              example:
+                used_by: [homelab/vps-docker]
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /audit-log:
+    get:
+      operationId: queryAuditLog
+      summary: Query the audit log
+      description: |
+        Every create, read, update, and delete call is recorded here -
+        this is what answers "did anyone fetch this ciphertext" during a
+        rotation or incident, since v1 has no pre-fetch access check.
+        Filters combine with AND when more than one is given.
+      tags: [audit-log]
+      parameters:
+        - name: object_id
+          in: query
+          required: false
+          description: Restrict to entries for this object id.
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+        - name: caller
+          in: query
+          required: false
+          description: Restrict to entries recorded with this caller identity.
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          description: Restrict to entries at or after this time.
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Restrict to entries at or before this time.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Matching audit log entries, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        The single writer token, checked on every create, update, and
+        delete call. There is one writer in v1 - no per-scope or
+        per-consumer tokens.
+
   parameters:
     id:
       name: id
       in: path
       required: true
       description: |
-        The widget's id, which is the last path segment and so has to
+        The object's id, which is the last path segment and so has to
         survive being in a URL.
       schema:
-        type: string
-        pattern: "^[a-z0-9][a-z0-9_-]*$"
-        examples: [hammer]
+        $ref: "#/components/schemas/ObjectId"
+
+  responses:
+    Unauthorized:
+      description: The request is missing a valid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: missing or invalid bearer token
+
+    NotFound:
+      description: No object is stored under that id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: unknown object
 
   schemas:
-    Widget:
+    ObjectId:
+      type: string
+      pattern: "^[a-z0-9][a-z0-9_-]*$"
+      examples: [mattermost_deploy_webhook]
+
+    CreateObjectRequest:
       type: object
-      required: [id, name]
+      required: [id, value]
       properties:
         id:
+          $ref: "#/components/schemas/ObjectId"
+        value:
           type: string
-          examples: [hammer]
-        name:
+          format: byte
+          description: The sealed (encrypted) value, base64-encoded.
+        used_by:
+          $ref: "#/components/schemas/UsedByList"
+
+    UpdateObjectRequest:
+      type: object
+      required: [value]
+      properties:
+        value:
           type: string
-          examples: [Claw hammer]
+          format: byte
+          description: The new sealed (encrypted) value, base64-encoded.
+
+    ObjectMetadata:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        used_by:
+          $ref: "#/components/schemas/UsedByList"
+
+    UsedByList:
+      type: array
+      description: |
+        The consumers (repos or hosts) recorded as depending on this
+        object. Set at creation; unaffected by later value updates.
+      items:
+        type: string
+      examples:
+        - [homelab/vps-docker]
+
+    UsedBy:
+      type: object
+      required: [used_by]
+      properties:
+        used_by:
+          $ref: "#/components/schemas/UsedByList"
+
+    AuditLogEntry:
+      type: object
+      required: [object_id, action, timestamp]
+      properties:
+        object_id:
+          $ref: "#/components/schemas/ObjectId"
+        action:
+          type: string
+          enum: [create, read, update, delete]
+        timestamp:
+          type: string
+          format: date-time
+        caller:
+          type: string
+          description: The caller's presented identity, if any.
 
     Health:
       type: object
@@ -132,6 +378,5 @@ components:
           type: string
           description: |
             What went wrong, in terms safe to show a caller. Nothing here
-            handles authentication or logs anything sensitive, so there's no
-            detail to hold back.
-          examples: [unknown widget]
+            handles authentication with a detail worth holding back.
+          examples: [unknown object]
