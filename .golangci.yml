@@ -4,11 +4,15 @@ linters:
   default: standard
   enable:
     - bodyclose
+    - err113
     - errorlint
     - gosec
     - misspell
+    - modernize
+    - perfsprint
     - revive
     - unconvert
+    - usestdlibvars
 
 formatters:
   enable:
