@@ -48,6 +48,9 @@ Alternative considered: an assembled `.env`-style output covering multiple objec
 **CLI-server contract verified with Pact (pact-go), introduced once the CLI's HTTP client exists (not before) - tracked in alrayyes/hush-hush#27.**
 A local pact file, no broker: the CLI-side consumer test writes it, the server-side provider verification test reads it directly from the same repo. A broker is unwarranted until a separate consumer repo also needs to verify against this contract. This is in addition to, not instead of, the OpenAPI spec - the spec describes the shape upfront; Pact verifies real request/response behaviour once both sides exist.
 
+**Caller identity for the audit log: an optional `X-Caller` header, unauthenticated.**
+The spec always described an audit entry's `caller` field as "the caller's presented identity, if any," but never defined how a caller presents one - a gap surfaced while implementing audit logging (alrayyes/hush-hush#11). Alternative considered: deriving it from the bearer token. Rejected for v1 - there is one shared write token, not per-consumer tokens, so it carries no caller-distinguishing information, and the read path has no token at all. `X-Caller` is a courtesy label a caller sends about itself, not a verified identity; the audit log's value already comes from correlating id, time, and this label during an incident, not from cryptographically proving who made the call.
+
 ## Risks / Trade-offs
 
 - [Risk] A leaked write bearer token grants full write access (create/update/delete on any object) → [Mitigation] Deliberate v1 simplification; rotate it like any other credential. Every write is audit-logged, giving visibility if it's misused. Scoped write tokens are a natural v2 extension if this proves insufficient.
