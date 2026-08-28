@@ -53,7 +53,7 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 		case errors.Is(err, store.ErrAlreadyExists):
 			writeError(w, http.StatusConflict, "object already exists")
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeInternalError(w, err)
 		}
 	}
 }
