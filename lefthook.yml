@@ -16,9 +16,13 @@ pre-commit:
       run: golangci-lint fmt {staged_files}
       stage_fixed: true
 
+    # --fix only here, not in CI's twin of this job: pre-commit may write and
+    # restage, but a rewrite in CI would leave the pushed commit and what CI
+    # actually checked disagreeing.
     - name: golangci-lint run
       glob: "*.go"
-      run: golangci-lint run ./...
+      run: golangci-lint run --fix ./...
+      stage_fixed: true
 
     # go mod edit -fmt is the canonicalizer for go.mod itself: a builtin `go`
     # subcommand, not gofmt (which never touches go.mod) and not `go mod tidy`
