@@ -37,12 +37,12 @@ jobs:
           fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: golangci-lint
+      - name: golangci-lint fmt
+        # --diff reports rather than rewrites here; this is the check that a
+        # file was committed unformatted.
+        run: golangci-lint fmt --diff
+      - name: golangci-lint run
         run: golangci-lint run
-      - name: gofmt
-        # golangci-lint's formatter reports rather than rewrites here; this
-        # is the check that a file was committed unformatted.
-        run: gofmt -l . | (! grep .)
 
   test:
     runs-on: ubuntu-latest
