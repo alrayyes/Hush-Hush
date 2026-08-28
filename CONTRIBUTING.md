@@ -74,6 +74,34 @@ the way `form-handler`'s `openapi_test.go` does for a real service. Add that
 test once the real secret-object endpoints replace the scaffold's example
 resource (`openspec/changes/secrets-object-store/`).
 
+## Contract tests
+
+`internal/client` (the HTTP client every consumer, including the future
+CLI, speaks through) and `internal/api` carry a
+[Pact](https://pact.io) contract behind the `pact` build tag - a local pact
+file, no broker, per
+[`design.md`](openspec/changes/secrets-object-store/design.md)'s decision.
+Pact's Go binding statically links a native library into the test binary at
+link time, so it isn't part of the ordinary `go test ./...` run: install it
+once, then run the two suites explicitly, consumer before provider - the
+provider test reads the pact file the consumer test writes, and running
+them together as one `go test ./...` starts them as independent binaries
+with no ordering guarantee between them.
+
+```sh
+go install github.com/pact-foundation/pact-go/v2@v2.7.1
+sudo "$(go env GOPATH)"/bin/pact-go install   # writes to /usr/local/lib
+export PACT_DO_NOT_TRACK=true                 # opts out of Pact's own telemetry
+
+go test -tags=pact ./internal/client/... -v   # writes pacts/*.json
+go test -tags=pact ./internal/api/... -run TestPactProviderVerification -v
+```
+
+`pacts/*.json` is committed - the provider test reads it from disk, not
+from whatever the consumer test most recently produced in the same run.
+Regenerate and commit it in the same pull request as any change to
+`internal/client`'s request or response handling.
+
 ## Commit messages
 
 [Conventional Commits](https://www.conventionalcommits.org/):

@@ -62,6 +62,34 @@ jobs:
           go tool cover -func=coverage.out | tail -1 |
             awk '{ print "**Coverage: " $3 "**" }' >> "$GITHUB_STEP_SUMMARY"
 
+  # Pact's Go binding statically links a native library into the test
+  # binary at link time - present or not, whether or not a Pact test
+  # actually runs - so this stays its own job rather than folding into
+  # `test`, which has no such dependency and shouldn't gain one just
+  # because this package now imports pact-go behind a build tag.
+  pact:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+    env:
+      PACT_DO_NOT_TRACK: "true"
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: go install github.com/pact-foundation/pact-go/v2@v2.7.1
+      - run: pact-go install
+      # Consumer first, provider second, as two separate invocations -
+      # never `go test -tags=pact ./...` for both packages together, which
+      # starts them as independent test binaries with no ordering
+      # guarantee between them: the provider test reads the pact file the
+      # consumer test writes, and letting them run concurrently risks the
+      # provider reading it mid-write.
+      - name: consumer tests (writes pacts/*.json)
+        run: go test -tags=pact ./internal/client/... -v
+      - name: provider verification (reads pacts/*.json)
+        run: go test -tags=pact ./internal/api/... -run TestPactProviderVerification -v
+
   build:
     runs-on: ubuntu-latest
     container:
