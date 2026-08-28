@@ -10,11 +10,11 @@
 ## 3. Server: Create Endpoint (alrayyes/hush-hush#31)
 
 - [x] 3.1 Implement the create endpoint (bearer-token gated) and verify a sealed object round-trips through storage unchanged
-- [ ] 3.2 Verify create rejects requests that lack a valid bearer token
+- [x] 3.2 Verify create rejects requests that lack a valid bearer token
 
 ## 4. Server: Get Endpoint (alrayyes/hush-hush#32)
 
-- [ ] 4.1 Implement the get endpoint (unauthenticated) and verify it returns stored ciphertext exactly as sealed, and returns not-found for an unknown id
+- [x] 4.1 Implement the get endpoint (unauthenticated) and verify it returns stored ciphertext exactly as sealed, and returns not-found for an unknown id
 
 ## 5. Server: used_by Lineage (alrayyes/hush-hush#33)
 
