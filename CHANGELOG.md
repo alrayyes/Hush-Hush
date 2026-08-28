@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.11.0](https://github.com/alrayyes/hush-hush/compare/v0.10.0...v0.11.0) (2026-08-28)
+
+
+### Features
+
+* add the HTTP client and CLI-server Pact contract tests ([#68](https://github.com/alrayyes/hush-hush/issues/68)) ([6cfdcd3](https://github.com/alrayyes/hush-hush/commit/6cfdcd3c607e3931d6fae7b9dc1d230fea956919))
+* implement the CLI get command ([#75](https://github.com/alrayyes/hush-hush/issues/75)) ([8794ac1](https://github.com/alrayyes/hush-hush/commit/8794ac1e19570ba4d5e3eb33687e38026dab00d5))
+* implement the CLI inject command ([#70](https://github.com/alrayyes/hush-hush/issues/70)) ([cef3460](https://github.com/alrayyes/hush-hush/commit/cef34608830de30e192b2ee73f7d75af041a0144))
+
 ## [0.10.0](https://github.com/alrayyes/hush-hush/compare/v0.9.0...v0.10.0) (2026-08-28)
 
 
