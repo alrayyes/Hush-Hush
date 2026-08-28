@@ -71,3 +71,27 @@ func TestGetObjectUnknownID(t *testing.T) {
 	_, err := s.GetObject(context.Background(), "nope")
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestUpdateObjectReplacesValuePreservingUsedBy(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}))
+
+	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new")))
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, []byte("new"), obj.Value)
+	require.Equal(t, []string{"homelab/vps-docker"}, obj.UsedBy)
+}
+
+func TestUpdateObjectUnknownID(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.UpdateObject(context.Background(), "nope", []byte("v"))
+	require.ErrorIs(t, err, store.ErrNotFound)
+}

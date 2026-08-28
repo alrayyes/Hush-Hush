@@ -22,8 +22,8 @@
 
 ## 6. Server: Update Endpoint (alrayyes/hush-hush#9)
 
-- [ ] 6.1 Implement the update endpoint (bearer-token gated) and verify an object's value changes while its id and used_by metadata are preserved
-- [ ] 6.2 Verify update rejects requests that lack a valid bearer token
+- [x] 6.1 Implement the update endpoint (bearer-token gated) and verify an object's value changes while its id and used_by metadata are preserved
+- [x] 6.2 Verify update rejects requests that lack a valid bearer token
 
 ## 7. Server: Delete Endpoint (alrayyes/hush-hush#10)
 

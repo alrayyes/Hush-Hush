@@ -98,3 +98,29 @@ func (s *Store) GetObject(ctx context.Context, id string) (Object, error) {
 
 	return obj, nil
 }
+
+// UpdateObject replaces the stored value for id, leaving used_by untouched -
+// this call only ever touches the value. It returns ErrNotFound if no
+// object exists under id.
+func (s *Store) UpdateObject(ctx context.Context, id string, value []byte) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	result, err := s.db.ExecContext(ctx,
+		`UPDATE objects SET value = ?, updated_at = ? WHERE id = ?`,
+		value, now, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update object: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
