@@ -19,6 +19,8 @@ func openTestStore(t *testing.T) *store.Store {
 }
 
 func TestCreateObjectRoundTripsUnchanged(t *testing.T) {
+	t.Parallel()
+
 	s := openTestStore(t)
 	ctx := context.Background()
 
@@ -32,6 +34,8 @@ func TestCreateObjectRoundTripsUnchanged(t *testing.T) {
 }
 
 func TestCreateObjectWithoutUsedBy(t *testing.T) {
+	t.Parallel()
+
 	s := openTestStore(t)
 	ctx := context.Background()
 
@@ -43,6 +47,8 @@ func TestCreateObjectWithoutUsedBy(t *testing.T) {
 }
 
 func TestCreateObjectRejectsDuplicateID(t *testing.T) {
+	t.Parallel()
+
 	s := openTestStore(t)
 	ctx := context.Background()
 
@@ -58,6 +64,8 @@ func TestCreateObjectRejectsDuplicateID(t *testing.T) {
 }
 
 func TestGetObjectUnknownID(t *testing.T) {
+	t.Parallel()
+
 	s := openTestStore(t)
 
 	_, err := s.GetObject(context.Background(), "nope")

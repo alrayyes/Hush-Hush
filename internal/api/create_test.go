@@ -44,6 +44,8 @@ func createRequest(t *testing.T, body hushhush.CreateObjectRequest, token string
 }
 
 func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
+	t.Parallel()
+
 	mux, s := newTestMux(t)
 	sealed := []byte("sealed-ciphertext")
 
@@ -71,6 +73,8 @@ func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
 }
 
 func TestCreateObjectWithoutBearerTokenIsRejected(t *testing.T) {
+	t.Parallel()
+
 	mux, _ := newTestMux(t)
 
 	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, "")
@@ -85,6 +89,8 @@ func TestCreateObjectWithoutBearerTokenIsRejected(t *testing.T) {
 }
 
 func TestCreateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
+	t.Parallel()
+
 	mux, _ := newTestMux(t)
 
 	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, "wrong-token")
@@ -95,6 +101,8 @@ func TestCreateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 }
 
 func TestCreateObjectDuplicateIDConflicts(t *testing.T) {
+	t.Parallel()
+
 	mux, _ := newTestMux(t)
 
 	first := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v1")}, testWriterToken)
@@ -112,6 +120,8 @@ func TestCreateObjectValueIsBase64EncodedOverTheWire(t *testing.T) {
 	// format:byte in the spec) is base64 text, not raw bytes - confirms the
 	// JSON encoding actually round-trips through base64 rather than relying
 	// on Go's own []byte<->JSON convention going unnoticed.
+	t.Parallel()
+
 	mux, _ := newTestMux(t)
 
 	raw := []byte("sealed-ciphertext")
