@@ -6,13 +6,25 @@ linters:
     - bodyclose
     - err113
     - errorlint
+    - funlen
+    - gocognit
+    - gocritic
+    - gocyclo
     - gosec
+    - makezero
     - misspell
     - modernize
     - perfsprint
     - revive
     - unconvert
+    - unparam
     - usestdlibvars
+    - wrapcheck
+  settings:
+    # Defaults to 30, which almost nothing trips - not optional the way the
+    # rest of golangci-lint's settings are (rules/go-lint.md).
+    gocyclo:
+      min-complexity: 15
 
 formatters:
   enable:
