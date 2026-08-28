@@ -51,8 +51,8 @@ key management and flag parsing on top of it, per
 
 ## 11. CLI: Inject Command (alrayyes/hush-hush#34)
 
-- [ ] 11.1 Implement inject: seal a value to one or more configured recipient keys and call the create endpoint, and verify a new object appears on the server afterward
-- [ ] 11.2 Verify inject runs correctly inside a CI job using only normal environment/config, with no CI-specific code path
+- [x] 11.1 Implement inject: seal a value to one or more configured recipient keys and call the create endpoint, and verify a new object appears on the server afterward
+- [x] 11.2 Verify inject runs correctly inside a CI job using only normal environment/config, with no CI-specific code path
 
 ## 12. CLI: Get Command (alrayyes/hush-hush#35)
 
