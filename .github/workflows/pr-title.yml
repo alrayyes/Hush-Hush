@@ -1,0 +1,31 @@
+# commitlint checks individual commit messages inside a pull request; it
+# never sees the pull request title. On a squash merge, the squash commit
+# message defaults to that title — so a title reading "fixed stuff" squashes
+# straight past commitlint and lands exactly that on main, and
+# release-please reads that landed message to decide the next version.
+#
+# Runs commitlint directly against the title rather than a marketplace
+# action, so it reuses the exact same config the commit-message hook and the
+# commits job in ci.yml check against — the two cannot disagree about what's
+# a valid type.
+name: pr-title
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container:
+      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      options: --entrypoint ""
+    steps:
+      - run: apk add --no-cache ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: commitlint the pull request title
+        run: echo "${{ github.event.pull_request.title }}" | bunx commitlint --verbose

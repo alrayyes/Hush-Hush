@@ -1,0 +1,165 @@
+# The gate. Every command in here has a twin in lefthook.yml, so a green
+# pre-commit means a green pipeline and neither can drift into being the only
+# place a rule is enforced.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege by default. A job that needs more says so itself.
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container:
+      # Version-pinned by the image tag itself, so there's nothing separate
+      # to keep in sync with a golangci-lint-action version. This image is
+      # built FROM golang, so `go` and `gofmt` are on PATH too.
+      image: golangci/golangci-lint:v2.13.1@sha256:d371321370bf2907bd13a8f6f8baff0e0ca7438d76fdf636b281eadf7e2305e3
+    steps:
+      # actions/checkout is a JavaScript action and needs node; installing
+      # git pulls in the need for ca-certificates too, since git reads the
+      # system CA store a minimal image hasn't got.
+      - run: |
+          if command -v apk >/dev/null 2>&1; then
+            apk add --no-cache ca-certificates git nodejs
+          else
+            apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: golangci-lint
+        run: golangci-lint run
+      - name: gofmt
+        # golangci-lint's formatter reports rather than rewrites here; this
+        # is the check that a file was committed unformatted.
+        run: gofmt -l . | (! grep .)
+
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: go test
+        # -coverpkg=./..., not the default: without it, coverage only counts
+        # each package's own tests, and a thin handler package under-reports
+        # since the logic it calls lives elsewhere.
+        run: go test -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./... ./...
+      - name: Report coverage
+        run: |
+          go tool cover -func=coverage.out | tail -1 |
+            awk '{ print "**Coverage: " $3 "**" }' >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: go build ./...
+
+  # No check-only flag on `go mod edit -fmt`, so this is the pre-commit
+  # fixer's twin from lefthook.yml: run it again and diff.
+  gomod:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: go mod edit -fmt
+        run: go mod edit -fmt go.mod && git diff --exit-code go.mod
+
+  # goreleaser's config is validated here without cutting a release - a typo
+  # in .goreleaser.yml otherwise only surfaces the day a release actually
+  # runs.
+  goreleaser:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: go install github.com/goreleaser/goreleaser/v2@v2.17.1
+      - run: goreleaser check
+
+  # hadolint runs as the job's own container rather than via `docker run`
+  # from inside another one — no Docker-outside-of-Docker needed at all.
+  # Must be the `-alpine` tag specifically: the default hadolint image is
+  # `FROM scratch`, no shell, and can't run a checkout step.
+  dockerfile:
+    runs-on: ubuntu-latest
+    container:
+      image: hadolint/hadolint:v2.15.1-alpine@sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552
+    steps:
+      - run: apk add --no-cache nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: hadolint Dockerfile
+
+  # Layout and structure. Style and mechanics are prose.yml — see its header
+  # comment for why they're split out.
+  prose:
+    runs-on: ubuntu-latest
+    container:
+      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      options: --entrypoint ""
+    steps:
+      - run: apk add --no-cache ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: bun install
+        # Frozen, so a drifted lockfile fails the job rather than silently
+        # resolving to something nobody committed. --ignore-scripts skips
+        # the `prepare` script (`lefthook install`) — hooks are a local dev
+        # convenience with nothing to do in a one-shot CI container.
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: prettier --check
+        run: bun run format:check
+      - name: markdownlint
+        run: bun run lint:md
+
+  # The API description is a contract. This proves the document is valid
+  # OpenAPI; nothing here proves the handler still matches it — see
+  # CONTRIBUTING.md's "The contract" section for the gap.
+  api:
+    runs-on: ubuntu-latest
+    container:
+      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      options: --entrypoint ""
+    steps:
+      - run: apk add --no-cache ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: redocly lint
+        run: bun run lint:api
+
+  # A hook is something you can skip, and the version number depends on
+  # these messages being right, so the whole branch is checked here too.
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    container:
+      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      options: --entrypoint ""
+    steps:
+      - run: apk add --no-cache ca-certificates git nodejs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: commitlint
+        run: |
+          bunx commitlint \
+            --from "${{ github.event.pull_request.base.sha }}" \
+            --to "${{ github.event.pull_request.head.sha }}" \
+            --verbose
