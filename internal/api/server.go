@@ -27,7 +27,7 @@ func requireBearerToken(token string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || token == "" || subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
-			writeJSON(w, http.StatusUnauthorized, Error{Error: "missing or invalid bearer token"})
+			writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
 			return
 		}
 		next(w, r)
@@ -38,4 +38,12 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// writeError writes the Error body every documented error response carries
+// (components.schemas.Error in api/openapi.yaml). Handlers go through this
+// rather than building Error{} literals inline, so the shape can't drift
+// between them.
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, Error{Error: msg})
 }
