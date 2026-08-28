@@ -39,6 +39,7 @@ func createRequest(t *testing.T, body hushhush.CreateObjectRequest, token string
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
+
 	return req
 }
 

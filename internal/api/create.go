@@ -36,11 +36,13 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 		var req CreateObjectRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, http.StatusBadRequest, "malformed request body")
+
 			return
 		}
 
 		if req.ID == "" || len(req.Value) == 0 {
 			writeError(w, http.StatusBadRequest, "id and value are required")
+
 			return
 		}
 

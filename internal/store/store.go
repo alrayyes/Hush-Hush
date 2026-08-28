@@ -36,11 +36,13 @@ func Open(path string) (*Store, error) {
 	// setting.
 	if _, err := db.Exec(`PRAGMA foreign_keys = ON`); err != nil {
 		_ = db.Close()
+
 		return nil, fmt.Errorf("enable foreign keys: %w", err)
 	}
 
 	if _, err := db.Exec(schema); err != nil {
 		_ = db.Close()
+
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
 
@@ -57,5 +59,6 @@ func (s *Store) Close() error {
 	if err := s.db.Close(); err != nil {
 		return fmt.Errorf("close database: %w", err)
 	}
+
 	return nil
 }

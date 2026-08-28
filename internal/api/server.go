@@ -17,6 +17,7 @@ func NewMux(s *store.Store, writerToken string) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth)
 	mux.HandleFunc("POST /objects", requireBearerToken(writerToken, handleCreateObject(s)))
+
 	return mux
 }
 
@@ -28,6 +29,7 @@ func requireBearerToken(token string, next http.HandlerFunc) http.HandlerFunc {
 		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || token == "" || subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
 			writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+
 			return
 		}
 		next(w, r)
