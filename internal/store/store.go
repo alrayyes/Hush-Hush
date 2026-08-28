@@ -54,5 +54,8 @@ func (s *Store) DB() *sql.DB {
 
 // Close closes the underlying database.
 func (s *Store) Close() error {
-	return s.db.Close()
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("close database: %w", err)
+	}
+	return nil
 }
