@@ -23,6 +23,12 @@ import (
 var version = "dev"
 
 func main() {
+	// os.Exit from inside main skips every deferred call registered before
+	// it - run returns instead, so main is the only place that exits.
+	os.Exit(run())
+}
+
+func run() int {
 	addr := os.Getenv("ADDR")
 	if addr == "" {
 		addr = ":8080"
@@ -53,6 +59,8 @@ func main() {
 	slog.Info("starting", "version", version, "addr", addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("server stopped", "error", err)
-		os.Exit(1)
+		return 1
 	}
+
+	return 0
 }
