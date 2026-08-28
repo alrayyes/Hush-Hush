@@ -1,0 +1,62 @@
+# release-please decides the version and cuts the tag; goreleaser builds and
+# attaches the binaries. A tag release-please pushes with the default
+# GITHUB_TOKEN starts no further workflow (GitHub refuses, to stop recursive
+# runs) — so goreleaser has to be a second job in this same workflow, gated
+# on release-please's own `release_created` output, not a separate
+# `on: push: tags:` workflow that would silently never fire.
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        id: release
+
+  goreleaser:
+    needs: release-please
+    if: needs.release-please.outputs.release_created
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+
+      - name: goreleaser
+        env:
+          # goreleaser's GitHub-shaped defaults resolve here without any
+          # override block - unlike the gitea_urls/force_token this repo
+          # needed when it lived on Forgejo (see FORGEJO.md).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          go install github.com/goreleaser/goreleaser/v2@v2.17.1
+          goreleaser release --clean
+
+      # Free SLSA Build L2 provenance tying these binaries to this workflow
+      # run - releases.md: adopt unconditionally, no cosign/SBOM needed yet.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e4d4f7c39adfa4c260fb5c147f0622000aa14b99 # v4.0.0
+        with:
+          subject-path: dist/*.tar.gz

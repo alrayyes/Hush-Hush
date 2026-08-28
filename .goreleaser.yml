@@ -1,0 +1,43 @@
+version: 2
+
+project_name: hush-hush
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - main: ./cmd/hush-hush
+    env:
+      - CGO_ENABLED=0
+    # Linux only, unlike a CLI scaffold's wider matrix: this is a deployed
+    # service, meant to run in a container on a server, not on someone's own
+    # machine.
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    # The version the binary reports comes from the tag, so a running
+    # container can be asked what it is without going back to CI to look it
+    # up.
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+# release-please already wrote the notes, curated from the same commits, and
+# created the release carrying them. A second shortlog generated here would
+# put them on twice, and `release.mode: replace` would throw the curated copy
+# away — so the changelog is off and `release.mode` stays at its default,
+# keep-existing. goreleaser is only hanging binaries on a release that exists.
+changelog:
+  disable: true

@@ -1,0 +1,55 @@
+{
+  "ltex.language": "en-GB",
+  "ltex.dictionary": {
+    "en-GB": [
+      "Dependabot",
+      "Forgejo",
+      "Gitea",
+      "erroring",
+      "OpenAPI",
+      "Redocly",
+      "Renovate",
+      "allowlist",
+      "bunx",
+      "changelog",
+      "commitlint",
+      "devDependencies",
+      "distroless",
+      "goreleaser",
+      "golangci",
+      "golangci-lint",
+      "hadolint",
+      "healthcheck",
+      "lefthook",
+      "ltex-cli-plus",
+      "ltex-ls-plus",
+      "markdownlint",
+      "pre-commit",
+      "proselint",
+      "ruleset",
+      "rulesets",
+      "hush-hush",
+      "testify",
+      "toolchain",
+      "toolchains",
+      "unexported"
+    ]
+  },
+  "ltex.disabledRules": {
+    "en-GB": [
+      "PASSIVE_VOICE",
+      "A_INFINITIVE",
+      "ENGLISH_WORD_REPEAT_BEGINNING_RULE",
+      "WHETHER",
+      "DASH_RULE",
+      "EN_QUOTES",
+      "UPPERCASE_SENTENCE_START",
+      "SENT_START_CONJUNCTIVE_LINKING_ADVERB_COMMA",
+      "ID_CASING",
+      "PREPOSITION_VERB",
+      "COMMA_COMPOUND_SENTENCE",
+      "COMMA_COMPOUND_SENTENCE_2",
+      "OXFORD_SPELLING_Z_NOT_S"
+    ]
+  }
+}

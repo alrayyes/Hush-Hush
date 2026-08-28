@@ -1,0 +1,137 @@
+# The contract, and the only machine-readable description of it. Hand-written
+# and committed rather than generated from handler annotations — the spec is
+# reviewed as the design, and the handler in cmd/hush-hush and the
+# scaffold_go_api package (PR #4b) is written against it, not the other way
+# round.
+openapi: 3.1.0
+
+info:
+  title: hush-hush
+  summary: The example API this scaffold ships.
+  description: |
+    A starting point, not a product. It answers a health check and one
+    example resource, so the whole chain — spec, handler, tests, hooks, CI —
+    has something real to run before a project stamped from this template
+    replaces the resource with its first real one.
+  version: 0.1.0
+  contact:
+    name: hush-hush
+    url: https://github.com/alrayyes/hush-hush
+
+servers:
+  - url: "{scheme}://{host}"
+    description: |
+      There's no canonical host — this is a template for a self-hosted
+      service, so the variables below are the shape of the answer rather
+      than the answer.
+    variables:
+      scheme:
+        default: https
+        enum: [https, http]
+      host:
+        default: localhost:8080
+        description: The default listen address. Set ADDR to change it.
+
+security: []
+
+tags:
+  - name: health
+    description: Liveness, for whatever supervises the process.
+  - name: widgets
+    description: The example resource this scaffold ships.
+
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Liveness
+      description: |
+        Answers 200 unconditionally. There's nothing behind this service to
+        be unavailable — replace this description the day there is, and add
+        the check that would make this answer something other than "ok".
+      tags: [health]
+      responses:
+        "200":
+          description: The process is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+
+  /widgets/{id}:
+    get:
+      operationId: getWidget
+      summary: Fetch a widget by id
+      description: |
+        The example resource. It's an in-memory map, not a database — this
+        is a scaffold, and the first real resource earns the persistence
+        layer this one doesn't need.
+      tags: [widgets]
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: The widget.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+              example:
+                id: hammer
+                name: Claw hammer
+        "404":
+          description: No widget is registered under that id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: unknown widget
+
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: |
+        The widget's id, which is the last path segment and so has to
+        survive being in a URL.
+      schema:
+        type: string
+        pattern: "^[a-z0-9][a-z0-9_-]*$"
+        examples: [hammer]
+
+  schemas:
+    Widget:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          examples: [hammer]
+        name:
+          type: string
+          examples: [Claw hammer]
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: |
+            What went wrong, in terms safe to show a caller. Nothing here
+            handles authentication or logs anything sensitive, so there's no
+            detail to hold back.
+          examples: [unknown widget]
