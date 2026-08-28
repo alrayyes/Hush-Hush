@@ -51,6 +51,7 @@ func newRootCmd() *cobra.Command {
 	viper.AutomaticEnv()
 
 	root.AddCommand(newInjectCmd())
+	root.AddCommand(newGetCmd())
 
 	return root
 }

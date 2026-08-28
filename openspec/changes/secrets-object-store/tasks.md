@@ -56,9 +56,9 @@ key management and flag parsing on top of it, per
 
 ## 12. CLI: Get Command (alrayyes/hush-hush#35)
 
-- [ ] 12.1 Implement get: fetch and decrypt one value to stdout per call, and verify it prints the correct plaintext for an object it holds a matching key for
-- [ ] 12.2 Verify get reports a clear decryption failure, not silent incorrect output, when the CLI holds no matching private key
-- [ ] 12.3 Verify get runs correctly inside a CI job using only normal environment/config, with no CI-specific code path
+- [x] 12.1 Implement get: fetch and decrypt one value to stdout per call, and verify it prints the correct plaintext for an object it holds a matching key for
+- [x] 12.2 Verify get reports a clear decryption failure, not silent incorrect output, when the CLI holds no matching private key
+- [x] 12.3 Verify get runs correctly inside a CI job using only normal environment/config, with no CI-specific code path
 
 ## 13. CLI: Update Command (alrayyes/hush-hush#13)
 
