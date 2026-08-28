@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/alrayyes/hush-hush/compare/v0.1.0...v0.2.0) (2026-08-28)
+
+
+### Features
+
+* implement the create endpoint ([#36](https://github.com/alrayyes/hush-hush/issues/36)) ([8c64818](https://github.com/alrayyes/hush-hush/commit/8c64818884f54abfb3103a5735b5c88b2c6e29f9))
+
 ## [0.1.0](https://github.com/alrayyes/hush-hush/compare/v0.0.1...v0.1.0) (2026-08-28)
 
 
