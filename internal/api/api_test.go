@@ -11,6 +11,8 @@ import (
 )
 
 func TestHealthAnswersOK(t *testing.T) {
+	t.Parallel()
+
 	mux, _ := newTestMux(t)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

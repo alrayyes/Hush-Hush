@@ -8,6 +8,8 @@ import (
 )
 
 func TestOpenAppliesSchemaToFreshDatabase(t *testing.T) {
+	t.Parallel()
+
 	s, err := store.Open(":memory:")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
@@ -22,6 +24,8 @@ func TestOpenIsIdempotent(t *testing.T) {
 	// A fresh database, then Open again against the same file, must not
 	// error - the schema is applied with CREATE TABLE IF NOT EXISTS, not a
 	// one-shot migration that fails the second time it runs.
+	t.Parallel()
+
 	dir := t.TempDir()
 	path := dir + "/hush-hush.db"
 
