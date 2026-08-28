@@ -1,6 +1,6 @@
 ## 1. OpenAPI Spec
 
-- [ ] 1.1 Write the OpenAPI spec covering create, read, update, and delete endpoints plus audit-log query, and verify it lints clean with Redocly
+- [x] 1.1 Write the OpenAPI spec covering create, read, update, and delete endpoints plus audit-log query, and verify it lints clean with Redocly
 - [ ] 1.2 Get the spec reviewed and merged as the agreed contract before any server or CLI implementation starts
 
 ## 2. Server: Storage Foundation
