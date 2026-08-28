@@ -15,14 +15,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestServer(t *testing.T, writerToken string) (*httptest.Server, *store.Store) {
+// testWriterToken is shared by every test in this package that calls
+// newTestServer - none of them need a distinct token.
+const testWriterToken = "writer-token"
+
+func newTestServer(t *testing.T) (*httptest.Server, *store.Store) {
 	t.Helper()
 
 	s, err := store.Open(":memory:")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	srv := httptest.NewServer(hushhush.NewMux(s, writerToken))
+	srv := httptest.NewServer(hushhush.NewMux(s, testWriterToken))
 	t.Cleanup(srv.Close)
 
 	return srv, s
@@ -31,12 +35,12 @@ func newTestServer(t *testing.T, writerToken string) (*httptest.Server, *store.S
 func TestInjectCreatesAnObjectTheMatchingIdentityCanDecrypt(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t, "writer-token")
+	srv, s := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	cfg := cli.Config{Server: srv.URL, Token: "writer-token"}
+	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
 	value := []byte("plaintext-value")
 
 	err = cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", value,
@@ -59,7 +63,7 @@ func TestInjectCreatesAnObjectTheMatchingIdentityCanDecrypt(t *testing.T) {
 func TestInjectWithoutAValidTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t, "writer-token")
+	srv, _ := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
@@ -73,9 +77,9 @@ func TestInjectWithoutAValidTokenIsRejected(t *testing.T) {
 func TestInjectWithAMalformedRecipientFailsBeforeCallingTheServer(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t, "writer-token")
+	srv, s := newTestServer(t)
 
-	cfg := cli.Config{Server: srv.URL, Token: "writer-token"}
+	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
 
 	err := cli.Inject(context.Background(), cfg, "x", []byte("v"), []string{"not-a-recipient"}, nil)
 	require.Error(t, err)
