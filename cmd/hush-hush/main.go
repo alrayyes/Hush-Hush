@@ -1,7 +1,6 @@
-// Command hush-hush is the composition root for the service: it wires the
-// in-memory widget store to the handlers and starts the server. This is
-// still the scaffold's placeholder example - see CLAUDE.md and
-// openspec/changes/secrets-object-store/ for the real API replacing it.
+// Command hush-hush is the composition root: it opens the SQLite store and
+// starts the HTTP server. See CLAUDE.md and
+// openspec/changes/secrets-object-store/ for the design.
 package main
 
 import (
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
+	"github.com/alrayyes/hush-hush/internal/store"
 )
 
 // version is stamped in at build time by goreleaser, from the tag. "dev" is
@@ -34,13 +34,35 @@ func run() int {
 		addr = ":8080"
 	}
 
-	widgets := map[string]hushhush.Widget{
-		"hammer": {ID: "hammer", Name: "Claw hammer"},
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "hush-hush.db"
 	}
+
+	// No default: an empty token would mean every write request is
+	// rejected forever (requireBearerToken treats "" as never matching),
+	// which is a server nobody can write to rather than a safe default -
+	// better to fail fast at startup and say so.
+	writerToken := os.Getenv("WRITER_TOKEN")
+	if writerToken == "" {
+		slog.Error("WRITER_TOKEN is required")
+		os.Exit(1)
+	}
+
+	s, err := store.Open(dbPath)
+	if err != nil {
+		slog.Error("open store", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := s.Close(); err != nil {
+			slog.Error("close store", "error", err)
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           hushhush.NewMux(widgets),
+		Handler:           hushhush.NewMux(s, writerToken),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -56,7 +78,7 @@ func run() int {
 		}
 	}()
 
-	slog.Info("starting", "version", version, "addr", addr)
+	slog.Info("starting", "version", version, "addr", addr, "db", dbPath)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("server stopped", "error", err)
 		return 1
