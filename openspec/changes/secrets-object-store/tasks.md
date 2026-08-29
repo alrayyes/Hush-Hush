@@ -62,7 +62,7 @@ key management and flag parsing on top of it, per
 
 ## 13. CLI: Update Command (alrayyes/hush-hush#13)
 
-- [ ] 13.1 Implement update: seal a new value and call the update endpoint, and verify the object's server-side value changes accordingly
+- [x] 13.1 Implement update: seal a new value and call the update endpoint, and verify the object's server-side value changes accordingly
 
 ## 14. CLI: Delete Command (alrayyes/hush-hush#14)
 
