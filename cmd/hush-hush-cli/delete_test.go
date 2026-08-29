@@ -1,0 +1,38 @@
+package main
+
+import (
+	"net/http/httptest"
+	"testing"
+
+	hushhush "github.com/alrayyes/hush-hush/internal/api"
+	"github.com/alrayyes/hush-hush/internal/store"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
+)
+
+// TestDeleteRunsFromEnvironmentAloneNoFlags mirrors
+// TestInjectRunsFromEnvironmentAloneNoFlags - the same "runs unmodified
+// inside CI" requirement, for the delete command.
+func TestDeleteRunsFromEnvironmentAloneNoFlags(t *testing.T) {
+	s, err := store.Open(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	srv := httptest.NewServer(hushhush.NewMux(s, "env-token"))
+	t.Cleanup(srv.Close)
+
+	require.NoError(t, s.CreateObject(t.Context(), "mattermost_deploy_webhook", []byte("sealed"), nil))
+
+	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
+	t.Setenv("HUSH_HUSH_TOKEN", "env-token")
+
+	viper.Reset()
+
+	root := newRootCmd()
+	root.SetArgs([]string{"delete", "mattermost_deploy_webhook"})
+
+	require.NoError(t, root.Execute())
+
+	_, err = s.GetObject(t.Context(), "mattermost_deploy_webhook")
+	require.ErrorIs(t, err, store.ErrNotFound)
+}

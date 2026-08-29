@@ -66,7 +66,7 @@ key management and flag parsing on top of it, per
 
 ## 14. CLI: Delete Command (alrayyes/hush-hush#14)
 
-- [ ] 14.1 Implement delete: call the delete endpoint, and verify the object is gone from the server afterward
+- [x] 14.1 Implement delete: call the delete endpoint, and verify the object is gone from the server afterward
 
 ## 15. End-to-End Validation
 
