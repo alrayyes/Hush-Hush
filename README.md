@@ -96,6 +96,12 @@ docker compose up          # pulls the published image
 docker compose up --build  # or builds the local Dockerfile instead
 ```
 
+## SDKs
+
+- [hush-hush-go](https://github.com/alrayyes/hush-hush-go) - a typed Go
+  client generated from [`api/openapi.yaml`](api/openapi.yaml), for
+  programs that want the full API surface without hand-rolling HTTP calls.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the toolchain, the hooks, and how
