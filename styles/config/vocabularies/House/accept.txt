@@ -59,4 +59,5 @@ CLI's
 testcontainers-go
 SDKs?
 hush-hush-go
+hush-hush-python
 hush-hush-node
