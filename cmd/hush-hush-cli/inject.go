@@ -27,6 +27,13 @@ func newInjectCmd() *cobra.Command {
 		Short: "Seal a value (read from stdin) and create a new object",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Rebound here rather than at construction: inject and update
+			// share the --recipients/HUSH_HUSH_RECIPIENTS name, and binding
+			// both flag objects to the one viper key at construction time
+			// leaves viper pointing at whichever command was registered
+			// last on root, silently ignoring the other's flag.
+			_ = viper.BindPFlag("recipients", cmd.Flags().Lookup("recipients"))
+
 			recipients := viper.GetString("recipients")
 			if recipients == "" {
 				return errNoRecipients
@@ -43,7 +50,6 @@ func newInjectCmd() *cobra.Command {
 
 	cmd.Flags().StringSliceVar(&usedBy, "used-by", nil, "consumers of this secret (repeatable, or comma-separated)")
 	cmd.Flags().String("recipients", "", "comma-separated age recipient public keys")
-	_ = viper.BindPFlag("recipients", cmd.Flags().Lookup("recipients"))
 
 	return cmd
 }
