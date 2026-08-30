@@ -6,9 +6,19 @@
 # already did). See Dockerfile for the from-source build a contributor
 # runs locally - the two intentionally diverge past that point
 # (go-releases.md's reproducibility tradeoff note).
+# A throwaway stage purely to mkdir - distroless below has no shell to do
+# it in, and this is the only content this stage ever produces.
+FROM busybox:1.37.0@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 AS data-dir
+RUN mkdir -p /data
+
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
 
 COPY hush-hush /hush-hush
+# Docker seeds a freshly created named volume from the image directory it's
+# mounted over, ownership included - baking that in here is what lets
+# compose.yaml's volume come up already writable by nonroot, with no
+# separate chown step needed at first run. Matches Dockerfile's own comment.
+COPY --from=data-dir --chown=nonroot:nonroot /data /data
 
 # The :nonroot base image variant already sets the user, so this is explicit
 # rather than load-bearing - matches Dockerfile's own comment.

@@ -3,6 +3,7 @@ package main
 import (
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -18,13 +19,16 @@ func TestDeleteRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	srv := httptest.NewServer(hushhush.NewMux(s, "env-token"))
+	srv := httptest.NewServer(hushhush.NewMux(s))
 	t.Cleanup(srv.Close)
+
+	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour)
+	require.NoError(t, err)
 
 	require.NoError(t, s.CreateObject(t.Context(), "mattermost_deploy_webhook", []byte("sealed"), nil))
 
 	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
-	t.Setenv("HUSH_HUSH_TOKEN", "env-token")
+	t.Setenv("HUSH_HUSH_TOKEN", token)
 
 	viper.Reset()
 

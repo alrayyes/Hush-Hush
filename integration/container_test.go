@@ -18,6 +18,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,12 +27,14 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-const containerWriterToken = "container-test-token"
-
-// containerEndpoint is set once by TestMain - the image takes on the
-// order of a minute to build, so every test in this package shares one
-// running container rather than each paying that cost separately.
-var containerEndpoint string
+// containerEndpoint and containerWriterToken are set once by TestMain -
+// the image takes on the order of a minute to build, so every test in
+// this package shares one running container rather than each paying that
+// cost separately.
+var (
+	containerEndpoint    string
+	containerWriterToken string
+)
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
@@ -43,9 +46,13 @@ func TestMain(m *testing.M) {
 				Dockerfile: "Dockerfile",
 			},
 			ExposedPorts: []string{"8080/tcp"},
+			// A real file under the image's own baked-in, already-writable
+			// /data (Dockerfile's own comment) rather than :memory: - the
+			// token issued below runs as a separate exec into this same
+			// container, which would get its own, disconnected in-memory
+			// database otherwise.
 			Env: map[string]string{
-				"WRITER_TOKEN": containerWriterToken,
-				"DB_PATH":      ":memory:",
+				"DB_PATH": "/data/hush-hush.db",
 			},
 			WaitingFor: wait.ForHTTP("/healthz").WithStartupTimeout(2 * time.Minute),
 		},
@@ -62,13 +69,51 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	code := m.Run()
+	execCode, reader, err := container.Exec(ctx,
+		[]string{"/hush-hush", "token", "issue", "--description", "container integration test"})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "issue token:", err)
+		os.Exit(1)
+	}
+
+	issueOut, err := io.ReadAll(reader)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "read token issue output:", err)
+		os.Exit(1)
+	}
+
+	if execCode != 0 {
+		fmt.Fprintln(os.Stderr, "token issue exited nonzero:", string(issueOut))
+		os.Exit(1)
+	}
+
+	var ok bool
+	containerWriterToken, ok = parseIssuedToken(string(issueOut))
+	if !ok {
+		fmt.Fprintln(os.Stderr, "could not find issued token in output:", string(issueOut))
+		os.Exit(1)
+	}
+
+	exitCode := m.Run()
 
 	if err := container.Terminate(context.Background()); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
 
-	os.Exit(code)
+	os.Exit(exitCode)
+}
+
+// parseIssuedToken pulls the plaintext out of `hush-hush token issue`'s
+// "token: <value>" line - the only machine-readable thing about that
+// output, which is meant for a human running the command by hand.
+func parseIssuedToken(output string) (token string, ok bool) {
+	for _, line := range strings.Split(output, "\n") {
+		if after, found := strings.CutPrefix(line, "token: "); found {
+			return after, true
+		}
+	}
+
+	return "", false
 }
 
 func TestContainerHealthz(t *testing.T) {

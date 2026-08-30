@@ -6,11 +6,14 @@ package api_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -19,6 +22,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// pactWriterToken is the literal bearer value internal/client's consumer
+// tests recorded (matchers.String("Bearer test-token")) - Pact replays
+// that exact example against this real provider, so it has to be a token
+// this store actually accepts, seeded directly since store.CreateWriteToken
+// always generates its own random plaintext.
 const pactWriterToken = "test-token"
 
 // TestPactProviderVerification confirms the real server satisfies every
@@ -29,7 +37,16 @@ func TestPactProviderVerification(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	srv := httptest.NewServer(hushhush.NewMux(s, pactWriterToken))
+	sum := sha256.Sum256([]byte(pactWriterToken))
+	now := time.Now().UTC()
+	_, err = s.DB().Exec(
+		`INSERT INTO write_tokens (id, token_hash, description, created_at, expires_at) VALUES (?, ?, ?, ?, ?)`,
+		"pact-test-token", hex.EncodeToString(sum[:]), "pact provider verification",
+		now.Format(time.RFC3339), now.Add(time.Hour).Format(time.RFC3339),
+	)
+	require.NoError(t, err)
+
+	srv := httptest.NewServer(hushhush.NewMux(s))
 	t.Cleanup(srv.Close)
 
 	pactFile, err := filepath.Abs("../../pacts/hush-hush-cli-hush-hush-server.json")

@@ -14,12 +14,12 @@ import (
 func TestDeleteRemovesTheObject(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t)
+	srv, s, token := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", []byte("v"),
 		[]string{identity.Recipient().String()}, nil))
 
@@ -32,12 +32,12 @@ func TestDeleteRemovesTheObject(t *testing.T) {
 func TestDeleteWithoutAValidTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t)
+	srv, s, token := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "x", []byte("v"),
 		[]string{identity.Recipient().String()}, nil))
 
@@ -52,9 +52,9 @@ func TestDeleteWithoutAValidTokenIsRejected(t *testing.T) {
 func TestDeleteUnknownIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t)
+	srv, _, token := newTestServer(t)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 	err := cli.Delete(context.Background(), cfg, "nope")
 	require.ErrorIs(t, err, client.ErrNotFound)
 }

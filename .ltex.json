@@ -16,6 +16,7 @@
       "bbolt",
       "bunx",
       "changelog",
+      "chown",
       "commitlint",
       "devDependencies",
       "distroless",

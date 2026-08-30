@@ -8,13 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/stretchr/testify/require"
 )
-
-const testWriterToken = "test-writer-token"
 
 // newTestMux and its backing store are shared by every handler test in this
 // package - each test gets its own in-memory database.
@@ -25,7 +24,18 @@ func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	return hushhush.NewMux(s, testWriterToken), s
+	return hushhush.NewMux(s), s
+}
+
+// issueToken mints a write token valid against s, for a test that needs a
+// real one rather than exercising the rejection path itself.
+func issueToken(t *testing.T, s *store.Store) string {
+	t.Helper()
+
+	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour)
+	require.NoError(t, err)
+
+	return token
 }
 
 func createRequest(t *testing.T, body hushhush.CreateObjectRequest, token string) *http.Request {
@@ -53,7 +63,7 @@ func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
 		ID:     "mattermost_deploy_webhook",
 		Value:  sealed,
 		UsedBy: []string{"homelab/vps-docker"},
-	}, testWriterToken)
+	}, issueToken(t, s))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -103,12 +113,13 @@ func TestCreateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 func TestCreateObjectDuplicateIDConflicts(t *testing.T) {
 	t.Parallel()
 
-	mux, _ := newTestMux(t)
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
 
-	first := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v1")}, testWriterToken)
+	first := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v1")}, token)
 	mux.ServeHTTP(httptest.NewRecorder(), first)
 
-	second := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v2")}, testWriterToken)
+	second := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v2")}, token)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, second)
 
@@ -122,7 +133,7 @@ func TestCreateObjectValueIsBase64EncodedOverTheWire(t *testing.T) {
 	// on Go's own []byte<->JSON convention going unnoticed.
 	t.Parallel()
 
-	mux, _ := newTestMux(t)
+	mux, s := newTestMux(t)
 
 	raw := []byte("sealed-ciphertext")
 	payload := struct {
@@ -134,7 +145,7 @@ func TestCreateObjectValueIsBase64EncodedOverTheWire(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/objects", bytes.NewReader(b))
-	req.Header.Set("Authorization", "Bearer "+testWriterToken)
+	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 

@@ -35,7 +35,7 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), testWriterToken))
+	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), issueToken(t, s)))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -53,10 +53,10 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 func TestUpdateObjectUnknownIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	mux, _ := newTestMux(t)
+	mux, s := newTestMux(t)
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "nope", []byte("v"), testWriterToken))
+	mux.ServeHTTP(rec, updateRequest(t, "nope", []byte("v"), issueToken(t, s)))
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }

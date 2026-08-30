@@ -5,9 +5,6 @@
 /dist
 coverage.out
 
-# Real values go in .env, gitignored - .env.example documents the keys.
-.env
-
 node_modules/
 .bun-cache/
 

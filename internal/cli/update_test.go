@@ -15,12 +15,12 @@ import (
 func TestUpdateChangesTheStoredValue(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t)
+	srv, s, token := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", []byte("old-value"),
 		[]string{identity.Recipient().String()}, []string{"homelab/vps-docker"}))
 
@@ -44,7 +44,7 @@ func TestUpdateChangesTheStoredValue(t *testing.T) {
 func TestUpdateWithoutAValidTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t)
+	srv, _, _ := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
@@ -58,12 +58,12 @@ func TestUpdateWithoutAValidTokenIsRejected(t *testing.T) {
 func TestUpdateWithAMalformedRecipientFailsBeforeCallingTheServer(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t)
+	srv, s, token := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "x", []byte("v"),
 		[]string{identity.Recipient().String()}, nil))
 

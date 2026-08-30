@@ -34,3 +34,13 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_log_object_id ON audit_log (object_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_caller ON audit_log (caller);
 CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log (timestamp);
+
+-- token_hash, never the raw token: a leaked database backup shouldn't
+-- also hand out every write credential it was ever meant to protect.
+CREATE TABLE IF NOT EXISTS write_tokens (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);

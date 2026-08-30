@@ -1,7 +1,6 @@
 package api
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"log/slog"
 	"net"
@@ -11,34 +10,49 @@ import (
 	"github.com/alrayyes/hush-hush/internal/store"
 )
 
-// NewMux wires the handlers registered against api/openapi.yaml. writerToken
-// is the single v1 write-path bearer token, checked on every create, update,
-// and delete call - reads need no authorization, per the settled v1 design
-// (openspec/changes/secrets-object-store/design.md).
-func NewMux(s *store.Store, writerToken string) *http.ServeMux {
+// NewMux wires the handlers registered against api/openapi.yaml. Every
+// create, update, and delete call is checked against s's issued write
+// tokens (alrayyes/hush-hush#72) - reads need no authorization, per the
+// settled v1 design (openspec/changes/secrets-object-store/design.md).
+func NewMux(s *store.Store) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth)
-	mux.HandleFunc("POST /objects", requireBearerToken(writerToken, handleCreateObject(s)))
+	mux.HandleFunc("POST /objects", requireWriteToken(s, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
-	mux.HandleFunc("PUT /objects/{id}", requireBearerToken(writerToken, handleUpdateObject(s)))
-	mux.HandleFunc("DELETE /objects/{id}", requireBearerToken(writerToken, handleDeleteObject(s)))
+	mux.HandleFunc("PUT /objects/{id}", requireWriteToken(s, handleUpdateObject(s)))
+	mux.HandleFunc("DELETE /objects/{id}", requireWriteToken(s, handleDeleteObject(s)))
 	mux.HandleFunc("GET /audit-log", handleQueryAuditLog(s))
 
 	return mux
 }
 
-// requireBearerToken rejects a request unless it carries an Authorization
-// header of exactly "Bearer <token>", comparing in constant time so a
-// request can't learn anything about the token from response timing.
-func requireBearerToken(token string, next http.HandlerFunc) http.HandlerFunc {
+// requireWriteToken rejects a request unless it carries an Authorization
+// header of "Bearer <token>" naming a currently issued, unexpired write
+// token (store.ValidateWriteToken) - an unknown, malformed, expired, or
+// revoked token are all the same 401 to the caller.
+func requireWriteToken(s *store.Store, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || token == "" || subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+		if !ok || got == "" {
 			writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token")
 
 			return
 		}
+
+		valid, err := s.ValidateWriteToken(r.Context(), got)
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		if !valid {
+			writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token")
+
+			return
+		}
+
 		next(w, r)
 	}
 }
