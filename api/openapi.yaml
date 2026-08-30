@@ -366,7 +366,7 @@ components:
 
     AuditLogEntry:
       type: object
-      required: [object_id, action, timestamp]
+      required: [object_id, action, timestamp, ip]
       properties:
         object_id:
           $ref: "#/components/schemas/ObjectId"
@@ -379,6 +379,15 @@ components:
         caller:
           type: string
           description: The caller's presented identity, if any.
+        ip:
+          type: string
+          description: |
+            The request's source IP. Unlike caller, this is never
+            self-reported - it's the one piece of the request nobody gets
+            to lie about via a header. Currently the immediate TCP peer's
+            address; this service isn't deployed behind a reverse proxy or
+            load balancer, so X-Forwarded-For (or similar) support isn't
+            implemented yet.
 
     Health:
       type: object

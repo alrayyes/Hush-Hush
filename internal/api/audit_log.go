@@ -14,6 +14,7 @@ type AuditLogEntry struct {
 	Action    string `json:"action"`
 	Timestamp string `json:"timestamp"`
 	Caller    string `json:"caller,omitempty"`
+	IP        string `json:"ip"`
 }
 
 // handleQueryAuditLog returns audit log entries matching the given
@@ -65,6 +66,7 @@ func handleQueryAuditLog(s *store.Store) http.HandlerFunc {
 				Action:    string(row.Action),
 				Timestamp: row.Timestamp,
 				Caller:    row.Caller,
+				IP:        row.IP,
 			}
 		}
 

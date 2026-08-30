@@ -16,8 +16,8 @@ func TestQueryAuditLogReturnsAllEntriesOldestFirst(t *testing.T) {
 
 	mux, s := newTestMux(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", ""))
-	require.NoError(t, s.RecordAuditLog(ctx, "b", "read", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", "", "203.0.113.1"))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", "read", "", "203.0.113.2"))
 
 	req := httptest.NewRequest(http.MethodGet, "/audit-log", nil)
 	rec := httptest.NewRecorder()
@@ -37,8 +37,8 @@ func TestQueryAuditLogFiltersByObjectID(t *testing.T) {
 
 	mux, s := newTestMux(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", ""))
-	require.NoError(t, s.RecordAuditLog(ctx, "b", "create", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", "", "203.0.113.1"))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", "create", "", "203.0.113.2"))
 
 	req := httptest.NewRequest(http.MethodGet, "/audit-log?object_id=a", nil)
 	rec := httptest.NewRecorder()
