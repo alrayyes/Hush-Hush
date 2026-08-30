@@ -74,7 +74,10 @@ func TestClientCreatePact(t *testing.T) {
 		})
 
 	err := provider.ExecuteTest(t, func(cfg consumer.MockServerConfig) error {
-		c := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "test-token")
+		c, err := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "test-token")
+		if err != nil {
+			return fmt.Errorf("build client: %w", err)
+		}
 
 		meta, err := c.Create(context.Background(), createTestObjectID, []byte("sealed-ciphertext"), []string{"homelab/vps-docker"})
 		if err != nil {
@@ -102,7 +105,10 @@ func TestClientGetPact(t *testing.T) {
 		})
 
 	err := provider.ExecuteTest(t, func(cfg consumer.MockServerConfig) error {
-		c := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "")
+		c, err := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "")
+		if err != nil {
+			return fmt.Errorf("build client: %w", err)
+		}
 
 		value, err := c.Get(context.Background(), "mattermost_deploy_webhook")
 		if err != nil {
@@ -136,7 +142,10 @@ func TestClientUpdatePact(t *testing.T) {
 		})
 
 	err := provider.ExecuteTest(t, func(cfg consumer.MockServerConfig) error {
-		c := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "test-token")
+		c, err := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "test-token")
+		if err != nil {
+			return fmt.Errorf("build client: %w", err)
+		}
 
 		meta, err := c.Update(context.Background(), "mattermost_deploy_webhook", []byte("new-sealed-ciphertext"))
 		if err != nil {
@@ -162,7 +171,10 @@ func TestClientDeletePact(t *testing.T) {
 		WillRespondWith(http.StatusNoContent, func(_ *consumer.V4ResponseBuilder) {})
 
 	err := provider.ExecuteTest(t, func(cfg consumer.MockServerConfig) error {
-		c := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "test-token")
+		c, err := client.New(fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port), "test-token")
+		if err != nil {
+			return fmt.Errorf("build client: %w", err)
+		}
 
 		return c.Delete(context.Background(), "mattermost_deploy_webhook")
 	})

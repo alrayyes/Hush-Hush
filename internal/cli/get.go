@@ -11,7 +11,12 @@ import (
 // identities matches - the CLI never writes an assembled file or applies
 // consumer-side file-shape logic (design.md).
 func Get(ctx context.Context, cfg Config, id string, identities []string) ([]byte, error) {
-	sealed, err := cfg.newClient().Get(ctx, id)
+	cl, err := cfg.newClient()
+	if err != nil {
+		return nil, err
+	}
+
+	sealed, err := cl.Get(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("fetch object: %w", err)
 	}
