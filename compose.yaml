@@ -2,12 +2,14 @@
 # rebuilds from the local Dockerfile instead and tags it the same way -
 # both flows the README documents work through this one file.
 #
-# DB_PATH stays :memory: here, matching the README's own "try it out"
-# example: the image runs as a distroless nonroot user (UID 65532), and a
-# fresh named volume is created root-owned, so mounting one for persistence
-# needs its ownership fixed first (`docker run --rm -v hush-hush-data:/data
-# busybox chown 65532:65532 /data`, or an init container that does the
-# same) - a real deployment's concern, not this quick-start's.
+# DB_PATH points at the named volume below rather than :memory: - a
+# write-path token is issued by running the image's own binary again
+# against that file (`docker compose exec hush-hush /hush-hush token
+# issue --description ...`), which needs a real, persistent file to find.
+# The volume comes up already writable by nonroot (UID 65532): Docker
+# seeds a freshly created named volume from the image directory it's
+# mounted over, ownership included, and the Dockerfile bakes that
+# ownership into /data for exactly this reason - no separate chown step.
 services:
   hush-hush:
     image: ghcr.io/alrayyes/hush-hush:latest
@@ -16,8 +18,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      WRITER_TOKEN: ${WRITER_TOKEN:?set WRITER_TOKEN in .env - see .env.example}
-      DB_PATH: ":memory:"
+      DB_PATH: "/data/hush-hush.db"
+    volumes:
+      - hush-hush-data:/data
     cap_drop:
       - ALL
     security_opt:
@@ -25,3 +28,6 @@ services:
     read_only: true
     mem_limit: 64m
     cpus: 0.5
+
+volumes:
+  hush-hush-data:

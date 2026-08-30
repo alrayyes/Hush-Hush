@@ -13,14 +13,14 @@ import (
 func TestGetDecryptsTheStoredValue(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t)
+	srv, _, token := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
 	value := []byte("plaintext-value")
 
-	injectCfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	injectCfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), injectCfg, "mattermost_deploy_webhook", value,
 		[]string{identity.Recipient().String()}, nil))
 
@@ -33,7 +33,7 @@ func TestGetDecryptsTheStoredValue(t *testing.T) {
 func TestGetWithNoMatchingIdentityFailsClearly(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t)
+	srv, _, token := newTestServer(t)
 
 	sealedTo, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestGetWithNoMatchingIdentityFailsClearly(t *testing.T) {
 	wrongIdentity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	injectCfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	injectCfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), injectCfg, "x", []byte("v"),
 		[]string{sealedTo.Recipient().String()}, nil))
 
@@ -53,7 +53,7 @@ func TestGetWithNoMatchingIdentityFailsClearly(t *testing.T) {
 func TestGetUnknownIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t)
+	srv, _, _ := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)

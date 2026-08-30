@@ -40,18 +40,35 @@ go build ./cmd/hush-hush-cli    # the client every writer and consumer uses
 ### Start the server
 
 ```sh
-WRITER_TOKEN=change-me ./hush-hush
+./hush-hush
 ```
 
-Listens on `:8080` by default. `WRITER_TOKEN` is the only required
-setting - it's the single bearer token every create, update, and delete
-call needs; v1 has no per-consumer scoping. See
+Listens on `:8080` by default, storing objects in `./hush-hush.db`. See
 [Configuration](#configuration) below for the rest of the server's
 environment variables.
 
 ```sh
 curl localhost:8080/healthz
 ```
+
+Every create, update, and delete call needs a bearer token - issue one by
+running the same binary again, directly against that database file:
+
+```sh
+./hush-hush token issue --description "homelab/vps-docker deploy"
+# id:    a1b2c3d4e5f6a7b8
+# token: 9f8e7d6c...
+#
+# The token is shown once - store it now, it can't be recovered later.
+```
+
+Any number of tokens can be valid at once, each with its own description
+and expiry (`--ttl`, default 90 days) - `hush-hush token list` shows what's
+issued, and `hush-hush token revoke <id>` invalidates one without touching
+the others. There's no HTTP endpoint for any of this: minting the
+credential that authenticates the write path can't itself need a token to
+call over the network, so it's direct store access instead, same as the
+server's own `DB_PATH`.
 
 ### Use the CLI
 
@@ -67,7 +84,7 @@ Inject a secret, sealed to one or more recipients:
 
 ```sh
 export HUSH_HUSH_SERVER=http://localhost:8080
-export HUSH_HUSH_TOKEN=change-me
+export HUSH_HUSH_TOKEN=9f8e7d6c...  # from `hush-hush token issue` above
 
 echo -n "hunter2" | hush-hush-cli inject mattermost_deploy_webhook \
   --recipients age1... --used-by homelab/vps-docker
@@ -104,11 +121,14 @@ curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 
 The server reads environment variables only:
 
-| Variable       | Default        | Meaning                                |
-| -------------- | -------------- | -------------------------------------- |
-| `ADDR`         | `:8080`        | Listen address.                        |
-| `DB_PATH`      | `hush-hush.db` | SQLite database file.                  |
-| `WRITER_TOKEN` | _(required)_   | Bearer token for create/update/delete. |
+| Variable  | Default        | Meaning               |
+| --------- | -------------- | --------------------- |
+| `ADDR`    | `:8080`        | Listen address.       |
+| `DB_PATH` | `hush-hush.db` | SQLite database file. |
+
+`hush-hush token issue`/`list`/`revoke` read the same `DB_PATH`, so they
+have to be run against the file (or, in a container, inside the container)
+the server they're managing tokens for is actually using.
 
 The CLI takes each setting as a flag or the matching environment variable -
 a flag always wins:
@@ -129,37 +149,44 @@ image to GitHub Container Registry:
 
 ```sh
 docker pull ghcr.io/alrayyes/hush-hush:latest
-docker run --rm -p 8080:8080 -e WRITER_TOKEN=change-me -e DB_PATH=:memory: \
+docker run --rm -d --name hush-hush -p 8080:8080 \
+  -v hush-hush-data:/data -e DB_PATH=/data/hush-hush.db \
   --cap-drop=ALL --security-opt=no-new-privileges --read-only \
   --memory=64m --cpus=0.5 \
   ghcr.io/alrayyes/hush-hush:latest
 curl localhost:8080/healthz
+docker exec hush-hush /hush-hush token issue --description "trying it out"
 ```
 
 Pin an exact version (`ghcr.io/alrayyes/hush-hush:0.7.0`) rather than
-`latest` for anything other than trying it out. `--read-only` needs
-`DB_PATH=:memory:` or a volume mounted at wherever `DB_PATH` points -
-the default `hush-hush.db` has nowhere to write on a read-only file
-system.
+`latest` for anything other than trying it out. `--read-only` needs a
+volume mounted at wherever `DB_PATH` points - the default `hush-hush.db`
+has nowhere to write on a read-only file system, and so does a token
+issued against `:memory:`, which `docker exec`'s own separate process
+could never actually reach. The image's `/data` already comes owned by
+its non-root user, so a freshly created named volume mounted there, the
+same way the preceding command does, needs no separate chown step.
 
 The [Dockerfile](Dockerfile) builds a static binary into the same
 distroless, non-root image the published one runs - build it yourself:
 
 ```sh
 docker build -t hush-hush .
-docker run --rm -p 8080:8080 -e WRITER_TOKEN=change-me -e DB_PATH=:memory: \
+docker run --rm -d --name hush-hush -p 8080:8080 \
+  -v hush-hush-data:/data -e DB_PATH=/data/hush-hush.db \
   --cap-drop=ALL --security-opt=no-new-privileges --read-only \
   --memory=64m --cpus=0.5 \
   hush-hush
 curl localhost:8080/healthz
+docker exec hush-hush /hush-hush token issue --description "trying it out"
 ```
 
-[`compose.yaml`](compose.yaml) wraps the same flags:
+[`compose.yaml`](compose.yaml) wraps the same flags, including the volume:
 
 ```sh
-cp .env.example .env  # then set a real WRITER_TOKEN
 docker compose up          # pulls the published image
 docker compose up --build  # or builds the local Dockerfile instead
+docker compose exec hush-hush /hush-hush token issue --description "trying it out"
 ```
 
 ## SDKs

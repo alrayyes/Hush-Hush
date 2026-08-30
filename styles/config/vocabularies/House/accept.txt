@@ -49,6 +49,7 @@ bbolt
 Postgres
 stdout
 stdin
+chown
 used_by
 semver
 rollout

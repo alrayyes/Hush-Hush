@@ -22,7 +22,7 @@ func TestGetRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	srv := httptest.NewServer(hushhush.NewMux(s, "env-token"))
+	srv := httptest.NewServer(hushhush.NewMux(s))
 	t.Cleanup(srv.Close)
 
 	identity, err := age.GenerateX25519Identity()

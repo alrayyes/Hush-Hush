@@ -28,7 +28,7 @@ func TestDeleteObjectRemovesItAndSubsequentGetReturnsNotFound(t *testing.T) {
 	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("v"), nil))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, deleteRequest(t, "mattermost_deploy_webhook", testWriterToken))
+	mux.ServeHTTP(rec, deleteRequest(t, "mattermost_deploy_webhook", issueToken(t, s)))
 
 	require.Equal(t, http.StatusNoContent, rec.Code)
 
@@ -39,10 +39,10 @@ func TestDeleteObjectRemovesItAndSubsequentGetReturnsNotFound(t *testing.T) {
 func TestDeleteObjectUnknownIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	mux, _ := newTestMux(t)
+	mux, s := newTestMux(t)
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, deleteRequest(t, "nope", testWriterToken))
+	mux.ServeHTTP(rec, deleteRequest(t, "nope", issueToken(t, s)))
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }

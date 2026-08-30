@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"filippo.io/age"
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
@@ -15,32 +16,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testWriterToken is shared by every test in this package that calls
-// newTestServer - none of them need a distinct token.
-const testWriterToken = "writer-token"
-
-func newTestServer(t *testing.T) (*httptest.Server, *store.Store) {
+// newTestServer issues a fresh write token valid against its own store -
+// none of this package's tests need a distinct one.
+func newTestServer(t *testing.T) (srv *httptest.Server, s *store.Store, token string) {
 	t.Helper()
 
 	s, err := store.Open(":memory:")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	srv := httptest.NewServer(hushhush.NewMux(s, testWriterToken))
+	_, token, err = s.CreateWriteToken(t.Context(), "test", time.Hour)
+	require.NoError(t, err)
+
+	srv = httptest.NewServer(hushhush.NewMux(s))
 	t.Cleanup(srv.Close)
 
-	return srv, s
+	return srv, s, token
 }
 
 func TestInjectCreatesAnObjectTheMatchingIdentityCanDecrypt(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t)
+	srv, s, token := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 	value := []byte("plaintext-value")
 
 	err = cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", value,
@@ -63,7 +65,7 @@ func TestInjectCreatesAnObjectTheMatchingIdentityCanDecrypt(t *testing.T) {
 func TestInjectWithoutAValidTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
-	srv, _ := newTestServer(t)
+	srv, _, _ := newTestServer(t)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
@@ -77,9 +79,9 @@ func TestInjectWithoutAValidTokenIsRejected(t *testing.T) {
 func TestInjectWithAMalformedRecipientFailsBeforeCallingTheServer(t *testing.T) {
 	t.Parallel()
 
-	srv, s := newTestServer(t)
+	srv, s, token := newTestServer(t)
 
-	cfg := cli.Config{Server: srv.URL, Token: testWriterToken}
+	cfg := cli.Config{Server: srv.URL, Token: token}
 
 	err := cli.Inject(context.Background(), cfg, "x", []byte("v"), []string{"not-a-recipient"}, nil)
 	require.Error(t, err)

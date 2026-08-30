@@ -263,9 +263,13 @@ components:
       type: http
       scheme: bearer
       description: |
-        The single writer token, checked on every create, update, and
-        delete call. There is one writer in v1 - no per-scope or
-        per-consumer tokens.
+        A write token, checked on every create, update, and delete call.
+        Each token carries its own description and expiry, issued and
+        revoked through the server's own `token` CLI command (direct
+        store access, not an HTTP endpoint - issuing a token over HTTP
+        would need its own token to call it with). Any number of tokens
+        may be valid at once; revoking or expiring one never affects the
+        others.
 
   parameters:
     id:

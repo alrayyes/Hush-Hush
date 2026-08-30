@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"filippo.io/age"
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
@@ -21,14 +22,17 @@ func TestInjectRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	srv := httptest.NewServer(hushhush.NewMux(s, "env-token"))
+	srv := httptest.NewServer(hushhush.NewMux(s))
 	t.Cleanup(srv.Close)
+
+	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour)
+	require.NoError(t, err)
 
 	identity, err := age.GenerateX25519Identity()
 	require.NoError(t, err)
 
 	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
-	t.Setenv("HUSH_HUSH_TOKEN", "env-token")
+	t.Setenv("HUSH_HUSH_TOKEN", token)
 	t.Setenv("HUSH_HUSH_RECIPIENTS", identity.Recipient().String())
 
 	// A fresh viper instance per test: the package-level default one

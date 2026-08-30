@@ -44,7 +44,7 @@ func TestCreateObjectRecordsAnAuditLogEntry(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, testWriterToken)
+	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, issueToken(t, s))
 	req.Header.Set("X-Caller", "homelab/vps-docker")
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -60,7 +60,7 @@ func TestCreateObjectRecordsTheRequestsSourceIP(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, testWriterToken)
+	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, issueToken(t, s))
 	req.RemoteAddr = "203.0.113.1:54321"
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -74,7 +74,7 @@ func TestCreateObjectRecordsTheRawRemoteAddrWhenItHasNoPort(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, testWriterToken)
+	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, issueToken(t, s))
 	req.RemoteAddr = "not-a-host-port-pair"
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -104,7 +104,7 @@ func TestUpdateObjectRecordsAnAuditLogEntry(t *testing.T) {
 	mux, s := newTestMux(t)
 	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
 
-	mux.ServeHTTP(httptest.NewRecorder(), updateRequest(t, "x", []byte("new"), testWriterToken))
+	mux.ServeHTTP(httptest.NewRecorder(), updateRequest(t, "x", []byte("new"), issueToken(t, s)))
 
 	entries := auditLogEntries(t, s)
 	require.Len(t, entries, 1)
@@ -117,7 +117,7 @@ func TestDeleteObjectRecordsAnAuditLogEntry(t *testing.T) {
 	mux, s := newTestMux(t)
 	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
 
-	mux.ServeHTTP(httptest.NewRecorder(), deleteRequest(t, "x", testWriterToken))
+	mux.ServeHTTP(httptest.NewRecorder(), deleteRequest(t, "x", issueToken(t, s)))
 
 	entries := auditLogEntries(t, s)
 	require.Len(t, entries, 1)
