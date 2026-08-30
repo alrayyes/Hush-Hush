@@ -1,16 +1,16 @@
-// Package client is the HTTP client every hush-hush consumer speaks
-// through - the CLI's own transport, and the consumer side of the
-// CLI-server Pact contract (openspec/changes/secrets-object-store/design.md).
+// Package client is the CLI's transport to the hush-hush server - a thin
+// adapter over the generated hush-hush-go SDK, kept so internal/cli depends
+// on this package's own sentinel errors and ObjectMetadata shape rather than
+// the SDK's directly (design.md).
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
+
+	hushhush "github.com/alrayyes/hush-hush-go"
 )
 
 // Sentinel errors mapped from the server's documented status codes -
@@ -21,96 +21,57 @@ var (
 	ErrAlreadyExists = errors.New("object already exists")
 )
 
+// ErrUnexpectedStatus anchors an unmapped status's error to something
+// errors.Is can match, since the status code and server message vary per
+// call and can't be a fixed sentinel on their own.
+var ErrUnexpectedStatus = errors.New("unexpected status")
+
 // ObjectMetadata is what a successful create or update returns. Matches
 // components.schemas.ObjectMetadata in api/openapi.yaml.
 type ObjectMetadata struct {
-	ID     string   `json:"id"`
-	UsedBy []string `json:"used_by,omitempty"`
+	ID     string
+	UsedBy []string
 }
 
 // Client is a hush-hush API client. Token is the write-path bearer token;
 // it's sent on every request, and reads simply ignore it server-side.
 type Client struct {
-	BaseURL string
-	Token   string
-	Caller  string
-	HTTP    *http.Client
+	Caller string
+
+	sdk *hushhush.Client
 }
 
-// New returns a Client using http.DefaultClient.
-func New(baseURL, token string) *Client {
-	return &Client{BaseURL: baseURL, Token: token, HTTP: http.DefaultClient}
-}
+// New returns a Client backed by the hush-hush-go SDK.
+func New(baseURL, token string) (*Client, error) {
+	sdk, err := hushhush.NewClient(baseURL, hushhush.WithAPIKey(token))
+	if err != nil {
+		return nil, fmt.Errorf("build hush-hush-go client: %w", err)
+	}
 
-type createRequest struct {
-	ID     string   `json:"id"`
-	Value  []byte   `json:"value"`
-	UsedBy []string `json:"used_by,omitempty"`
+	return &Client{sdk: sdk}, nil
 }
-
-type updateRequest struct {
-	Value []byte `json:"value"`
-}
-
-type errorBody struct {
-	Error string `json:"error"`
-}
-
-// ErrUnexpectedStatus anchors statusError's dynamic message to something
-// errors.Is can match, since the status code and server message vary per
-// call and can't be a fixed sentinel on their own.
-var ErrUnexpectedStatus = errors.New("unexpected status")
 
 // Create stores value under id, sealed to usedBy's recipients before this
 // is ever called - the client itself does no sealing.
 func (c *Client) Create(ctx context.Context, id string, value []byte, usedBy []string) (ObjectMetadata, error) {
-	body, err := json.Marshal(createRequest{ID: id, Value: value, UsedBy: usedBy})
+	req := hushhush.CreateObjectRequest{Id: id, Value: value}
+	if len(usedBy) > 0 {
+		req.UsedBy = &usedBy
+	}
+
+	meta, err := c.sdk.CreateObject(ctx, req, c.Caller)
 	if err != nil {
-		return ObjectMetadata{}, fmt.Errorf("marshal create request: %w", err)
+		return ObjectMetadata{}, mapError(err)
 	}
 
-	req, err := c.newRequest(ctx, http.MethodPost, "/objects", bytes.NewReader(body))
-	if err != nil {
-		return ObjectMetadata{}, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	var meta ObjectMetadata
-	if err := c.doJSON(req, http.StatusCreated, &meta, map[int]error{
-		http.StatusUnauthorized: ErrUnauthorized,
-		http.StatusConflict:     ErrAlreadyExists,
-	}); err != nil {
-		return ObjectMetadata{}, err
-	}
-
-	return meta, nil
+	return toObjectMetadata(meta), nil
 }
 
 // Get fetches an object's stored ciphertext exactly as sealed.
 func (c *Client) Get(ctx context.Context, id string) ([]byte, error) {
-	req, err := c.newRequest(ctx, http.MethodGet, "/objects/"+id, nil)
+	value, err := c.sdk.GetObject(ctx, id, c.Caller)
 	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("get object: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, ErrNotFound
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, statusError(resp)
-	}
-
-	value, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read object body: %w", err)
+		return nil, mapError(err)
 	}
 
 	return value, nil
@@ -119,102 +80,53 @@ func (c *Client) Get(ctx context.Context, id string) ([]byte, error) {
 // Update replaces id's stored value, leaving its used_by metadata
 // unchanged.
 func (c *Client) Update(ctx context.Context, id string, value []byte) (ObjectMetadata, error) {
-	body, err := json.Marshal(updateRequest{Value: value})
+	meta, err := c.sdk.UpdateObject(ctx, id, hushhush.UpdateObjectRequest{Value: value}, c.Caller)
 	if err != nil {
-		return ObjectMetadata{}, fmt.Errorf("marshal update request: %w", err)
+		return ObjectMetadata{}, mapError(err)
 	}
 
-	req, err := c.newRequest(ctx, http.MethodPut, "/objects/"+id, bytes.NewReader(body))
-	if err != nil {
-		return ObjectMetadata{}, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	var meta ObjectMetadata
-	if err := c.doJSON(req, http.StatusOK, &meta, map[int]error{
-		http.StatusUnauthorized: ErrUnauthorized,
-		http.StatusNotFound:     ErrNotFound,
-	}); err != nil {
-		return ObjectMetadata{}, err
-	}
-
-	return meta, nil
+	return toObjectMetadata(meta), nil
 }
 
 // Delete permanently removes id.
 func (c *Client) Delete(ctx context.Context, id string) error {
-	req, err := c.newRequest(ctx, http.MethodDelete, "/objects/"+id, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return fmt.Errorf("delete object: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusUnauthorized:
-		return ErrUnauthorized
-	case http.StatusNotFound:
-		return ErrNotFound
-	default:
-		return statusError(resp)
-	}
-}
-
-func (c *Client) newRequest(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, body)
-	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
-	}
-
-	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-	}
-
-	if c.Caller != "" {
-		req.Header.Set("X-Caller", c.Caller)
-	}
-
-	return req, nil
-}
-
-// doJSON sends req, decodes a status-matching JSON response into out, and
-// maps any status in knownErrors to its sentinel.
-func (c *Client) doJSON(req *http.Request, wantStatus int, out any, knownErrors map[int]error) error {
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return fmt.Errorf("send request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if sentinel, ok := knownErrors[resp.StatusCode]; ok {
-		return sentinel
-	}
-
-	if resp.StatusCode != wantStatus {
-		return statusError(resp)
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return fmt.Errorf("decode response: %w", err)
+	if err := c.sdk.DeleteObject(ctx, id, c.Caller); err != nil {
+		return mapError(err)
 	}
 
 	return nil
 }
 
-// statusError builds an error from an unexpected response, including the
-// server's own message when it sent one.
-func statusError(resp *http.Response) error {
-	var body errorBody
-	if err := json.NewDecoder(resp.Body).Decode(&body); err == nil && body.Error != "" {
-		return fmt.Errorf("%w %d: %s", ErrUnexpectedStatus, resp.StatusCode, body.Error)
+func toObjectMetadata(m *hushhush.ObjectMetadata) ObjectMetadata {
+	meta := ObjectMetadata{ID: m.Id}
+	if m.UsedBy != nil {
+		meta.UsedBy = *m.UsedBy
 	}
 
-	return fmt.Errorf("%w %d", ErrUnexpectedStatus, resp.StatusCode)
+	return meta
+}
+
+// mapError translates the SDK's *hushhush.APIError into this package's
+// sentinels, so callers keep matching on client.Err* regardless of which
+// transport sits underneath.
+func mapError(err error) error {
+	var apiErr *hushhush.APIError
+	if !errors.As(err, &apiErr) {
+		return fmt.Errorf("call hush-hush server: %w", err)
+	}
+
+	switch apiErr.StatusCode {
+	case http.StatusUnauthorized:
+		return ErrUnauthorized
+	case http.StatusNotFound:
+		return ErrNotFound
+	case http.StatusConflict:
+		return ErrAlreadyExists
+	default:
+		if apiErr.Message != "" {
+			return fmt.Errorf("%w %d: %s", ErrUnexpectedStatus, apiErr.StatusCode, apiErr.Message)
+		}
+
+		return fmt.Errorf("%w %d", ErrUnexpectedStatus, apiErr.StatusCode)
+	}
 }

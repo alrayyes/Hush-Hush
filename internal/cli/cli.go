@@ -5,6 +5,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/alrayyes/hush-hush/internal/client"
 )
 
@@ -20,9 +22,13 @@ type Config struct {
 	Caller string
 }
 
-func (c Config) newClient() *client.Client {
-	cl := client.New(c.Server, c.Token)
+func (c Config) newClient() (*client.Client, error) {
+	cl, err := client.New(c.Server, c.Token)
+	if err != nil {
+		return nil, fmt.Errorf("build client: %w", err)
+	}
+
 	cl.Caller = c.Caller
 
-	return cl
+	return cl, nil
 }

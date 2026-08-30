@@ -16,7 +16,12 @@ func Update(ctx context.Context, cfg Config, id string, value []byte, recipients
 		return fmt.Errorf("seal value: %w", err)
 	}
 
-	if _, err := cfg.newClient().Update(ctx, id, sealed); err != nil {
+	cl, err := cfg.newClient()
+	if err != nil {
+		return err
+	}
+
+	if _, err := cl.Update(ctx, id, sealed); err != nil {
 		return fmt.Errorf("update object: %w", err)
 	}
 
