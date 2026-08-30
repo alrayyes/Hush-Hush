@@ -42,11 +42,12 @@ JSON
 plaintext
 ciphertext
 queryable
-keypair
+keypairs?
 cgo
 bbolt
 Postgres
 stdout
+stdin
 used_by
 semver
 rollout
