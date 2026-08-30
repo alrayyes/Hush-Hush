@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/alrayyes/hush-hush/compare/v0.12.1...v0.13.0) (2026-08-30)
+
+
+### Features
+
+* **ci:** upload coverage to Codecov ([#93](https://github.com/alrayyes/hush-hush/issues/93)) ([0793e8c](https://github.com/alrayyes/hush-hush/commit/0793e8ca756aedb092af574820347de21c053460))
+
 ## [0.12.1](https://github.com/alrayyes/hush-hush/compare/v0.12.0...v0.12.1) (2026-08-30)
 
 
