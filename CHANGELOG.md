@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.0](https://github.com/alrayyes/hush-hush/compare/v0.11.0...v0.12.0) (2026-08-30)
+
+
+### Features
+
+* implement the CLI delete command ([#82](https://github.com/alrayyes/hush-hush/issues/82)) ([dfcc373](https://github.com/alrayyes/hush-hush/commit/dfcc373820dd585a31bb5bd6f4ff6120ec974e31)), closes [#14](https://github.com/alrayyes/hush-hush/issues/14)
+* implement the CLI update command ([#80](https://github.com/alrayyes/hush-hush/issues/80)) ([7ce7156](https://github.com/alrayyes/hush-hush/commit/7ce715686cd6e21ad85a6e7ac9861ed3093297af)), closes [#13](https://github.com/alrayyes/hush-hush/issues/13)
+* use the hush-hush-go SDK as the CLI's transport ([#86](https://github.com/alrayyes/hush-hush/issues/86)) ([294f62c](https://github.com/alrayyes/hush-hush/commit/294f62ca4e40a64d4ba10e8dfab89d0a06b47237))
+
 ## [0.11.0](https://github.com/alrayyes/hush-hush/compare/v0.10.0...v0.11.0) (2026-08-28)
 
 
