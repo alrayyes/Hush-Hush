@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/alrayyes/hush-hush/compare/v0.13.0...v0.14.0) (2026-08-30)
+
+
+### Features
+
+* **audit-log:** record the request's source IP ([#95](https://github.com/alrayyes/hush-hush/issues/95)) ([ba7affe](https://github.com/alrayyes/hush-hush/commit/ba7affefb666f554a05beabc05a36cf56a2b976d)), closes [#73](https://github.com/alrayyes/hush-hush/issues/73)
+* **auth:** scoped write tokens with description and TTL ([#97](https://github.com/alrayyes/hush-hush/issues/97)) ([9aeae88](https://github.com/alrayyes/hush-hush/commit/9aeae8867c79f1a40cef8ea83db0bb285bcc681c)), closes [#72](https://github.com/alrayyes/hush-hush/issues/72)
+
 ## [0.13.0](https://github.com/alrayyes/hush-hush/compare/v0.12.1...v0.13.0) (2026-08-30)
 
 
