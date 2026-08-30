@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/alrayyes/hush-hush/compare/v0.12.0...v0.12.1) (2026-08-30)
+
+
+### Performance Improvements
+
+* **release:** copy a precompiled binary instead of building in Docker ([#90](https://github.com/alrayyes/hush-hush/issues/90)) ([87b4a71](https://github.com/alrayyes/hush-hush/commit/87b4a71ff5f5da2c67dff339d45f287f63e9c8ac))
+
 ## [0.12.0](https://github.com/alrayyes/hush-hush/compare/v0.11.0...v0.12.0) (2026-08-30)
 
 
