@@ -49,7 +49,7 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 		err := s.CreateObject(r.Context(), req.ID, req.Value, req.UsedBy)
 		switch {
 		case err == nil:
-			if err := s.RecordAuditLog(r.Context(), req.ID, store.AuditActionCreate, callerFrom(r)); err != nil {
+			if err := s.RecordAuditLog(r.Context(), req.ID, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r)); err != nil {
 				writeInternalError(w, r, err)
 
 				return

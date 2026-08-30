@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     object_id TEXT NOT NULL,
     action TEXT NOT NULL,
     caller TEXT,
+    ip TEXT NOT NULL DEFAULT '',
     timestamp TEXT NOT NULL
 );
 

@@ -26,7 +26,7 @@ func handleDeleteObject(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionDelete, callerFrom(r)); err != nil {
+		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionDelete, callerFrom(r), sourceIPFrom(r)); err != nil {
 			writeInternalError(w, r, err)
 
 			return

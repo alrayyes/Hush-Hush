@@ -23,13 +23,14 @@ const (
 
 // RecordAuditLog appends an entry to the audit log. caller may be empty,
 // recorded as NULL rather than an empty string, matching the spec's "the
-// caller's presented identity, if any."
+// caller's presented identity, if any." ip is the request's source
+// address - unlike caller, always present for a real request.
 //
 // There is deliberately no update or delete method alongside this one -
 // the audit-log spec requires entries be immutable once recorded, and the
 // simplest way to guarantee that is to never write the code that would
 // violate it.
-func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action AuditAction, caller string) error {
+func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action AuditAction, caller, ip string) error {
 	var callerValue sql.NullString
 	if caller != "" {
 		callerValue = sql.NullString{String: caller, Valid: true}
@@ -38,8 +39,8 @@ func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action Audi
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO audit_log (object_id, action, caller, timestamp) VALUES (?, ?, ?, ?)`,
-		objectID, string(action), callerValue, now,
+		`INSERT INTO audit_log (object_id, action, caller, ip, timestamp) VALUES (?, ?, ?, ?, ?)`,
+		objectID, string(action), callerValue, ip, now,
 	); err != nil {
 		return fmt.Errorf("record audit log: %w", err)
 	}
@@ -54,6 +55,7 @@ type AuditLogEntry struct {
 	Action    AuditAction
 	Timestamp string
 	Caller    string
+	IP        string
 }
 
 // AuditLogFilter narrows a QueryAuditLog call. A zero-value field means
@@ -93,7 +95,7 @@ func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]Aud
 		args = append(args, filter.To.UTC().Format(time.RFC3339))
 	}
 
-	query := `SELECT object_id, action, caller, timestamp FROM audit_log`
+	query := `SELECT object_id, action, caller, ip, timestamp FROM audit_log`
 	if len(clauses) > 0 {
 		// clauses are fixed strings from this function alone ("object_id
 		// = ?" and the like) - every actual value travels through args
@@ -117,7 +119,7 @@ func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]Aud
 			caller sql.NullString
 		)
 
-		if err := rows.Scan(&e.ObjectID, &action, &caller, &e.Timestamp); err != nil {
+		if err := rows.Scan(&e.ObjectID, &action, &caller, &e.IP, &e.Timestamp); err != nil {
 			return nil, fmt.Errorf("scan audit log entry: %w", err)
 		}
 

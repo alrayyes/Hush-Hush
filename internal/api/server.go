@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 
@@ -47,6 +48,24 @@ func requireBearerToken(token string, next http.HandlerFunc) http.HandlerFunc {
 // api/openapi.yaml's `caller` parameter.
 func callerFrom(r *http.Request) string {
 	return r.Header.Get("X-Caller")
+}
+
+// sourceIPFrom returns the immediate TCP peer's address, with any port
+// stripped - r.RemoteAddr, unlike X-Caller, is never self-reported.
+//
+// This service isn't deployed behind a reverse proxy or load balancer, so
+// there's no X-Forwarded-For (or similar) support here yet: trusting that
+// header without knowing which upstream hop to trust it from would let any
+// caller spoof its own recorded IP, trading one spoofable value for
+// another. Add it once a real deployment needs it, scoped to the actual
+// proxy in front of it.
+func sourceIPFrom(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+
+	return host
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
