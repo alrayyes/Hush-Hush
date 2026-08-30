@@ -4,12 +4,14 @@ go 1.26.0
 
 require (
 	filippo.io/age v1.3.1
+	github.com/adrg/xdg v0.5.3
 	github.com/alrayyes/hush-hush-go v1.0.0
 	github.com/pact-foundation/pact-go/v2 v2.7.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.44.0
+	golang.org/x/term v0.45.0
 	modernc.org/sqlite v1.57.0
 )
 

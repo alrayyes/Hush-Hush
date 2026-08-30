@@ -35,6 +35,7 @@ func TestGetRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
 	t.Setenv("HUSH_HUSH_IDENTITY", identity.String())
 
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	viper.Reset()
 
 	var out bytes.Buffer

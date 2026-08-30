@@ -39,6 +39,7 @@ func TestUpdateRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	t.Setenv("HUSH_HUSH_TOKEN", token)
 	t.Setenv("HUSH_HUSH_RECIPIENTS", identity.Recipient().String())
 
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	viper.Reset()
 
 	root := newRootCmd()
