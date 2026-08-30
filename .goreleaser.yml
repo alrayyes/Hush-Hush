@@ -69,29 +69,24 @@ archives:
 checksum:
   name_template: checksums.txt
 
-# Two per-arch images, joined into one multi-arch manifest below - both
-# built from the same Dockerfile hadolint already lints, not a second copy
-# that could drift. arm64 runs under QEMU emulation (release.yml sets that
-# up), since the release runner itself is amd64.
+# Two per-arch images, joined into one multi-arch manifest below - built
+# from Dockerfile.release, which only COPYs the binary this same
+# goreleaser run already cross-compiled (go-releases.md's "the
+# Dockerfile's job is to COPY, not to build" - a Dockerfile that ran `go
+# build` here would pay for it under arm64's QEMU emulation, 5-20x slower
+# than the cross-compile above already was). Dockerfile (source build) is
+# what a contributor's local `docker build .` still uses - the two
+# intentionally diverge past this point.
 dockers:
   - image_templates:
       - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-amd64"
     use: buildx
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.release
     # Disambiguates against hush-hush-cli, which now also builds
     # linux/amd64 and linux/arm64 - without this, goreleaser has two
     # matching builds to pick from for the same platform.
     ids: [hush-hush]
     goarch: amd64
-    # The Dockerfile builds from source rather than copying goreleaser's
-    # own compiled binary in, so its build context needs the actual
-    # source tree - not just the binary goreleaser would otherwise hand
-    # it alone.
-    extra_files:
-      - go.mod
-      - go.sum
-      - cmd
-      - internal
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.source={{ .GitURL }}"
@@ -99,14 +94,9 @@ dockers:
   - image_templates:
       - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-arm64"
     use: buildx
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.release
     ids: [hush-hush]
     goarch: arm64
-    extra_files:
-      - go.mod
-      - go.sum
-      - cmd
-      - internal
     build_flag_templates:
       - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.source={{ .GitURL }}"

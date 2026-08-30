@@ -142,8 +142,7 @@ the default `hush-hush.db` has nowhere to write on a read-only file
 system.
 
 The [Dockerfile](Dockerfile) builds a static binary into the same
-distroless, non-root image - build it yourself the same way goreleaser
-does:
+distroless, non-root image the published one runs - build it yourself:
 
 ```sh
 docker build -t hush-hush .

@@ -46,8 +46,9 @@ jobs:
           go-version-file: go.mod
 
       # arm64 has no native runner here, so its image builds under QEMU
-      # emulation instead - slower than a native build, acceptable for a
-      # release that happens on merge to main, not on every push.
+      # emulation - cheap now that Dockerfile.release only COPYs a binary
+      # goreleaser already cross-compiled natively (go-releases.md),
+      # rather than running `go build` itself under emulation.
       - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
 
       - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
