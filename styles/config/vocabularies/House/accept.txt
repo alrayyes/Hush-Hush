@@ -22,7 +22,7 @@ rulesets
 runbook
 unexported
 unmergeable
-Dockerfile
+Dockerfiles?
 distroless
 healthcheck
 misconfiguration

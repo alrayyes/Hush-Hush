@@ -69,14 +69,20 @@ pre-commit:
 
     # Pinned by digest rather than `latest`, like any other container image —
     # dependencies.md's rule applies to an image named in a hook command just
-    # as much as one named in the Dockerfile itself.
+    # as much as one named in the Dockerfile itself. Both Dockerfiles get
+    # hadolint (containers.md: "every Dockerfile, no exceptions") - passed
+    # as file arguments rather than stdin so one invocation covers both.
     - name: hadolint
-      glob: "Dockerfile"
+      glob:
+        - "Dockerfile"
+        - "Dockerfile.release"
       run: >-
-        docker run --rm -i
+        docker run --rm
         -v "$(pwd)/.hadolint.yaml:/.hadolint.yaml"
+        -v "$(pwd)/Dockerfile:/Dockerfile"
+        -v "$(pwd)/Dockerfile.release:/Dockerfile.release"
         hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
-        < Dockerfile
+        hadolint Dockerfile Dockerfile.release
 
 commit-msg:
   jobs:

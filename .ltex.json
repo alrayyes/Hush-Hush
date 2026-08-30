@@ -18,6 +18,7 @@
       "commitlint",
       "devDependencies",
       "distroless",
+      "Dockerfiles",
       "goreleaser",
       "golangci",
       "golangci-lint",

@@ -116,6 +116,24 @@ packaged distroless artifact someone actually pulls and runs. Behind the
 go test -tags=integration ./integration/... -v
 ```
 
+## Docker images
+
+Two Dockerfiles, deliberately not one:
+
+- **`Dockerfile`** compiles from source - what `docker build .`, the
+  preceding container integration test, and `docker compose up --build`
+  all use. hadolint lints it same as any other.
+- **`Dockerfile.release`** only `COPY`s an already-cross-compiled binary -
+  goreleaser's own `dockers:` block uses it exclusively, never built by
+  hand. It exists because a Dockerfile that ran `go build` for a
+  multi-arch image pays for it on every non-native architecture: that
+  `RUN` step runs under QEMU emulation, 5-20x slower than the native
+  cross-compile goreleaser's `builds:` step already did. Real tradeoff,
+  not a free win: the released image no longer reproduces byte-for-byte
+  from a bare `docker build .` the way building from source in one
+  Dockerfile would - worth it for the speed on a repo shipping multi-arch
+  images on every release. hadolint lints this one too.
+
 ## Commit messages
 
 [Conventional Commits](https://www.conventionalcommits.org/):

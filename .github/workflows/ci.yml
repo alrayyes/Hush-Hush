@@ -140,7 +140,7 @@ jobs:
       # doesn't need the safe.directory fix (or git installed at all).
       - run: apk add --no-cache nodejs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: hadolint Dockerfile
+      - run: hadolint Dockerfile Dockerfile.release
 
   # No container: block, deliberately - testcontainers-go needs a real
   # Docker daemon to build and run against, which the bare runner already
