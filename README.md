@@ -7,53 +7,119 @@
 
 A lightweight, standalone secrets object store: a writer only ever needs the
 service's public key to add or rotate a value, and a consumer only ever
-needs an object key to fetch it. Public-key encryption (age) end to end -
-the server stores and serves sealed ciphertext and never computes or
-returns plaintext.
+needs an object id to fetch it. Public-key encryption
+([age](https://github.com/FiloSottile/age)) end to end - the server stores
+and serves sealed ciphertext and never computes or returns plaintext.
 
-**This repo is still being built.** The full design - encryption model,
-read-path and write-path auth, storage backend, and the reasoning behind
-each - is in
+The full design - encryption model, read-path and write-path auth, storage
+backend, and the reasoning behind each - is in
 [`openspec/changes/secrets-object-store/design.md`](openspec/changes/secrets-object-store/design.md).
-The API this README describes below is still the bootstrap scaffold's
-placeholder example, not the real secret-object endpoints yet.
 
 ## Requirements
 
-- **Go 1.25 or newer.**
-- **[bun](https://bun.sh)**, for the tooling that isn't Go — commitlint,
-  Prettier, markdownlint, [Redocly](https://redocly.com/docs/cli), and the
-  [lefthook](https://lefthook.dev) that runs the git hooks. There's a
-  `package.json`, but nothing here is JavaScript; it exists only so those
-  tools resolve and stay pinned.
-- **[golangci-lint](https://golangci-lint.run)**, pinned in
-  [CONTRIBUTING.md](CONTRIBUTING.md#getting-set-up).
-- No external services. Storage is a local SQLite database once the real
-  implementation lands.
+- **Go 1.26 or newer** to build from source, or **Docker** to run the
+  published image instead - see [Docker](#docker) below.
+- **[age](https://github.com/FiloSottile/age)**, to generate the keypairs a
+  writer and a consumer each need. Not a dependency of hush-hush itself -
+  the server and CLI only ever handle already-sealed ciphertext, never a
+  private key or plaintext value.
+- No external services. Storage is a local SQLite database.
 
 ## Installation
 
 ```sh
 git clone https://github.com/alrayyes/hush-hush.git
 cd hush-hush
-go build ./cmd/hush-hush
+go build ./cmd/hush-hush        # the server
+go build ./cmd/hush-hush-cli    # the client every writer and consumer uses
 ```
 
 ## Usage
 
+### Start the server
+
 ```sh
-./hush-hush
+WRITER_TOKEN=change-me ./hush-hush
 ```
 
-Listens on `:8080` by default; set `ADDR` to change it.
+Listens on `:8080` by default. `WRITER_TOKEN` is the only required
+setting - it's the single bearer token every create, update, and delete
+call needs; v1 has no per-consumer scoping. See
+[Configuration](#configuration) below for the rest of the server's
+environment variables.
 
 ```sh
 curl localhost:8080/healthz
-curl localhost:8080/widgets/hammer
 ```
 
-`api/openapi.yaml` is the contract both endpoints are held to — read it
-first if you're replacing the example resource with a real one.
+### Use the CLI
+
+A consumer needs an age keypair to receive a secret -
+[`age-keygen`](https://github.com/FiloSottile/age) generates one:
+
+```sh
+age-keygen -o consumer.key
+# Public key: age1...
+```
+
+Inject a secret, sealed to one or more recipients:
+
+```sh
+export HUSH_HUSH_SERVER=http://localhost:8080
+export HUSH_HUSH_TOKEN=change-me
+
+echo -n "hunter2" | hush-hush-cli inject mattermost_deploy_webhook \
+  --recipients age1... --used-by homelab/vps-docker
+```
+
+Fetch and decrypt it - only whoever holds a matching private key can.
+`--identity` takes the bare key, so pull it out of `age-keygen`'s comment
+header first:
+
+```sh
+hush-hush-cli get mattermost_deploy_webhook --identity "$(tail -1 consumer.key)"
+```
+
+Rotate the value, then remove the object once nothing needs it any more:
+
+```sh
+echo -n "new-value" | hush-hush-cli update mattermost_deploy_webhook \
+  --recipients age1...
+hush-hush-cli delete mattermost_deploy_webhook
+```
+
+`inject` and `update` both read the new plaintext from stdin rather than a
+flag or argument, so it never ends up in shell history or a process
+listing.
+
+[`api/openapi.yaml`](api/openapi.yaml) is the full contract, including the
+audit-log query endpoint the CLI doesn't wrap - query it directly:
+
+```sh
+curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
+```
+
+### Configuration
+
+The server reads environment variables only:
+
+| Variable       | Default        | Meaning                                |
+| -------------- | -------------- | -------------------------------------- |
+| `ADDR`         | `:8080`        | Listen address.                        |
+| `DB_PATH`      | `hush-hush.db` | SQLite database file.                  |
+| `WRITER_TOKEN` | _(required)_   | Bearer token for create/update/delete. |
+
+The CLI takes each setting as a flag or the matching environment variable -
+a flag always wins:
+
+| Flag           | Environment variable   | Meaning                                                                 |
+| -------------- | ---------------------- | ----------------------------------------------------------------------- |
+| `--server`     | `HUSH_HUSH_SERVER`     | Server base URL. Default `http://localhost:8080`.                       |
+| `--token`      | `HUSH_HUSH_TOKEN`      | Bearer token, for `inject`/`update`/`delete`.                           |
+| `--caller`     | `HUSH_HUSH_CALLER`     | Self-presented identity recorded in the audit log. Optional.            |
+| `--recipients` | `HUSH_HUSH_RECIPIENTS` | Comma-separated age recipients, for `inject`/`update`.                  |
+| `--identity`   | `HUSH_HUSH_IDENTITY`   | Comma-separated age private keys, for `get`.                            |
+| `--used-by`    | -                      | Consumers of the secret (repeatable or comma-separated), `inject` only. |
 
 ### Docker
 

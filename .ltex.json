@@ -24,6 +24,7 @@
       "hadolint",
       "healthcheck",
       "keypair",
+      "keypairs",
       "lefthook",
       "ltex-cli-plus",
       "ltex-ls-plus",
