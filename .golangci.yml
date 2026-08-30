@@ -21,6 +21,7 @@ linters:
     - revive
     - sqlclosecheck
     - testifylint
+    - thelper
     - unconvert
     - unparam
     - usestdlibvars
@@ -50,3 +51,12 @@ formatters:
     - gci
     - gofumpt
     - goimports
+
+# A table-driven test written to go-test.md's own advice is legitimately
+# repetitive in a way dupl can't tell apart from a real copy-paste mistake -
+# without this it's noise against this repo's own conventions, not signal.
+exclusions:
+  rules:
+    - path: _test\.go
+      linters:
+        - dupl
