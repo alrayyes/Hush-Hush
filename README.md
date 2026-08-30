@@ -101,6 +101,8 @@ docker compose up --build  # or builds the local Dockerfile instead
 - [hush-hush-go](https://github.com/alrayyes/hush-hush-go) - a typed Go
   client generated from [`api/openapi.yaml`](api/openapi.yaml), for
   programs that want the full API surface without hand-rolling HTTP calls.
+- [hush-hush-node](https://github.com/alrayyes/hush-hush-node) - the same,
+  generated for Node.js/TypeScript.
 
 ## Contributing
 
