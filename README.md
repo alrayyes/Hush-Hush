@@ -1,6 +1,7 @@
 # hush-hush
 
 [![CI](https://github.com/alrayyes/hush-hush/actions/workflows/ci.yml/badge.svg)](https://github.com/alrayyes/hush-hush/actions)
+[![Codecov](https://codecov.io/gh/alrayyes/hush-hush/graph/badge.svg)](https://codecov.io/gh/alrayyes/hush-hush)
 [![release](https://img.shields.io/github/v/release/alrayyes/hush-hush?sort=semver)](https://github.com/alrayyes/hush-hush/releases)
 [![Go Reference](https://pkg.go.dev/badge/github.com/alrayyes/hush-hush.svg)](https://pkg.go.dev/github.com/alrayyes/hush-hush)
 [![licence](https://img.shields.io/badge/licence-GPL--3.0-blue)](LICENSE)
