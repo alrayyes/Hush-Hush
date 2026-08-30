@@ -62,6 +62,13 @@ jobs:
           go tool cover -func=coverage.out | tail -1 |
             awk '{ print "**Coverage: " $3 "**" }' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage to Codecov
+        # GitHub withholds repository Actions secrets from a Dependabot
+        # pull_request run - CODECOV_TOKEN included - so this step would
+        # otherwise fail every Dependabot PR with "token required because
+        # branch is protected", regardless of what the PR actually
+        # changes. go test above still ran and still gates the PR; only
+        # the coverage report, which needs the missing token, is skipped.
+        if: github.actor != 'dependabot[bot]'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
