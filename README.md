@@ -171,6 +171,8 @@ docker compose up --build  # or builds the local Dockerfile instead
   same, generated for Python.
 - [hush-hush-node](https://github.com/alrayyes/hush-hush-node) - the same,
   generated for Node.js/TypeScript.
+- [hush-hush-php](https://github.com/alrayyes/hush-hush-php) - the same,
+  generated for PHP.
 
 ## Contributing
 

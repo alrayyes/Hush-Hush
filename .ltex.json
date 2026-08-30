@@ -38,6 +38,7 @@
       "rulesets",
       "semver",
       "hush-hush",
+      "hush-hush-php",
       "testcontainers-go",
       "testify",
       "toolchain",
