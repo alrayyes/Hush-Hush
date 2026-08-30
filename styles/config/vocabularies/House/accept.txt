@@ -42,11 +42,12 @@ JSON
 plaintext
 ciphertext
 queryable
-keypair
+keypairs?
 cgo
 bbolt
 Postgres
 stdout
+stdin
 used_by
 semver
 rollout
@@ -59,4 +60,6 @@ CLI's
 testcontainers-go
 SDKs?
 hush-hush-go
+hush-hush-python
 hush-hush-node
+hush-hush-php
