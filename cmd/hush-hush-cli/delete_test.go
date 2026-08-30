@@ -30,6 +30,7 @@ func TestDeleteRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
 	t.Setenv("HUSH_HUSH_TOKEN", token)
 
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	viper.Reset()
 
 	root := newRootCmd()

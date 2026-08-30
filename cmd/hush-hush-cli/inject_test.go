@@ -39,6 +39,7 @@ func TestInjectRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	// otherwise carries flag bindings and values across tests in this
 	// package, which is exactly what a "no CI-specific code path" test
 	// must not rely on to pass.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	viper.Reset()
 
 	root := newRootCmd()

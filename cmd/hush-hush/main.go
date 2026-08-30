@@ -16,9 +16,11 @@ import (
 	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
+	"github.com/alrayyes/hush-hush/internal/cliconfig"
 	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 // version is stamped in at build time by goreleaser, from the tag. "dev" is
@@ -26,19 +28,45 @@ import (
 // built off an unknown tree.
 var version = "dev"
 
+// configEnvVars are every environment variable loadConfig binds - used
+// only to decide whether the tool is already configured through the
+// environment, not to read a value.
+var configEnvVars = []string{"ADDR", "DB_PATH"}
+
+// errConfigAlreadyExists is a sentinel rather than a plain fmt.Errorf: a
+// fixed condition (a file is already there), not a message built from
+// per-call detail - the path itself is per-call detail, so it's wrapped
+// in rather than folded into the message.
+var errConfigAlreadyExists = errors.New("config file already exists (use --force to overwrite)")
+
 // config is this binary's runtime configuration, shared by serving and the
-// token subcommands (both need db_path; only serving needs addr). There's
-// no config file or CLI flag surface yet - it's all environment variables
-// - but going through viper keeps loading in one place if that changes.
+// token subcommands (both need db_path; only serving needs addr).
+// rules/cli.md's flags > environment > config file > defaults - there are
+// no flags yet, so this is env over the file at configFilePath().
 type config struct {
 	Addr   string `mapstructure:"addr"`
 	DBPath string `mapstructure:"db_path"`
+}
+
+func configFilePath() (string, error) {
+	path, err := cliconfig.Path("hush-hush")
+	if err != nil {
+		return "", fmt.Errorf("resolve hush-hush config path: %w", err)
+	}
+
+	return path, nil
 }
 
 func loadConfig() (config, error) {
 	v := viper.New()
 	v.SetDefault("addr", ":8080")
 	v.SetDefault("db_path", "hush-hush.db")
+
+	if path, err := configFilePath(); err == nil {
+		v.SetConfigFile(path)
+		v.SetConfigType("yaml")
+		_ = v.ReadInConfig() // no config file yet is not an error
+	}
 
 	for key, env := range map[string]string{
 		"addr":    "ADDR",
@@ -85,14 +113,135 @@ func newRootCmd() *cobra.Command {
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if cmd.Name() == "init" {
+				return nil
+			}
+
+			return maybeOfferInit(cmd)
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return serve()
 		},
 	}
 
+	root.PersistentFlags().BoolP("yes", "y", false, "write a starter config with no prompt, if none exists")
+
+	root.AddCommand(newInitCmd())
 	root.AddCommand(newTokenCmd())
 
 	return root
+}
+
+// newInitCmd writes a starter config file populated with the same
+// defaults the tool would otherwise fall back to, ready to edit
+// (rules/cli.md).
+func newInitCmd() *cobra.Command {
+	var force bool
+
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Write a starter config file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			path, err := configFilePath()
+			if err != nil {
+				return err
+			}
+
+			if cliconfig.Exists(path) && !force {
+				return fmt.Errorf("%s: %w", path, errConfigAlreadyExists)
+			}
+
+			return writeStarterConfig(cmd, path)
+		},
+	}
+
+	cmd.Flags().BoolVar(&force, "force", false, "overwrite an existing config file")
+
+	return cmd
+}
+
+const starterConfig = `# hush-hush server config file. Environment variables override these -
+# see README.md#configuration.
+addr: ":8080"
+db_path: "hush-hush.db"
+`
+
+func writeStarterConfig(cmd *cobra.Command, path string) error {
+	if err := os.WriteFile(path, []byte(starterConfig), 0o600); err != nil {
+		return fmt.Errorf("write config file: %w", err)
+	}
+
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "wrote %s\n", path); err != nil {
+		return fmt.Errorf("write init confirmation: %w", err)
+	}
+
+	return nil
+}
+
+// maybeOfferInit is rules/cli.md's "a run with no config file and no
+// relevant environment variable set offers to run init right there":
+// skipped entirely once a config file exists or the environment already
+// configures the tool, and never blocks a non-interactive run (no TTY)
+// on a prompt nothing will ever answer.
+//
+// anyEnvSet is checked before ever resolving a path: ShouldWriteStarter
+// always skips once it's true, and resolving one has a real side effect
+// (creating the parent directory) that can fail on its own - a read-only
+// container filesystem, deliberately how the published image runs, is
+// exactly the case that already sets DB_PATH and must never be blocked
+// by a nudge it was never going to act on anyway.
+func maybeOfferInit(cmd *cobra.Command) error {
+	anyEnvSet := anyConfigEnvVarSet()
+	if anyEnvSet {
+		return nil
+	}
+
+	path, err := configFilePath()
+	if err != nil {
+		// Advisory only: a run this environment doesn't already
+		// configure still has to work even where the config path
+		// itself can't be resolved or created.
+		return nil //nolint:nilerr // advisory only, error already explained above
+	}
+
+	exists := cliconfig.Exists(path)
+	yes, _ := cmd.Flags().GetBool("yes")
+	interactive := term.IsTerminal(int(os.Stdin.Fd()))
+
+	confirmed := false
+	if !yes && interactive && !exists && !anyEnvSet {
+		confirmed = cliconfig.Confirm(cmd.InOrStdin(), cmd.OutOrStdout(),
+			"No config file found. Write a starter one at "+path+" now?")
+	}
+
+	if !cliconfig.ShouldWriteStarter(exists, anyEnvSet, yes, interactive, confirmed) {
+		if !exists && !anyEnvSet && !interactive {
+			if _, err := fmt.Fprintf(cmd.ErrOrStderr(),
+				"no config file and no ADDR/DB_PATH environment variables set - running on defaults (`hush-hush init` writes a starter config)\n",
+			); err != nil {
+				return fmt.Errorf("write config nudge: %w", err)
+			}
+		}
+
+		return nil
+	}
+
+	if err := writeStarterConfig(cmd, path); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func anyConfigEnvVarSet() bool {
+	for _, name := range configEnvVars {
+		if _, ok := os.LookupEnv(name); ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func serve() error {
