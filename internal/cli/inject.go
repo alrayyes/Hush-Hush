@@ -16,7 +16,12 @@ func Inject(ctx context.Context, cfg Config, id string, value []byte, recipients
 		return fmt.Errorf("seal value: %w", err)
 	}
 
-	if _, err := cfg.newClient().Create(ctx, id, sealed, usedBy); err != nil {
+	cl, err := cfg.newClient()
+	if err != nil {
+		return err
+	}
+
+	if _, err := cl.Create(ctx, id, sealed, usedBy); err != nil {
 		return fmt.Errorf("create object: %w", err)
 	}
 
