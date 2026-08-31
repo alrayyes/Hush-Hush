@@ -58,7 +58,9 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			if cmd.Name() == "init" {
+			// man generates pages by walking the command tree, not by
+			// connecting to a server - the same reason init is exempt.
+			if cmd.Name() == "init" || cmd.Name() == "man" {
 				return nil
 			}
 
@@ -89,6 +91,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newGetCmd())
 	root.AddCommand(newUpdateCmd())
 	root.AddCommand(newDeleteCmd())
+	root.AddCommand(newManCmd(root))
 
 	return root
 }
