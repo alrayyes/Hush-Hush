@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.0](https://github.com/alrayyes/hush-hush/compare/v0.16.0...v0.17.0) (2026-08-31)
+
+
+### Features
+
+* add a Nix flake for hush-hush-cli ([#114](https://github.com/alrayyes/hush-hush/issues/114)) ([90168f0](https://github.com/alrayyes/hush-hush/commit/90168f012c8268beefad6d7667e2203137c4c1ef))
+
+
+### Bug Fixes
+
+* **packaging:** use a spam-resistant maintainer email and fix checksums ([#111](https://github.com/alrayyes/hush-hush/issues/111)) ([1c208d8](https://github.com/alrayyes/hush-hush/commit/1c208d82e3e48800e48cb5938255972ac95b428c))
+
 ## [0.16.0](https://github.com/alrayyes/hush-hush/compare/v0.15.0...v0.16.0) (2026-08-31)
 
 
