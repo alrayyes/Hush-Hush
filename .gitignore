@@ -3,6 +3,7 @@
 
 /hush-hush
 /dist
+/manpages
 coverage.out
 
 node_modules/

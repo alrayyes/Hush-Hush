@@ -139,6 +139,47 @@ jobs:
           version: v2.17.1
           args: check
 
+  # `goreleaser check` above only validates the config; this actually
+  # builds the nfpm packages via a --snapshot release (no publish, no real
+  # tag needed) and installs each into the distro it targets, so a broken
+  # .deb/.rpm - a bad contents: path, a missing man page - fails here
+  # instead of on the first real release. docker/announce/publish need
+  # real credentials or a real tag, neither of which a snapshot has -
+  # skipping them is what makes this safe to run on every push and pull
+  # request.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.17.1
+          args: release --snapshot --clean --skip=docker,announce,publish
+
+      - name: install and smoke-test the .deb
+        run: |
+          sudo dpkg -i dist/hush-hush-cli_*_linux_amd64.deb
+          hush-hush-cli --version
+          test -s /usr/share/man/man1/hush-hush-cli.1
+
+      # No native rpm tooling on ubuntu-latest - a Fedora container is the
+      # least-friction way to actually install and run the package, not
+      # just inspect its file list.
+      - name: install and smoke-test the .rpm
+        run: |
+          docker run --rm -v "$PWD/dist:/dist" \
+            fedora@sha256:f1a3fab47bcb3c3ddf3135d5ee7ba8b7b25f2e809a47440936212a3a50957f3d \
+            sh -c '
+              rpm -i /dist/hush-hush-cli_*_linux_amd64.rpm &&
+              hush-hush-cli --version &&
+              test -s /usr/share/man/man1/hush-hush-cli.1
+            '
+
   # hadolint runs as the job's own container rather than via `docker run`
   # from inside another one — no Docker-outside-of-Docker needed at all.
   # Must be the `-alpine` tag specifically: the default hadolint image is
