@@ -101,7 +101,7 @@ nfpms:
     ids: [hush-hush-cli]
     package_name: hush-hush-cli
     formats: [deb, rpm]
-    maintainer: Ryan Kes <ryan@ryankes.eu>
+    maintainer: Ryan Kes <alias+packages@ryankes.eu>
     description: Client for the hush-hush secrets object store
     homepage: https://github.com/alrayyes/hush-hush
     license: GPL-3.0
