@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/alrayyes/hush-hush/compare/v0.15.0...v0.16.0) (2026-08-31)
+
+
+### Features
+
+* package hush-hush-cli for deb/rpm/AUR, with man pages ([#109](https://github.com/alrayyes/hush-hush/issues/109)) ([d1531e8](https://github.com/alrayyes/hush-hush/commit/d1531e8c16ca40b85d3fb79a77b711df1b0f8552))
+
 ## [0.15.0](https://github.com/alrayyes/hush-hush/compare/v0.14.0...v0.15.0) (2026-08-30)
 
 
