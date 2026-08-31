@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.0](https://github.com/alrayyes/hush-hush/compare/v0.14.0...v0.15.0) (2026-08-30)
+
+
+### Features
+
+* **cli:** add a config file to both binaries ([#106](https://github.com/alrayyes/hush-hush/issues/106)) ([e7e8f33](https://github.com/alrayyes/hush-hush/commit/e7e8f333d30da12a64ec06cb97e77facafaa27b3))
+
+
+### Bug Fixes
+
+* bump busybox from 1.37.0 to 1.38.0 ([#100](https://github.com/alrayyes/hush-hush/issues/100)) ([58d14fb](https://github.com/alrayyes/hush-hush/commit/58d14fb8d5b1ceda852708f7a70bb09668234441))
+* **ci:** skip Codecov upload on Dependabot PRs ([#104](https://github.com/alrayyes/hush-hush/issues/104)) ([e3a212a](https://github.com/alrayyes/hush-hush/commit/e3a212a5356433bbf20a9498d3e6b67e668b48fd))
+
 ## [0.14.0](https://github.com/alrayyes/hush-hush/compare/v0.13.0...v0.14.0) (2026-08-30)
 
 
