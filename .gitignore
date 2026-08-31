@@ -6,6 +6,9 @@
 /manpages
 coverage.out
 
+# `nix build`'s own output symlink.
+/result
+
 node_modules/
 .bun-cache/
 
