@@ -63,7 +63,7 @@ func TestPactProviderVerification(t *testing.T) {
 			// keeps each interaction's precondition true regardless of
 			// what a prior interaction in the same run did to it.
 			"an object exists": func(_ bool, _ models.ProviderState) (models.ProviderStateResponse, error) {
-				err := s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("sealed-ciphertext"), []string{"homelab/vps-docker"})
+				err := s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("sealed-ciphertext"), []string{"homelab/vps-docker"}, "")
 				if err != nil && !errors.Is(err, store.ErrAlreadyExists) {
 					return nil, fmt.Errorf("seed test object: %w", err)
 				}

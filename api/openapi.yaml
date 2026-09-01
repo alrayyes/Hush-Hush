@@ -139,8 +139,8 @@ paths:
       summary: Rotate an object's value
       description: |
         Replaces the stored ciphertext for an existing object. The
-        object's id and used_by metadata are preserved unchanged - this
-        endpoint only ever touches the value.
+        object's id, used_by, and description metadata are preserved
+        unchanged - this endpoint only ever touches the value.
       tags: [objects]
       security:
         - bearerAuth: []
@@ -332,6 +332,8 @@ components:
           description: The sealed (encrypted) value, base64-encoded.
         used_by:
           $ref: "#/components/schemas/UsedByList"
+        description:
+          $ref: "#/components/schemas/ObjectDescription"
 
     UpdateObjectRequest:
       type: object
@@ -350,6 +352,16 @@ components:
           $ref: "#/components/schemas/ObjectId"
         used_by:
           $ref: "#/components/schemas/UsedByList"
+        description:
+          $ref: "#/components/schemas/ObjectDescription"
+
+    ObjectDescription:
+      type: string
+      description: |
+        A free-text label set at creation, for a reader who only knows the
+        id. Fixed at creation - the same as used_by, it is unaffected by a
+        later value update.
+      examples: ["prod deploy webhook for homelab/vps-docker"]
 
     UsedByList:
       type: array

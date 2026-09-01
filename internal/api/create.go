@@ -13,16 +13,18 @@ import (
 // []byte rather than string because encoding/json already encodes a []byte
 // field as base64 on the wire, which is exactly the spec's format: byte.
 type CreateObjectRequest struct {
-	ID     string   `json:"id"`
-	Value  []byte   `json:"value"`
-	UsedBy []string `json:"used_by,omitempty"`
+	ID          string   `json:"id"`
+	Value       []byte   `json:"value"`
+	UsedBy      []string `json:"used_by,omitempty"`
+	Description string   `json:"description,omitempty"`
 }
 
 // ObjectMetadata is what a successful create or update returns. Matches
 // components.schemas.ObjectMetadata in api/openapi.yaml.
 type ObjectMetadata struct {
-	ID     string   `json:"id"`
-	UsedBy []string `json:"used_by,omitempty"`
+	ID          string   `json:"id"`
+	UsedBy      []string `json:"used_by,omitempty"`
+	Description string   `json:"description,omitempty"`
 }
 
 // Error is the body every documented error response carries. Matches
@@ -46,7 +48,7 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		err := s.CreateObject(r.Context(), req.ID, req.Value, req.UsedBy)
+		err := s.CreateObject(r.Context(), req.ID, req.Value, req.UsedBy, req.Description)
 		switch {
 		case err == nil:
 			if err := s.RecordAuditLog(r.Context(), req.ID, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r)); err != nil {
@@ -55,7 +57,7 @@ func handleCreateObject(s *store.Store) http.HandlerFunc {
 				return
 			}
 
-			writeJSON(w, http.StatusCreated, ObjectMetadata{ID: req.ID, UsedBy: req.UsedBy})
+			writeJSON(w, http.StatusCreated, ObjectMetadata{ID: req.ID, UsedBy: req.UsedBy, Description: req.Description})
 		case errors.Is(err, store.ErrAlreadyExists):
 			writeError(w, r, http.StatusConflict, "object already exists")
 		default:

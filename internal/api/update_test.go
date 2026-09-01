@@ -32,7 +32,7 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 
 	mux, s := newTestMux(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), issueToken(t, s)))
@@ -50,6 +50,23 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 	require.Equal(t, []string{"homelab/vps-docker"}, obj.UsedBy)
 }
 
+func TestUpdateObjectPreservesDescription(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "prod deploy webhook"))
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), issueToken(t, s)))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var meta hushhush.ObjectMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
+	require.Equal(t, "prod deploy webhook", meta.Description)
+}
+
 func TestUpdateObjectUnknownIDReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
@@ -65,7 +82,7 @@ func TestUpdateObjectWithoutBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, updateRequest(t, "x", []byte("new"), ""))
@@ -77,7 +94,7 @@ func TestUpdateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, updateRequest(t, "x", []byte("new"), "wrong-token"))

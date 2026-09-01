@@ -14,9 +14,10 @@ type UpdateObjectRequest struct {
 	Value []byte `json:"value"`
 }
 
-// handleUpdateObject replaces an object's sealed value, leaving its id and
-// used_by metadata unchanged - the response carries the same shape create
-// does, since both hand back the object's current metadata.
+// handleUpdateObject replaces an object's sealed value, leaving its id,
+// used_by, and description metadata unchanged - the response carries the
+// same shape create does, since both hand back the object's current
+// metadata.
 func handleUpdateObject(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req UpdateObjectRequest
@@ -60,6 +61,6 @@ func handleUpdateObject(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, ObjectMetadata{ID: obj.ID, UsedBy: obj.UsedBy})
+		writeJSON(w, http.StatusOK, ObjectMetadata{ID: obj.ID, UsedBy: obj.UsedBy, Description: obj.Description})
 	}
 }

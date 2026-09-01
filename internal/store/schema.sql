@@ -9,6 +9,7 @@
 CREATE TABLE IF NOT EXISTS objects (
     id TEXT PRIMARY KEY,
     value BLOB NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
