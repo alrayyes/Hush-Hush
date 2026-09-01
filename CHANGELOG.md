@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/alrayyes/hush-hush/compare/v0.18.0...v0.19.0) (2026-09-01)
+
+
+### Features
+
+* wire --description through the CLI's inject command ([#120](https://github.com/alrayyes/hush-hush/issues/120)) ([b12e8b6](https://github.com/alrayyes/hush-hush/commit/b12e8b646627cec16dbbae7ca2663b379e1bf477)), closes [#117](https://github.com/alrayyes/hush-hush/issues/117)
+
 ## [0.18.0](https://github.com/alrayyes/hush-hush/compare/v0.17.0...v0.18.0) (2026-09-01)
 
 
