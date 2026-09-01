@@ -16,9 +16,7 @@ implementing it is in that same change's `tasks.md`.
 Bootstrapped from `alrayyes/scaffold-go-api`, then ported from that
 scaffold's self-hosted-forge form to GitHub-primary tooling (release-please
 instead of semantic-release, Dependabot instead of Renovate,
-`.github/workflows/` instead of a self-hosted forge's workflow directory) -
-see `FORGEJO.md` for the reasoning behind each swap, kept here in case this
-repo ever needs to move the other way.
+`.github/workflows/` instead of a self-hosted forge's workflow directory).
 
 ## Commands
 
@@ -54,4 +52,4 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Dependabot raises the dependency pull requests here**, not Renovate -
   GitHub-primary repos use GitHub-native Dependabot
   (`.github/dependabot.yml`); Renovate is the answer on a Forgejo instance
-  instead, per `FORGEJO.md`.
+  instead.
