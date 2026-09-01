@@ -6,7 +6,7 @@
 openapi: 3.1.0
 
 info:
-  title: hush-hush
+  title: Hush Hush
   summary: A standalone secrets object store.
   description: |
     A writer only ever needs the service's public key to add or rotate a
@@ -23,7 +23,7 @@ info:
     are gated by a bearer token.
   version: 0.1.0
   contact:
-    name: hush-hush
+    name: Hush Hush
     url: https://github.com/alrayyes/hush-hush
 
 servers:
