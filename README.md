@@ -84,7 +84,8 @@ export HUSH_HUSH_SERVER=http://localhost:8080
 export HUSH_HUSH_TOKEN=9f8e7d6c...  # from `hush-hush token issue` above
 
 echo -n "hunter2" | hush-hush-cli inject mattermost_deploy_webhook \
-  --recipients age1... --used-by homelab/vps-docker
+  --recipients age1... --used-by homelab/vps-docker \
+  --description "prod deploy webhook"
 ```
 
 Fetch and decrypt it - only whoever holds a matching private key can.
@@ -149,14 +150,15 @@ the server they're managing tokens for is actually using.
 The CLI takes each setting as a flag, environment variable, or config key -
 a flag always wins:
 
-| Flag           | Environment variable   | config key   | Meaning                                                                 |
-| -------------- | ---------------------- | ------------ | ----------------------------------------------------------------------- |
-| `--server`     | `HUSH_HUSH_SERVER`     | `server`     | Server base URL. Default `http://localhost:8080`.                       |
-| `--token`      | `HUSH_HUSH_TOKEN`      | `token`      | Bearer token, for `inject`/`update`/`delete`.                           |
-| `--caller`     | `HUSH_HUSH_CALLER`     | `caller`     | Self-presented identity recorded in the audit log. Optional.            |
-| `--recipients` | `HUSH_HUSH_RECIPIENTS` | `recipients` | Comma-separated age recipients, for `inject`/`update`.                  |
-| `--identity`   | `HUSH_HUSH_IDENTITY`   | `identity`   | Comma-separated age private keys, for `get`.                            |
-| `--used-by`    | -                      | -            | Consumers of the secret (repeatable or comma-separated), `inject` only. |
+| Flag            | Environment variable   | config key   | Meaning                                                                 |
+| --------------- | ---------------------- | ------------ | ----------------------------------------------------------------------- |
+| `--server`      | `HUSH_HUSH_SERVER`     | `server`     | Server base URL. Default `http://localhost:8080`.                       |
+| `--token`       | `HUSH_HUSH_TOKEN`      | `token`      | Bearer token, for `inject`/`update`/`delete`.                           |
+| `--caller`      | `HUSH_HUSH_CALLER`     | `caller`     | Self-presented identity recorded in the audit log. Optional.            |
+| `--recipients`  | `HUSH_HUSH_RECIPIENTS` | `recipients` | Comma-separated age recipients, for `inject`/`update`.                  |
+| `--identity`    | `HUSH_HUSH_IDENTITY`   | `identity`   | Comma-separated age private keys, for `get`.                            |
+| `--used-by`     | -                      | -            | Consumers of the secret (repeatable or comma-separated), `inject` only. |
+| `--description` | -                      | -            | Free-text label, fixed at creation, `inject` only.                      |
 
 ### Docker
 

@@ -46,12 +46,13 @@ func TestInjectCreatesAnObjectTheMatchingIdentityCanDecrypt(t *testing.T) {
 	value := []byte("plaintext-value")
 
 	err = cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", value,
-		[]string{identity.Recipient().String()}, []string{"homelab/vps-docker"})
+		[]string{identity.Recipient().String()}, []string{"homelab/vps-docker"}, "prod deploy webhook")
 	require.NoError(t, err)
 
 	obj, err := s.GetObject(context.Background(), "mattermost_deploy_webhook")
 	require.NoError(t, err)
 	require.Equal(t, []string{"homelab/vps-docker"}, obj.UsedBy)
+	require.Equal(t, "prod deploy webhook", obj.Description)
 	require.NotEqual(t, value, obj.Value, "stored value must be sealed, not plaintext")
 
 	r, err := age.Decrypt(bytes.NewReader(obj.Value), identity)
@@ -72,7 +73,7 @@ func TestInjectWithoutAValidTokenIsRejected(t *testing.T) {
 
 	cfg := cli.Config{Server: srv.URL, Token: "wrong-token"}
 
-	err = cli.Inject(context.Background(), cfg, "x", []byte("v"), []string{identity.Recipient().String()}, nil)
+	err = cli.Inject(context.Background(), cfg, "x", []byte("v"), []string{identity.Recipient().String()}, nil, "")
 	require.ErrorIs(t, err, client.ErrUnauthorized)
 }
 
@@ -83,7 +84,7 @@ func TestInjectWithAMalformedRecipientFailsBeforeCallingTheServer(t *testing.T) 
 
 	cfg := cli.Config{Server: srv.URL, Token: token}
 
-	err := cli.Inject(context.Background(), cfg, "x", []byte("v"), []string{"not-a-recipient"}, nil)
+	err := cli.Inject(context.Background(), cfg, "x", []byte("v"), []string{"not-a-recipient"}, nil, "")
 	require.Error(t, err)
 
 	_, getErr := s.GetObject(context.Background(), "x")

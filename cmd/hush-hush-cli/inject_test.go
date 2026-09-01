@@ -52,3 +52,40 @@ func TestInjectRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, []byte("plaintext-value"), obj.Value)
 }
+
+// TestInjectDescriptionFlagSetsIt drives the real cobra command end to end,
+// through the hush-hush-go SDK's regenerated CreateObjectRequest, rather
+// than internal/cli.Inject directly.
+func TestInjectDescriptionFlagSetsIt(t *testing.T) {
+	s, err := store.Open(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	srv := httptest.NewServer(hushhush.NewMux(s))
+	t.Cleanup(srv.Close)
+
+	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour)
+	require.NoError(t, err)
+
+	identity, err := age.GenerateX25519Identity()
+	require.NoError(t, err)
+
+	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
+	t.Setenv("HUSH_HUSH_TOKEN", token)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	viper.Reset()
+
+	root := newRootCmd()
+	root.SetArgs([]string{
+		"inject", "mattermost_deploy_webhook",
+		"--recipients", identity.Recipient().String(),
+		"--description", "prod deploy webhook",
+	})
+	root.SetIn(bytes.NewReader([]byte("plaintext-value")))
+
+	require.NoError(t, root.Execute())
+
+	obj, err := s.GetObject(t.Context(), "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, "prod deploy webhook", obj.Description)
+}

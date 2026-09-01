@@ -21,6 +21,7 @@ var errNoRecipients = errors.New("no recipients configured (--recipients or HUSH
 // what injecting a secret should avoid.
 func newInjectCmd() *cobra.Command {
 	var usedBy []string
+	var description string
 
 	cmd := &cobra.Command{
 		Use:   "inject <id>",
@@ -44,12 +45,13 @@ func newInjectCmd() *cobra.Command {
 				return fmt.Errorf("read value from stdin: %w", err)
 			}
 
-			return cli.Inject(cmd.Context(), config(), args[0], value, strings.Split(recipients, ","), usedBy)
+			return cli.Inject(cmd.Context(), config(), args[0], value, strings.Split(recipients, ","), usedBy, description)
 		},
 	}
 
 	cmd.Flags().StringSliceVar(&usedBy, "used-by", nil, "consumers of this secret (repeatable, or comma-separated)")
 	cmd.Flags().String("recipients", "", "comma-separated age recipient public keys")
+	cmd.Flags().StringVar(&description, "description", "", "free-text label for this object, fixed at creation")
 
 	return cmd
 }
