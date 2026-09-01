@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/alrayyes/hush-hush/compare/v0.17.0...v0.18.0) (2026-09-01)
+
+
+### Features
+
+* add optional description field to secret objects ([#118](https://github.com/alrayyes/hush-hush/issues/118)) ([5c38654](https://github.com/alrayyes/hush-hush/commit/5c38654c77554552a08af8a73473d45dbdbecb1d)), closes [#117](https://github.com/alrayyes/hush-hush/issues/117)
+
 ## [0.17.0](https://github.com/alrayyes/hush-hush/compare/v0.16.0...v0.17.0) (2026-08-31)
 
 
