@@ -68,7 +68,7 @@ jobs:
         env:
           # goreleaser's GitHub-shaped defaults resolve here without any
           # override block - unlike the gitea_urls/force_token this repo
-          # needed when it lived on Forgejo (see FORGEJO.md).
+          # needed when it lived on Forgejo.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Free SLSA Build L2 provenance tying these binaries to this workflow
