@@ -22,7 +22,7 @@ func TestGetDecryptsTheStoredValue(t *testing.T) {
 
 	injectCfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), injectCfg, "mattermost_deploy_webhook", value,
-		[]string{identity.Recipient().String()}, nil))
+		[]string{identity.Recipient().String()}, nil, ""))
 
 	getCfg := cli.Config{Server: srv.URL}
 	plaintext, err := cli.Get(context.Background(), getCfg, "mattermost_deploy_webhook", []string{identity.String()})
@@ -43,7 +43,7 @@ func TestGetWithNoMatchingIdentityFailsClearly(t *testing.T) {
 
 	injectCfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), injectCfg, "x", []byte("v"),
-		[]string{sealedTo.Recipient().String()}, nil))
+		[]string{sealedTo.Recipient().String()}, nil, ""))
 
 	getCfg := cli.Config{Server: srv.URL}
 	_, err = cli.Get(context.Background(), getCfg, "x", []string{wrongIdentity.String()})

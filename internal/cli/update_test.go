@@ -22,7 +22,7 @@ func TestUpdateChangesTheStoredValue(t *testing.T) {
 
 	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", []byte("old-value"),
-		[]string{identity.Recipient().String()}, []string{"homelab/vps-docker"}))
+		[]string{identity.Recipient().String()}, []string{"homelab/vps-docker"}, ""))
 
 	newValue := []byte("new-value")
 	err = cli.Update(context.Background(), cfg, "mattermost_deploy_webhook", newValue,
@@ -65,7 +65,7 @@ func TestUpdateWithAMalformedRecipientFailsBeforeCallingTheServer(t *testing.T) 
 
 	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "x", []byte("v"),
-		[]string{identity.Recipient().String()}, nil))
+		[]string{identity.Recipient().String()}, nil, ""))
 
 	before, err := s.GetObject(context.Background(), "x")
 	require.NoError(t, err)

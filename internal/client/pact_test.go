@@ -79,7 +79,7 @@ func TestClientCreatePact(t *testing.T) {
 			return fmt.Errorf("build client: %w", err)
 		}
 
-		meta, err := c.Create(context.Background(), createTestObjectID, []byte("sealed-ciphertext"), []string{"homelab/vps-docker"})
+		meta, err := c.Create(context.Background(), createTestObjectID, []byte("sealed-ciphertext"), []string{"homelab/vps-docker"}, "")
 		if err != nil {
 			return fmt.Errorf("create: %w", err)
 		}

@@ -21,7 +21,7 @@ func TestDeleteRemovesTheObject(t *testing.T) {
 
 	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "mattermost_deploy_webhook", []byte("v"),
-		[]string{identity.Recipient().String()}, nil))
+		[]string{identity.Recipient().String()}, nil, ""))
 
 	require.NoError(t, cli.Delete(context.Background(), cfg, "mattermost_deploy_webhook"))
 
@@ -39,7 +39,7 @@ func TestDeleteWithoutAValidTokenIsRejected(t *testing.T) {
 
 	cfg := cli.Config{Server: srv.URL, Token: token}
 	require.NoError(t, cli.Inject(context.Background(), cfg, "x", []byte("v"),
-		[]string{identity.Recipient().String()}, nil))
+		[]string{identity.Recipient().String()}, nil, ""))
 
 	wrongCfg := cli.Config{Server: srv.URL, Token: "wrong-token"}
 	err = cli.Delete(context.Background(), wrongCfg, "x")

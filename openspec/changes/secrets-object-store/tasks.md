@@ -82,4 +82,4 @@ key management and flag parsing on top of it, per
 
 - [x] 17.1 Add an optional `description` field to the create endpoint's request and response schema in the OpenAPI spec, and verify it lints clean with Redocly
 - [x] 17.2 Store description alongside the object and verify it's returned unchanged in metadata and persists across an update
-- [ ] 17.3 Add `--description` to the CLI inject command and surface it wherever object metadata is shown, and verify it round-trips end to end
+- [x] 17.3 Add `--description` to the CLI inject command and surface it wherever object metadata is shown, and verify it round-trips end to end
