@@ -1,4 +1,4 @@
-# hush-hush
+# Hush Hush
 
 [![CI](https://github.com/alrayyes/hush-hush/actions/workflows/ci.yml/badge.svg)](https://github.com/alrayyes/hush-hush/actions)
 [![Codecov](https://codecov.io/gh/alrayyes/hush-hush/graph/badge.svg)](https://codecov.io/gh/alrayyes/hush-hush)
