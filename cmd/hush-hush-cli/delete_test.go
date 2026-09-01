@@ -25,7 +25,7 @@ func TestDeleteRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour)
 	require.NoError(t, err)
 
-	require.NoError(t, s.CreateObject(t.Context(), "mattermost_deploy_webhook", []byte("sealed"), nil))
+	require.NoError(t, s.CreateObject(t.Context(), "mattermost_deploy_webhook", []byte("sealed"), nil, ""))
 
 	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
 	t.Setenv("HUSH_HUSH_TOKEN", token)

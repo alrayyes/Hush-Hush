@@ -87,7 +87,7 @@ func TestGetObjectRecordsAnAuditLogEntryWithNoCaller(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects/x", nil)
 	mux.ServeHTTP(httptest.NewRecorder(), req)
@@ -102,7 +102,7 @@ func TestUpdateObjectRecordsAnAuditLogEntry(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	mux.ServeHTTP(httptest.NewRecorder(), updateRequest(t, "x", []byte("new"), issueToken(t, s)))
 
@@ -115,7 +115,7 @@ func TestDeleteObjectRecordsAnAuditLogEntry(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	mux.ServeHTTP(httptest.NewRecorder(), deleteRequest(t, "x", issueToken(t, s)))
 

@@ -82,6 +82,27 @@ func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
 	require.Equal(t, sealed, obj.Value)
 }
 
+func TestCreateObjectWithDescriptionReturnsItInMetadata(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	req := createRequest(t, hushhush.CreateObjectRequest{
+		ID:          "mattermost_deploy_webhook",
+		Value:       []byte("sealed-ciphertext"),
+		Description: "prod deploy webhook",
+	}, issueToken(t, s))
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var meta hushhush.ObjectMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
+	require.Equal(t, "prod deploy webhook", meta.Description)
+}
+
 func TestCreateObjectWithoutBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 

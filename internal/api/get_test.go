@@ -16,7 +16,7 @@ func TestGetObjectReturnsStoredCiphertextExactly(t *testing.T) {
 
 	mux, s := newTestMux(t)
 	sealed := []byte("sealed-ciphertext")
-	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", sealed, nil))
+	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", sealed, nil, ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects/mattermost_deploy_webhook", nil)
 	rec := httptest.NewRecorder()
@@ -47,7 +47,7 @@ func TestGetObjectRequiresNoBearerToken(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "no_auth_needed", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "no_auth_needed", []byte("v"), nil, ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects/no_auth_needed", nil)
 	rec := httptest.NewRecorder()

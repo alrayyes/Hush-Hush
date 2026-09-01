@@ -52,6 +52,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	if err := addColumnIfMissing(db, "objects", "description", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	return &Store{db: db}, nil
 }
 

@@ -25,7 +25,7 @@ func TestDeleteObjectRemovesItAndSubsequentGetReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("v"), nil, ""))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, deleteRequest(t, "mattermost_deploy_webhook", issueToken(t, s)))
@@ -51,7 +51,7 @@ func TestDeleteObjectWithoutBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, deleteRequest(t, "x", ""))
@@ -63,7 +63,7 @@ func TestDeleteObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil))
+	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, ""))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, deleteRequest(t, "x", "wrong-token"))

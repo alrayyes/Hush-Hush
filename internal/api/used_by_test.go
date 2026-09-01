@@ -15,7 +15,7 @@ func TestGetObjectUsedByReturnsRecordedConsumers(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("v"), []string{"homelab/vps-docker"}))
+	require.NoError(t, s.CreateObject(context.Background(), "mattermost_deploy_webhook", []byte("v"), []string{"homelab/vps-docker"}, ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects/mattermost_deploy_webhook/used-by", nil)
 	rec := httptest.NewRecorder()

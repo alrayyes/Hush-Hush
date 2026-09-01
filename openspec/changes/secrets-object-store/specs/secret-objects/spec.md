@@ -83,6 +83,25 @@ The system SHALL store, alongside each object, a queryable record of which consu
 - **WHEN** an object's value is updated
 - **THEN** its used_by metadata is unchanged by the update
 
+### Requirement: Optional description for a secret object
+
+The system SHALL allow a writer to set a free-text description on an object at creation, returned unchanged in that object's metadata. Description is fixed at creation, the same as used_by, and is not affected by a later value update.
+
+#### Scenario: Writer creates an object with a description
+
+- **WHEN** a writer creates an object with a description
+- **THEN** the system stores the description and returns it in the object's metadata
+
+#### Scenario: Description persists across an update
+
+- **WHEN** an object's value is updated
+- **THEN** its description is unchanged by the update
+
+#### Scenario: Object created without a description
+
+- **WHEN** a writer creates an object without supplying a description
+- **THEN** the system stores the object with no description
+
 ### Requirement: The service never computes or persists plaintext
 
 The system SHALL NOT decrypt a stored value at any point during create, read, update, or delete.

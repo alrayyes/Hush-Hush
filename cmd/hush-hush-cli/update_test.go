@@ -33,7 +33,7 @@ func TestUpdateRunsFromEnvironmentAloneNoFlags(t *testing.T) {
 
 	sealed, err := seal.Seal([]byte("old-value"), []string{identity.Recipient().String()})
 	require.NoError(t, err)
-	require.NoError(t, s.CreateObject(t.Context(), "mattermost_deploy_webhook", sealed, nil))
+	require.NoError(t, s.CreateObject(t.Context(), "mattermost_deploy_webhook", sealed, nil, ""))
 
 	t.Setenv("HUSH_HUSH_SERVER", srv.URL)
 	t.Setenv("HUSH_HUSH_TOKEN", token)

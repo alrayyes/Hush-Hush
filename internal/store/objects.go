@@ -15,20 +15,23 @@ var ErrAlreadyExists = errors.New("object already exists")
 // ErrNotFound is returned when no object exists under the given id.
 var ErrNotFound = errors.New("object not found")
 
-// Object is a stored secret object: its sealed value and its recorded
-// used_by lineage. The service never decrypts Value - it is opaque
-// ciphertext.
+// Object is a stored secret object: its sealed value, its recorded used_by
+// lineage, and its description. The service never decrypts Value - it is
+// opaque ciphertext.
 type Object struct {
-	ID     string
-	Value  []byte
-	UsedBy []string
+	ID          string
+	Value       []byte
+	UsedBy      []string
+	Description string
 }
 
-// CreateObject stores a new object under id. It returns ErrAlreadyExists if
-// an object already exists under that id - existence is checked and the
-// insert performed in the same transaction, so this is race-safe against
+// CreateObject stores a new object under id. description is fixed at
+// creation, the same as usedBy - there is no way to change it later
+// (specs/secret-objects/spec.md). It returns ErrAlreadyExists if an object
+// already exists under that id - existence is checked and the insert
+// performed in the same transaction, so this is race-safe against
 // concurrent creates under the same id.
-func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedBy []string) error {
+func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedBy []string, description string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -45,8 +48,8 @@ func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedB
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO objects (id, value, created_at, updated_at) VALUES (?, ?, ?, ?)`,
-		id, value, now, now,
+		`INSERT INTO objects (id, value, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+		id, value, description, now, now,
 	); err != nil {
 		return fmt.Errorf("insert object: %w", err)
 	}
@@ -72,7 +75,7 @@ func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedB
 func (s *Store) GetObject(ctx context.Context, id string) (Object, error) {
 	obj := Object{ID: id}
 
-	switch err := s.db.QueryRowContext(ctx, `SELECT value FROM objects WHERE id = ?`, id).Scan(&obj.Value); {
+	switch err := s.db.QueryRowContext(ctx, `SELECT value, description FROM objects WHERE id = ?`, id).Scan(&obj.Value, &obj.Description); {
 	case errors.Is(err, sql.ErrNoRows):
 		return Object{}, ErrNotFound
 	case err != nil:
