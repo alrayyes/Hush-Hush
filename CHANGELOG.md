@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/alrayyes/Hush-Hush/compare/v0.19.0...v0.19.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* pin CI's bun image below 1.4, matching packageManager ([#125](https://github.com/alrayyes/Hush-Hush/issues/125)) ([3756c02](https://github.com/alrayyes/Hush-Hush/commit/3756c023314e1b54ac6fa0b0b320f844ceeab855))
+
 ## [0.19.0](https://github.com/alrayyes/hush-hush/compare/v0.18.0...v0.19.0) (2026-09-01)
 
 
