@@ -210,10 +210,17 @@ jobs:
 
   # Layout and structure. Style and mechanics are prose.yml — see its header
   # comment for why they're split out.
+  #
+  # Pinned below 1.4, matching package.json's own packageManager: bun 1.4
+  # made lockfileVersion 2 the default bun.lock format, and Dependabot's
+  # bundled bun updater still ships 1.3.5, which can't parse it and
+  # silently corrupts it back to v1 instead of erroring
+  # (dependabot/dependabot-core#15848). Every bun job here stays on the
+  # same pin so nothing writes a v2 lockfile out from under Dependabot.
   prose:
     runs-on: ubuntu-latest
     container:
-      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
     steps:
       - run: apk add --no-cache ca-certificates git nodejs
@@ -236,7 +243,7 @@ jobs:
   api:
     runs-on: ubuntu-latest
     container:
-      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
     steps:
       - run: apk add --no-cache ca-certificates git nodejs
@@ -252,7 +259,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     container:
-      image: oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+      image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
     steps:
       - run: apk add --no-cache ca-certificates git nodejs
