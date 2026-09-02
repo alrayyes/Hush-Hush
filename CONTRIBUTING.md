@@ -69,10 +69,10 @@ second resource needs it, not day one.
 
 `api/openapi.yaml` describes the API and is handwritten, not generated from
 the handlers — see the header comment for why. `redocly lint` checks the
-document is valid OpenAPI; nothing yet checks the handler still matches it,
-the way `form-handler`'s `openapi_test.go` does for a real service. Add that
-test once the real secret-object endpoints replace the scaffold's example
-resource (`openspec/changes/secrets-object-store/`).
+document is valid OpenAPI; `internal/api/openapi_test.go` checks the
+handlers still match it — a real HTTP round trip through the actual mux,
+per documented operation, validated against the spec's own schema in both
+directions. Part of the ordinary `go test ./...` run, no separate command.
 
 ## Contract tests
 
