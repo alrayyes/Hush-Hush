@@ -8,9 +8,11 @@ import (
 )
 
 // UsedBy is the used-by-query response. Matches components.schemas.UsedBy
-// in api/openapi.yaml.
+// in api/openapi.yaml, which marks used_by required - unlike
+// ObjectMetadata's own optional used_by, this is the field the whole
+// response exists for, so it's always present, empty array included.
 type UsedBy struct {
-	UsedBy []string `json:"used_by,omitempty"`
+	UsedBy []string `json:"used_by"`
 }
 
 // handleGetObjectUsedBy returns an object's recorded used_by lineage -
@@ -30,6 +32,11 @@ func handleGetObjectUsedBy(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, UsedBy{UsedBy: obj.UsedBy})
+		usedBy := obj.UsedBy
+		if usedBy == nil {
+			usedBy = []string{}
+		}
+
+		writeJSON(w, http.StatusOK, UsedBy{UsedBy: usedBy})
 	}
 }

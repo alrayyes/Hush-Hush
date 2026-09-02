@@ -256,6 +256,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditLogEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
 components:
   securitySchemes:
@@ -296,6 +298,15 @@ components:
         type: string
 
   responses:
+    BadRequest:
+      description: The request could not be parsed as documented.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: from must be RFC 3339
+
     Unauthorized:
       description: The request is missing a valid bearer token.
       content:

@@ -46,6 +46,7 @@ queryable
 keypairs?
 cgo
 bbolt
+mux
 Postgres
 stdout
 stdin

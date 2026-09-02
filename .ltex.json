@@ -34,6 +34,7 @@
       "ltex-ls-plus",
       "markdownlint",
       "mTLS",
+      "mux",
       "pre-commit",
       "cgo",
       "proselint",
