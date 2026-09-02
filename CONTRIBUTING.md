@@ -134,6 +134,16 @@ Two Dockerfiles, deliberately not one:
   Dockerfile would - worth it for the speed on a repo shipping multi-arch
   images on every release. hadolint lints this one too.
 
+## AUR
+
+`release.yml`'s `aur` job bumps `PKGBUILD`'s `pkgver`, runs `updpkgsums`
+against the release goreleaser's own job just published, regenerates
+`.SRCINFO`, and pushes both to the AUR git remote using the repo's
+`AUR_SSH_KEY` secret - the real publish, unconditional on every release
+that ships. It then opens a pull request here with the same two files, so
+`PKGBUILD`/`.SRCINFO` in this repo don't drift from what's live on AUR -
+that part goes through the ordinary review flow like everything else.
+
 ## Commit messages
 
 [Conventional Commits](https://www.conventionalcommits.org/):
