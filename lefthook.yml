@@ -45,6 +45,14 @@ pre-commit:
       glob: "*.md"
       run: bunx markdownlint-cli2 {staged_files}
 
+    # Keeps package.json itself canonical, the same job Prettier does for
+    # everything else - Prettier doesn't format JSON key order, only the
+    # bytes.
+    - name: sort-package-json
+      glob: "package.json"
+      run: bunx sort-package-json {staged_files}
+      stage_fixed: true
+
     # Fast enough for a commit. LTeX is not — around ten seconds a file — so
     # mechanics run at push instead, where the wait is paid once rather than
     # per commit.
@@ -133,6 +141,9 @@ pre-push:
 
     - name: redocly
       run: bun run lint:api
+
+    - name: sort-package-json
+      run: bun run lint:package-json
 
     # A strict superset of a bare `docker build`: testcontainers-go builds
     # the same Dockerfile, then actually starts the container and proves
