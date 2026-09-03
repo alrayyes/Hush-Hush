@@ -150,15 +150,16 @@ the server they're managing tokens for is actually using.
 The CLI takes each setting as a flag, environment variable, or config key -
 a flag always wins:
 
-| Flag            | Environment variable   | config key   | Meaning                                                                 |
-| --------------- | ---------------------- | ------------ | ----------------------------------------------------------------------- |
-| `--server`      | `HUSH_HUSH_SERVER`     | `server`     | Server base URL. Default `http://localhost:8080`.                       |
-| `--token`       | `HUSH_HUSH_TOKEN`      | `token`      | Bearer token, for `inject`/`update`/`delete`.                           |
-| `--caller`      | `HUSH_HUSH_CALLER`     | `caller`     | Self-presented identity recorded in the audit log. Optional.            |
-| `--recipients`  | `HUSH_HUSH_RECIPIENTS` | `recipients` | Comma-separated age recipients, for `inject`/`update`.                  |
-| `--identity`    | `HUSH_HUSH_IDENTITY`   | `identity`   | Comma-separated age private keys, for `get`.                            |
-| `--used-by`     | -                      | -            | Consumers of the secret (repeatable or comma-separated), `inject` only. |
-| `--description` | -                      | -            | Free-text label, fixed at creation, `inject` only.                      |
+| Flag              | Environment variable      | config key      | Meaning                                                                                  |
+| ----------------- | ------------------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| `--server`        | `HUSH_HUSH_SERVER`        | `server`        | Server base URL. Default `http://localhost:8080`.                                        |
+| `--token`         | `HUSH_HUSH_TOKEN`         | `token`         | Bearer token, for `inject`/`update`/`delete`.                                            |
+| `--token-command` | `HUSH_HUSH_TOKEN_COMMAND` | `token_command` | Command whose trimmed stdout is the token instead - wins over `--token` if both are set. |
+| `--caller`        | `HUSH_HUSH_CALLER`        | `caller`        | Self-presented identity recorded in the audit log. Optional.                             |
+| `--recipients`    | `HUSH_HUSH_RECIPIENTS`    | `recipients`    | Comma-separated age recipients, for `inject`/`update`.                                   |
+| `--identity`      | `HUSH_HUSH_IDENTITY`      | `identity`      | Comma-separated age private keys, for `get`.                                             |
+| `--used-by`       | -                         | -               | Consumers of the secret (repeatable or comma-separated), `inject` only.                  |
+| `--description`   | -                         | -               | Free-text label, fixed at creation, `inject` only.                                       |
 
 ### Docker
 

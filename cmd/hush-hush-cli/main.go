@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/alrayyes/hush-hush/internal/cli"
 	"github.com/alrayyes/hush-hush/internal/cliconfig"
@@ -32,7 +34,7 @@ var errConfigAlreadyExists = errors.New("config file already exists (use --force
 // tool is already configured through the environment, not to read a
 // value.
 var configEnvVars = []string{
-	"HUSH_HUSH_SERVER", "HUSH_HUSH_TOKEN", "HUSH_HUSH_CALLER",
+	"HUSH_HUSH_SERVER", "HUSH_HUSH_TOKEN", "HUSH_HUSH_TOKEN_COMMAND", "HUSH_HUSH_CALLER",
 	"HUSH_HUSH_RECIPIENTS", "HUSH_HUSH_IDENTITY",
 }
 
@@ -70,12 +72,15 @@ func newRootCmd() *cobra.Command {
 
 	root.PersistentFlags().String("server", "http://localhost:8080", "hush-hush server URL")
 	root.PersistentFlags().String("token", "", "write-path bearer token")
+	root.PersistentFlags().String("token-command", "", "command whose trimmed stdout is the write-path bearer token (wins over --token if both are set)")
 	root.PersistentFlags().String("caller", "", "self-presented identity recorded in the audit log")
 	root.PersistentFlags().BoolP("yes", "y", false, "write a starter config with no prompt, if none exists")
 
 	for _, name := range []string{"server", "token", "caller"} {
 		_ = viper.BindPFlag(name, root.PersistentFlags().Lookup(name))
 	}
+
+	_ = viper.BindPFlag("token_command", root.PersistentFlags().Lookup("token-command"))
 
 	viper.SetEnvPrefix("hush_hush")
 	viper.AutomaticEnv()
@@ -96,6 +101,12 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
+// config resolves the CLI's connection settings, running --token-command/
+// HUSH_HUSH_TOKEN_COMMAND if set - rules/cli.md's "secrets get a command
+// option, not just a value", so a token can come from `pass`, an
+// age-encrypted file, or a keyring CLI instead of sitting in the config
+// file as plaintext. The command wins over a literal --token/token if both
+// are set: whoever configured the command form did it on purpose.
 func config() (cli.Config, error) {
 	cfg := cli.Config{
 		Server: viper.GetString("server"),
@@ -103,11 +114,33 @@ func config() (cli.Config, error) {
 		Caller: viper.GetString("caller"),
 	}
 
+	if tokenCmd := viper.GetString("token_command"); tokenCmd != "" {
+		token, err := runSecretCommand(tokenCmd)
+		if err != nil {
+			return cli.Config{}, fmt.Errorf("token_command: %w", err)
+		}
+
+		cfg.Token = token
+	}
+
 	if err := cfg.Validate(); err != nil {
 		return cli.Config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
 	return cfg, nil
+}
+
+// runSecretCommand runs cmdStr through the shell (so a pipeline like `pass
+// show <path>` works unmodified) and returns its trimmed stdout - exactly
+// one trailing newline, not every trailing space, so a secret that
+// genuinely ends in whitespace survives.
+func runSecretCommand(cmdStr string) (string, error) {
+	out, err := exec.Command("sh", "-c", cmdStr).Output() //nolint:gosec // cmdStr is operator-supplied config, not external input
+	if err != nil {
+		return "", fmt.Errorf("run: %w", err)
+	}
+
+	return strings.TrimSuffix(string(out), "\n"), nil
 }
 
 func configFilePath() (string, error) {
@@ -151,6 +184,9 @@ const starterConfig = `# hush-hush-cli config file. Flags and HUSH_HUSH_* enviro
 # both override these - see README.md#configuration.
 server: http://localhost:8080
 token: ""
+# token_command runs a command and uses its trimmed stdout as the token
+# instead - it wins over the literal value above if both are set.
+# token_command: "pass show hush-hush/write-token"
 caller: ""
 recipients: ""
 identity: ""
