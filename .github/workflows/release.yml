@@ -154,6 +154,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          # This step commits to the repo's own checkout - tooling.md's
+          # "every pipeline sets LEFTHOOK=0" for a job that runs `git
+          # commit` itself. A no-op today (this job never runs `bun
+          # install`, so there's no lefthook to fire), but it stays
+          # correct if that ever changes.
+          LEFTHOOK: 0
         run: |
           git diff --quiet -- PKGBUILD .SRCINFO && exit 0
 
