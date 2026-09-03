@@ -11,9 +11,23 @@ pre-commit:
     # gofumpt (a gofmt superset) is what .golangci.yml's formatters actually
     # run - calling plain gofmt here too would be two formatters arguing over
     # the same bytes, the exact thing rules/go-lint.md says not to do.
+    #
+    # Docker-wrapped, like every other Go hook command below: a host go and
+    # golangci-lint drifting apart independently is a real failure mode
+    # (go.md), not a hypothetical - hit live on this machine once already.
+    # --user keeps the fixer's writes owned by the invoking user, not root;
+    # the GOCACHE/GOMODCACHE/GOLANGCI_LINT_CACHE mounts keep a second run
+    # from paying a cold cache every time.
     - name: golangci-lint fmt
       glob: "*.go"
-      run: golangci-lint fmt {staged_files}
+      run: >-
+        docker run --rm --user "$(id -u):$(id -g)"
+        -v "$(pwd):/src" -w /src
+        -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
+        -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
+        -e GOLANGCI_LINT_CACHE=/lintcache -v "$HOME/.cache/golangci-lint-docker:/lintcache"
+        golangci/golangci-lint:v2.13.1@sha256:d371321370bf2907bd13a8f6f8baff0e0ca7438d76fdf636b281eadf7e2305e3
+        golangci-lint fmt {staged_files}
       stage_fixed: true
 
     # --fix only here, not in CI's twin of this job: pre-commit may write and
@@ -21,16 +35,30 @@ pre-commit:
     # actually checked disagreeing.
     - name: golangci-lint run
       glob: "*.go"
-      run: golangci-lint run --fix ./...
+      run: >-
+        docker run --rm --user "$(id -u):$(id -g)"
+        -v "$(pwd):/src" -w /src
+        -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
+        -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
+        -e GOLANGCI_LINT_CACHE=/lintcache -v "$HOME/.cache/golangci-lint-docker:/lintcache"
+        golangci/golangci-lint:v2.13.1@sha256:d371321370bf2907bd13a8f6f8baff0e0ca7438d76fdf636b281eadf7e2305e3
+        golangci-lint run --fix ./...
       stage_fixed: true
 
     # go mod edit -fmt is the canonicalizer for go.mod itself: a builtin `go`
     # subcommand, not gofmt (which never touches go.mod) and not `go mod tidy`
     # (which does network resolution a formatting-only hook shouldn't be
-    # doing).
+    # doing). golang:<go.mod's own go directive>-bookworm, matching the
+    # Dockerfile and CI's pin exactly.
     - name: gomod
       glob: "go.mod"
-      run: go mod edit -fmt go.mod
+      run: >-
+        docker run --rm --user "$(id -u):$(id -g)"
+        -v "$(pwd):/src" -w /src
+        -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
+        -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
+        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        go mod edit -fmt go.mod
       stage_fixed: true
 
     # Prettier decides the layout, markdownlint then judges what Prettier
@@ -108,14 +136,30 @@ commit-msg:
 pre-push:
   parallel: true
   jobs:
+    # Docker-wrapped, same reasoning and pin as pre-commit's Go jobs above.
     - name: test
-      run: go test ./...
+      run: >-
+        docker run --rm --user "$(id -u):$(id -g)"
+        -v "$(pwd):/src" -w /src
+        -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
+        -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
+        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        go test ./...
 
     # No check-only flag on `go mod edit -fmt`, so the gate is running it
     # again and diffing. A no-op on a go.mod pre-commit already canonicalized;
-    # only fails if that got bypassed.
+    # only fails if that got bypassed. Only the edit itself needs Docker -
+    # the mount is live, not a copy, so the diff check right after runs
+    # against the host's own git same as any other pre-push job here.
     - name: gomod
-      run: go mod edit -fmt go.mod && git diff --exit-code go.mod
+      run: >-
+        docker run --rm --user "$(id -u):$(id -g)"
+        -v "$(pwd):/src" -w /src
+        -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
+        -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
+        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        go mod edit -fmt go.mod
+        && git diff --exit-code go.mod
 
     # These are `package.json` scripts rather than the commands spelled out,
     # because CI runs the same ones and a literal copied into two files drifts
@@ -149,5 +193,13 @@ pre-push:
     # the same Dockerfile, then actually starts the container and proves
     # it serves real requests - the packaged distroless artifact, not the
     # server's Go code run directly the way every other test here does.
+    #
+    # Deliberately NOT Docker-wrapped, unlike every other Go job above:
+    # testcontainers-go needs a real Docker daemon to build and run
+    # against, which the host already has - wrapping this command in
+    # another container would need Docker-outside-of-Docker (mounting
+    # /var/run/docker.sock into it) for no benefit over just not nesting,
+    # the same reasoning ci.yml's own container-integration job gives for
+    # staying off a `container:` runner.
     - name: container-integration
       run: go test -tags=integration ./integration/... -v
