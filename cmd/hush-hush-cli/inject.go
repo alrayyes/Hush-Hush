@@ -45,7 +45,12 @@ func newInjectCmd() *cobra.Command {
 				return fmt.Errorf("read value from stdin: %w", err)
 			}
 
-			return cli.Inject(cmd.Context(), config(), args[0], value, strings.Split(recipients, ","), usedBy, description)
+			cfg, err := config()
+			if err != nil {
+				return err
+			}
+
+			return cli.Inject(cmd.Context(), cfg, args[0], value, strings.Split(recipients, ","), usedBy, description)
 		},
 	}
 

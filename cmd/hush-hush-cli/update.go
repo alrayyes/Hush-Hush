@@ -34,7 +34,12 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("read value from stdin: %w", err)
 			}
 
-			return cli.Update(cmd.Context(), config(), args[0], value, strings.Split(recipients, ","))
+			cfg, err := config()
+			if err != nil {
+				return err
+			}
+
+			return cli.Update(cmd.Context(), cfg, args[0], value, strings.Split(recipients, ","))
 		},
 	}
 

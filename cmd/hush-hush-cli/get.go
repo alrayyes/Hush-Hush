@@ -28,7 +28,12 @@ func newGetCmd() *cobra.Command {
 				return errNoIdentity
 			}
 
-			plaintext, err := cli.Get(cmd.Context(), config(), args[0], strings.Split(identities, ","))
+			cfg, err := config()
+			if err != nil {
+				return err
+			}
+
+			plaintext, err := cli.Get(cmd.Context(), cfg, args[0], strings.Split(identities, ","))
 			if err != nil {
 				return fmt.Errorf("get: %w", err)
 			}
