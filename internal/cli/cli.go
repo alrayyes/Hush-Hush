@@ -5,7 +5,9 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/alrayyes/hush-hush/internal/client"
 )
@@ -20,6 +22,33 @@ type Config struct {
 	// Caller is this CLI's self-presented identity for the audit log
 	// (api/openapi.yaml's X-Caller header) - optional.
 	Caller string
+}
+
+// Validate's own sentinels - fixed conditions, not messages built from
+// per-call detail, which stays in the %w wrap around each at the call site.
+var (
+	errServerRequired    = errors.New("server: required")
+	errServerNotAbsolute = errors.New("not an absolute URL")
+)
+
+// Validate catches a bad Server value at startup rather than at the first
+// request - an empty or malformed base URL otherwise only surfaces as a
+// generic connection error from deep inside net/http.
+func (c Config) Validate() error {
+	if c.Server == "" {
+		return errServerRequired
+	}
+
+	u, err := url.Parse(c.Server)
+	if err != nil {
+		return fmt.Errorf("server: %w", err)
+	}
+
+	if u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("server %q: %w", c.Server, errServerNotAbsolute)
+	}
+
+	return nil
 }
 
 func (c Config) newClient() (*client.Client, error) {

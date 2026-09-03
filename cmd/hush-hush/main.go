@@ -39,6 +39,13 @@ var configEnvVars = []string{"ADDR", "DB_PATH"}
 // in rather than folded into the message.
 var errConfigAlreadyExists = errors.New("config file already exists (use --force to overwrite)")
 
+// Validate's own sentinels, same reasoning as errConfigAlreadyExists above:
+// a fixed condition, not per-call detail.
+var (
+	errAddrRequired   = errors.New("addr: required")
+	errDBPathRequired = errors.New("db_path: required")
+)
+
 // config is this binary's runtime configuration, shared by serving and the
 // token subcommands (both need db_path; only serving needs addr).
 // rules/cli.md's flags > environment > config file > defaults - there are
@@ -46,6 +53,22 @@ var errConfigAlreadyExists = errors.New("config file already exists (use --force
 type config struct {
 	Addr   string `mapstructure:"addr"`
 	DBPath string `mapstructure:"db_path"`
+}
+
+// Validate catches a bad value at startup rather than wherever it's first
+// read - an empty Addr surfaces as a cryptic net/http bind failure and an
+// empty DBPath as a hard-to-place sqlite open error, both well past where
+// the actual mistake was made.
+func (c config) Validate() error {
+	if c.Addr == "" {
+		return errAddrRequired
+	}
+
+	if c.DBPath == "" {
+		return errDBPathRequired
+	}
+
+	return nil
 }
 
 func configFilePath() (string, error) {
@@ -80,6 +103,10 @@ func loadConfig() (config, error) {
 	var c config
 	if err := v.Unmarshal(&c); err != nil {
 		return config{}, fmt.Errorf("unmarshal config: %w", err)
+	}
+
+	if err := c.Validate(); err != nil {
+		return config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
 	return c, nil

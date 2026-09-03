@@ -96,12 +96,18 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
-func config() cli.Config {
-	return cli.Config{
+func config() (cli.Config, error) {
+	cfg := cli.Config{
 		Server: viper.GetString("server"),
 		Token:  viper.GetString("token"),
 		Caller: viper.GetString("caller"),
 	}
+
+	if err := cfg.Validate(); err != nil {
+		return cli.Config{}, fmt.Errorf("invalid config: %w", err)
+	}
+
+	return cfg, nil
 }
 
 func configFilePath() (string, error) {
