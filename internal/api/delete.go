@@ -9,7 +9,7 @@ import (
 
 // handleDeleteObject permanently removes an object. A subsequent get for
 // the same id returns 404.
-func handleDeleteObject(s *store.Store) http.HandlerFunc {
+func handleDeleteObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 

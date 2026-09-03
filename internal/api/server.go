@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net"
@@ -10,11 +11,26 @@ import (
 	"github.com/alrayyes/hush-hush/internal/store"
 )
 
+// objectStore is what this package needs from a store - defined here,
+// the consuming package, per go.md's "define interfaces in the consuming
+// package, not alongside the implementation". *store.Store satisfies it;
+// a handler-level test can satisfy it with a fake instead of a real
+// database (go-test.md's "reach for a fake before a mock").
+type objectStore interface {
+	CreateObject(ctx context.Context, id string, value []byte, usedBy []string, description string) error
+	GetObject(ctx context.Context, id string) (store.Object, error)
+	UpdateObject(ctx context.Context, id string, value []byte) error
+	DeleteObject(ctx context.Context, id string) error
+	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip string) error
+	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
+	ValidateWriteToken(ctx context.Context, token string) (bool, error)
+}
+
 // NewMux wires the handlers registered against api/openapi.yaml. Every
 // create, update, and delete call is checked against s's issued write
 // tokens (alrayyes/hush-hush#72) - reads need no authorization, per the
 // settled v1 design (openspec/changes/secrets-object-store/design.md).
-func NewMux(s *store.Store) *http.ServeMux {
+func NewMux(s objectStore) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth)
 	mux.HandleFunc("POST /objects", requireWriteToken(s, handleCreateObject(s)))
@@ -31,7 +47,7 @@ func NewMux(s *store.Store) *http.ServeMux {
 // header of "Bearer <token>" naming a currently issued, unexpired write
 // token (store.ValidateWriteToken) - an unknown, malformed, expired, or
 // revoked token are all the same 401 to the caller.
-func requireWriteToken(s *store.Store, next http.HandlerFunc) http.HandlerFunc {
+func requireWriteToken(s objectStore, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || got == "" {

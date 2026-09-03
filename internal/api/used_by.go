@@ -17,7 +17,7 @@ type UsedBy struct {
 
 // handleGetObjectUsedBy returns an object's recorded used_by lineage -
 // unauthenticated, same as the get endpoint it shares a store call with.
-func handleGetObjectUsedBy(s *store.Store) http.HandlerFunc {
+func handleGetObjectUsedBy(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		obj, err := s.GetObject(r.Context(), r.PathValue("id"))
 		if errors.Is(err, store.ErrNotFound) {
