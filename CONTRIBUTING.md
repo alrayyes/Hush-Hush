@@ -5,13 +5,13 @@ for whoever runs it.
 
 ## Getting set up
 
-- **Go 1.26 or newer.**
+- **Go 1.27 or newer.**
 - **[bun](https://bun.sh)** for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, [Redocly](https://redocly.com/docs/cli), and the
   [lefthook](https://lefthook.dev) that runs the git hooks. There's a
   `package.json`, but nothing here is JavaScript; it exists only so those
   tools resolve and stay pinned.
-- **[golangci-lint](https://golangci-lint.run) v2.12.2**, which the
+- **[golangci-lint](https://golangci-lint.run) v2.13.1**, which the
   pre-commit hook runs from your `PATH` while CI runs it pinned. Install
   that version rather than whichever is current: when the two disagree, the
   hook passes and the pipeline fails, and the reason isn't obvious from the
