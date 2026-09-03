@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/alrayyes/Hush-Hush/compare/v1.0.1...v2.0.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** hush-hush no longer builds or publishes hush-hush-cli - no more AUR package, .deb/.rpm assets, Nix flake, or CLI binary in this repo's releases. Install hush-hush-cli from github.com/alrayyes/hush-hush-cli instead; the CLI's own behavior is unchanged, only where it's built and packaged.
+
+### Code Refactoring
+
+* **cli:** remove the CLI, now split into hush-hush-cli ([#160](https://github.com/alrayyes/Hush-Hush/issues/160)) ([1cbdf23](https://github.com/alrayyes/Hush-Hush/commit/1cbdf239bac7378a216327cbe5225739400baf78))
+
 ## [1.0.1](https://github.com/alrayyes/Hush-Hush/compare/v1.0.0...v1.0.1) (2026-09-03)
 
 
