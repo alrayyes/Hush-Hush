@@ -5,17 +5,22 @@ for whoever runs it.
 
 ## Getting set up
 
-- **Go 1.27 or newer.**
+- **Go 1.27 or newer** — for editor/IDE tooling (`gopls`, `go build`/`go test`
+  run by hand) and the container-integration test, which needs a real Go
+  toolchain outside the hooks. Not required for the hooks themselves; see
+  below.
+- **[Docker](https://docs.docker.com/get-docker/)**, running. Every Go hook
+  command (`golangci-lint fmt`/`run`, `go mod edit -fmt`, `go test`) runs
+  through the `golang`/`golangci-lint` image `go.mod`'s own `go` directive
+  and CI both pin, not whatever Go/golangci-lint happen to be on your
+  `PATH` — a host toolchain drifting from the pinned image independently
+  (a package manager updating one without the other) is a real failure
+  mode this closes, not a hypothetical one.
 - **[bun](https://bun.sh)** for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, [Redocly](https://redocly.com/docs/cli), and the
   [lefthook](https://lefthook.dev) that runs the git hooks. There's a
   `package.json`, but nothing here is JavaScript; it exists only so those
   tools resolve and stay pinned.
-- **[golangci-lint](https://golangci-lint.run) v2.13.1**, which the
-  pre-commit hook runs from your `PATH` while CI runs it pinned. Install
-  that version rather than whichever is current: when the two disagree, the
-  hook passes and the pipeline fails, and the reason isn't obvious from the
-  failure.
 - **[Vale](https://vale.sh)** on your `PATH`, for the style tier of the
   prose lint:
 
