@@ -5,7 +5,7 @@ for whoever runs it.
 
 ## Getting set up
 
-- **Go 1.26 or newer.**
+- **Go 1.27 or newer.**
 - **[bun](https://bun.sh)** for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, [Redocly](https://redocly.com/docs/cli), and the
   [lefthook](https://lefthook.dev) that runs the git hooks. There's a
