@@ -18,7 +18,7 @@ type UpdateObjectRequest struct {
 // used_by, and description metadata unchanged - the response carries the
 // same shape create does, since both hand back the object's current
 // metadata.
-func handleUpdateObject(s *store.Store) http.HandlerFunc {
+func handleUpdateObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req UpdateObjectRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

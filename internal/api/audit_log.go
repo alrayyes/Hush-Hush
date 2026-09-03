@@ -21,7 +21,7 @@ type AuditLogEntry struct {
 // filters, oldest first. Unauthenticated, same as the other read paths -
 // this is itself part of the audit trail's own value, not something it
 // needs to protect.
-func handleQueryAuditLog(s *store.Store) http.HandlerFunc {
+func handleQueryAuditLog(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 

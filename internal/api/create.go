@@ -33,7 +33,7 @@ type Error struct {
 	Error string `json:"error"`
 }
 
-func handleCreateObject(s *store.Store) http.HandlerFunc {
+func handleCreateObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateObjectRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

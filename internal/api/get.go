@@ -10,7 +10,7 @@ import (
 // handleGetObject returns an object's stored ciphertext exactly as sealed.
 // Unauthenticated by design - v1's confidentiality boundary is entirely
 // "who holds a matching private key" (api/openapi.yaml, design.md).
-func handleGetObject(s *store.Store) http.HandlerFunc {
+func handleGetObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
