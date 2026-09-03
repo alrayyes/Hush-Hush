@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.20.0](https://github.com/alrayyes/Hush-Hush/compare/v0.19.1...v0.20.0) (2026-09-03)
+
+
+### Features
+
+* **cli:** add --token-command for the write-path bearer token ([#149](https://github.com/alrayyes/Hush-Hush/issues/149)) ([81456ac](https://github.com/alrayyes/Hush-Hush/commit/81456ac7923c863bbcf01a9f332fa77838ff02ba))
+* **cli:** validate config once at load ([#146](https://github.com/alrayyes/Hush-Hush/issues/146)) ([dd09691](https://github.com/alrayyes/Hush-Hush/commit/dd0969127f462d13d90f0eff34e25f7ca4e2f490))
+
+
+### Bug Fixes
+
+* **git:** collapse bun.lock diffs ([#143](https://github.com/alrayyes/Hush-Hush/issues/143)) ([f77d918](https://github.com/alrayyes/Hush-Hush/commit/f77d918729de1bb6bc0ef6dca7244616eb60eb6f))
+* **hooks:** pin lefthook's hadolint image with a version tag ([#136](https://github.com/alrayyes/Hush-Hush/issues/136)) ([307e286](https://github.com/alrayyes/Hush-Hush/commit/307e2860dc01aeb0446fe5e32057e95762cac897))
+
 ## [0.19.1](https://github.com/alrayyes/Hush-Hush/compare/v0.19.0...v0.19.1) (2026-09-02)
 
 
