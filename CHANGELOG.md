@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/alrayyes/Hush-Hush/compare/v0.20.0...v1.0.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** hush-hush no longer reads ~/.config/hush-hush/config.yaml or offers to write one. `hush-hush init` is gone. Anyone relying on that config file for ADDR/DB_PATH needs to set the equivalent environment variables instead before upgrading.
+
+### Code Refactoring
+
+* **server:** drop init/config-file support, env-vars only ([#156](https://github.com/alrayyes/Hush-Hush/issues/156)) ([a152431](https://github.com/alrayyes/Hush-Hush/commit/a152431c69f0beb07566dec204edcaca124c3298))
+
 ## [0.20.0](https://github.com/alrayyes/Hush-Hush/compare/v0.19.1...v0.20.0) (2026-09-03)
 
 
