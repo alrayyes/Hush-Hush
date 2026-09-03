@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/alrayyes/Hush-Hush/compare/v1.0.0...v1.0.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **hooks:** move golangci-lint run out of pre-commit ([#158](https://github.com/alrayyes/Hush-Hush/issues/158)) ([0f722f3](https://github.com/alrayyes/Hush-Hush/commit/0f722f3ddefa9da693283fd907890e77b2f05be5))
+
 ## [1.0.0](https://github.com/alrayyes/Hush-Hush/compare/v0.20.0...v1.0.0) (2026-09-03)
 
 
