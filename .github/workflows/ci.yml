@@ -79,6 +79,14 @@ jobs:
   # actually runs - so this stays its own job rather than folding into
   # `test`, which has no such dependency and shouldn't gain one just
   # because this package now imports pact-go behind a build tag.
+  #
+  # Provider verification only, unlike before the CLI split: the consumer
+  # side (internal/client) moved to hush-hush-cli along with the rest of
+  # the client, and that repo verified live it doesn't reproduce this pact
+  # suite (design.md's resolved open question - a hand-written fake
+  # instead). pacts/*.json stays committed here as a frozen snapshot this
+  # job keeps verifying the server against; nothing regenerates it going
+  # forward.
   pact:
     runs-on: ubuntu-latest
     container:
@@ -91,14 +99,6 @@ jobs:
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: go install github.com/pact-foundation/pact-go/v2@v2.7.1
       - run: pact-go install
-      # Consumer first, provider second, as two separate invocations -
-      # never `go test -tags=pact ./...` for both packages together, which
-      # starts them as independent test binaries with no ordering
-      # guarantee between them: the provider test reads the pact file the
-      # consumer test writes, and letting them run concurrently risks the
-      # provider reading it mid-write.
-      - name: consumer tests (writes pacts/*.json)
-        run: go test -tags=pact ./internal/client/... -v
       - name: provider verification (reads pacts/*.json)
         run: go test -tags=pact ./internal/api/... -run TestPactProviderVerification -v
 
@@ -153,47 +153,6 @@ jobs:
         with:
           version: v2.17.1
           args: check
-
-  # `goreleaser check` above only validates the config; this actually
-  # builds the nfpm packages via a --snapshot release (no publish, no real
-  # tag needed) and installs each into the distro it targets, so a broken
-  # .deb/.rpm - a bad contents: path, a missing man page - fails here
-  # instead of on the first real release. docker/announce/publish need
-  # real credentials or a real tag, neither of which a snapshot has -
-  # skipping them is what makes this safe to run on every push and pull
-  # request.
-  package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
-        with:
-          go-version-file: go.mod
-      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
-        with:
-          version: v2.17.1
-          args: release --snapshot --clean --skip=docker,announce,publish
-
-      - name: install and smoke-test the .deb
-        run: |
-          sudo dpkg -i dist/hush-hush-cli_*_linux_amd64.deb
-          hush-hush-cli --version
-          test -s /usr/share/man/man1/hush-hush-cli.1
-
-      # No native rpm tooling on ubuntu-latest - a Fedora container is the
-      # least-friction way to actually install and run the package, not
-      # just inspect its file list.
-      - name: install and smoke-test the .rpm
-        run: |
-          docker run --rm -v "$PWD/dist:/dist" \
-            fedora@sha256:f1a3fab47bcb3c3ddf3135d5ee7ba8b7b25f2e809a47440936212a3a50957f3d \
-            sh -c '
-              rpm -i /dist/hush-hush-cli_*_linux_amd64.rpm &&
-              hush-hush-cli --version &&
-              test -s /usr/share/man/man1/hush-hush-cli.1
-            '
 
   # hadolint runs as the job's own container rather than via `docker run`
   # from inside another one — no Docker-outside-of-Docker needed at all.

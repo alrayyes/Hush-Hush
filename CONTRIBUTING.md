@@ -81,31 +81,28 @@ directions. Part of the ordinary `go test ./...` run, no separate command.
 
 ## Contract tests
 
-`internal/client` (the HTTP client every consumer, including the future
-CLI, speaks through) and `internal/api` carry a
-[Pact](https://pact.io) contract behind the `pact` build tag - a local pact
-file, no broker, per
+`internal/api` carries the provider side of a [Pact](https://pact.io)
+contract behind the `pact` build tag - a local pact file, no broker, per
 [`design.md`](openspec/changes/secrets-object-store/design.md)'s decision.
-Pact's Go binding statically links a native library into the test binary at
-link time, so it isn't part of the ordinary `go test ./...` run: install it
-once, then run the two suites explicitly, consumer before provider - the
-provider test reads the pact file the consumer test writes, and running
-them together as one `go test ./...` starts them as independent binaries
-with no ordering guarantee between them.
+The consumer side (`internal/client`) moved to
+[`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) along with the
+rest of the client when it split into its own repo; that repo verified it
+doesn't reproduce this suite (a handwritten fake instead, see its own
+`design.md`). `pacts/*.json` stays committed here as a frozen snapshot -
+nothing regenerates it going forward, so treat a real change to what the
+server accepts or returns as a reason to check whether it still holds, not
+assume it does.
+
+Pact's Go binding statically links a native library into the test binary
+at link time, so it isn't part of the ordinary `go test ./...` run:
 
 ```sh
 go install github.com/pact-foundation/pact-go/v2@v2.7.1
 sudo "$(go env GOPATH)"/bin/pact-go install   # writes to /usr/local/lib
 export PACT_DO_NOT_TRACK=true                 # opts out of Pact's own telemetry
 
-go test -tags=pact ./internal/client/... -v   # writes pacts/*.json
 go test -tags=pact ./internal/api/... -run TestPactProviderVerification -v
 ```
-
-`pacts/*.json` is committed - the provider test reads it from disk, not
-from whatever the consumer test most recently produced in the same run.
-Regenerate and commit it in the same pull request as any change to
-`internal/client`'s request or response handling.
 
 ## Container integration test
 
@@ -138,16 +135,6 @@ Two Dockerfiles, deliberately not one:
   from a bare `docker build .` the way building from source in one
   Dockerfile would - worth it for the speed on a repo shipping multi-arch
   images on every release. hadolint lints this one too.
-
-## AUR
-
-`release.yml`'s `aur` job bumps `PKGBUILD`'s `pkgver`, runs `updpkgsums`
-against the release goreleaser's own job just published, regenerates
-`.SRCINFO`, and pushes both to the AUR git remote using the repo's
-`AUR_SSH_KEY` secret - the real publish, unconditional on every release
-that ships. It then opens a pull request here with the same two files, so
-`PKGBUILD`/`.SRCINFO` in this repo don't drift from what's live on AUR -
-that part goes through the ordinary review flow like everything else.
 
 ## Commit messages
 

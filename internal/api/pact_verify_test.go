@@ -1,7 +1,8 @@
 //go:build pact
 
-// See internal/client/pact_test.go's build-tag comment - the same static
-// link requirement applies here.
+// Pact's Go binding statically links a native library into the test
+// binary at link time, so this stays behind a build tag rather than in
+// the ordinary go test ./... run.
 package api_test
 
 import (
@@ -22,16 +23,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// pactWriterToken is the literal bearer value internal/client's consumer
-// tests recorded (matchers.String("Bearer test-token")) - Pact replays
-// that exact example against this real provider, so it has to be a token
-// this store actually accepts, seeded directly since store.CreateWriteToken
-// always generates its own random plaintext.
+// pactWriterToken is the literal bearer value the recorded consumer
+// interactions in pacts/hush-hush-cli-hush-hush-server.json use
+// (matchers.String("Bearer test-token")) - Pact replays that exact
+// example against this real provider, so it has to be a token this store
+// actually accepts, seeded directly since store.CreateWriteToken always
+// generates its own random plaintext.
 const pactWriterToken = "test-token"
 
 // TestPactProviderVerification confirms the real server satisfies every
-// interaction internal/client's consumer tests recorded - the other half
-// of the CLI-server contract (design.md: "a local pact file, no broker").
+// interaction recorded in the committed pact file - the other half of the
+// CLI-server contract (design.md: "a local pact file, no broker"). The
+// consumer side moved to hush-hush-cli's own repo when the CLI split out
+// (CONTRIBUTING.md's "Contract tests" section) - the file is now a frozen
+// snapshot, nothing regenerates it going forward.
 func TestPactProviderVerification(t *testing.T) {
 	s, err := store.Open(":memory:")
 	require.NoError(t, err)

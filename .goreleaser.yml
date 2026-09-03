@@ -5,24 +5,15 @@ project_name: hush-hush
 before:
   hooks:
     - go mod download
-    # Generated from hush-hush-cli's own command tree (cmd/hush-hush-cli/man.go)
-    # rather than hand-written, so a page can't drift out of sync with the
-    # command it documents. `go run`, not a pre-built binary: this runs
-    # before the builds below produce one.
-    - go run ./cmd/hush-hush-cli man manpages
 
 builds:
   - id: hush-hush
     main: ./cmd/hush-hush
-    # Explicit rather than relying on the project_name default - once a
-    # second build exists below, that default would name both binaries
-    # "hush-hush" inside their own, differently-named archives.
     binary: hush-hush
     env:
       - CGO_ENABLED=0
-    # Linux only, unlike hush-hush-cli below: this is a deployed service,
-    # meant to run in a container on a server, not on someone's own
-    # machine.
+    # Linux only: this is a deployed service, meant to run in a container
+    # on a server, not on someone's own machine.
     goos:
       - linux
     goarch:
@@ -36,90 +27,11 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
-  - id: hush-hush-cli
-    main: ./cmd/hush-hush-cli
-    binary: hush-hush-cli
-    env:
-      - CGO_ENABLED=0
-    # The writer's and every consumer's own machine, unlike hush-hush
-    # above - a laptop or a CI runner, any of the three major OSes.
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ignore:
-      # Negligible real-world demand, and Go's own windows/arm64 support
-      # is comparatively new next to the other five combinations here.
-      - goos: windows
-        goarch: arm64
-    flags:
-      - -trimpath
-    ldflags:
-      - -s -w -X main.version={{ .Version }}
-
 archives:
   - id: hush-hush
     ids: [hush-hush]
     formats: [tar.gz]
     name_template: "hush-hush_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
-  - id: hush-hush-cli
-    ids: [hush-hush-cli]
-    formats: [tar.gz]
-    name_template: "hush-hush-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    # The same six pages the nfpms below package into the .deb/.rpm -
-    # every distribution path carries the same docs, no exceptions. Not a
-    # manpages/*.1 glob: that would also pick up cobra's auto-generated
-    # completion-* pages, which the deb/rpm deliberately leave out.
-    files:
-      - src: manpages/hush-hush-cli.1
-        dst: man1/hush-hush-cli.1
-      - src: manpages/hush-hush-cli-init.1
-        dst: man1/hush-hush-cli-init.1
-      - src: manpages/hush-hush-cli-inject.1
-        dst: man1/hush-hush-cli-inject.1
-      - src: manpages/hush-hush-cli-get.1
-        dst: man1/hush-hush-cli-get.1
-      - src: manpages/hush-hush-cli-update.1
-        dst: man1/hush-hush-cli-update.1
-      - src: manpages/hush-hush-cli-delete.1
-        dst: man1/hush-hush-cli-delete.1
-      - src: LICENSE
-        dst: LICENSE
-
-# deb/rpm for hush-hush-cli only - hush-hush itself is container-only (see
-# the build above), and a system package for a service nobody installs
-# outside a container has no audience. Distributed as release assets, same
-# as the archives above - not a hosted apt/dnf repo, which would need its
-# own signing key and publishing pipeline for no real gain over
-# `dpkg -i`/`rpm -i` on a personal tool's release cadence.
-nfpms:
-  - id: hush-hush-cli
-    ids: [hush-hush-cli]
-    package_name: hush-hush-cli
-    formats: [deb, rpm]
-    maintainer: Ryan Kes <alias+packages@ryankes.eu>
-    description: Client for the hush-hush secrets object store
-    homepage: https://github.com/alrayyes/hush-hush
-    license: GPL-3.0
-    contents:
-      - src: manpages/hush-hush-cli.1
-        dst: /usr/share/man/man1/hush-hush-cli.1
-      - src: manpages/hush-hush-cli-init.1
-        dst: /usr/share/man/man1/hush-hush-cli-init.1
-      - src: manpages/hush-hush-cli-inject.1
-        dst: /usr/share/man/man1/hush-hush-cli-inject.1
-      - src: manpages/hush-hush-cli-get.1
-        dst: /usr/share/man/man1/hush-hush-cli-get.1
-      - src: manpages/hush-hush-cli-update.1
-        dst: /usr/share/man/man1/hush-hush-cli-update.1
-      - src: manpages/hush-hush-cli-delete.1
-        dst: /usr/share/man/man1/hush-hush-cli-delete.1
-      - src: LICENSE
-        dst: /usr/share/licenses/hush-hush-cli/LICENSE
 
 checksum:
   name_template: checksums.txt
@@ -137,9 +49,6 @@ dockers:
       - "ghcr.io/alrayyes/hush-hush:{{ .Version }}-amd64"
     use: buildx
     dockerfile: Dockerfile.release
-    # Disambiguates against hush-hush-cli, which now also builds
-    # linux/amd64 and linux/arm64 - without this, goreleaser has two
-    # matching builds to pick from for the same platform.
     ids: [hush-hush]
     goarch: amd64
     build_flag_templates:

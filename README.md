@@ -20,17 +20,17 @@ backend, and the reasoning behind each - is in
 
 - **Go 1.27 or newer** to build from source, or **Docker** to run the
   published image instead - see [Docker](#docker) below.
-- **[age](https://github.com/FiloSottile/age)**, to generate the keypairs a
-  writer and a consumer each need. Not a dependency of hush-hush itself -
-  the server and CLI only ever handle already-sealed ciphertext, never a
-  private key or plaintext value.
 - No external services. Storage is a local SQLite database.
 
 ## Installation
 
-See [`INSTALL.md`](INSTALL.md) for install options - AUR, `.deb`, `.rpm`,
-and from source. The server (`hush-hush`) is container-only, see
-[Docker](#docker) below.
+The server (`hush-hush`) is container-only - see [Docker](#docker) below.
+There's no other install path for it: nothing here ships a `.deb`, `.rpm`,
+or AUR package for the server itself.
+
+For the client, see
+[`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli#installation) -
+AUR, `.deb`, `.rpm`, Nix, and from source.
 
 ## Usage
 
@@ -67,46 +67,13 @@ credential that authenticates the write path can't itself need a token to
 call over the network, so it's direct store access instead, same as the
 server's own `DB_PATH`.
 
-### Use the CLI
+### Use the client
 
-A consumer needs an age keypair to receive a secret -
-[`age-keygen`](https://github.com/FiloSottile/age) generates one:
-
-```sh
-age-keygen -o consumer.key
-# Public key: age1...
-```
-
-Inject a secret, sealed to one or more recipients:
-
-```sh
-export HUSH_HUSH_SERVER=http://localhost:8080
-export HUSH_HUSH_TOKEN=9f8e7d6c...  # from `hush-hush token issue` above
-
-echo -n "hunter2" | hush-hush-cli inject mattermost_deploy_webhook \
-  --recipients age1... --used-by homelab/vps-docker \
-  --description "prod deploy webhook"
-```
-
-Fetch and decrypt it - only whoever holds a matching private key can.
-`--identity` takes the bare key, so pull it out of `age-keygen`'s comment
-header first:
-
-```sh
-hush-hush-cli get mattermost_deploy_webhook --identity "$(tail -1 consumer.key)"
-```
-
-Rotate the value, then remove the object once nothing needs it any more:
-
-```sh
-echo -n "new-value" | hush-hush-cli update mattermost_deploy_webhook \
-  --recipients age1...
-hush-hush-cli delete mattermost_deploy_webhook
-```
-
-`inject` and `update` both read the new plaintext from stdin rather than a
-flag or argument, so it never ends up in shell history or a process
-listing.
+Injecting, fetching, rotating, and deleting a secret - `inject`, `get`,
+`update`, `delete` - is [`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli)'s
+job, a separate repo with its own install path. See its own README for the
+full usage guide, including the age keypair a consumer needs to receive a
+secret.
 
 [`api/openapi.yaml`](api/openapi.yaml) is the full contract, including the
 audit-log query endpoint the CLI doesn't wrap - query it directly:
@@ -130,32 +97,9 @@ for, so it has no `init` command and no config file:
 have to be run against the file (or, in a container, inside the container)
 the server they're managing tokens for is actually using.
 
-The CLI (`hush-hush-cli`) is a different shape: it's run interactively by a
-person, so it takes settings as **flags > environment variables > config
-file > defaults**, and writes a starter config the first time it matters:
-
-```sh
-hush-hush-cli init      # writes ~/.config/hush-hush-cli/config.yaml
-```
-
-(`$XDG_CONFIG_HOME` instead of `~/.config` if it's set.) Run it with nothing
-configured yet - no config file, no relevant environment variable - on an
-interactive terminal, and it offers to write that starter file itself
-before continuing; `--yes` skips the prompt and writes it unconditionally,
-for a script that wants the file without a person to answer for it.
-`--force` on `init` itself overwrites an existing file, which the prompt
-never does. A flag always wins over the rest:
-
-| Flag              | Environment variable      | config key      | Meaning                                                                                  |
-| ----------------- | ------------------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| `--server`        | `HUSH_HUSH_SERVER`        | `server`        | Server base URL. Default `http://localhost:8080`.                                        |
-| `--token`         | `HUSH_HUSH_TOKEN`         | `token`         | Bearer token, for `inject`/`update`/`delete`.                                            |
-| `--token-command` | `HUSH_HUSH_TOKEN_COMMAND` | `token_command` | Command whose trimmed stdout is the token instead - wins over `--token` if both are set. |
-| `--caller`        | `HUSH_HUSH_CALLER`        | `caller`        | Self-presented identity recorded in the audit log. Optional.                             |
-| `--recipients`    | `HUSH_HUSH_RECIPIENTS`    | `recipients`    | Comma-separated age recipients, for `inject`/`update`.                                   |
-| `--identity`      | `HUSH_HUSH_IDENTITY`      | `identity`      | Comma-separated age private keys, for `get`.                                             |
-| `--used-by`       | -                         | -               | Consumers of the secret (repeatable or comma-separated), `inject` only.                  |
-| `--description`   | -                         | -               | Free-text label, fixed at creation, `inject` only.                                       |
+See [`hush-hush-cli`'s own README](https://github.com/alrayyes/hush-hush-cli#configuration)
+for the client's configuration - a different shape, since it's run
+interactively by a person rather than deployed as a service.
 
 ### Docker
 
