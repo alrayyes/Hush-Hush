@@ -13,7 +13,12 @@ func newDeleteCmd() *cobra.Command {
 		Short: "Permanently remove an object",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := cli.Delete(cmd.Context(), config(), args[0]); err != nil {
+			cfg, err := config()
+			if err != nil {
+				return err
+			}
+
+			if err := cli.Delete(cmd.Context(), cfg, args[0]); err != nil {
 				return fmt.Errorf("delete: %w", err)
 			}
 
