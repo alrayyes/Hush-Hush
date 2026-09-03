@@ -12,13 +12,10 @@ import (
 
 // dbPath points every subcommand under test at the same fresh SQLite file
 // - DB_PATH is how a real deployment configures it too, per loadConfig.
-// XDG_CONFIG_HOME is isolated too, so the config-nudge path this package
-// also exercises never touches a real home directory.
 func dbPath(t *testing.T) string {
 	t.Helper()
 
 	viper.Reset()
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	path := t.TempDir() + "/hush-hush.db"
 	t.Setenv("DB_PATH", path)
 

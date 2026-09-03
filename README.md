@@ -18,7 +18,7 @@ backend, and the reasoning behind each - is in
 
 ## Requirements
 
-- **Go 1.26 or newer** to build from source, or **Docker** to run the
+- **Go 1.27 or newer** to build from source, or **Docker** to run the
   published image instead - see [Docker](#docker) below.
 - **[age](https://github.com/FiloSottile/age)**, to generate the keypairs a
   writer and a consumer each need. Not a dependency of hush-hush itself -
@@ -117,38 +117,34 @@ curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 
 ### Configuration
 
-Both binaries take settings in the same order, each layer overriding the
-one before it: **flags > environment variables > config file > defaults**.
-Neither one requires the file - environment variables alone are enough for
-a CI job or a container - but each writes one for you the first time it
-matters:
+The server (`hush-hush`) takes its settings from the environment alone -
+it's a deployed service with no interactive user to persist a preference
+for, so it has no `init` command and no config file:
 
-```sh
-hush-hush init          # writes ~/.config/hush-hush/config.yaml
-hush-hush-cli init      # writes ~/.config/hush-hush-cli/config.yaml
-```
-
-(`$XDG_CONFIG_HOME` instead of `~/.config` if it's set.) Run either command
-with nothing configured yet - no config file, no relevant environment
-variable - on an interactive terminal, and it offers to write that starter
-file itself before continuing; `--yes` skips the prompt and writes it
-unconditionally, for a script that wants the file without a person to
-answer for it. `--force` on `init` itself overwrites an existing file,
-which the prompt never does.
-
-The server reads:
-
-| Variable  | config key | Default        | Meaning               |
-| --------- | ---------- | -------------- | --------------------- |
-| `ADDR`    | `addr`     | `:8080`        | Listen address.       |
-| `DB_PATH` | `db_path`  | `hush-hush.db` | SQLite database file. |
+| Variable  | Default        | Meaning               |
+| --------- | -------------- | --------------------- |
+| `ADDR`    | `:8080`        | Listen address.       |
+| `DB_PATH` | `hush-hush.db` | SQLite database file. |
 
 `hush-hush token issue`/`list`/`revoke` read the same `DB_PATH`, so they
 have to be run against the file (or, in a container, inside the container)
 the server they're managing tokens for is actually using.
 
-The CLI takes each setting as a flag, environment variable, or config key -
-a flag always wins:
+The CLI (`hush-hush-cli`) is a different shape: it's run interactively by a
+person, so it takes settings as **flags > environment variables > config
+file > defaults**, and writes a starter config the first time it matters:
+
+```sh
+hush-hush-cli init      # writes ~/.config/hush-hush-cli/config.yaml
+```
+
+(`$XDG_CONFIG_HOME` instead of `~/.config` if it's set.) Run it with nothing
+configured yet - no config file, no relevant environment variable - on an
+interactive terminal, and it offers to write that starter file itself
+before continuing; `--yes` skips the prompt and writes it unconditionally,
+for a script that wants the file without a person to answer for it.
+`--force` on `init` itself overwrites an existing file, which the prompt
+never does. A flag always wins over the rest:
 
 | Flag              | Environment variable      | config key      | Meaning                                                                                  |
 | ----------------- | ------------------------- | --------------- | ---------------------------------------------------------------------------------------- |
