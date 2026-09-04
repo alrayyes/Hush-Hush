@@ -50,7 +50,7 @@ jobs:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
       - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check the prose this repository owns
         # The same script the pre-push hook runs, so the two cannot disagree
         # about the version, the file list or what counts as a failure.
@@ -62,7 +62,7 @@ jobs:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
       - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Vale
         env:
           GOTOOLCHAIN: auto
