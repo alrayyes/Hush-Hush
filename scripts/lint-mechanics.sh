@@ -2,10 +2,13 @@
 # Grammar, spelling and the phonetic article, over the prose this repository
 # owns. The tier with a right answer, so it fails rather than advises.
 #
-# Runs the same ltex-ls-plus in the pre-push hook as in CI. It ships its own
-# JDK and is a ~300 MB download the first time, which is why this caches it
-# outside the repository; after that a run over a handful of documents takes
-# about ten seconds.
+# Runs the same ltex-ls-plus in the pre-push hook as in CI. In CI the job's
+# own container is ghcr.io/alrayyes/ltex-cli-plus (built once by that repo,
+# not fetched fresh here), so ltex-cli-plus is already on PATH and this
+# script's only job there is to skip the fetch and use it. Locally it still
+# ships its own JDK and is a ~300 MB download the first time, which is why
+# this caches it outside the repository; after that a run over a handful of
+# documents takes about ten seconds.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -22,31 +25,36 @@ git config --global --add safe.directory "$(pwd)"
 # arrangement exists to avoid.
 VERSION=18.7.0
 
-# Outside the repository, so a second clone does not download it again and no
-# .gitignore has to know about it.
-CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ltex-ls-plus/$VERSION"
-HOME_DIR="$CACHE/ltex-ls-plus-$VERSION"
+if command -v ltex-cli-plus >/dev/null 2>&1; then
+  CLI=$(command -v ltex-cli-plus)
+else
+  # Outside the repository, so a second clone does not download it again and
+  # no .gitignore has to know about it.
+  CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ltex-ls-plus/$VERSION"
+  HOME_DIR="$CACHE/ltex-ls-plus-$VERSION"
+  CLI="$HOME_DIR/bin/ltex-cli-plus"
 
-if [ ! -x "$HOME_DIR/bin/ltex-cli-plus" ]; then
-  echo "Fetching ltex-ls-plus $VERSION (~300 MB, once per machine)"
-  mkdir -p "$CACHE"
-  url="https://github.com/ltex-plus/ltex-ls-plus/releases/download/${VERSION}/ltex-ls-plus-${VERSION}-linux-x64.tar.gz"
-  # No --strip-components: the archive has a leading "./" entry, so stripping
-  # one component removes that rather than the version directory, and the
-  # binary ends up somewhere nobody looks.
-  curl -fsSL "$url" | tar -xz -C "$CACHE"
-fi
+  if [ ! -x "$CLI" ]; then
+    echo "Fetching ltex-ls-plus $VERSION (~300 MB, once per machine)"
+    mkdir -p "$CACHE"
+    url="https://github.com/ltex-plus/ltex-ls-plus/releases/download/${VERSION}/ltex-ls-plus-${VERSION}-linux-x64.tar.gz"
+    # No --strip-components: the archive has a leading "./" entry, so
+    # stripping one component removes that rather than the version
+    # directory, and the binary ends up somewhere nobody looks.
+    curl -fsSL "$url" | tar -xz -C "$CACHE"
+  fi
 
-# The archive ships its own JDK and the launcher prefers JAVA_HOME, which on a
-# machine with an older Java set dies on a class-file-version mismatch — a
-# Java error reported as a prose failure. Found by glob so a JDK bump upstream
-# does not silently break it.
-jdk=$(find "$HOME_DIR" -maxdepth 1 -type d -name 'jdk-*' | head -1)
-if [ -z "$jdk" ]; then
-  echo "no bundled JDK found in the ltex archive" >&2
-  exit 1
+  # The archive ships its own JDK and the launcher prefers JAVA_HOME, which
+  # on a machine with an older Java set dies on a class-file-version
+  # mismatch — a Java error reported as a prose failure. Found by glob so a
+  # JDK bump upstream does not silently break it.
+  jdk=$(find "$HOME_DIR" -maxdepth 1 -type d -name 'jdk-*' | head -1)
+  if [ -z "$jdk" ]; then
+    echo "no bundled JDK found in the ltex archive" >&2
+    exit 1
+  fi
+  export JAVA_HOME="$jdk"
 fi
-export JAVA_HOME="$jdk"
 
 # CHANGELOG.md is written by the release job, and .claude/ is Claude Code's
 # own installed skill/command definitions - neither is this repo's authored
@@ -66,7 +74,7 @@ echo "Checking:"
 echo "$files"
 
 # shellcheck disable=SC2086
-"$HOME_DIR/bin/ltex-cli-plus" --client-configuration=.ltex.json $files
+"$CLI" --client-configuration=.ltex.json $files
 status=$?
 
 # ltex-cli-plus exits 3 when it finds something, not 1. Testing for a specific
