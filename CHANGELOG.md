@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.1](https://github.com/alrayyes/Hush-Hush/compare/v2.0.0...v2.0.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* bump @redocly/cli from 2.47.0 to 2.49.1 ([#168](https://github.com/alrayyes/Hush-Hush/issues/168)) ([9a15d54](https://github.com/alrayyes/Hush-Hush/commit/9a15d544174815f8861085d88e8755054011d8e4))
+* bump golang from 1.27.0-bookworm to 1.27.1-bookworm ([#165](https://github.com/alrayyes/Hush-Hush/issues/165)) ([515637a](https://github.com/alrayyes/Hush-Hush/commit/515637a51a59ed58c4704aa4736cbd61dbe74404))
+* bump lefthook from 2.1.10 to 2.1.12 ([#167](https://github.com/alrayyes/Hush-Hush/issues/167)) ([af4be5d](https://github.com/alrayyes/Hush-Hush/commit/af4be5d55467558b6c74cb6e84460bb16b54e1dc))
+
 ## [2.0.0](https://github.com/alrayyes/Hush-Hush/compare/v1.0.1...v2.0.0) (2026-09-03)
 
 
