@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/alrayyes/Hush-Hush/compare/v2.0.1...v2.0.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **ci:** correct codecov-action input to report_type, not report-type ([#174](https://github.com/alrayyes/Hush-Hush/issues/174)) ([f1983c3](https://github.com/alrayyes/Hush-Hush/commit/f1983c3751be16229365514eb2a5ea0c6e1e3914))
+
 ## [2.0.1](https://github.com/alrayyes/Hush-Hush/compare/v2.0.0...v2.0.1) (2026-09-04)
 
 
