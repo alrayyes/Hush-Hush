@@ -55,8 +55,11 @@ jobs:
       - name: go test
         # -coverpkg=./..., not the default: without it, coverage only counts
         # each package's own tests, and a thin handler package under-reports
-        # since the logic it calls lives elsewhere.
-        run: go test -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./... ./...
+        # since the logic it calls lives elsewhere. gotestsum wraps it for
+        # the JUnit report Test Analytics needs.
+        run: >-
+          go tool gotestsum --junitfile junit.xml --
+          -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./... ./...
       - name: Report coverage
         run: |
           go tool cover -func=coverage.out | tail -1 |
@@ -72,6 +75,14 @@ jobs:
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && github.actor != 'dependabot[bot]' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report-type: test_results
+          files: junit.xml
           fail_ci_if_error: true
 
   # Pact's Go binding statically links a native library into the test
