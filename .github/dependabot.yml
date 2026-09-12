@@ -11,7 +11,12 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: fix
+      # Every bun devDependency here is pure tooling (prettier,
+      # markdownlint, redocly, commitlint, lefthook, sort-package-json) -
+      # none of it ships in the released Go binary or container image, so
+      # releases.md's fix: rationale (a change to what ships) doesn't hold
+      # for this repo's bun ecosystem specifically.
+      prefix: chore
   - package-ecosystem: github-actions
     directory: /
     schedule:
