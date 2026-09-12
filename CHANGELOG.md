@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/alrayyes/Hush-Hush/compare/v2.0.3...v2.0.4) (2026-09-12)
+
+
+### Bug Fixes
+
+* **deps:** bump grpc and go-archive to patched versions ([#182](https://github.com/alrayyes/Hush-Hush/issues/182)) ([41dc93c](https://github.com/alrayyes/Hush-Hush/commit/41dc93cf363c22a1d99f34b50fcf96cff0909568))
+
 ## [2.0.3](https://github.com/alrayyes/Hush-Hush/compare/v2.0.2...v2.0.3) (2026-09-12)
 
 
