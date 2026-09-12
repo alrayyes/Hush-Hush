@@ -20,6 +20,7 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       # Version-pinned by the image tag itself, so there's nothing separate
       # to keep in sync with a golangci-lint-action version. This image is
@@ -46,6 +47,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     container:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
@@ -100,6 +102,7 @@ jobs:
   # forward.
   pact:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     container:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     env:
@@ -115,6 +118,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
@@ -129,6 +133,7 @@ jobs:
   # now.
   govulncheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     container:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
@@ -142,6 +147,7 @@ jobs:
   # fixer's twin from lefthook.yml: run it again and diff.
   gomod:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
     steps:
@@ -158,6 +164,7 @@ jobs:
   # instead of `go install`-ing the whole tool from source on every run.
   goreleaser:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
@@ -171,6 +178,7 @@ jobs:
   # `FROM scratch`, no shell, and can't run a checkout step.
   dockerfile:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: hadolint/hadolint:v2.15.1-alpine@sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552
     steps:
@@ -186,6 +194,7 @@ jobs:
   # setup for no benefit over just not nesting at all.
   container-integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -204,6 +213,7 @@ jobs:
   # same pin so nothing writes a v2 lockfile out from under Dependabot.
   prose:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
@@ -227,6 +237,7 @@ jobs:
   # CONTRIBUTING.md's "The contract" section for the gap.
   api:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
@@ -242,6 +253,7 @@ jobs:
   # role here that Prettier fills for everything else.
   package-json:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
@@ -256,6 +268,7 @@ jobs:
   # stops it drifting, not a known CVE in whatever's pinned right now.
   bun-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
@@ -271,6 +284,7 @@ jobs:
   commits:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     container:
       image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
