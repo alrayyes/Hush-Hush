@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.3](https://github.com/alrayyes/Hush-Hush/compare/v2.0.2...v2.0.3) (2026-09-12)
+
+
+### Bug Fixes
+
+* bump @redocly/cli from 2.49.1 to 2.51.2 ([#176](https://github.com/alrayyes/Hush-Hush/issues/176)) ([3265cd3](https://github.com/alrayyes/Hush-Hush/commit/3265cd3f29215125179cb9ee0f9ac9778a2b5a8b))
+* bump modernc.org/sqlite from 1.57.0 to 1.58.0 ([#177](https://github.com/alrayyes/Hush-Hush/issues/177)) ([66bd16b](https://github.com/alrayyes/Hush-Hush/commit/66bd16b44467e40f3f6fa77690a2cdeef066a0e7))
+
 ## [2.0.2](https://github.com/alrayyes/Hush-Hush/compare/v2.0.1...v2.0.2) (2026-09-10)
 
 
