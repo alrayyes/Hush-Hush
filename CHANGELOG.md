@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/alrayyes/Hush-Hush/compare/v2.1.0...v2.1.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* bump modernc.org/sqlite from 1.58.0 to 1.59.0 ([365fa38](https://github.com/alrayyes/Hush-Hush/commit/365fa3859a144387565aab38efdfa41c2cdff724))
+* bump modernc.org/sqlite from 1.58.0 to 1.59.0 ([fa8f15b](https://github.com/alrayyes/Hush-Hush/commit/fa8f15b7230f0ad4c60076c50113e32957df6484))
+
 ## [2.1.0](https://github.com/alrayyes/Hush-Hush/compare/v2.0.4...v2.1.0) (2026-09-18)
 
 
