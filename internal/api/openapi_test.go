@@ -100,6 +100,26 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "list objects",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObject(t, s, "contract_list")
+
+				req := httptest.NewRequest(http.MethodGet, "/objects", nil)
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "list objects without a bearer token",
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest(http.MethodGet, "/objects", nil)
+			},
+		},
+		{
 			name: "get object",
 			request: func(t *testing.T, s *store.Store) *http.Request {
 				t.Helper()

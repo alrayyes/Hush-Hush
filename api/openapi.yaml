@@ -69,6 +69,37 @@ paths:
                 status: ok
 
   /objects:
+    get:
+      operationId: listObjects
+      summary: List stored objects
+      description: |
+        Returns every stored object's metadata (id, used_by, description) -
+        never the sealed value. Gated by a write token unlike every other
+        read path here: an id-scoped read only ever discloses what a
+        caller already knows the id of, but enumerating every object is a
+        capability none of those reads grant on their own.
+      tags: [objects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: used_by
+          in: query
+          required: false
+          description: Restrict to objects whose recorded used_by lineage includes this consumer.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching objects' metadata, sorted by id.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ObjectMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
     post:
       operationId: createObject
       summary: Create a new sealed object

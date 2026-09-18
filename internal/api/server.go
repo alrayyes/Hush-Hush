@@ -19,6 +19,7 @@ import (
 type objectStore interface {
 	CreateObject(ctx context.Context, id string, value []byte, usedBy []string, description string) error
 	GetObject(ctx context.Context, id string) (store.Object, error)
+	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	UpdateObject(ctx context.Context, id string, value []byte) error
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip string) error
@@ -34,6 +35,7 @@ func NewMux(s objectStore) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth)
 	mux.HandleFunc("POST /objects", requireWriteToken(s, handleCreateObject(s)))
+	mux.HandleFunc("GET /objects", requireWriteToken(s, handleListObjects(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{id}", requireWriteToken(s, handleUpdateObject(s)))
