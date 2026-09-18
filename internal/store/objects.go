@@ -82,24 +82,92 @@ func (s *Store) GetObject(ctx context.Context, id string) (Object, error) {
 		return Object{}, fmt.Errorf("select object: %w", err)
 	}
 
+	usedBy, err := s.usedByFor(ctx, id)
+	if err != nil {
+		return Object{}, err
+	}
+	obj.UsedBy = usedBy
+
+	return obj, nil
+}
+
+// usedByFor returns id's recorded used_by lineage, consumer names sorted -
+// shared by GetObject and ListObjects rather than each querying it inline.
+func (s *Store) usedByFor(ctx context.Context, id string) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT consumer FROM used_by WHERE object_id = ? ORDER BY consumer`, id)
 	if err != nil {
-		return Object{}, fmt.Errorf("select used_by: %w", err)
+		return nil, fmt.Errorf("select used_by: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
+	var usedBy []string
 	for rows.Next() {
 		var consumer string
 		if err := rows.Scan(&consumer); err != nil {
-			return Object{}, fmt.Errorf("scan used_by: %w", err)
+			return nil, fmt.Errorf("scan used_by: %w", err)
 		}
-		obj.UsedBy = append(obj.UsedBy, consumer)
+		usedBy = append(usedBy, consumer)
 	}
 	if err := rows.Err(); err != nil {
-		return Object{}, fmt.Errorf("iterate used_by: %w", err)
+		return nil, fmt.Errorf("iterate used_by: %w", err)
 	}
 
-	return obj, nil
+	return usedBy, nil
+}
+
+// ObjectFilter narrows a ListObjects call. The zero value matches every
+// stored object.
+type ObjectFilter struct {
+	// UsedBy restricts the result to objects whose recorded used_by
+	// lineage includes this consumer. Empty means no restriction.
+	UsedBy string
+}
+
+// ListObjects returns every stored object's metadata (id, used_by,
+// description - never the sealed value), sorted by id. filter narrows the
+// result; its zero value returns everything.
+func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object, error) {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+
+	if filter.UsedBy != "" {
+		rows, err = s.db.QueryContext(ctx, `
+			SELECT DISTINCT o.id, o.description
+			FROM objects o
+			JOIN used_by u ON u.object_id = o.id
+			WHERE u.consumer = ?
+			ORDER BY o.id`, filter.UsedBy)
+	} else {
+		rows, err = s.db.QueryContext(ctx, `SELECT id, description FROM objects ORDER BY id`)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select objects: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var objs []Object
+	for rows.Next() {
+		var obj Object
+		if err := rows.Scan(&obj.ID, &obj.Description); err != nil {
+			return nil, fmt.Errorf("scan object: %w", err)
+		}
+		objs = append(objs, obj)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate objects: %w", err)
+	}
+
+	for i := range objs {
+		usedBy, err := s.usedByFor(ctx, objs[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		objs[i].UsedBy = usedBy
+	}
+
+	return objs, nil
 }
 
 // UpdateObject replaces the stored value for id, leaving used_by untouched -

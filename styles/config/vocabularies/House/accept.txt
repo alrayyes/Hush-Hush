@@ -66,3 +66,4 @@ hush-hush-go
 hush-hush-python
 hush-hush-node
 hush-hush-php
+hush-hush-cli

@@ -157,3 +157,44 @@ func TestDeleteObjectUnknownID(t *testing.T) {
 	err := s.DeleteObject(context.Background(), "nope")
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestListObjectsReturnsEveryObjectSortedByID(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "zeta", []byte("v"), nil, ""))
+	require.NoError(t, s.CreateObject(ctx, "alpha", []byte("v"), []string{"homelab/vps-docker"}, "prod deploy webhook"))
+
+	objs, err := s.ListObjects(ctx, store.ObjectFilter{})
+	require.NoError(t, err)
+	require.Len(t, objs, 2)
+	require.Equal(t, "alpha", objs[0].ID)
+	require.Equal(t, []string{"homelab/vps-docker"}, objs[0].UsedBy)
+	require.Equal(t, "prod deploy webhook", objs[0].Description)
+	require.Equal(t, "zeta", objs[1].ID)
+}
+
+func TestListObjectsReturnsEmptyArrayWhenNoneExist(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	objs, err := s.ListObjects(context.Background(), store.ObjectFilter{})
+	require.NoError(t, err)
+	require.Empty(t, objs)
+}
+
+func TestListObjectsFiltersByUsedBy(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "shared_by_two", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "unrelated", []byte("v"), []string{"homelab/mattermost"}, ""))
+
+	objs, err := s.ListObjects(ctx, store.ObjectFilter{UsedBy: "homelab/vps-docker"})
+	require.NoError(t, err)
+	require.Len(t, objs, 1)
+	require.Equal(t, "shared_by_two", objs[0].ID)
+}

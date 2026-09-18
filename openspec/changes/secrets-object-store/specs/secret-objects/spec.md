@@ -102,6 +102,30 @@ The system SHALL allow a writer to set a free-text description on an object at c
 - **WHEN** a writer creates an object without supplying a description
 - **THEN** the system stores the object with no description
 
+### Requirement: List stored objects
+
+The system SHALL allow a writer holding a valid bearer token to list every stored object's metadata (id, used_by, description), optionally restricted to objects whose used_by lineage includes a given consumer, without ever returning a sealed value. Unlike the id-scoped read paths, listing requires no id the caller already knows, so it is gated the same as a write instead of left unauthenticated.
+
+#### Scenario: Writer lists every stored object
+
+- **WHEN** a writer with a valid bearer token submits a list request with no filter
+- **THEN** the system returns metadata for every stored object, sorted by id, with no sealed value included
+
+#### Scenario: Writer lists objects filtered by used_by
+
+- **WHEN** a writer with a valid bearer token submits a list request restricted to a given consumer
+- **THEN** the system returns metadata only for objects whose recorded used_by lineage includes that consumer
+
+#### Scenario: List request without a valid bearer token is rejected
+
+- **WHEN** a list request is submitted without a valid bearer token
+- **THEN** the system rejects the request
+
+#### Scenario: Listing when no objects are stored
+
+- **WHEN** a writer with a valid bearer token submits a list request and no objects exist
+- **THEN** the system returns an empty list, not an error
+
 ### Requirement: The service never computes or persists plaintext
 
 The system SHALL NOT decrypt a stored value at any point during create, read, update, or delete.

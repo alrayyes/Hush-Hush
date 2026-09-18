@@ -83,3 +83,9 @@ key management and flag parsing on top of it, per
 - [x] 17.1 Add an optional `description` field to the create endpoint's request and response schema in the OpenAPI spec, and verify it lints clean with Redocly
 - [x] 17.2 Store description alongside the object and verify it's returned unchanged in metadata and persists across an update
 - [x] 17.3 Add `--description` to the CLI inject command and surface it wherever object metadata is shown, and verify it round-trips end to end
+
+## 18. Server: List Objects Endpoint (alrayyes/hush-hush#188)
+
+- [x] 18.1 Add `GET /objects` to the OpenAPI spec - bearer-token gated, an optional `used_by` filter, metadata-only response - and verify it lints clean with Redocly
+- [x] 18.2 Implement the endpoint and verify it returns every stored object's metadata sorted by id, an empty array when none exist, and only matching objects when `used_by` is given
+- [ ] 18.3 CLI: consume the endpoint with a `list` command, once the hush-hush-go SDK is regenerated against the updated spec (tracked in hush-hush-cli, not here)
