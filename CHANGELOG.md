@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0](https://github.com/alrayyes/Hush-Hush/compare/v2.0.4...v2.1.0) (2026-09-18)
+
+
+### Features
+
+* **api:** add GET /objects to list stored objects ([0abfdf1](https://github.com/alrayyes/Hush-Hush/commit/0abfdf10fc600e9d3b068fb87be96c1f6d9102e3))
+* **api:** add GET /objects to list stored objects ([921c9c5](https://github.com/alrayyes/Hush-Hush/commit/921c9c5dd29c40d12fcf0fb40f291d666f322059)), closes [#188](https://github.com/alrayyes/Hush-Hush/issues/188)
+
 ## [2.0.4](https://github.com/alrayyes/Hush-Hush/compare/v2.0.3...v2.0.4) (2026-09-12)
 
 
