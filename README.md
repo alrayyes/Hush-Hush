@@ -117,6 +117,13 @@ curl localhost:8080/healthz
 docker exec hush-hush /hush-hush token issue --description "trying it out"
 ```
 
+The image is `distroless/static-debian12` - there's no shell in it, so
+`docker exec -ti <container> sh` has nothing to run. `docker exec` only
+works by naming the binary itself, at `/hush-hush` in the container, the
+way the preceding commands do - not `./out/hush-hush`, which is where the
+[Dockerfile](Dockerfile)'s discarded build stage puts it and which doesn't
+exist in the image that actually ships.
+
 Pin an exact version (`ghcr.io/alrayyes/hush-hush:0.7.0`) rather than
 `latest` for anything other than trying it out. `--read-only` needs a
 volume mounted at wherever `DB_PATH` points - the default `hush-hush.db`
