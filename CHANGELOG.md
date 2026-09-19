@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/alrayyes/Hush-Hush/compare/v2.2.0...v2.3.0) (2026-09-19)
+
+
+### Features
+
+* **store:** add web-ui storage schema ([#217](https://github.com/alrayyes/Hush-Hush/issues/217)) ([f2e5a37](https://github.com/alrayyes/Hush-Hush/commit/f2e5a37e37e369f10c4fa0e4ddc94839e0edfdd4))
+
 ## [2.2.0](https://github.com/alrayyes/Hush-Hush/compare/v2.1.1...v2.2.0) (2026-09-19)
 
 
