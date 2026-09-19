@@ -64,16 +64,28 @@ more dependency surface than a few pages need; over Melt UI,
 whose Svelte 5 support was still migrating as of this research. Revisit if
 the page count grows enough that hand-styling becomes the bottleneck.
 
-**Build embedding: frontend built to `web/build/`, embedded into the Go
-binary with `go:embed`, served for every non-`/api`-prefixed path (or
-however the existing router is namespaced - see tasks.md for the concrete
-routing change).** Alternative considered: serving the SPA from a separate
-static host/CDN. Rejected - it reintroduces the CORS and separate-deploy
-complexity the user explicitly decided against, and this service already
-ships as a single distroless binary; a second deployable would defeat that.
-`Dockerfile` gains a frontend build stage (Node/bun) ahead of the Go build
-stage, discarded from the final image the same way the Go build stage
-already is.
+**Build embedding: frontend built to `cmd/hush-hush/web/build/`, embedded
+into the Go binary with `go:embed`, served for every non-`/api`-prefixed
+path (or however the existing router is namespaced - see tasks.md for the
+concrete routing change).** Alternative considered: serving the SPA from a
+separate static host/CDN. Rejected - it reintroduces the CORS and
+separate-deploy complexity the user explicitly decided against, and this
+service already ships as a single distroless binary; a second deployable
+would defeat that. `Dockerfile` gains a frontend build stage (Node/bun)
+ahead of the Go build stage, discarded from the final image the same way
+the Go build stage already is.
+
+Corrects a path this same decision originally got wrong, caught while
+implementing #205: `go:embed` can only reach a subdirectory of the file
+that declares the directive - no `../` escapes, per `go doc embed` - so a
+repo-root `web/build/` is unreachable from any file under `cmd/` or
+`internal/`, and this repo has no root-level Go package for a directive to
+live in otherwise. The SvelteKit project (and its `build/` output) is
+scaffolded under `cmd/hush-hush/web/` instead, directly alongside
+`cmd/hush-hush/main.go`, the one place in the tree that can actually
+declare `//go:embed all:web/build`. `all:` matters here specifically:
+SvelteKit's own build output includes a `_app/` directory, and `go:embed`
+excludes `_`-prefixed files and directories by default.
 
 **WebAuthn library: `go-webauthn/webauthn` server-side,
 `@simplewebauthn/browser` client-side.** Confirmed still the maintained Go

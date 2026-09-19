@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
@@ -20,6 +21,23 @@ import (
 // ceremony against without each one repeating the value.
 const testPublicURL = "https://hush-hush.example.test"
 
+// testIndexHTML is what every handler test's mux serves as the embedded
+// SPA's index.html - static_test.go checks its exact content, and every
+// other test just needs some fixed, recognizable body so a static-route
+// case can't be confused with a real API response.
+const testIndexHTML = "<html>test placeholder</html>"
+
+// testWebBuild stands in for the real embedded SPA build in every
+// handler test - an in-memory fs.FS (testing/fstest.MapFS), not the real
+// cmd/hush-hush/web/build/ placeholder, so this package doesn't need a
+// filesystem path back to it.
+func testWebBuild() fstest.MapFS {
+	return fstest.MapFS{
+		"index.html":       {Data: []byte(testIndexHTML)},
+		"_app/version.txt": {Data: []byte("test")},
+	}
+}
+
 // newTestMux and its backing store are shared by every handler test in this
 // package - each test gets its own in-memory database.
 func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
@@ -29,7 +47,7 @@ func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	return hushhush.NewMux(s, testPublicURL), s
+	return hushhush.NewMux(s, testPublicURL, testWebBuild()), s
 }
 
 // issueToken mints a write token valid against s, for a test that needs a

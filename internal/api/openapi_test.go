@@ -428,7 +428,7 @@ func checkContractCase(t *testing.T, router routers.Router, tc contractCase) {
 func seedObject(t *testing.T, s *store.Store, id string) {
 	t.Helper()
 
-	mux := hushhush.NewMux(s, testPublicURL)
+	mux := hushhush.NewMux(s, testPublicURL, testWebBuild())
 	req := createRequest(t, hushhush.CreateObjectRequest{ID: id, Value: []byte("sealed-ciphertext")}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
