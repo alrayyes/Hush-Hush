@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.0](https://github.com/alrayyes/Hush-Hush/compare/v2.5.1...v2.6.0) (2026-09-19)
+
+
+### Features
+
+* **api:** token management HTTP endpoints ([10864f0](https://github.com/alrayyes/Hush-Hush/commit/10864f094a6824e65934dae82c6656cdaccde22b))
+* **api:** token management HTTP endpoints ([#204](https://github.com/alrayyes/Hush-Hush/issues/204)) ([c2846e9](https://github.com/alrayyes/Hush-Hush/commit/c2846e9f79bdabd49f2b999f0e95bb5498df4ab6))
+
 ## [2.5.1](https://github.com/alrayyes/Hush-Hush/compare/v2.5.0...v2.5.1) (2026-09-19)
 
 
