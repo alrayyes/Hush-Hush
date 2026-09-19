@@ -29,6 +29,35 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
 
+  # Each SDK repo's own codegen.yml already listens for this event
+  # alongside its daily cron poll of the spec (alrayyes/hush-hush-go#65 and
+  # its siblings) - this job only closes the notification gap so
+  # regeneration doesn't wait up to 24h for the next cron tick. It doesn't
+  # diff the spec itself: the SDK repos' own "did the spec actually move"
+  # check already no-ops a release that didn't touch api/openapi.yaml, so
+  # doing that twice here would just be duplicate bookkeeping.
+  notify-sdks:
+    needs: release-please
+    if: needs.release-please.outputs.release_created
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        repo: [hush-hush-go, hush-hush-python, hush-hush-node, hush-hush-php]
+      fail-fast: false
+    steps:
+      # RELEASE_TOKEN, not the default GITHUB_TOKEN: a repository_dispatch
+      # needs write access to the *target* repo, which GITHUB_TOKEN never
+      # has outside the repo the workflow runs in.
+      - name: Dispatch spec-updated to ${{ matrix.repo }}
+        run: |
+          gh api "repos/alrayyes/${{ matrix.repo }}/dispatches" \
+            -f event_type=spec-updated
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
   goreleaser:
     needs: release-please
     if: needs.release-please.outputs.release_created
