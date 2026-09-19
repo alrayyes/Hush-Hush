@@ -479,6 +479,7 @@ paths:
         - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/credentialId"
+        - $ref: "#/components/parameters/csrfToken"
       requestBody:
         required: true
         content:
@@ -509,6 +510,7 @@ paths:
         - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/credentialId"
+        - $ref: "#/components/parameters/csrfToken"
       responses:
         "204":
           description: The credential was removed.

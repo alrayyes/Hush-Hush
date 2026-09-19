@@ -72,6 +72,48 @@ func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 	return creds, nil
 }
 
+// RenameCredential updates a credential's nickname. Returns
+// ErrCredentialNotFound if no credential exists under id.
+func (s *Store) RenameCredential(ctx context.Context, id, nickname string) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE webauthn_credentials SET nickname = ? WHERE id = ?`, nickname, id)
+	if err != nil {
+		return fmt.Errorf("rename credential: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rename credential: %w", err)
+	}
+
+	if n == 0 {
+		return ErrCredentialNotFound
+	}
+
+	return nil
+}
+
+// DeleteCredential permanently removes a credential. Returns
+// ErrCredentialNotFound if no credential exists under id - the caller is
+// responsible for refusing to delete the last remaining one (this
+// package has no notion of "last" beyond ListCredentials' count).
+func (s *Store) DeleteCredential(ctx context.Context, id string) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM webauthn_credentials WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete credential: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete credential: %w", err)
+	}
+
+	if n == 0 {
+		return ErrCredentialNotFound
+	}
+
+	return nil
+}
+
 // UpdateCredentialUsage records a successful login's new signature counter
 // and timestamp - go-webauthn's own clone-detection step compares this
 // stored counter against a later assertion's, so it has to be kept current.

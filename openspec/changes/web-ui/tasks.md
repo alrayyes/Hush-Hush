@@ -26,9 +26,9 @@
 
 ## 4. Server: Credential Management (alrayyes/hush-hush#202)
 
-- [ ] 4.1 Implement credential list (nickname, created-at, last-used-at only - no public key material), and verify the response shape
-- [ ] 4.2 Implement credential rename and delete, and verify a deleted credential can no longer authenticate a login
-- [ ] 4.3 Verify deleting the last remaining credential is rejected and the credential remains registered
+- [x] 4.1 Implement credential list (nickname, created-at, last-used-at only - no public key material), and verify the response shape
+- [x] 4.2 Implement credential rename and delete, and verify a deleted credential can no longer authenticate a login
+- [x] 4.3 Verify deleting the last remaining credential is rejected and the credential remains registered
 
 ## 5. Server: Session-Attributed Audit Writes (alrayyes/hush-hush#203)
 
