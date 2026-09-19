@@ -61,9 +61,7 @@ func nullableString(v string) sql.NullString {
 }
 
 // AuditLogEntry is one recorded audit log entry. Matches
-// components.schemas.AuditLogEntry in api/openapi.yaml - ActorType and
-// ActorID aren't in that schema yet (alrayyes/hush-hush#214 adds them),
-// but are already readable here since RecordAuditLog already writes them.
+// components.schemas.AuditLogEntry in api/openapi.yaml.
 type AuditLogEntry struct {
 	ObjectID  string
 	Action    AuditAction
@@ -80,6 +78,7 @@ type AuditLogEntry struct {
 type AuditLogFilter struct {
 	ObjectID string
 	Caller   string
+	Actor    string
 	From     time.Time
 	To       time.Time
 }
@@ -99,6 +98,11 @@ func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]Aud
 	if filter.Caller != "" {
 		clauses = append(clauses, "caller = ?")
 		args = append(args, filter.Caller)
+	}
+
+	if filter.Actor != "" {
+		clauses = append(clauses, "actor_id = ?")
+		args = append(args, filter.Actor)
 	}
 
 	if !filter.From.IsZero() {

@@ -47,9 +47,9 @@
 
 ## 7. Server: Bearer-Token-Attributed Audit Writes and Actor Query Filter (alrayyes/hush-hush#214)
 
-- [ ] 7.1 Implement attribution: a bearer-token-authenticated create/update/delete records the authenticating token's id as the audit log entry's `actor_type`/`actor_id`, and verify with a test per operation
-- [ ] 7.2 Add an actor/token filter to `GET /audit-log`, combining with the existing object/caller/time filters, and verify each filter combination
-- [ ] 7.3 Verify a revoked token's past audit entries still resolve to its real description and owner (tokens/spec.md's "A revoked token's history stays readable" scenario)
+- [x] 7.1 Implement attribution: a bearer-token-authenticated create/update/delete records the authenticating token's id as the audit log entry's `actor_type`/`actor_id`, and verify with a test per operation
+- [x] 7.2 Add an actor/token filter to `GET /audit-log`, combining with the existing object/caller/time filters, and verify each filter combination
+- [x] 7.3 Verify a revoked token's past audit entries still resolve to its real description and owner (tokens/spec.md's "A revoked token's history stays readable" scenario)
 
 ## 8. Server: Embed and Serve the SPA (alrayyes/hush-hush#205)
 
