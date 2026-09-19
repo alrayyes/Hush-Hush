@@ -28,10 +28,12 @@ if [ ! -d styles/Google ] || [ ! -d styles/proselint ]; then
 fi
 
 # The prose this repository wrote. A bare `vale .` also reads the generated
-# changelog, Claude Code's own installed skill/command definitions, and the
-# README of every downloaded style package, and holds all of them to house
-# rules they were never written to.
-files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/')
+# changelog, Claude Code's own installed skill/command definitions, sv's
+# generated AI-tooling prompt under cmd/hush-hush/web/ (npx sv add
+# ai-tools), and the README of every downloaded style package, and holds
+# all of them to house rules they were never written to.
+files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/' \
+  | grep -v '^cmd/hush-hush/web/AGENTS\.md$' | grep -v '^cmd/hush-hush/web/\.claude/')
 
 # An empty list means something upstream broke, not that there is nothing to
 # check - see lint-mechanics.sh for the failure mode this avoids.

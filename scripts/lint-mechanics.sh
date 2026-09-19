@@ -56,10 +56,13 @@ else
   export JAVA_HOME="$jdk"
 fi
 
-# CHANGELOG.md is written by the release job, and .claude/ is Claude Code's
-# own installed skill/command definitions - neither is this repo's authored
-# prose to correct.
-files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/')
+# CHANGELOG.md is written by the release job, .claude/ is Claude Code's
+# own installed skill/command definitions, and cmd/hush-hush/web/AGENTS.md
+# plus its own nested .claude/ are sv's generated AI-tooling prompt
+# (npx sv add ai-tools) - none of it is this repo's authored prose to
+# correct.
+files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/' \
+  | grep -v '^cmd/hush-hush/web/AGENTS\.md$' | grep -v '^cmd/hush-hush/web/\.claude/')
 
 # An empty list means something upstream broke (git, the working directory,
 # ls-files itself) - not that there is nothing to check. Failing loudly here

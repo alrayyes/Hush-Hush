@@ -73,6 +73,8 @@ pre-commit:
       glob: "*.md"
       exclude:
         - "CHANGELOG.md"
+        - "cmd/hush-hush/web/AGENTS.md"
+        - "cmd/hush-hush/web/.claude/**"
       run: vale {staged_files}
 
     # Reads only, so it changes nothing to restage. Invoked bare rather than

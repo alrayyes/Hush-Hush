@@ -19,6 +19,10 @@ ignores:
   - "openspec/**"
   # Claude Code's own command/skill definitions, not this repo's documentation.
   - ".claude/**"
+  # sv's own generated AI-tooling prompt (`npx sv add ai-tools`) and its
+  # nested skill files - written by that tool, not authored prose.
+  - "cmd/hush-hush/web/AGENTS.md"
+  - "cmd/hush-hush/web/.claude/**"
 
 config:
   # markdownlint/style/prettier drops MD013 because Prettier reflows prose on
