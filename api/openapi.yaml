@@ -21,6 +21,16 @@ info:
     to the audit log instead, which is what answers "did anyone access
     this" during a rotation or incident. Writes (create, update, delete)
     are gated by a bearer token.
+
+    A separate web UI adds a second, human-facing way in: a single admin
+    account authenticates with a WebAuthn passkey and gets a browser
+    session, used only by the `/auth/*`, `/credentials/*`, and `/tokens/*`
+    endpoints below - it never substitutes for the bearer token the
+    `objects`/`audit-log` endpoints above require. WebAuthn needs a fixed
+    relying-party ID and origin, so a deployment that enables the web UI
+    sets a new `PUBLIC_URL` environment variable (see the server's own
+    README) - unset, every `/auth/*` endpoint responds with a
+    configuration error rather than guessing a host from request headers.
   version: 0.1.0
   contact:
     name: Hush Hush
@@ -48,6 +58,18 @@ tags:
     description: Sealed secret objects - create, fetch, update, delete.
   - name: audit-log
     description: The record of every read and write against an object.
+  - name: auth
+    description: |
+      WebAuthn passkey registration and login for the single admin
+      account, and the browser session that results.
+  - name: credentials
+    description: Managing the admin account's registered passkeys.
+  - name: tokens
+    description: |
+      HTTP management of write bearer tokens - create, list, revoke -
+      for the web UI's settings page. Session-gated, distinct from the
+      tokens themselves, which still authenticate the `objects` write
+      path above.
 
 paths:
   /healthz:
@@ -290,6 +312,288 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /auth/register/begin:
+    post:
+      operationId: beginRegistration
+      summary: Begin passkey registration
+      description: |
+        Starts a WebAuthn registration ceremony and returns the
+        credential-creation options a browser passes to
+        `navigator.credentials.create()`. Anonymous when no admin account
+        exists yet (this is how the account is first created); requires a
+        valid session otherwise, since adding a passkey to an existing
+        account shouldn't be reachable by an unauthenticated caller.
+      tags: [auth]
+      security:
+        - {}
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Registration options for the browser's WebAuthn ceremony.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationOptions"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/register/finish:
+    post:
+      operationId: finishRegistration
+      summary: Complete passkey registration
+      description: |
+        Verifies the browser's attestation response and stores the new
+        credential. The first successful call (no admin account yet)
+        creates the account; every later call adds another credential to
+        it. Issues a new session either way.
+      tags: [auth]
+      security:
+        - {}
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationFinishRequest"
+      responses:
+        "201":
+          description: The credential was stored and a session issued.
+          headers:
+            Set-Cookie:
+              description: The new session cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/login/begin:
+    post:
+      operationId: beginLogin
+      summary: Begin passkey login
+      description: |
+        Starts a WebAuthn login ceremony and returns the credential-request
+        options a browser passes to `navigator.credentials.get()`.
+      tags: [auth]
+      security: []
+      responses:
+        "200":
+          description: Login options for the browser's WebAuthn ceremony.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginOptions"
+        "400":
+          description: No admin account has registered a passkey yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: no admin account registered yet
+
+  /auth/login/finish:
+    post:
+      operationId: finishLogin
+      summary: Complete passkey login
+      description: |
+        Verifies the browser's assertion response against a registered
+        credential and, on success, issues a session. Also rejects a
+        credential whose signature counter didn't advance, a sign a
+        cloned authenticator was used.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginFinishRequest"
+      responses:
+        "204":
+          description: The assertion was verified and a session issued.
+          headers:
+            Set-Cookie:
+              description: The new session cookie.
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: End the current session
+      description: Invalidates the session presented with the request.
+      tags: [auth]
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: The session was invalidated.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /credentials:
+    get:
+      operationId: listCredentials
+      summary: List registered passkeys
+      description: |
+        Returns every credential registered to the admin account -
+        nickname, timestamps, never the public key material.
+      tags: [credentials]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: The admin account's registered credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /credentials/{id}:
+    patch:
+      operationId: renameCredential
+      summary: Rename a passkey
+      tags: [credentials]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/credentialId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialRenameRequest"
+      responses:
+        "200":
+          description: The credential's nickname was updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteCredential
+      summary: Remove a passkey
+      description: |
+        Permanently removes a credential. Refused when it's the only one
+        remaining - a passkey the account can't log in with is never left
+        as its last one.
+      tags: [credentials]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/credentialId"
+      responses:
+        "204":
+          description: The credential was removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: This is the only remaining credential.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: cannot remove the last remaining passkey
+
+  /tokens:
+    post:
+      operationId: createToken
+      summary: Create a write bearer token
+      description: |
+        Issues a new write-path bearer token, owned by the admin account
+        that created it. The raw token value is returned here only - it
+        is never recoverable again once this response is read, the same
+        as a token issued via the `token` CLI command.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTokenRequest"
+            example:
+              description: web UI test token
+              ttl_seconds: 7776000
+      responses:
+        "201":
+          description: The token was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenWithValue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    get:
+      operationId: listTokens
+      summary: List write bearer tokens
+      description: |
+        Returns every issued token's metadata - never a raw value, which
+        by design no longer exists anywhere to return once a token is
+        created. Includes tokens issued via the `token` CLI command
+        alongside ones created here; a CLI-issued token has no owner.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Every issued token's metadata.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TokenMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /tokens/{id}:
+    delete:
+      operationId: revokeToken
+      summary: Revoke a write bearer token
+      description: |
+        Invalidates the token issued under id. Revoking an id that's
+        already expired or doesn't exist isn't an error - both leave
+        every other token's state unaffected either way.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tokenId"
+      responses:
+        "204":
+          description: The token was revoked, or already wasn't valid.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -303,6 +607,17 @@ components:
         would need its own token to call it with). Any number of tokens
         may be valid at once; revoking or expiring one never affects the
         others.
+
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: |
+        A browser session, issued by a successful `/auth/login/finish` or
+        `/auth/register/finish` call. Used only by the `/auth/*`
+        (post-login), `/credentials/*`, and `/tokens/*` endpoints - it
+        never authorizes a call to `/objects/*`, which stays gated by
+        `bearerAuth` regardless of any session presented alongside it.
 
   parameters:
     id:
@@ -327,6 +642,22 @@ components:
         resulting audit log entry's caller field is empty.
       schema:
         type: string
+
+    credentialId:
+      name: id
+      in: path
+      required: true
+      description: The credential's id.
+      schema:
+        $ref: "#/components/schemas/CredentialId"
+
+    tokenId:
+      name: id
+      in: path
+      required: true
+      description: The token's id.
+      schema:
+        $ref: "#/components/schemas/TokenId"
 
   responses:
     BadRequest:
@@ -465,3 +796,129 @@ components:
             What went wrong, in terms safe to show a caller. Nothing here
             handles authentication with a detail worth holding back.
           examples: [unknown object]
+
+    RegistrationOptions:
+      type: object
+      description: |
+        A WebAuthn `PublicKeyCredentialCreationOptions` object, passed
+        straight to the browser's `navigator.credentials.create()` -
+        opaque to this service's own clients, defined by the WebAuthn
+        specification rather than reproduced here field by field.
+      additionalProperties: true
+
+    RegistrationFinishRequest:
+      type: object
+      required: [credential]
+      properties:
+        credential:
+          type: object
+          description: |
+            The browser's attestation response, exactly as
+            `navigator.credentials.create()` returned it.
+          additionalProperties: true
+        nickname:
+          type: string
+          description: A human-readable label for this credential, shown in the credentials list.
+          examples: [YubiKey 5C]
+
+    LoginOptions:
+      type: object
+      description: |
+        A WebAuthn `PublicKeyCredentialRequestOptions` object, passed
+        straight to the browser's `navigator.credentials.get()`.
+      additionalProperties: true
+
+    LoginFinishRequest:
+      type: object
+      required: [credential]
+      properties:
+        credential:
+          type: object
+          description: |
+            The browser's assertion response, exactly as
+            `navigator.credentials.get()` returned it.
+          additionalProperties: true
+
+    CredentialId:
+      type: string
+      examples: [Zm9vYmFyYmF6]
+
+    Credential:
+      type: object
+      required: [id, nickname, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/CredentialId"
+        nickname:
+          type: string
+          examples: [YubiKey 5C]
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+          description: Absent if this credential has never been used to log in.
+
+    CredentialRenameRequest:
+      type: object
+      required: [nickname]
+      properties:
+        nickname:
+          type: string
+          examples: [YubiKey 5C - office]
+
+    TokenId:
+      type: string
+      pattern: "^[0-9a-f]{16}$"
+      examples: [a1b2c3d4e5f6a7b8]
+
+    CreateTokenRequest:
+      type: object
+      required: [description, ttl_seconds]
+      properties:
+        description:
+          type: string
+          examples: [web UI test token]
+        ttl_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: How long the token stays valid for, starting now.
+          examples: [7776000]
+
+    TokenMetadata:
+      type: object
+      required: [id, description, created_at, expires_at, revoked]
+      properties:
+        id:
+          $ref: "#/components/schemas/TokenId"
+        description:
+          type: string
+        owner:
+          type: string
+          description: |
+            The admin account that created this token over HTTP. Absent
+            for a token issued via the `token` CLI command, which has no
+            session to attribute to - never a guessed value.
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        revoked:
+          type: boolean
+
+    TokenWithValue:
+      allOf:
+        - $ref: "#/components/schemas/TokenMetadata"
+        - type: object
+          required: [value]
+          properties:
+            value:
+              type: string
+              description: |
+                The raw bearer token. Shown here once, at creation, and
+                never again - the same as a token issued via the `token`
+                CLI command.
