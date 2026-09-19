@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.7.0](https://github.com/alrayyes/Hush-Hush/compare/v2.6.0...v2.7.0) (2026-09-19)
+
+
+### Features
+
+* **api:** embed and serve the built SPA ([39bbb62](https://github.com/alrayyes/Hush-Hush/commit/39bbb6246ca4cdff7e9f98783cda453cabf67c02))
+* **web:** scaffold SvelteKit, add login page and secrets overview ([4435379](https://github.com/alrayyes/Hush-Hush/commit/44353797316f26a2f31c6c77e3aff0617c31bfd8))
+* **web:** scaffold SvelteKit, add login page and secrets overview ([#206](https://github.com/alrayyes/Hush-Hush/issues/206)) ([0b0a37d](https://github.com/alrayyes/Hush-Hush/commit/0b0a37de468d94e09fe049f6eed8d511a19e080b))
+
 ## [2.6.0](https://github.com/alrayyes/Hush-Hush/compare/v2.5.1...v2.6.0) (2026-09-19)
 
 
