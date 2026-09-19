@@ -178,6 +178,27 @@ is something that command can call once it exists. Researched against
 result-limit flag, no follow mode) as the closest real-world precedent
 for what that command should look like when it's built.
 
+**`/objects` accepts a valid session as a credential equally valid to
+the write bearer token, instead of session auth stopping at the new
+`/auth`/`/credentials`/`/tokens` surface.** Corrects a contradiction
+caught while implementing ticket #203: the merged `auth/spec.md`
+originally said a session never authenticates a bearer-token-gated
+endpoint, and #201 shipped and tested exactly that. But `/objects` is
+the _only_ bearer-gated resource in the whole service, the web UI never
+holds a bearer token of its own, and the proposal's own "Secrets
+overview: list, view, create, edit, delete" requirement (from the
+user's original request) is impossible without the UI's session
+authenticating those calls somehow. The two credentials stay
+independent otherwise - a session can't read, derive, or manage a
+bearer token's value, and expiring or revoking one never touches the
+other; see `auth/spec.md`'s revised "Session lifecycle" and new "A
+session authenticates secret-object access" requirements. Alternative
+considered: an auto-provisioned internal bearer token minted per
+session and attached to the UI's own requests server-side. Rejected -
+it's the same access grant with an extra layer of indirection and a
+second credential to keep in sync with the session's own lifetime, for
+no real gain over accepting the session directly.
+
 **`api/openapi.yaml` gains the new endpoints (WebAuthn ceremonies,
 session, credential management, token management, audit-log actor
 filter) under the project's existing spec-first convention - reviewed

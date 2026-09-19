@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -22,7 +23,7 @@ type objectStore interface {
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	UpdateObject(ctx context.Context, id string, value []byte) error
 	DeleteObject(ctx context.Context, id string) error
-	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip string) error
+	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
 	ValidateWriteToken(ctx context.Context, token string) (bool, error)
 
@@ -59,12 +60,12 @@ func NewMux(s objectStore, publicURL string) *http.ServeMux {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth)
-	mux.HandleFunc("POST /objects", requireWriteToken(s, handleCreateObject(s)))
-	mux.HandleFunc("GET /objects", requireWriteToken(s, handleListObjects(s)))
+	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
+	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
-	mux.HandleFunc("PUT /objects/{id}", requireWriteToken(s, handleUpdateObject(s)))
-	mux.HandleFunc("DELETE /objects/{id}", requireWriteToken(s, handleDeleteObject(s)))
+	mux.HandleFunc("PUT /objects/{id}", requireWriteAccess(s, true, handleUpdateObject(s)))
+	mux.HandleFunc("DELETE /objects/{id}", requireWriteAccess(s, true, handleDeleteObject(s)))
 	mux.HandleFunc("GET /audit-log", handleQueryAuditLog(s))
 
 	mux.HandleFunc("POST /auth/register/begin", handleBeginRegistration(s, wa))
@@ -80,34 +81,90 @@ func NewMux(s objectStore, publicURL string) *http.ServeMux {
 	return mux
 }
 
-// requireWriteToken rejects a request unless it carries an Authorization
-// header of "Bearer <token>" naming a currently issued, unexpired write
-// token (store.ValidateWriteToken) - an unknown, malformed, expired, or
-// revoked token are all the same 401 to the caller.
-func requireWriteToken(s objectStore, next http.HandlerFunc) http.HandlerFunc {
+// requireWriteAccess rejects a request unless it carries a valid write
+// bearer token OR a valid session - two independent, equally valid
+// credentials for /objects (openspec/changes/web-ui/design.md's
+// "/objects accepts a valid session" decision; the web UI holds a
+// session, never a bearer token, and this is what lets its secrets
+// overview work at all). requireCSRFForSession additionally requires a
+// session's own CSRF token on a state-changing request authenticated by
+// session - never checked for a bearer-token-authenticated one, which has
+// no session or CSRF token to present.
+func requireWriteAccess(s objectStore, requireCSRFForSession bool, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || got == "" {
-			writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token")
-
-			return
-		}
-
-		valid, err := s.ValidateWriteToken(r.Context(), got)
+		validToken, err := bearerTokenValid(r, s)
 		if err != nil {
 			writeInternalError(w, r, err)
 
 			return
 		}
 
-		if !valid {
-			writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token")
+		if validToken {
+			next(w, r)
 
 			return
 		}
 
-		next(w, r)
+		sess, ok := validSession(r, s)
+		if !ok {
+			writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token or session")
+
+			return
+		}
+
+		if requireCSRFForSession && (sess.CSRFToken == "" || r.Header.Get("X-CSRF-Token") != sess.CSRFToken) {
+			writeError(w, r, http.StatusUnauthorized, "missing or invalid CSRF token")
+
+			return
+		}
+
+		next(w, r.WithContext(context.WithValue(r.Context(), sessionContextKey{}, sess)))
 	}
+}
+
+// bearerTokenValid reports whether r carries a currently valid write
+// bearer token - false (with no error) for a missing or unknown one, an
+// error only for a genuine lookup failure.
+func bearerTokenValid(r *http.Request, s objectStore) (bool, error) {
+	got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || got == "" {
+		return false, nil
+	}
+
+	valid, err := s.ValidateWriteToken(r.Context(), got)
+	if err != nil {
+		return false, fmt.Errorf("validate write token: %w", err)
+	}
+
+	return valid, nil
+}
+
+// validSession returns r's session if it carries a valid, unexpired one.
+func validSession(r *http.Request, s objectStore) (store.Session, bool) {
+	id, ok := sessionFromCookie(r)
+	if !ok {
+		return store.Session{}, false
+	}
+
+	sess, err := s.GetSession(r.Context(), id)
+	if err != nil {
+		return store.Session{}, false
+	}
+
+	return sess, true
+}
+
+// actorFrom returns the verified actor (type, id) that authenticated r -
+// a session put in context by requireWriteAccess or requireSession, or
+// both empty when neither did (an unauthenticated read, or - until
+// alrayyes/hush-hush#214 adds token attribution too - a
+// bearer-token-authenticated write).
+func actorFrom(r *http.Request) (actorType, actorID string) {
+	if _, ok := r.Context().Value(sessionContextKey{}).(store.Session); ok {
+		return "session", string(adminUserID)
+	}
+
+	return "", ""
 }
 
 // callerFrom returns the caller's self-presented identity, or "" if none

@@ -14,8 +14,8 @@ func TestQueryAuditLogReturnsAllEntriesOldestFirst(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1"))
-	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionRead, "", "203.0.113.2"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionRead, "", "203.0.113.2", "", ""))
 
 	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{})
 	require.NoError(t, err)
@@ -29,8 +29,8 @@ func TestQueryAuditLogFiltersByObjectID(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1"))
-	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "", "203.0.113.2"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "", "203.0.113.2", "", ""))
 
 	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{ObjectID: "a"})
 	require.NoError(t, err)
@@ -43,8 +43,8 @@ func TestQueryAuditLogFiltersByCaller(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.1"))
-	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "homelab/other", "203.0.113.2"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "homelab/other", "203.0.113.2", "", ""))
 
 	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Caller: "homelab/vps-docker"})
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestQueryAuditLogFiltersByTimeRange(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
 
 	future := time.Now().UTC().Add(time.Hour)
 	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{From: future})
@@ -75,8 +75,8 @@ func TestQueryAuditLogCombinesFiltersWithAnd(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.1"))
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "homelab/other", "203.0.113.2"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "homelab/other", "203.0.113.2", "", ""))
 
 	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{ObjectID: "a", Caller: "homelab/vps-docker"})
 	require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestQueryAuditLogReturnsIP(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
 
 	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{})
 	require.NoError(t, err)

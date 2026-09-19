@@ -30,10 +30,12 @@
 - [x] 4.2 Implement credential rename and delete, and verify a deleted credential can no longer authenticate a login
 - [x] 4.3 Verify deleting the last remaining credential is rejected and the credential remains registered
 
-## 5. Server: Session-Attributed Audit Writes (alrayyes/hush-hush#203)
+## 5. Server: Session-Authenticated Object Access and Attributed Writes (alrayyes/hush-hush#203)
 
-- [ ] 5.1 Implement attribution: a session-authenticated create/update/delete records the admin account as the audit log entry's `actor_type`/`actor_id`, leaving `caller` populated from `X-Caller` exactly as before, and verify with a test per operation
-- [ ] 5.2 Verify `internal/api/openapi_test.go` and the Pact provider verification both still pass unmodified
+- [x] 5.0 Correct `auth/spec.md`: a session is a credential equally valid to the write bearer token on `/objects` (not a substitute that's always rejected there), since the web UI holds no bearer token of its own - caught while starting this ticket, documented in `design.md`
+- [x] 5.1 Extend `/objects` (list, create, update, delete) to accept a valid session (with its CSRF token on create/update/delete) as an alternative to the write bearer token, and verify each operation succeeds via session alone and via bearer token alone
+- [x] 5.2 Implement attribution: a session-authenticated create/update/delete records the admin account as the audit log entry's `actor_type`/`actor_id`, leaving `caller` populated from `X-Caller` exactly as before, and verify with a test per operation
+- [x] 5.3 Verify `internal/api/openapi_test.go` and the Pact provider verification both still pass unmodified
 
 ## 6. Server: Token Management HTTP Endpoints (alrayyes/hush-hush#204)
 
