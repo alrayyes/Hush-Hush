@@ -15,6 +15,8 @@ type AuditLogEntry struct {
 	Timestamp string `json:"timestamp"`
 	Caller    string `json:"caller,omitempty"`
 	IP        string `json:"ip"`
+	ActorType string `json:"actor_type,omitempty"`
+	ActorID   string `json:"actor_id,omitempty"`
 }
 
 // handleQueryAuditLog returns audit log entries matching the given
@@ -28,6 +30,7 @@ func handleQueryAuditLog(s objectStore) http.HandlerFunc {
 		filter := store.AuditLogFilter{
 			ObjectID: q.Get("object_id"),
 			Caller:   q.Get("caller"),
+			Actor:    q.Get("actor"),
 		}
 
 		if from := q.Get("from"); from != "" {
@@ -67,6 +70,8 @@ func handleQueryAuditLog(s objectStore) http.HandlerFunc {
 				Timestamp: row.Timestamp,
 				Caller:    row.Caller,
 				IP:        row.IP,
+				ActorType: row.ActorType,
+				ActorID:   row.ActorID,
 			}
 		}
 

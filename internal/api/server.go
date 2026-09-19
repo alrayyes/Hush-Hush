@@ -26,7 +26,7 @@ type objectStore interface {
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
-	ValidateWriteToken(ctx context.Context, token string) (bool, error)
+	AuthenticateWriteToken(ctx context.Context, token string) (id string, valid bool, err error)
 	CreateWriteToken(ctx context.Context, description string, ttl time.Duration, owner string) (store.WriteToken, string, error)
 	ListWriteTokens(ctx context.Context) ([]store.WriteToken, error)
 	RevokeWriteToken(ctx context.Context, id string) error
@@ -100,7 +100,7 @@ func NewMux(s objectStore, publicURL string) *http.ServeMux {
 // no session or CSRF token to present.
 func requireWriteAccess(s objectStore, requireCSRFForSession bool, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		validToken, err := bearerTokenValid(r, s)
+		tokenID, validToken, err := bearerTokenID(r, s)
 		if err != nil {
 			writeInternalError(w, r, err)
 
@@ -108,7 +108,7 @@ func requireWriteAccess(s objectStore, requireCSRFForSession bool, next http.Han
 		}
 
 		if validToken {
-			next(w, r)
+			next(w, r.WithContext(context.WithValue(r.Context(), tokenContextKey{}, tokenID)))
 
 			return
 		}
@@ -130,21 +130,23 @@ func requireWriteAccess(s objectStore, requireCSRFForSession bool, next http.Han
 	}
 }
 
-// bearerTokenValid reports whether r carries a currently valid write
-// bearer token - false (with no error) for a missing or unknown one, an
-// error only for a genuine lookup failure.
-func bearerTokenValid(r *http.Request, s objectStore) (bool, error) {
+// bearerTokenID reports r's bearer token's id if it carries a currently
+// valid one - false (with no error) for a missing or unknown one, an
+// error only for a genuine lookup failure. The id is what lets a
+// resulting audit log entry attribute the write to that specific token
+// (audit-log/spec.md's "Verified actor attribution" requirement).
+func bearerTokenID(r *http.Request, s objectStore) (id string, valid bool, err error) {
 	got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || got == "" {
-		return false, nil
+		return "", false, nil
 	}
 
-	valid, err := s.ValidateWriteToken(r.Context(), got)
+	id, valid, err = s.AuthenticateWriteToken(r.Context(), got)
 	if err != nil {
-		return false, fmt.Errorf("validate write token: %w", err)
+		return "", false, fmt.Errorf("authenticate write token: %w", err)
 	}
 
-	return valid, nil
+	return id, valid, nil
 }
 
 // validSession returns r's session if it carries a valid, unexpired one.
@@ -162,14 +164,22 @@ func validSession(r *http.Request, s objectStore) (store.Session, bool) {
 	return sess, true
 }
 
+// tokenContextKey is the context key requireWriteAccess stores a
+// bearer-authenticated request's token id under, mirroring
+// sessionContextKey for the session-authenticated path.
+type tokenContextKey struct{}
+
 // actorFrom returns the verified actor (type, id) that authenticated r -
-// a session put in context by requireWriteAccess or requireSession, or
-// both empty when neither did (an unauthenticated read, or - until
-// alrayyes/hush-hush#214 adds token attribution too - a
-// bearer-token-authenticated write).
+// a session or token id put in context by requireWriteAccess or
+// requireSession, or both empty when neither did (an unauthenticated
+// read).
 func actorFrom(r *http.Request) (actorType, actorID string) {
 	if _, ok := r.Context().Value(sessionContextKey{}).(store.Session); ok {
 		return "session", string(adminUserID)
+	}
+
+	if id, ok := r.Context().Value(tokenContextKey{}).(string); ok {
+		return "token", id
 	}
 
 	return "", ""

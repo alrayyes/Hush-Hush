@@ -69,24 +69,39 @@ func (s *Store) CreateWriteToken(ctx context.Context, description string, ttl ti
 // are all indistinguishable here on purpose - each means "not
 // authorized", same as api/openapi.yaml's write-path 401.
 func (s *Store) ValidateWriteToken(ctx context.Context, token string) (bool, error) {
+	_, valid, err := s.AuthenticateWriteToken(ctx, token)
+
+	return valid, err
+}
+
+// AuthenticateWriteToken reports whether token is a currently issued,
+// unexpired, unrevoked write token and, if so, its id - actor
+// attribution needs to know exactly which token authenticated a write
+// (audit-log/spec.md's "Verified actor attribution" requirement), not
+// just that some token did.
+func (s *Store) AuthenticateWriteToken(ctx context.Context, token string) (id string, valid bool, err error) {
 	var expiresAt string
 
-	err := s.db.QueryRowContext(ctx,
-		`SELECT expires_at FROM write_tokens WHERE token_hash = ? AND revoked_at IS NULL`, hashToken(token),
-	).Scan(&expiresAt)
+	err = s.db.QueryRowContext(ctx,
+		`SELECT id, expires_at FROM write_tokens WHERE token_hash = ? AND revoked_at IS NULL`, hashToken(token),
+	).Scan(&id, &expiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
+		return "", false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("validate write token: %w", err)
+		return "", false, fmt.Errorf("authenticate write token: %w", err)
 	}
 
 	expiry, err := time.Parse(time.RFC3339, expiresAt)
 	if err != nil {
-		return false, fmt.Errorf("parse write token expiry: %w", err)
+		return "", false, fmt.Errorf("parse write token expiry: %w", err)
 	}
 
-	return time.Now().UTC().Before(expiry), nil
+	if !time.Now().UTC().Before(expiry) {
+		return "", false, nil
+	}
+
+	return id, true, nil
 }
 
 // ListWriteTokens returns every issued token's metadata, oldest first,

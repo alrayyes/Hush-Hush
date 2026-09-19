@@ -58,6 +58,46 @@ func TestValidateWriteTokenRejectsRevokedToken(t *testing.T) {
 	require.False(t, valid)
 }
 
+func TestAuthenticateWriteTokenReturnsItsID(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, token, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+
+	id, valid, err := s.AuthenticateWriteToken(t.Context(), token)
+	require.NoError(t, err)
+	require.True(t, valid)
+	require.Equal(t, wt.ID, id)
+}
+
+func TestAuthenticateWriteTokenRejectsUnknownToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	id, valid, err := s.AuthenticateWriteToken(t.Context(), "never-issued")
+	require.NoError(t, err)
+	require.False(t, valid)
+	require.Empty(t, id)
+}
+
+func TestAuthenticateWriteTokenRejectsRevokedToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, token, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeWriteToken(t.Context(), wt.ID))
+
+	id, valid, err := s.AuthenticateWriteToken(t.Context(), token)
+	require.NoError(t, err)
+	require.False(t, valid)
+	require.Empty(t, id)
+}
+
 func TestCreateWriteTokenReturnsUniqueIDsAndTokens(t *testing.T) {
 	t.Parallel()
 
