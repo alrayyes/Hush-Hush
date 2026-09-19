@@ -20,10 +20,14 @@ export async function login(): Promise<void> {
 	// api/openapi.yaml documents LoginOptions as an opaque
 	// additionalProperties: true blob, passed straight through to the
 	// browser - the real shape is only known by the WebAuthn/SimpleWebAuthn
-	// contract on both ends, not by the API's own schema.
-	const optionsJSON =
-		(await beginLogin()) as unknown as PublicKeyCredentialRequestOptionsJSON;
-	const credential = await startAuthentication({ optionsJSON });
+	// contract on both ends, not by the API's own schema. go-webauthn's
+	// BeginLogin returns the full CredentialRequestOptions dictionary
+	// (navigator.credentials.get()'s own argument shape, {publicKey: ...}),
+	// but startAuthentication wants just the inner options.
+	const { publicKey } = (await beginLogin()) as unknown as {
+		publicKey: PublicKeyCredentialRequestOptionsJSON;
+	};
+	const credential = await startAuthentication({ optionsJSON: publicKey });
 	await finishLogin(credential);
 }
 
@@ -32,8 +36,9 @@ export async function login(): Promise<void> {
 // passkey from settings" scenario). Throws on any failure, same as
 // login().
 export async function registerPasskey(nickname?: string): Promise<void> {
-	const optionsJSON =
-		(await beginRegistration()) as unknown as PublicKeyCredentialCreationOptionsJSON;
-	const credential = await startRegistration({ optionsJSON });
+	const { publicKey } = (await beginRegistration()) as unknown as {
+		publicKey: PublicKeyCredentialCreationOptionsJSON;
+	};
+	const credential = await startRegistration({ optionsJSON: publicKey });
 	await finishRegistration(credential, nickname);
 }
