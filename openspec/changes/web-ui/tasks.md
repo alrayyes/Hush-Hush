@@ -2,10 +2,10 @@
 
 ## 1. OpenAPI Spec (alrayyes/hush-hush#199)
 
-- [ ] 1.1 Add WebAuthn registration begin/finish and login begin/finish endpoints to `api/openapi.yaml`, and verify it lints clean with Redocly
-- [ ] 1.2 Add logout and credential list/rename/delete endpoints, and verify it lints clean
-- [ ] 1.3 Add token create/list/revoke endpoints (session-gated) to the spec, and verify it lints clean
-- [ ] 1.4 Document `PUBLIC_URL` in the spec's `info.description` or a cross-reference to the README, and get the spec reviewed and merged before any handler in this change is implemented
+- [x] 1.1 Add WebAuthn registration begin/finish and login begin/finish endpoints to `api/openapi.yaml`, and verify it lints clean with Redocly
+- [x] 1.2 Add logout and credential list/rename/delete endpoints, and verify it lints clean
+- [x] 1.3 Add token create/list/revoke endpoints (session-gated) to the spec, and verify it lints clean
+- [x] 1.4 Document `PUBLIC_URL` in the spec's `info.description` or a cross-reference to the README, and get the spec reviewed and merged before any handler in this change is implemented
 
 ## 2. Server: Storage Schema (alrayyes/hush-hush#200)
 
