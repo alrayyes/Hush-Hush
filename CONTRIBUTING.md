@@ -16,11 +16,13 @@ for whoever runs it.
   `PATH` — a host toolchain drifting from the pinned image independently
   (a package manager updating one without the other) is a real failure
   mode this closes, not a hypothetical one.
-- **[bun](https://bun.sh)** for the tooling that isn't Go — commitlint,
+- **[bun](https://bun.sh) 1.3.x** for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, [Redocly](https://redocly.com/docs/cli), and the
   [lefthook](https://lefthook.dev) that runs the git hooks. There's a
   `package.json`, but nothing here is JavaScript; it exists only so those
-  tools resolve and stay pinned.
+  tools resolve and stay pinned. `cmd/hush-hush/web` is a **second, separate**
+  bun project — the actual web UI frontend — with its own `package.json` and
+  `bun install`; see [its own README](cmd/hush-hush/web/README.md).
 - **[Vale](https://vale.sh)** on your `PATH`, for the style tier of the
   prose lint:
 
@@ -61,6 +63,19 @@ bun run lint:prose         # vale
 bun run lint:mechanics     # ltex-cli-plus
 ```
 
+`cmd/hush-hush/web`'s own commands run from inside that directory, against
+its own `bun install` — nothing above touches it, and it touches nothing
+above:
+
+```sh
+cd cmd/hush-hush/web
+bun install
+bun run check    # svelte-check — types, unused exports, Svelte-aware lint
+bun run test     # vitest
+bun run lint     # biome check
+bun run build    # writes build/, which cmd/hush-hush/embed.go embeds
+```
+
 ## How it fits together
 
 `internal/api` holds the handler, and `cmd/hush-hush/main.go` is the
@@ -69,6 +84,17 @@ server keeps everything in `internal/` and its commands in `cmd/`", since
 there's nothing here worth exporting. No finer `internal/domain`/
 `internal/adapter` split on top of that: that shape earns its keep the day a
 second resource needs it, not day one.
+
+`cmd/hush-hush/web` is the web UI's own frontend source — a SvelteKit
+project, built to `cmd/hush-hush/web/build/` and embedded into the binary
+by `cmd/hush-hush/embed.go` at compile time (`go:embed` can only reach a
+subdirectory of the file declaring it, which is why the frontend lives
+under `cmd/hush-hush/` rather than a repo-root `web/`). That directory
+stays committed rather than gitignored: nothing in `go build`/`go test`
+or the plain Go CI jobs rebuilds it, only `Dockerfile`'s own frontend
+stage and goreleaser's `before.hooks` do, so a frontend change needs
+`bun run build` run and its output committed in the same change, or a
+plain `go build` embeds stale content.
 
 ## The contract
 
@@ -124,7 +150,10 @@ Two Dockerfiles, deliberately not one:
 
 - **`Dockerfile`** compiles from source - what `docker build .`, the
   preceding container integration test, and `docker compose up --build`
-  all use. hadolint lints it same as any other.
+  all use. Its first stage builds the frontend (`cmd/hush-hush/web`)
+  before the Go stage's `go:embed` ever reads it, so the built image
+  always ships a fresh frontend regardless of what's committed. hadolint
+  lints it same as any other.
 - **`Dockerfile.release`** only `COPY`s an already-cross-compiled binary -
   goreleaser's own `dockers:` block uses it exclusively, never built by
   hand. It exists because a Dockerfile that ran `go build` for a

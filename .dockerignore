@@ -10,6 +10,10 @@ styles/proselint/
 dist/
 coverage.out
 *.md
+# The frontend build's own copy-changelog script needs this one - it's
+# not documentation the image ships, it's the changelog page's own
+# source.
+!CHANGELOG.md
 
 # Never bake a real secret into an image layer.
 .env
