@@ -284,7 +284,10 @@ jobs:
       run:
         working-directory: cmd/hush-hush/web
     steps:
+      # Overrides the job-level default above: this step runs before
+      # checkout, so cmd/hush-hush/web doesn't exist on disk yet.
       - run: apk add --no-cache ca-certificates git nodejs
+        working-directory: .
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: bun install --frozen-lockfile
