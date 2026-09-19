@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/alrayyes/Hush-Hush/compare/v2.3.0...v2.4.0) (2026-09-19)
+
+
+### Features
+
+* **api:** implement WebAuthn ceremonies and session issuance ([#219](https://github.com/alrayyes/Hush-Hush/issues/219)) ([d06303d](https://github.com/alrayyes/Hush-Hush/commit/d06303ddda6ce14e72c094ecbe62fe6f02411f29))
+
 ## [2.3.0](https://github.com/alrayyes/Hush-Hush/compare/v2.2.0...v2.3.0) (2026-09-19)
 
 
