@@ -7,11 +7,13 @@ what's specific to this repo.
 ## What this is
 
 A standalone secrets object store: public-key (age) writes, consumers
-decrypt locally, the server never sees plaintext. The full design -
-encryption model, read-path and write-path auth, storage backend, and why
-each was chosen over the alternatives - lives in
-`openspec/changes/secrets-object-store/design.md`. The task breakdown for
-implementing it is in that same change's `tasks.md`.
+decrypt locally, the server never sees plaintext. The durable record of
+why it's built this way - encryption model, read-path and write-path auth,
+storage backend, and more - is `ARCHITECTURE.md` and `docs/adr/`, per
+`rules/architecture-docs.md` (`alrayyes/hush-hush#210`). An in-flight
+OpenSpec change's own `design.md` (`openspec/changes/*/design.md`) is that
+change's working paper, not this - it's where a decision gets proposed and
+argued before landing in an ADR, and it's archived once the change ships.
 
 Bootstrapped from `alrayyes/scaffold-go-api`, then ported from that
 scaffold's self-hosted-forge form to GitHub-primary tooling (release-please

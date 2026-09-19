@@ -12,9 +12,10 @@ needs an object id to fetch it. Public-key encryption
 ([age](https://github.com/FiloSottile/age)) end to end - the server stores
 and serves sealed ciphertext and never computes or returns plaintext.
 
-The full design - encryption model, read-path and write-path auth, storage
-backend, and the reasoning behind each - is in
-[`openspec/changes/secrets-object-store/design.md`](openspec/changes/secrets-object-store/design.md).
+The current shape of the service, and the reasoning behind its real
+architectural decisions (encryption model, read-path and write-path auth,
+storage backend, and more), is in [`ARCHITECTURE.md`](ARCHITECTURE.md) and
+[`docs/adr/`](docs/adr/).
 
 ## Requirements
 

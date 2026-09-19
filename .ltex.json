@@ -78,7 +78,8 @@
       "biome",
       "Biome",
       "gitignored",
-      "toolset"
+      "toolset",
+      "localStorage"
     ]
   },
   "ltex.disabledRules": {
