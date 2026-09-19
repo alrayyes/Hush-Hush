@@ -76,14 +76,14 @@ func TestTokenRevokeInvalidatesTheToken(t *testing.T) {
 
 	s, err := store.Open(path)
 	require.NoError(t, err)
-	id, token, err := s.CreateWriteToken(t.Context(), "a", time.Hour)
+	wt, token, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
 	require.NoError(t, err)
 	require.NoError(t, s.Close())
 
 	viper.Reset()
 	t.Setenv("DB_PATH", path)
 	root := newRootCmd()
-	root.SetArgs([]string{"token", "revoke", id})
+	root.SetArgs([]string{"token", "revoke", wt.ID})
 	require.NoError(t, root.Execute())
 
 	s, err = store.Open(path)

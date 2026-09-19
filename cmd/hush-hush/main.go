@@ -226,14 +226,14 @@ func newTokenIssueCmd() *cobra.Command {
 			}
 			defer func() { _ = s.Close() }()
 
-			id, token, err := s.CreateWriteToken(cmd.Context(), description, ttl)
+			wt, token, err := s.CreateWriteToken(cmd.Context(), description, ttl, "")
 			if err != nil {
 				return fmt.Errorf("issue token: %w", err)
 			}
 
 			if _, err := fmt.Fprintf(cmd.OutOrStdout(),
 				"id:    %s\ntoken: %s\n\nThe token is shown once - store it now, it can't be recovered later.\n",
-				id, token,
+				wt.ID, token,
 			); err != nil {
 				return fmt.Errorf("write issued token: %w", err)
 			}
