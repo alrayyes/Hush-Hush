@@ -164,6 +164,11 @@ pre-push:
     # only fails if that got bypassed. Only the edit itself needs Docker -
     # the mount is live, not a copy, so the diff check right after runs
     # against the host's own git same as any other pre-push job here.
+    #
+    # `go mod tidy -diff` is a separate, broader check run after: -fmt alone
+    # only canonicalizes formatting, not a stale require, a non-canonical
+    # version string, or an orphaned go.sum entry - go-mod.md's reasoning for
+    # keeping it here rather than folding it into the pre-commit -fmt step.
     - name: gomod
       run: >-
         docker run --rm --user "$(id -u):$(id -g)"
@@ -173,6 +178,12 @@ pre-push:
         golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
         go mod edit -fmt go.mod
         && git diff --exit-code go.mod
+        && docker run --rm --user "$(id -u):$(id -g)"
+        -v "$(pwd):/src" -w /src
+        -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
+        -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
+        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        go mod tidy -diff
 
     # These are `package.json` scripts rather than the commands spelled out,
     # because CI runs the same ones and a literal copied into two files drifts
