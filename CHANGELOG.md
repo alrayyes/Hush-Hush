@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/alrayyes/Hush-Hush/compare/v2.1.1...v2.2.0) (2026-09-19)
+
+
+### Features
+
+* **api:** add auth, credentials, and tokens endpoints to the spec ([#212](https://github.com/alrayyes/Hush-Hush/issues/212)) ([0fddf3f](https://github.com/alrayyes/Hush-Hush/commit/0fddf3f1c56665d2c8ba0da92777bd26a9344ca6))
+
 ## [2.1.1](https://github.com/alrayyes/Hush-Hush/compare/v2.1.0...v2.1.1) (2026-09-18)
 
 
