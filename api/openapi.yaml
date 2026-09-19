@@ -303,6 +303,15 @@ paths:
           description: Restrict to entries recorded with this caller identity.
           schema:
             type: string
+        - name: actor
+          in: query
+          required: false
+          description: |
+            Restrict to entries authenticated by this verified actor - a
+            token id, or the admin account's own actor_id. Unlike caller,
+            this is never self-reported.
+          schema:
+            type: string
         - name: from
           in: query
           required: false
@@ -831,6 +840,18 @@ components:
             address; this service isn't deployed behind a reverse proxy or
             load balancer, so X-Forwarded-For (or similar) support isn't
             implemented yet.
+        actor_type:
+          type: string
+          enum: [token, session]
+          description: |
+            The kind of verified credential that authenticated this call -
+            absent for an unauthenticated read. Unlike caller, this is
+            never self-reported.
+        actor_id:
+          type: string
+          description: |
+            The specific token id or admin account this call was
+            authenticated as - absent for an unauthenticated read.
 
     Health:
       type: object

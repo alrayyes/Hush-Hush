@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -15,8 +16,9 @@ import (
 // "Session-attributed writes" requirement): a session-authenticated
 // create/update/delete records the admin account as the audit log
 // entry's verified actor, alongside - not instead of - any self-reported
-// X-Caller header. A bearer-token-authenticated one keeps recording no
-// actor for now (alrayyes/hush-hush#214 adds token attribution).
+// X-Caller header. A bearer-token-authenticated one is attributed to
+// that specific token's id (audit-log/spec.md's "Verified actor
+// attribution" requirement).
 
 func TestSessionCreateIsAttributedToTheAdminAccount(t *testing.T) {
 	t.Parallel()
@@ -100,12 +102,14 @@ func TestSessionDeleteIsAttributedToTheAdminAccount(t *testing.T) {
 	require.Equal(t, "admin", last.ActorID)
 }
 
-func TestBearerTokenWriteHasNoActorYet(t *testing.T) {
+func TestBearerTokenWriteIsAttributedToThatToken(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
+	wt, token, err := s.CreateWriteToken(t.Context(), "ci token", time.Hour, "")
+	require.NoError(t, err)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "attributed_by_token", Value: []byte("sealed-ciphertext")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{ID: "attributed_by_token", Value: []byte("sealed-ciphertext")}, token)
 	req.Header.Set("X-Caller", "ci-pipeline")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -114,7 +118,74 @@ func TestBearerTokenWriteHasNoActorYet(t *testing.T) {
 	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "attributed_by_token"})
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	require.Empty(t, entries[0].ActorType)
-	require.Empty(t, entries[0].ActorID)
+	require.Equal(t, "token", entries[0].ActorType)
+	require.Equal(t, wt.ID, entries[0].ActorID)
 	require.Equal(t, "ci-pipeline", entries[0].Caller)
+}
+
+func TestBearerTokenUpdateIsAttributedToThatToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedObject(t, s, "attributed_update_by_token")
+	wt, token, err := s.CreateWriteToken(t.Context(), "ci token", time.Hour, "")
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPut, "/objects/attributed_update_by_token",
+		bytes.NewReader([]byte(`{"value":"bmV3LXNlYWxlZC12YWx1ZQ=="}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "attributed_update_by_token"})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	last := entries[len(entries)-1]
+	require.Equal(t, store.AuditActionUpdate, last.Action)
+	require.Equal(t, "token", last.ActorType)
+	require.Equal(t, wt.ID, last.ActorID)
+}
+
+func TestBearerTokenDeleteIsAttributedToThatToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedObject(t, s, "attributed_delete_by_token")
+	wt, token, err := s.CreateWriteToken(t.Context(), "ci token", time.Hour, "")
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodDelete, "/objects/attributed_delete_by_token", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "attributed_delete_by_token"})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	last := entries[len(entries)-1]
+	require.Equal(t, store.AuditActionDelete, last.Action)
+	require.Equal(t, "token", last.ActorType)
+	require.Equal(t, wt.ID, last.ActorID)
+}
+
+func TestUnauthenticatedReadHasNoActor(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedObject(t, s, "read_no_actor")
+
+	req := httptest.NewRequest(http.MethodGet, "/objects/read_no_actor", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "read_no_actor"})
+	require.NoError(t, err)
+	last := entries[len(entries)-1]
+	require.Equal(t, store.AuditActionRead, last.Action)
+	require.Empty(t, last.ActorType)
+	require.Empty(t, last.ActorID)
 }

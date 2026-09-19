@@ -84,6 +84,21 @@ func TestQueryAuditLogCombinesFiltersWithAnd(t *testing.T) {
 	require.Equal(t, store.AuditActionCreate, entries[0].Action)
 }
 
+func TestQueryAuditLogFiltersByActor(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "token", "a1b2c3d4e5f6a7b8"))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "", "203.0.113.2", "session", "admin"))
+
+	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Actor: "a1b2c3d4e5f6a7b8"})
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, "a", entries[0].ObjectID)
+	require.Equal(t, "token", entries[0].ActorType)
+}
+
 func TestQueryAuditLogReturnsIP(t *testing.T) {
 	t.Parallel()
 
