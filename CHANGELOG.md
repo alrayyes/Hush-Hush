@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.2](https://github.com/alrayyes/Hush-Hush/compare/v2.9.1...v2.9.2) (2026-09-19)
+
+
+### Bug Fixes
+
+* **web-ui:** unwrap publicKey before handing WebAuthn options to the browser ([#246](https://github.com/alrayyes/Hush-Hush/issues/246)) ([9fc8169](https://github.com/alrayyes/Hush-Hush/commit/9fc8169352b1eb1acc3be9fa20cab13ad1dda0f2)), closes [#245](https://github.com/alrayyes/Hush-Hush/issues/245)
+
 ## [2.9.1](https://github.com/alrayyes/Hush-Hush/compare/v2.9.0...v2.9.1) (2026-09-19)
 
 
