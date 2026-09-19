@@ -120,20 +120,24 @@ grant access to the CLI/CI bearer-token write path or vice versa.
 ### Requirement: Session-attributed writes
 
 A secret-object create, update, or delete made through an authenticated
-session SHALL record that session's admin identity as the audit log
-entry's caller, taking precedence over any `X-Caller` header sent on the
-same request.
+session SHALL record that session's admin identity as the verified actor
+on the resulting audit log entry (`audit-log/spec.md`'s "Verified actor
+attribution" requirement), alongside - not in place of - any `X-Caller`
+header sent on the same request.
 
 #### Scenario: UI-driven write is attributed to the session
 
 - **WHEN** an authenticated session creates, updates, or deletes a secret
   object
-- **THEN** the resulting audit log entry's caller is the admin account,
-  regardless of any `X-Caller` header present on the request
+- **THEN** the resulting audit log entry's actor is the admin account,
+  regardless of any `X-Caller` header present on the request, and that
+  header - if present - is still recorded in the entry's separate caller
+  field unchanged
 
 #### Scenario: Token-authenticated write keeps existing attribution
 
 - **WHEN** a create, update, or delete is authenticated by a bearer token
   rather than a session
-- **THEN** the audit log entry's caller is populated from the `X-Caller`
-  header as before, unchanged by this capability
+- **THEN** the audit log entry's caller field is populated from the
+  `X-Caller` header exactly as before this capability, and its actor is
+  the authenticating token per `audit-log/spec.md`

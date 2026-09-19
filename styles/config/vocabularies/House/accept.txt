@@ -89,3 +89,7 @@ Svelte's
 [Ss]caffold(?:ed|ing)?
 UI's
 shadcn-svelte
+Pangea
+Setproduct
+[Aa]ufaitux
+antipattern
