@@ -96,3 +96,10 @@ antipattern
 httpOnly
 gitignored
 toolset
+tooling's
+composable
+localStorage
+unprefixed
+namespaces
+ADRs?
+frontend's
