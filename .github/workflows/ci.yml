@@ -270,6 +270,36 @@ jobs:
       - run: bun install --frozen-lockfile --ignore-scripts
       - run: bun run lint:package-json
 
+  # cmd/hush-hush/web is its own bun project, with its own package.json
+  # and bun.lock - none of the bun-container jobs above touch it, they
+  # all only ever install and run against this repo's root one. Nothing
+  # here proved the frontend even builds until this job existed.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
+      options: --entrypoint ""
+    defaults:
+      run:
+        working-directory: cmd/hush-hush/web
+    steps:
+      # Overrides the job-level default above: this step runs before
+      # checkout, so cmd/hush-hush/web doesn't exist on disk yet.
+      - run: apk add --no-cache ca-certificates git nodejs
+        working-directory: .
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: bun install --frozen-lockfile
+      - name: svelte-check
+        run: bun run check
+      - name: vitest
+        run: bun run test
+      - name: biome check
+        run: bun run lint
+      - name: vite build
+        run: bun run build
+
   # Same reasoning as govulncheck above, for the bun ecosystem: pinning
   # stops it drifting, not a known CVE in whatever's pinned right now.
   bun-audit:

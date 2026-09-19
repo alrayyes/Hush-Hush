@@ -94,3 +94,5 @@ Setproduct
 [Aa]ufaitux
 antipattern
 httpOnly
+gitignored
+toolset

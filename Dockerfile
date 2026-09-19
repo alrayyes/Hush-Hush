@@ -1,3 +1,19 @@
+# Builds the SPA before the Go stage's go:embed ever reads
+# cmd/hush-hush/web/build/ - that directory stays committed as a fallback
+# for a plain `go build` outside Docker (design.md's "Build embedding"
+# decision), but a real image always ships whatever this stage produces
+# fresh, not that stale copy.
+FROM oven/bun:1.3.14-slim@sha256:d56a2534ffd262e92c12fd3249d3924d296d97086da773f821d7d0477435ea04 AS frontend-build
+
+WORKDIR /src/cmd/hush-hush/web
+
+COPY cmd/hush-hush/web/package.json cmd/hush-hush/web/bun.lock cmd/hush-hush/web/bunfig.toml ./
+RUN bun install --frozen-lockfile
+
+COPY cmd/hush-hush/web/ ./
+COPY CHANGELOG.md /src/CHANGELOG.md
+RUN bun run build
+
 # Multi-stage: compile in a full toolchain image, copy only the binary into
 # the runtime stage. Distroless because the build is static — there's no libc
 # to bring along, and nothing left in the image to exec into if it's ever
@@ -10,6 +26,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY --from=frontend-build /src/cmd/hush-hush/web/build ./cmd/hush-hush/web/build
 
 # Static, so the distroless base below is enough. -trimpath keeps build
 # machine paths out of the binary. The mkdir rides along in the same RUN

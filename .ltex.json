@@ -76,7 +76,9 @@
       "httpOnly",
       "goreleaser-stamped",
       "biome",
-      "Biome"
+      "Biome",
+      "gitignored",
+      "toolset"
     ]
   },
   "ltex.disabledRules": {

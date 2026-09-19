@@ -20,6 +20,10 @@ backend, and the reasoning behind each - is in
 
 - **Go 1.27 or newer** to build from source, or **Docker** to run the
   published image instead - see [Docker](#docker) below.
+- **bun 1.3.x**, only to build from source - the embedded web UI's own
+  frontend toolchain, documented in
+  [`cmd/hush-hush/web`'s own README](cmd/hush-hush/web/README.md).
+  Docker builds it for you; a published image needs nothing extra.
 - No external services. Storage is a local SQLite database.
 
 ## Installation
@@ -82,16 +86,44 @@ audit-log query endpoint the CLI doesn't wrap - query it directly:
 curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 ```
 
+### Web UI
+
+Set `PUBLIC_URL` (the URL you'll actually reach the server at - for
+example `https://hush-hush.example.com`, or `http://localhost:8080` for
+local use) and the binary serves a browser UI at `/` on top of the same
+API - a passkey-authenticated login, a secrets-overview page
+(list/view/create/edit/delete, each showing who created and last updated
+it, and when), settings for managing passkeys and bearer tokens, and the
+audit log page. Leave `PUBLIC_URL` unset and every `/auth/*` ceremony
+endpoint answers with a configuration error instead of the server
+refusing to start - the API (and the CLI/SDKs that call it) work exactly
+the same either way.
+
+The first successful passkey registration creates the single
+administrator account this service has - there's no sign-up flow or
+invitation to send, and no separate default credential to rotate away
+from.
+
+```sh
+PUBLIC_URL=http://localhost:8080 ./hush-hush
+```
+
+Then open `http://localhost:8080` in a browser and register a passkey.
+`cmd/hush-hush/web` holds the frontend source, a SvelteKit project
+built into the binary at compile time - see
+[its own README](cmd/hush-hush/web/README.md) for how to work on it.
+
 ### Configuration
 
 The server (`hush-hush`) takes its settings from the environment alone -
 it's a deployed service with no interactive user to persist a preference
 for, so it has no `init` command and no config file:
 
-| Variable  | Default        | Meaning               |
-| --------- | -------------- | --------------------- |
-| `ADDR`    | `:8080`        | Listen address.       |
-| `DB_PATH` | `hush-hush.db` | SQLite database file. |
+| Variable     | Default        | Meaning                                           |
+| ------------ | -------------- | ------------------------------------------------- |
+| `ADDR`       | `:8080`        | Listen address.                                   |
+| `DB_PATH`    | `hush-hush.db` | SQLite database file.                             |
+| `PUBLIC_URL` | unset          | Enables the web UI - see [Web UI](#web-ui) below. |
 
 `hush-hush token issue`/`list`/`revoke` read the same `DB_PATH`, so they
 have to be run against the file (or, in a container, inside the container)
@@ -104,7 +136,10 @@ interactively by a person rather than deployed as a service.
 ### Docker
 
 Every tagged release publishes a multi-arch (`linux/amd64`, `linux/arm64`)
-image to GitHub Container Registry:
+image to GitHub Container Registry. Add `-e PUBLIC_URL=http://localhost:8080`
+(or wherever the container is actually reachable) to any command below to
+enable the [web UI](#web-ui) - left out of these examples since they're
+about the API/token flow, not the browser one:
 
 ```sh
 docker pull ghcr.io/alrayyes/hush-hush:latest
