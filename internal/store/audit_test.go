@@ -42,7 +42,7 @@ func TestRecordAuditLogInsertsAnEntry(t *testing.T) {
 
 	s := openTestStore(t)
 
-	require.NoError(t, s.RecordAuditLog(context.Background(), "mattermost_deploy_webhook", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.1"))
+	require.NoError(t, s.RecordAuditLog(context.Background(), "mattermost_deploy_webhook", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.1", "", ""))
 
 	rows := auditLogRows(t, s)
 	require.Len(t, rows, 1)
@@ -58,7 +58,7 @@ func TestRecordAuditLogWithNoCallerLeavesCallerNull(t *testing.T) {
 
 	s := openTestStore(t)
 
-	require.NoError(t, s.RecordAuditLog(context.Background(), "x", store.AuditActionRead, "", "203.0.113.1"))
+	require.NoError(t, s.RecordAuditLog(context.Background(), "x", store.AuditActionRead, "", "203.0.113.1", "", ""))
 
 	rows := auditLogRows(t, s)
 	require.Len(t, rows, 1)

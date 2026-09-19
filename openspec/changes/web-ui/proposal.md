@@ -17,8 +17,12 @@ human operator, tracked in
 - **BREAKING** (additive to the trust model, not a removal): introduces
   real authenticated identity for the first time. WebAuthn (passkey) login
   for a single admin account, any number of registered credentials.
-  Successful login issues a browser session (cookie), scoped to the web UI
-  only - the existing CLI/CI bearer-token write path is untouched.
+  Successful login issues a browser session (cookie) that authenticates
+  `/objects` in its own right - a second, independent credential
+  alongside the existing write bearer token, not a replacement for it.
+  The web UI holds no bearer token of its own; this is what lets its
+  secrets overview list, create, edit, and delete secrets at all. The
+  existing CLI/CI bearer-token write path itself is untouched.
 - New HTTP endpoints for bearer-token lifecycle management (create, list,
   revoke) - reversing the v1 decision that minting write credentials must
   never itself be reachable over the network. That decision held because

@@ -96,13 +96,18 @@ paths:
       summary: List stored objects
       description: |
         Returns every stored object's metadata (id, used_by, description) -
-        never the sealed value. Gated by a write token unlike every other
-        read path here: an id-scoped read only ever discloses what a
-        caller already knows the id of, but enumerating every object is a
-        capability none of those reads grant on their own.
+        never the sealed value. Gated by a write token or a session unlike
+        every other read path here: an id-scoped read only ever discloses
+        what a caller already knows the id of, but enumerating every
+        object is a capability none of those reads grant on their own.
+        The web UI holds a session, never a bearer token, and uses this
+        for its secrets overview - the two credentials are equally valid
+        here (auth/spec.md's "A session authenticates secret-object
+        access" requirement).
       tags: [objects]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - name: used_by
           in: query
@@ -128,12 +133,17 @@ paths:
       description: |
         Stores an already-sealed value under a new object id. The value is
         opaque ciphertext to this service - it is never decrypted, and the
-        service has no notion of which recipients it was sealed to.
+        service has no notion of which recipients it was sealed to. A
+        session-authenticated call needs its CSRF token too; a
+        bearer-token-authenticated one doesn't, since there's no session
+        to have one.
       tags: [objects]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/caller"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       requestBody:
         required: true
         content:
@@ -193,13 +203,17 @@ paths:
       description: |
         Replaces the stored ciphertext for an existing object. The
         object's id, used_by, and description metadata are preserved
-        unchanged - this endpoint only ever touches the value.
+        unchanged - this endpoint only ever touches the value. A
+        session-authenticated call needs its CSRF token too; a
+        bearer-token-authenticated one doesn't.
       tags: [objects]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/id"
         - $ref: "#/components/parameters/caller"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       requestBody:
         required: true
         content:
@@ -225,13 +239,16 @@ paths:
       summary: Remove an object
       description: |
         Permanently removes an object. A subsequent fetch by this id
-        returns 404.
+        returns 404. A session-authenticated call needs its CSRF token
+        too; a bearer-token-authenticated one doesn't.
       tags: [objects]
       security:
         - bearerAuth: []
+        - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/id"
         - $ref: "#/components/parameters/caller"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       responses:
         "204":
           description: The object was removed.
@@ -677,6 +694,19 @@ components:
         second, readable `csrf_token` cookie alongside the (httpOnly)
         session cookie at login/registration time; the frontend reads that
         cookie and echoes its value back here.
+      schema:
+        type: string
+
+    csrfTokenOptional:
+      name: X-CSRF-Token
+      in: header
+      required: false
+      description: |
+        The current session's own CSRF token - required when the request
+        is authenticated by a session, not present or checked when it's
+        authenticated by a bearer token instead (which has no session, and
+        so no CSRF token to send). See `csrfToken` for the always-required
+        form used where session auth is the only option.
       schema:
         type: string
 

@@ -51,7 +51,8 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 		err := s.CreateObject(r.Context(), req.ID, req.Value, req.UsedBy, req.Description)
 		switch {
 		case err == nil:
-			if err := s.RecordAuditLog(r.Context(), req.ID, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r)); err != nil {
+			actorType, actorID := actorFrom(r)
+			if err := s.RecordAuditLog(r.Context(), req.ID, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
 				writeInternalError(w, r, err)
 
 				return

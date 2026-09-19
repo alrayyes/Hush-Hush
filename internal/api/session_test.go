@@ -75,19 +75,9 @@ func TestExpiredSessionIsTreatedAsUnauthenticated(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
-func TestSessionDoesNotAuthenticateABearerTokenEndpoint(t *testing.T) {
-	t.Parallel()
-
-	mux, s := newTestMux(t)
-	sessionCookie := seedSession(t, s)
-
-	req := httptest.NewRequest(http.MethodGet, "/objects", nil)
-	req.AddCookie(sessionCookie)
-	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusUnauthorized, rec.Code)
-}
+// A session authenticating /objects on its own terms, alongside the
+// bearer token, is covered by write_access_test.go - this file's own
+// scope is the /auth/* session/CSRF middleware itself.
 
 // seedSession creates a session directly through the store, for a test
 // that needs a valid one without going through a full registration or

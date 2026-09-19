@@ -91,8 +91,11 @@ remaining credential SHALL NOT be deletable.
 ### Requirement: Session lifecycle
 
 A successful login SHALL issue a session usable by the web UI, which
-SHALL be invalidated by an explicit logout or by expiry, and SHALL NOT
-grant access to the CLI/CI bearer-token write path or vice versa.
+SHALL be invalidated by an explicit logout or by expiry. A session is an
+independent credential from any write bearer token: it authenticates
+`/objects` requests on its own terms (`Session-attributed writes` below),
+never by deriving, exposing, or reusing a bearer token's own value, and
+revoking or expiring one SHALL NOT affect the other.
 
 #### Scenario: Session grants UI access
 
@@ -110,12 +113,40 @@ grant access to the CLI/CI bearer-token write path or vice versa.
 - **WHEN** a request carries a session past its expiry
 - **THEN** the request is treated as unauthenticated
 
-#### Scenario: A session does not substitute for a bearer token
+#### Scenario: A session never exposes or substitutes for a token's own value
 
-- **WHEN** a request authenticated only by a valid session is made against
-  an endpoint that requires the write bearer token
-- **THEN** the request is rejected exactly as it would be with no
-  credential at all
+- **WHEN** an authenticated session is used against any endpoint
+- **THEN** no response ever includes a bearer token's raw value on the
+  strength of the session alone, and no bearer token is invalidated or
+  altered as a side effect of a session being created, used, or ended
+
+### Requirement: A session authenticates secret-object access
+
+`/objects` (list, fetch, create, update, delete) SHALL accept a valid,
+unexpired session - with its CSRF token on create/update/delete - as a
+credential equally valid to the write bearer token. This is what lets
+the web UI's secrets overview work at all: it holds a session, never a
+bearer token. The two credentials are independent (`Session lifecycle`
+above); a request may be authenticated by either without needing both.
+
+#### Scenario: A session lists objects without a bearer token
+
+- **WHEN** `GET /objects` carries a valid session and no bearer token
+- **THEN** the request succeeds exactly as it would with a valid bearer
+  token
+
+#### Scenario: A session creates, updates, or deletes an object
+
+- **WHEN** a create, update, or delete request carries a valid session
+  and its matching CSRF token, and no bearer token
+- **THEN** the request succeeds exactly as it would with a valid bearer
+  token
+
+#### Scenario: A session's write without its CSRF token is rejected
+
+- **WHEN** a create, update, or delete request carries a valid session
+  but a missing or wrong CSRF token, and no bearer token
+- **THEN** the request is rejected
 
 ### Requirement: Session-attributed writes
 

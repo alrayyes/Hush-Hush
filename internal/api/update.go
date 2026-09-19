@@ -55,7 +55,8 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionUpdate, callerFrom(r), sourceIPFrom(r)); err != nil {
+		actorType, actorID := actorFrom(r)
+		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionUpdate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
 			writeInternalError(w, r, err)
 
 			return

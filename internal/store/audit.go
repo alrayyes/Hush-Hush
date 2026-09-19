@@ -24,23 +24,27 @@ const (
 // RecordAuditLog appends an entry to the audit log. caller may be empty,
 // recorded as NULL rather than an empty string, matching the spec's "the
 // caller's presented identity, if any." ip is the request's source
-// address - unlike caller, always present for a real request.
+// address - unlike caller, always present for a real request. actorType
+// and actorID are the verified credential that authenticated the call
+// ("token"/a token id, "session"/the admin account, or both empty for an
+// unauthenticated read) - kept separate from caller, which stays
+// self-reported and unverified (openspec/changes/web-ui/design.md's
+// "Audit log actor" decision).
 //
 // There is deliberately no update or delete method alongside this one -
 // the audit-log spec requires entries be immutable once recorded, and the
 // simplest way to guarantee that is to never write the code that would
 // violate it.
-func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action AuditAction, caller, ip string) error {
-	var callerValue sql.NullString
-	if caller != "" {
-		callerValue = sql.NullString{String: caller, Valid: true}
-	}
+func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action AuditAction, caller, ip, actorType, actorID string) error {
+	callerValue := nullableString(caller)
+	actorTypeValue := nullableString(actorType)
+	actorIDValue := nullableString(actorID)
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO audit_log (object_id, action, caller, ip, timestamp) VALUES (?, ?, ?, ?, ?)`,
-		objectID, string(action), callerValue, ip, now,
+		`INSERT INTO audit_log (object_id, action, caller, ip, timestamp, actor_type, actor_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		objectID, string(action), callerValue, ip, now, actorTypeValue, actorIDValue,
 	); err != nil {
 		return fmt.Errorf("record audit log: %w", err)
 	}
@@ -48,14 +52,26 @@ func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action Audi
 	return nil
 }
 
+func nullableString(v string) sql.NullString {
+	if v == "" {
+		return sql.NullString{}
+	}
+
+	return sql.NullString{String: v, Valid: true}
+}
+
 // AuditLogEntry is one recorded audit log entry. Matches
-// components.schemas.AuditLogEntry in api/openapi.yaml.
+// components.schemas.AuditLogEntry in api/openapi.yaml - ActorType and
+// ActorID aren't in that schema yet (alrayyes/hush-hush#214 adds them),
+// but are already readable here since RecordAuditLog already writes them.
 type AuditLogEntry struct {
 	ObjectID  string
 	Action    AuditAction
 	Timestamp string
 	Caller    string
 	IP        string
+	ActorType string
+	ActorID   string
 }
 
 // AuditLogFilter narrows a QueryAuditLog call. A zero-value field means
@@ -95,7 +111,7 @@ func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]Aud
 		args = append(args, filter.To.UTC().Format(time.RFC3339))
 	}
 
-	query := `SELECT object_id, action, caller, ip, timestamp FROM audit_log`
+	query := `SELECT object_id, action, caller, ip, timestamp, actor_type, actor_id FROM audit_log`
 	if len(clauses) > 0 {
 		// clauses are fixed strings from this function alone ("object_id
 		// = ?" and the like) - every actual value travels through args
@@ -111,20 +127,29 @@ func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]Aud
 	}
 	defer func() { _ = rows.Close() }()
 
+	return scanAuditLogRows(rows)
+}
+
+// scanAuditLogRows drains rows into entries - split out of QueryAuditLog
+// itself only to stay under golangci-lint's funlen limit, not because the
+// scanning loop is reused anywhere.
+func scanAuditLogRows(rows *sql.Rows) ([]AuditLogEntry, error) {
 	var entries []AuditLogEntry
 	for rows.Next() {
 		var (
-			e      AuditLogEntry
-			action string
-			caller sql.NullString
+			e                          AuditLogEntry
+			action                     string
+			caller, actorType, actorID sql.NullString
 		)
 
-		if err := rows.Scan(&e.ObjectID, &action, &caller, &e.IP, &e.Timestamp); err != nil {
+		if err := rows.Scan(&e.ObjectID, &action, &caller, &e.IP, &e.Timestamp, &actorType, &actorID); err != nil {
 			return nil, fmt.Errorf("scan audit log entry: %w", err)
 		}
 
 		e.Action = AuditAction(action)
 		e.Caller = caller.String
+		e.ActorType = actorType.String
+		e.ActorID = actorID.String
 		entries = append(entries, e)
 	}
 
