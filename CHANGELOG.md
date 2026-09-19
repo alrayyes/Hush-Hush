@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.1](https://github.com/alrayyes/Hush-Hush/compare/v2.9.0...v2.9.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **release:** put --cwd after the subcommand in goreleaser's bun hooks ([e3036de](https://github.com/alrayyes/Hush-Hush/commit/e3036de03ebb9905fce4f11da75d1521960b1180))
+* **release:** put --cwd after the subcommand in goreleaser's bun hooks ([4666f90](https://github.com/alrayyes/Hush-Hush/commit/4666f9098c381df03fb324e8f9ce4f4d72b313a4)), closes [#241](https://github.com/alrayyes/Hush-Hush/issues/241)
+
 ## [2.9.0](https://github.com/alrayyes/Hush-Hush/compare/v2.8.0...v2.9.0) (2026-09-19)
 
 
