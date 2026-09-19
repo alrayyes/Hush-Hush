@@ -58,6 +58,44 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	// owner: the admin account that created a token over HTTP, absent
+	// (NULL) for one issued via the CLI's direct-DB path - never a
+	// guessed value (openspec/changes/web-ui/design.md's "Token ownership
+	// is nullable, not backfilled or guessed" decision).
+	if err := addColumnIfMissing(db, "write_tokens", "owner", "TEXT"); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
+	// revoked_at: NULL while valid, set once revoked - a soft-delete so a
+	// revoked token's audit history still resolves to a real description
+	// and owner instead of a bare id (openspec/changes/web-ui/design.md's
+	// "Token revocation moves from DELETE ... to a revoked_at timestamp
+	// column" decision).
+	if err := addColumnIfMissing(db, "write_tokens", "revoked_at", "TEXT"); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
+	// actor_type/actor_id: the verified credential (a token's id, or the
+	// admin account for a session) that authenticated a write, kept
+	// separate from the existing, self-reported, unverified caller column
+	// rather than overwriting it (openspec/changes/web-ui/design.md's
+	// "Audit log actor" decision).
+	if err := addColumnIfMissing(db, "audit_log", "actor_type", "TEXT"); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
+	if err := addColumnIfMissing(db, "audit_log", "actor_id", "TEXT"); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	return &Store{db: db}, nil
 }
 

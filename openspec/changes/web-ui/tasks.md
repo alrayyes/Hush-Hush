@@ -9,11 +9,11 @@
 
 ## 2. Server: Storage Schema (alrayyes/hush-hush#200)
 
-- [ ] 2.1 Add `webauthn_credentials` (credential id, COSE public key, sign counter, AAGUID, nickname, created-at, last-used-at, owning account) to the schema, and verify migrations apply cleanly to a fresh database
-- [ ] 2.2 Add `sessions` (id, created-at, expires-at, CSRF token) to the schema, and verify migrations apply cleanly
-- [ ] 2.3 Add `webauthn_ceremonies` (challenge, kind, created-at, expires-at) to the schema, and verify expired rows are cleaned up opportunistically
-- [ ] 2.4 Add a nullable owner column and a nullable `revoked_at` column to the existing `tokens` table, and verify a migration against a database already containing tokens leaves existing rows with no owner and `revoked_at` null rather than erroring
-- [ ] 2.5 Add nullable `actor_type` (`token`/`session`) and `actor_id` columns to `audit_log`, separate from the existing `caller` column, and verify migrations apply cleanly to a database already containing audit log entries
+- [x] 2.1 Add `webauthn_credentials` (credential id, COSE public key, sign counter, AAGUID, nickname, created-at, last-used-at - no separate owning-account column, since a single-admin schema has nothing to key it against) to the schema, and verify migrations apply cleanly to a fresh database
+- [x] 2.2 Add `sessions` (id, created-at, expires-at, CSRF token) to the schema, and verify migrations apply cleanly
+- [x] 2.3 Add `webauthn_ceremonies` (challenge, kind, created-at, expires-at) to the schema, and verify expired rows are cleaned up opportunistically
+- [x] 2.4 Add a nullable owner column and a nullable `revoked_at` column to the existing `write_tokens` table, and verify a migration against a database already containing tokens leaves existing rows with no owner and `revoked_at` null rather than erroring
+- [x] 2.5 Add nullable `actor_type` (`token`/`session`) and `actor_id` columns to `audit_log`, separate from the existing `caller` column, and verify migrations apply cleanly to a database already containing audit log entries
 
 ## 3. Server: WebAuthn Ceremonies and Session Issuance (alrayyes/hush-hush#201)
 
