@@ -37,7 +37,7 @@ func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
 func issueToken(t *testing.T, s *store.Store) string {
 	t.Helper()
 
-	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour)
+	_, token, err := s.CreateWriteToken(t.Context(), "test", time.Hour, "")
 	require.NoError(t, err)
 
 	return token

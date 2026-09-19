@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/alrayyes/hush-hush/internal/store"
 )
@@ -26,6 +27,9 @@ type objectStore interface {
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
 	ValidateWriteToken(ctx context.Context, token string) (bool, error)
+	CreateWriteToken(ctx context.Context, description string, ttl time.Duration, owner string) (store.WriteToken, string, error)
+	ListWriteTokens(ctx context.Context) ([]store.WriteToken, error)
+	RevokeWriteToken(ctx context.Context, id string) error
 
 	CreateCredential(ctx context.Context, c store.Credential) error
 	ListCredentials(ctx context.Context) ([]store.Credential, error)
@@ -77,6 +81,10 @@ func NewMux(s objectStore, publicURL string) *http.ServeMux {
 	mux.HandleFunc("GET /credentials", requireSession(s, handleListCredentials(s)))
 	mux.HandleFunc("PATCH /credentials/{id}", requireSession(s, requireCSRF(handleRenameCredential(s))))
 	mux.HandleFunc("DELETE /credentials/{id}", requireSession(s, requireCSRF(handleDeleteCredential(s))))
+
+	mux.HandleFunc("POST /tokens", requireSession(s, requireCSRF(handleCreateToken(s))))
+	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
+	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
 
 	return mux
 }

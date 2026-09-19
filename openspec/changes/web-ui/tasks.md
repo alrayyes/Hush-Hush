@@ -39,11 +39,11 @@
 
 ## 6. Server: Token Management HTTP Endpoints (alrayyes/hush-hush#204)
 
-- [ ] 6.1 Implement token creation (description + TTL, session-gated), and verify the raw value is present only in the creation response
-- [ ] 6.2 Verify a missing or non-positive TTL is rejected and no token is created
-- [ ] 6.3 Implement token listing (metadata only) and revocation as a soft-delete (`revoked_at`, not a row delete), and verify a revoked token no longer authenticates a write but stays listed with its description and owner intact
-- [ ] 6.4 Verify listing shows HTTP-created tokens with their owning admin account and CLI-created tokens with no owner
-- [ ] 6.5 Change `internal/store`'s `RevokeWriteToken` (the existing CLI-facing path) from `DELETE` to setting `revoked_at`, and `ValidateWriteToken` to check `revoked_at IS NULL` alongside expiry, and verify `hush-hush token revoke`'s CLI-visible behaviour is unchanged
+- [x] 6.1 Implement token creation (description + TTL, session-gated), and verify the raw value is present only in the creation response
+- [x] 6.2 Verify a missing or non-positive TTL is rejected and no token is created
+- [x] 6.3 Implement token listing (metadata only) and revocation as a soft-delete (`revoked_at`, not a row delete), and verify a revoked token no longer authenticates a write but stays listed with its description and owner intact
+- [x] 6.4 Verify listing shows HTTP-created tokens with their owning admin account and CLI-created tokens with no owner
+- [x] 6.5 Change `internal/store`'s `RevokeWriteToken` (the existing CLI-facing path) from `DELETE` to setting `revoked_at`, and `ValidateWriteToken` to check `revoked_at IS NULL` alongside expiry, and verify `hush-hush token revoke`'s CLI-visible behaviour is unchanged
 
 ## 7. Server: Bearer-Token-Attributed Audit Writes and Actor Query Filter (alrayyes/hush-hush#214)
 

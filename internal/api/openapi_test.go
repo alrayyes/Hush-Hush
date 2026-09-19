@@ -266,6 +266,64 @@ func contractCases() []contractCase {
 				return req
 			},
 		},
+		{
+			name: "create token",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+
+				b := []byte(`{"description":"contract test token","ttl_seconds":3600}`)
+				req := httptest.NewRequest(http.MethodPost, "/tokens", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
+		{
+			name:                   "create token without a session",
+			requestIsSchemaInvalid: true,
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				b := []byte(`{"description":"unauthenticated","ttl_seconds":3600}`)
+				req := httptest.NewRequest(http.MethodPost, "/tokens", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+
+				return req
+			},
+		},
+		{
+			name: "list tokens",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				req := httptest.NewRequest(http.MethodGet, "/tokens", nil)
+				req.AddCookie(seedSessionCookie(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "revoke unknown token",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodDelete, "/tokens/0000000000000000", nil)
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
 	}
 }
 
