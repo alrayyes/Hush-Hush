@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/alrayyes/Hush-Hush/compare/v2.4.0...v2.5.0) (2026-09-19)
+
+
+### Features
+
+* **api:** implement credential management endpoints ([#221](https://github.com/alrayyes/Hush-Hush/issues/221)) ([b03a149](https://github.com/alrayyes/Hush-Hush/commit/b03a149ffebbb54987b03436b45ee4f34b98a6e1))
+
 ## [2.4.0](https://github.com/alrayyes/Hush-Hush/compare/v2.3.0...v2.4.0) (2026-09-19)
 
 
