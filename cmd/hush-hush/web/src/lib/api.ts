@@ -76,6 +76,28 @@ export async function finishLogin(credential: unknown): Promise<void> {
 	});
 }
 
+// beginRegistration/finishRegistration cover both first-run account
+// creation (no session yet) and adding another passkey to the existing
+// account from settings (session required) - the server tells the two
+// apart on its own (auth/spec.md's "Registering a first passkey" vs.
+// "Registering another passkey" scenarios), so this client doesn't need
+// to know which case it's in.
+export async function beginRegistration(): Promise<Record<string, unknown>> {
+	const res = await request('/auth/register/begin', { method: 'POST' });
+
+	return res.json();
+}
+
+export async function finishRegistration(
+	credential: unknown,
+	nickname?: string,
+): Promise<void> {
+	await request('/auth/register/finish', {
+		method: 'POST',
+		body: JSON.stringify({ credential, nickname }),
+	});
+}
+
 export async function logout(): Promise<void> {
 	await request('/auth/logout', { method: 'POST' });
 }
@@ -176,6 +198,84 @@ export interface AuditLogEntry {
 // dedicated audit log page, which is a different, much larger view.
 export async function queryAuditLog(): Promise<AuditLogEntry[]> {
 	const res = await request('/audit-log');
+
+	return res.json();
+}
+
+export interface Credential {
+	id: string;
+	nickname?: string;
+	created_at: string;
+	last_used_at?: string;
+}
+
+export async function listCredentials(): Promise<Credential[]> {
+	const res = await request('/credentials');
+
+	return res.json();
+}
+
+export async function renameCredential(
+	id: string,
+	nickname: string,
+): Promise<Credential> {
+	const res = await request(`/credentials/${encodeURIComponent(id)}`, {
+		method: 'PATCH',
+		body: JSON.stringify({ nickname }),
+	});
+
+	return res.json();
+}
+
+export async function deleteCredential(id: string): Promise<void> {
+	await request(`/credentials/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export interface TokenMetadata {
+	id: string;
+	description: string;
+	owner?: string;
+	created_at: string;
+	expires_at: string;
+	revoked: boolean;
+}
+
+export interface TokenWithValue extends TokenMetadata {
+	value: string;
+}
+
+export async function listTokens(): Promise<TokenMetadata[]> {
+	const res = await request('/tokens');
+
+	return res.json();
+}
+
+export async function createToken(
+	description: string,
+	ttlSeconds: number,
+): Promise<TokenWithValue> {
+	const res = await request('/tokens', {
+		method: 'POST',
+		body: JSON.stringify({ description, ttl_seconds: ttlSeconds }),
+	});
+
+	return res.json();
+}
+
+export async function revokeToken(id: string): Promise<void> {
+	await request(`/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export interface Health {
+	status: string;
+	version: string;
+}
+
+// getHealth is unauthenticated, same as every page's own footer that
+// calls it (web-ui/spec.md's "Footer content is present on every page"
+// requirement covers login too, which holds no session yet).
+export async function getHealth(): Promise<Health> {
+	const res = await request('/healthz');
 
 	return res.json();
 }

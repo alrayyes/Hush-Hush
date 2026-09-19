@@ -23,6 +23,13 @@ ignores:
   # nested skill files - written by that tool, not authored prose.
   - "cmd/hush-hush/web/AGENTS.md"
   - "cmd/hush-hush/web/.claude/**"
+  # The changelog page's own source, and every copy the frontend build
+  # itself makes of it (adapter-static's build/, Vite's own .svelte-kit/
+  # cache) - all a fresh copy of the root CHANGELOG.md made by
+  # `bun run dev`/`build`, held to the same rule as the original above.
+  - "cmd/hush-hush/web/static/CHANGELOG.md"
+  - "cmd/hush-hush/web/build/CHANGELOG.md"
+  - "cmd/hush-hush/web/.svelte-kit/**"
 
 config:
   # markdownlint/style/prettier drops MD013 because Prettier reflows prose on

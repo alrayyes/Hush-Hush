@@ -1,7 +1,12 @@
 <script lang="ts">
 import favicon from '$lib/assets/favicon.svg';
+import Footer from '$lib/Footer.svelte';
+import type { LayoutData } from './$types';
 
-let { children } = $props();
+let {
+	data,
+	children,
+}: { data: LayoutData; children: import('svelte').Snippet } = $props();
 </script>
 
 <svelte:head>
@@ -9,3 +14,5 @@ let { children } = $props();
 </svelte:head>
 
 {@render children()}
+
+<Footer version={data.version} />

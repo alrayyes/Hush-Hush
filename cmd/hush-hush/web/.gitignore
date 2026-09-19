@@ -15,6 +15,11 @@ node_modules
 # placeholder it replaces - run `bun run build` before committing a
 # frontend change so it doesn't go stale relative to src/.
 
+# The changelog page's own source: copied fresh from the repo root by
+# `bun run dev`/`build` (the "copy-changelog" script) every time, so a
+# committed copy here would just be a second one to drift out of sync.
+/static/CHANGELOG.md
+
 # OS
 .DS_Store
 Thumbs.db

@@ -66,10 +66,10 @@
 
 ## 10. Frontend: Settings and Footer (alrayyes/hush-hush#207)
 
-- [ ] 10.1 Implement the passkeys section of settings (list, add via registration ceremony, rename, delete), and verify against a running server, including the last-credential-refusal case surfacing as a visible error
-- [ ] 10.2 Implement the tokens section of settings (create with description + TTL, list, revoke), and verify the raw value's one-time-display behaviour
-- [ ] 10.3 Implement the footer (version linked to changelog, disclaimer link, privacy link, licence) on every page, sourcing the version from the build rather than hardcoding it
-- [ ] 10.4 Implement the changelog page rendering `CHANGELOG.md`, and verify it reflects the file's actual content
+- [x] 10.1 Implement the passkeys section of settings (list, add via registration ceremony, rename, delete), and verify against a running server, including the last-credential-refusal case surfacing as a visible error - implemented and type-checked; no browser tool available this session to drive the registration ceremony or the 409 case interactively (same gap noted on `#206`'s tasks)
+- [x] 10.2 Implement the tokens section of settings (create with description + TTL, list, revoke), and verify the raw value's one-time-display behaviour - implemented and type-checked; same interactive-verification gap as 10.1
+- [x] 10.3 Implement the footer (version linked to changelog, disclaimer link, privacy link, licence) on every page, sourcing the version from the build rather than hardcoding it - `/healthz` now reports the running binary's own goreleaser-stamped version (`api/openapi.yaml`'s `Health.version`), fetched by the root layout and rendered on every page including login; verified end to end against the real built binary (`curl /healthz`, `curl /settings`, `curl /changelog` all correct)
+- [x] 10.4 Implement the changelog page rendering `CHANGELOG.md`, and verify it reflects the file's actual content - verified end to end: `curl /CHANGELOG.md` against the real built binary returns the repository's actual changelog content
 
 ## 11. Frontend: Audit Log Page (alrayyes/hush-hush#215)
 

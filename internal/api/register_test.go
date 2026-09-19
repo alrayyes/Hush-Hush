@@ -146,7 +146,7 @@ func TestRegistrationWithoutPublicURLConfiguredIsBadRequest(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	mux := hushhush.NewMux(s, "", testWebBuild())
+	mux := hushhush.NewMux(s, "", testWebBuild(), testVersion)
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/register/begin", nil)
 	rec := httptest.NewRecorder()

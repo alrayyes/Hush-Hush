@@ -21,6 +21,10 @@ import (
 // ceremony against without each one repeating the value.
 const testPublicURL = "https://hush-hush.example.test"
 
+// testVersion is the version every handler test's mux reports from
+// /healthz.
+const testVersion = "test-version"
+
 // testIndexHTML is what every handler test's mux serves as the embedded
 // SPA's index.html - static_test.go checks its exact content, and every
 // other test just needs some fixed, recognizable body so a static-route
@@ -47,7 +51,7 @@ func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	return hushhush.NewMux(s, testPublicURL, testWebBuild()), s
+	return hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion), s
 }
 
 // issueToken mints a write token valid against s, for a test that needs a

@@ -160,7 +160,7 @@ func serve() error {
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.NewMux(s, cfg.PublicURL, build),
+		Handler:           hushhush.NewMux(s, cfg.PublicURL, build, version),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
