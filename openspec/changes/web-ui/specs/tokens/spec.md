@@ -52,6 +52,8 @@ has been revoked - without exposing any raw token value.
 
 An authenticated admin session SHALL be able to revoke a token by id,
 after which that token SHALL no longer authenticate any write request.
+Revocation SHALL be a soft-delete - the token's record persists, marked
+revoked, rather than being removed.
 
 #### Scenario: Revoking a token
 
@@ -60,12 +62,32 @@ after which that token SHALL no longer authenticate any write request.
   that token's raw value are rejected, and the token's listed status shows
   it as revoked
 
+#### Scenario: A revoked token stays listed
+
+- **WHEN** a token is revoked
+- **THEN** it continues to appear in the token list (marked revoked)
+  rather than disappearing, and its id, description, and owner remain
+  readable
+
 #### Scenario: Revoking an already-expired or unknown token
 
 - **WHEN** an authenticated session attempts to revoke a token id that is
   already expired or does not exist
 - **THEN** the server responds without error and no other token's state
   changes
+
+### Requirement: Revoked tokens stay attributable
+
+A token, once created, SHALL remain identifiable by its id, description,
+and owner for as long as any audit log entry references it - revocation
+or expiry SHALL NOT remove that record.
+
+#### Scenario: A revoked token's history stays readable
+
+- **WHEN** an audit log entry recorded before a token was revoked is
+  viewed after the revocation
+- **THEN** the entry's attributed token still resolves to its real
+  description and owner, not a bare id with nothing behind it
 
 ### Requirement: Token ownership
 

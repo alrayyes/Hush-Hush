@@ -28,11 +28,18 @@ human operator, tracked in
 - Tokens gain an owner (the admin account that created them) so the
   settings page can show who issued each one - previously implicit (there
   was only ever one operator with DB access).
-- Writes made through the web UI (create/update/delete on a secret object)
-  record the authenticated session's identity as the audit log's caller,
-  instead of the unauthenticated, self-reported `X-Caller` header. The
-  header stays as-is for CLI/CI callers, which have no session to attribute
-  to.
+- Revoking a token becomes a soft-delete (a `revoked_at` timestamp) instead
+  of deleting its row - **BREAKING** to the existing `RevokeWriteToken`
+  storage behaviour, though not to its CLI-visible interface. A revoked
+  token has to stay identifiable for its past audit-log entries to remain
+  attributable to a real, named token rather than a bare id nobody can
+  look up any more.
+- Every audit log entry now records a verified `actor` (`token` or
+  `session`, plus the specific token/admin id) alongside the existing
+  self-reported `X-Caller` header, not instead of it - `X-Caller` stays
+  unauthenticated and unchanged. `GET /audit-log` gains an actor/token
+  filter, and the audit log itself becomes viewable and filterable from
+  the web UI - a new page, not just an endpoint a caller queries directly.
 - New Svelte (SvelteKit + `adapter-static`) single-page app, built and
   embedded into the server binary, served from the same origin as the API
   (no separate deploy, no CORS):
@@ -41,6 +48,9 @@ human operator, tracked in
     created/updated-by and when.
   - Settings page: manage registered passkeys (add, nickname, delete) and
     bearer tokens (create with description + TTL, list, revoke).
+  - Audit log page: filterable (object, actor/token, date range) and
+    exportable (CSV/JSON of the visible page) view of every recorded
+    action.
   - Footer: version linked to a changelog page (rendering `CHANGELOG.md`),
     a disclaimer link, a privacy link, and the licence.
 
@@ -53,23 +63,28 @@ human operator, tracked in
   authenticated session's identity to secret-object writes made through it.
 - `tokens`: HTTP API for bearer-token lifecycle management - create
   (description + TTL), list (metadata only, never the raw value after
-  creation), revoke - each token owned by the admin account that created
+  creation), revoke (soft-delete) - each token owned by the admin account
+  that created it, and identifiable for as long as its audit history
+  exists even after revocation.
+- `audit-log`: verified actor attribution (token or session) on every
+  recorded action, an actor/token query filter alongside the existing
+  object/caller/time ones, and a web UI page to view, filter, and export
   it.
 - `web-ui`: the embedded Svelte single-page app itself - routes, what each
   page must show and let the operator do, and the required footer
-  links/content. Consumes the `auth`, `tokens`, and existing secret-object
-  HTTP APIs; adds no new server behaviour of its own beyond serving static
-  assets.
+  links/content. Consumes the `auth`, `tokens`, `audit-log`, and existing
+  secret-object HTTP APIs; adds no new server behaviour of its own beyond
+  serving static assets.
 
 ### Modified Capabilities
 
 None. `openspec list --specs` shows no existing capability specs in this
 repo to delta against - the original secrets-object-store work predates
 this project's use of the spec-driven OpenSpec workflow. The secret-object
-CRUD and audit-log endpoints this change builds on are unchanged; only the
-new `auth` capability's session-attribution requirement adds a new _source_
-of the audit log's existing `caller` field, described there rather than as
-a delta to a nonexistent spec.
+CRUD endpoint behaviour this change builds on is unchanged; the existing
+audit-log _endpoint's_ behaviour changes (new query filter, new response
+fields) but there's no existing spec file for it to delta against either,
+so that's described fully in the new `audit-log` capability instead.
 
 ## Impact
 
@@ -93,6 +108,13 @@ a delta to a nonexistent spec.
 - README/CONTRIBUTING updated: how to build/run the web UI, the new
   frontend toolchain requirement (bun, already a dependency for tooling in
   this repo), and the new endpoints.
-- No impact on `hush-hush-cli` or the generated SDKs - the write bearer
-  token and existing object/audit endpoints are unchanged; new endpoints
-  are additive to `api/openapi.yaml`.
+- `internal/store`'s `RevokeWriteToken` changes from `DELETE` to setting a
+  `revoked_at` timestamp - existing behaviour for CLI callers
+  (`hush-hush token revoke`) is unchanged at the interface level, but the
+  row now persists.
+- `hush-hush-cli` gains a new audit-log command mirroring the query
+  filters below (object/actor/caller/time, table or JSON output) -
+  tracked as a separate issue in that repo, not implemented as part of
+  this change. The generated SDKs pick up the new `/audit-log` filter and
+  response fields automatically on their next regeneration; no manual
+  change needed there.

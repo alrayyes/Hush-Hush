@@ -131,10 +131,57 @@ account") would be a fabricated attribution the audit trail shouldn't
 carry. See
 tokens/spec.md's "CLI-created token has no owner" scenario.
 
+**Token revocation moves from `DELETE FROM write_tokens` to a
+`revoked_at` timestamp column.** A revoked token that's actually deleted
+takes its description and owner with it, so an old audit entry pointing at
+it resolves to a bare id nobody can explain during an incident review,
+exactly the gap this change's audit-log-per-token requirement exists to
+close. `ValidateWriteToken` gains a `revoked_at IS NULL` check alongside
+its existing expiry check; the CLI's own `token revoke` command's
+interface is unchanged, only what happens underneath it.
+
+**Audit log actor: new `actor_type` (`token`/`session`, nullable) and
+`actor_id` columns on `audit_log`, kept separate from the existing
+`caller` column rather than overwriting it.** Researched against
+verified-vs-self-reported audit field conventions (Pangea, Cloudflare
+Audit Logs v2, evlog.dev - see this change's research notes). Collapsing
+a verified identity and an unverified, self-reported one into a single
+field is the antipattern those sources call out directly - a caller can
+already put anything in `X-Caller`, and losing the distinction once a
+real actor exists would make the whole field less trustworthy, not more.
+This also revises `auth/spec.md`'s originally planned "session
+overwrites caller" behaviour (written before this requirement existed)
+to attribute via the new `actor_type`/`actor_id` pair instead - see that
+spec's now-updated "Session-attributed writes" requirement. No foreign
+key to `write_tokens`, the same reasoning already used for the audit log
+having no foreign key to objects: the entry has to survive the token or
+account
+state it references changing.
+
+**Audit log UI: cursor-based pagination, filters as removable chips
+applied instantly (no explicit "Apply"), no live-tail/streaming.**
+Researched against dashboard-filter and pagination UX guidance (Setproduct,
+aufaitux). Offset pagination degrades and can double-count rows under
+concurrent writes on a table that grows unbounded; an admin reviewing an
+incident is hunting a specific window or actor, not skimming a feed, so
+live-tail is overkill complexity for this tool. Export is a "download the
+currently visible page as CSV/JSON" button, not a separate unbounded
+server-side export job - reuses the same paginated query rather than
+building a second code path.
+
+**The CLI's own audit-log command is out of this change's scope
+entirely - a separate issue in `hush-hush-cli`, not a task here.** That
+repo is a different deployable with its own release cycle; this change
+only has to make sure the server-side query shape (the new actor filter)
+is something that command can call once it exists. Researched against
+`gh`'s own audit-log CLI shape (flag-per-filter, `--format table|json`,
+result-limit flag, no follow mode) as the closest real-world precedent
+for what that command should look like when it's built.
+
 **`api/openapi.yaml` gains the new endpoints (WebAuthn ceremonies,
-session, credential management, token management) under the project's
-existing spec-first convention - reviewed there before the handlers are
-written, same as every prior endpoint.**
+session, credential management, token management, audit-log actor
+filter) under the project's existing spec-first convention - reviewed
+there before the handlers are written, same as every prior endpoint.**
 
 ## Risks / Trade-offs
 

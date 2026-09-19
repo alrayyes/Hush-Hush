@@ -12,7 +12,8 @@
 - [ ] 2.1 Add `webauthn_credentials` (credential id, COSE public key, sign counter, AAGUID, nickname, created-at, last-used-at, owning account) to the schema, and verify migrations apply cleanly to a fresh database
 - [ ] 2.2 Add `sessions` (id, created-at, expires-at, CSRF token) to the schema, and verify migrations apply cleanly
 - [ ] 2.3 Add `webauthn_ceremonies` (challenge, kind, created-at, expires-at) to the schema, and verify expired rows are cleaned up opportunistically
-- [ ] 2.4 Add a nullable owner column to the existing `tokens` table, and verify a migration against a database already containing tokens leaves existing rows with no owner rather than erroring
+- [ ] 2.4 Add a nullable owner column and a nullable `revoked_at` column to the existing `tokens` table, and verify a migration against a database already containing tokens leaves existing rows with no owner and `revoked_at` null rather than erroring
+- [ ] 2.5 Add nullable `actor_type` (`token`/`session`) and `actor_id` columns to `audit_log`, separate from the existing `caller` column, and verify migrations apply cleanly to a database already containing audit log entries
 
 ## 3. Server: WebAuthn Ceremonies and Session Issuance (alrayyes/hush-hush#201)
 
@@ -31,39 +32,53 @@
 
 ## 5. Server: Session-Attributed Audit Writes (alrayyes/hush-hush#203)
 
-- [ ] 5.1 Implement attribution: a session-authenticated create/update/delete records the admin account as the audit log caller, overriding any `X-Caller` header, and verify with a test per operation
-- [ ] 5.2 Verify a bearer-token-authenticated create/update/delete keeps recording `X-Caller` exactly as before this change, and that `internal/api/openapi_test.go` and the Pact provider verification both still pass unmodified
+- [ ] 5.1 Implement attribution: a session-authenticated create/update/delete records the admin account as the audit log entry's `actor_type`/`actor_id`, leaving `caller` populated from `X-Caller` exactly as before, and verify with a test per operation
+- [ ] 5.2 Verify `internal/api/openapi_test.go` and the Pact provider verification both still pass unmodified
 
 ## 6. Server: Token Management HTTP Endpoints (alrayyes/hush-hush#204)
 
 - [ ] 6.1 Implement token creation (description + TTL, session-gated), and verify the raw value is present only in the creation response
 - [ ] 6.2 Verify a missing or non-positive TTL is rejected and no token is created
-- [ ] 6.3 Implement token listing (metadata only) and revocation, and verify a revoked token no longer authenticates a write
+- [ ] 6.3 Implement token listing (metadata only) and revocation as a soft-delete (`revoked_at`, not a row delete), and verify a revoked token no longer authenticates a write but stays listed with its description and owner intact
 - [ ] 6.4 Verify listing shows HTTP-created tokens with their owning admin account and CLI-created tokens with no owner
+- [ ] 6.5 Change `internal/store`'s `RevokeWriteToken` (the existing CLI-facing path) from `DELETE` to setting `revoked_at`, and `ValidateWriteToken` to check `revoked_at IS NULL` alongside expiry, and verify `hush-hush token revoke`'s CLI-visible behaviour is unchanged
 
-## 7. Server: Embed and Serve the SPA (alrayyes/hush-hush#205)
+## 7. Server: Bearer-Token-Attributed Audit Writes and Actor Query Filter (alrayyes/hush-hush#214)
 
-- [ ] 7.1 Add a `go:embed` static handler serving `web/build/`, routed as the fallback after every known API path, and verify existing routes (`/objects`, `/audit-log`, `/healthz`) are unaffected
-- [ ] 7.2 Verify an unmatched path serves `index.html` and that a fresh build of `internal/api/openapi_test.go`'s contract test and the Pact provider verification both still pass
+- [ ] 7.1 Implement attribution: a bearer-token-authenticated create/update/delete records the authenticating token's id as the audit log entry's `actor_type`/`actor_id`, and verify with a test per operation
+- [ ] 7.2 Add an actor/token filter to `GET /audit-log`, combining with the existing object/caller/time filters, and verify each filter combination
+- [ ] 7.3 Verify a revoked token's past audit entries still resolve to its real description and owner (tokens/spec.md's "A revoked token's history stays readable" scenario)
 
-## 8. Frontend: Scaffold, Login, Secrets Overview (alrayyes/hush-hush#206)
+## 8. Server: Embed and Serve the SPA (alrayyes/hush-hush#205)
 
-- [ ] 8.1 Scaffold a SvelteKit project under `web/` with `npx sv add ai-tools` (wires the MCP-driven Svelte AI tooling per `rules/svelte.md`), configure `adapter-static`, `ssr = false`, `fallback: 'index.html'`, and Svelte 5 runes, and verify it builds with the repo's frontend build command
-- [ ] 8.1a Use the Svelte MCP server's `list-sections`/`get-documentation` before writing unfamiliar SvelteKit APIs (routing, load functions, `adapter-static` config) throughout this and the following frontend tasks, and run `svelte-autofixer` against generated `.svelte`/`.svelte.ts` code until it reports clean before it ships, per `rules/svelte.md`
-- [ ] 8.2 Implement the login page and WebAuthn ceremony calls via `@simplewebauthn/browser`, and verify a successful login redirects to the secrets overview and a failed/cancelled ceremony shows an error without crashing the page
-- [ ] 8.3 Implement an auth guard redirecting any unauthenticated request for a page other than login to the login page, and verify no secret data is fetched before redirect
-- [ ] 8.4 Implement the secrets overview (list with created/updated-by and when, view, create, edit, delete), and verify each action against a running server
+- [ ] 8.1 Add a `go:embed` static handler serving `web/build/`, routed as the fallback after every known API path, and verify existing routes (`/objects`, `/audit-log`, `/healthz`) are unaffected
+- [ ] 8.2 Verify an unmatched path serves `index.html` and that a fresh build of `internal/api/openapi_test.go`'s contract test and the Pact provider verification both still pass
 
-## 9. Frontend: Settings and Footer (alrayyes/hush-hush#207)
+## 9. Frontend: Scaffold, Login, Secrets Overview (alrayyes/hush-hush#206)
 
-- [ ] 9.1 Implement the passkeys section of settings (list, add via registration ceremony, rename, delete), and verify against a running server, including the last-credential-refusal case surfacing as a visible error
-- [ ] 9.2 Implement the tokens section of settings (create with description + TTL, list, revoke), and verify the raw value's one-time-display behaviour
-- [ ] 9.3 Implement the footer (version linked to changelog, disclaimer link, privacy link, licence) on every page, sourcing the version from the build rather than hardcoding it
-- [ ] 9.4 Implement the changelog page rendering `CHANGELOG.md`, and verify it reflects the file's actual content
+- [ ] 9.1 Scaffold a SvelteKit project under `web/` with `npx sv add ai-tools` (wires the MCP-driven Svelte AI tooling per `rules/svelte.md`), configure `adapter-static`, `ssr = false`, `fallback: 'index.html'`, and Svelte 5 runes, and verify it builds with the repo's frontend build command
+- [ ] 9.1a Use the Svelte MCP server's `list-sections`/`get-documentation` before writing unfamiliar SvelteKit APIs (routing, load functions, `adapter-static` config) throughout this and the following frontend tasks, and run `svelte-autofixer` against generated `.svelte`/`.svelte.ts` code until it reports clean before it ships, per `rules/svelte.md`
+- [ ] 9.2 Implement the login page and WebAuthn ceremony calls via `@simplewebauthn/browser`, and verify a successful login redirects to the secrets overview and a failed/cancelled ceremony shows an error without crashing the page
+- [ ] 9.3 Implement an auth guard redirecting any unauthenticated request for a page other than login to the login page, and verify no secret data is fetched before redirect
+- [ ] 9.4 Implement the secrets overview (list with created/updated-by and when, view, create, edit, delete), and verify each action against a running server
 
-## 10. Build, Docs, and End-to-End Validation (alrayyes/hush-hush#208)
+## 10. Frontend: Settings and Footer (alrayyes/hush-hush#207)
 
-- [ ] 10.1 Add a frontend build stage to `Dockerfile` ahead of the Go build stage, and verify `docker build .` produces the same distroless image shape with no Node/bun in the final layer
-- [ ] 10.2 Update README (requirements, `PUBLIC_URL`, how to reach the web UI, frontend toolchain) and CONTRIBUTING (frontend build/test commands), and verify a reader with no prior context can follow it to build and reach the login page
-- [ ] 10.3 Migrate one real login + secret create/edit/delete + token create/revoke round trip against a running instance end to end, and verify it succeeds
-- [ ] 10.4 Verify every sub-issue this change touched or spawned is closed referencing what shipped, and archive this OpenSpec change
+- [ ] 10.1 Implement the passkeys section of settings (list, add via registration ceremony, rename, delete), and verify against a running server, including the last-credential-refusal case surfacing as a visible error
+- [ ] 10.2 Implement the tokens section of settings (create with description + TTL, list, revoke), and verify the raw value's one-time-display behaviour
+- [ ] 10.3 Implement the footer (version linked to changelog, disclaimer link, privacy link, licence) on every page, sourcing the version from the build rather than hardcoding it
+- [ ] 10.4 Implement the changelog page rendering `CHANGELOG.md`, and verify it reflects the file's actual content
+
+## 11. Frontend: Audit Log Page (alrayyes/hush-hush#215)
+
+- [ ] 11.1 Implement the audit log page: table, filters (object, actor/token, date range) as removable chips applied instantly, cursor-based pagination, and verify against a running server with more entries than one page
+- [ ] 11.2 Implement "export visible page" as CSV and JSON, and verify the downloaded file matches exactly what's currently filtered/shown
+- [ ] 11.3 Verify an entry with no actor (an unauthenticated read) renders as "none" rather than blank or erroring
+
+## 12. Build, Docs, and End-to-End Validation (alrayyes/hush-hush#208)
+
+- [ ] 12.1 Add a frontend build stage to `Dockerfile` ahead of the Go build stage, and verify `docker build .` produces the same distroless image shape with no Node/bun in the final layer
+- [ ] 12.2 Update README (requirements, `PUBLIC_URL`, how to reach the web UI, frontend toolchain) and CONTRIBUTING (frontend build/test commands), and verify a reader with no prior context can follow it to build and reach the login page
+- [ ] 12.3 Migrate one real login + secret create/edit/delete + token create/revoke + audit log filter/export round trip against a running instance end to end, and verify it succeeds
+- [ ] 12.4 File the `hush-hush-cli` audit-log command as an issue in that repo, referencing this change's actor/token filter shape
+- [ ] 12.5 Verify every sub-issue this change touched or spawned is closed referencing what shipped, and archive this OpenSpec change
