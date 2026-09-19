@@ -100,7 +100,7 @@ so that's described fully in the new `audit-log` capability instead.
   `internal/store`.
 - New dependency: `go-webauthn/webauthn` (Go, server-side WebAuthn) and its
   transitive dependencies.
-- New `web/` directory: a SvelteKit project (Svelte 5, `adapter-static`),
+- New `cmd/hush-hush/web/` directory: a SvelteKit project (Svelte 5, `adapter-static`),
   its own `package.json`/toolchain, built as a static bundle and embedded
   into the server binary via `go:embed`. New frontend dependency:
   `@simplewebauthn/browser`.

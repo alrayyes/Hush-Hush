@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -56,7 +57,12 @@ type objectStore interface {
 // deployment that hasn't enabled the web UI yet, in which case every
 // /auth/* ceremony endpoint answers with a configuration error rather
 // than the server refusing to start.
-func NewMux(s objectStore, publicURL string) *http.ServeMux {
+//
+// webBuild is the embedded SPA's build output, served as the fallback
+// for any request that doesn't match a known API route (design.md's
+// "Routing boundary" decision) - never intercepting /objects,
+// /audit-log, /healthz, or any /auth, /credentials, or /tokens path.
+func NewMux(s objectStore, publicURL string, webBuild fs.FS) *http.ServeMux {
 	wa, err := newWebAuthn(publicURL)
 	if err != nil {
 		wa = nil
@@ -85,6 +91,8 @@ func NewMux(s objectStore, publicURL string) *http.ServeMux {
 	mux.HandleFunc("POST /tokens", requireSession(s, requireCSRF(handleCreateToken(s))))
 	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
 	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
+
+	mux.Handle("/", handleStatic(webBuild))
 
 	return mux
 }

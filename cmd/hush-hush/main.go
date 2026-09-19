@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -150,9 +151,16 @@ func serve() error {
 		}
 	}()
 
+	build, err := fs.Sub(webBuild, "web/build")
+	if err != nil {
+		slog.Error("open embedded web build", "error", err)
+
+		return fmt.Errorf("open embedded web build: %w", err)
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.NewMux(s, cfg.PublicURL),
+		Handler:           hushhush.NewMux(s, cfg.PublicURL, build),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

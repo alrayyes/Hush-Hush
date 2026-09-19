@@ -53,12 +53,12 @@
 
 ## 8. Server: Embed and Serve the SPA (alrayyes/hush-hush#205)
 
-- [ ] 8.1 Add a `go:embed` static handler serving `web/build/`, routed as the fallback after every known API path, and verify existing routes (`/objects`, `/audit-log`, `/healthz`) are unaffected
-- [ ] 8.2 Verify an unmatched path serves `index.html` and that a fresh build of `internal/api/openapi_test.go`'s contract test and the Pact provider verification both still pass
+- [x] 8.1 Add a `go:embed` static handler serving `cmd/hush-hush/web/build/`, routed as the fallback after every known API path, and verify existing routes (`/objects`, `/audit-log`, `/healthz`) are unaffected
+- [x] 8.2 Verify an unmatched path serves `index.html` and that a fresh build of `internal/api/openapi_test.go`'s contract test and the Pact provider verification both still pass
 
 ## 9. Frontend: Scaffold, Login, Secrets Overview (alrayyes/hush-hush#206)
 
-- [ ] 9.1 Scaffold a SvelteKit project under `web/` with `npx sv add ai-tools` (wires the MCP-driven Svelte AI tooling per `rules/svelte.md`), configure `adapter-static`, `ssr = false`, `fallback: 'index.html'`, and Svelte 5 runes, and verify it builds with the repo's frontend build command
+- [ ] 9.1 Scaffold a SvelteKit project under `cmd/hush-hush/web/` with `npx sv add ai-tools` (wires the MCP-driven Svelte AI tooling per `rules/svelte.md`), configure `adapter-static`, `ssr = false`, `fallback: 'index.html'`, and Svelte 5 runes, and verify it builds with the repo's frontend build command
 - [ ] 9.1a Use the Svelte MCP server's `list-sections`/`get-documentation` before writing unfamiliar SvelteKit APIs (routing, load functions, `adapter-static` config) throughout this and the following frontend tasks, and run `svelte-autofixer` against generated `.svelte`/`.svelte.ts` code until it reports clean before it ships, per `rules/svelte.md`
 - [ ] 9.2 Implement the login page and WebAuthn ceremony calls via `@simplewebauthn/browser`, and verify a successful login redirects to the secrets overview and a failed/cancelled ceremony shows an error without crashing the page
 - [ ] 9.3 Implement an auth guard redirecting any unauthenticated request for a page other than login to the login page, and verify no secret data is fetched before redirect
