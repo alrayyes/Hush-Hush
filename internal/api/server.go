@@ -62,14 +62,17 @@ type objectStore interface {
 // for any request that doesn't match a known API route (design.md's
 // "Routing boundary" decision) - never intercepting /objects,
 // /audit-log, /healthz, or any /auth, /credentials, or /tokens path.
-func NewMux(s objectStore, publicURL string, webBuild fs.FS) *http.ServeMux {
+//
+// version is the running binary's own version, echoed by /healthz for
+// the web UI's footer to link to the changelog page.
+func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *http.ServeMux {
 	wa, err := newWebAuthn(publicURL)
 	if err != nil {
 		wa = nil
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", handleHealth)
+	mux.HandleFunc("GET /healthz", handleHealth(version))
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))

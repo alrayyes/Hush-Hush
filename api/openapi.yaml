@@ -89,6 +89,7 @@ paths:
                 $ref: "#/components/schemas/Health"
               example:
                 status: ok
+                version: "2.6.0"
 
   /objects:
     get:
@@ -855,11 +856,19 @@ components:
 
     Health:
       type: object
-      required: [status]
+      required: [status, version]
       properties:
         status:
           type: string
           const: ok
+        version:
+          type: string
+          description: |
+            The running server's own version, as goreleaser stamped it -
+            "dev" for a plain `go build`. The web UI's footer links this
+            to the changelog page rather than hardcoding a version that
+            would drift from what's actually running.
+          examples: ["2.6.0", "dev"]
 
     Error:
       type: object

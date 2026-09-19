@@ -73,7 +73,10 @@
       "Vite",
       "dialogs",
       "filesystem",
-      "httpOnly"
+      "httpOnly",
+      "goreleaser-stamped",
+      "biome",
+      "Biome"
     ]
   },
   "ltex.disabledRules": {

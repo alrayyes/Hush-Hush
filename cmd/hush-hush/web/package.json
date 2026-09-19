@@ -4,10 +4,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
+		"build": "bun run copy-changelog && vite build",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"dev": "vite dev",
+		"copy-changelog": "cp ../../../CHANGELOG.md static/CHANGELOG.md",
+		"dev": "bun run copy-changelog && vite dev",
 		"format": "biome format --write .",
 		"lint": "biome check .",
 		"prepare": "svelte-kit sync || echo ''",

@@ -1,8 +1,15 @@
 import {
+	type PublicKeyCredentialCreationOptionsJSON,
 	type PublicKeyCredentialRequestOptionsJSON,
 	startAuthentication,
+	startRegistration,
 } from '@simplewebauthn/browser';
-import { beginLogin, finishLogin } from './api';
+import {
+	beginLogin,
+	beginRegistration,
+	finishLogin,
+	finishRegistration,
+} from './api';
 
 // login runs the whole WebAuthn login ceremony - begin, the browser
 // prompt, finish - design.md's "WebAuthn library: go-webauthn/webauthn
@@ -18,4 +25,15 @@ export async function login(): Promise<void> {
 		(await beginLogin()) as unknown as PublicKeyCredentialRequestOptionsJSON;
 	const credential = await startAuthentication({ optionsJSON });
 	await finishLogin(credential);
+}
+
+// registerPasskey runs the whole WebAuthn registration ceremony -
+// settings' own "add a passkey" action (web-ui/spec.md's "Adding a
+// passkey from settings" scenario). Throws on any failure, same as
+// login().
+export async function registerPasskey(nickname?: string): Promise<void> {
+	const optionsJSON =
+		(await beginRegistration()) as unknown as PublicKeyCredentialCreationOptionsJSON;
+	const credential = await startRegistration({ optionsJSON });
+	await finishRegistration(credential, nickname);
 }

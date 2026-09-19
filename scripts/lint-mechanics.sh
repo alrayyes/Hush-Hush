@@ -62,7 +62,8 @@ fi
 # (npx sv add ai-tools) - none of it is this repo's authored prose to
 # correct.
 files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/' \
-  | grep -v '^cmd/hush-hush/web/AGENTS\.md$' | grep -v '^cmd/hush-hush/web/\.claude/')
+  | grep -v '^cmd/hush-hush/web/AGENTS\.md$' | grep -v '^cmd/hush-hush/web/\.claude/' \
+  | grep -v '^cmd/hush-hush/web/build/CHANGELOG\.md$')
 
 # An empty list means something upstream broke (git, the working directory,
 # ls-files itself) - not that there is nothing to check. Failing loudly here
