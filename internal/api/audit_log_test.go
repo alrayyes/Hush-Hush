@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -56,6 +57,74 @@ func TestQueryAuditLogMalformedFromIsRejected(t *testing.T) {
 	mux, _ := newTestMux(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/audit-log?from=not-a-time", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestQueryAuditLogLimitCapsResultCount(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", "create", "", "203.0.113.2", "", ""))
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?limit=1", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	var entries []hushhush.AuditLogEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &entries))
+	require.Len(t, entries, 1)
+	require.Equal(t, "a", entries[0].ObjectID)
+}
+
+func TestQueryAuditLogAfterAdvancesThePage(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", "create", "", "203.0.113.2", "", ""))
+
+	first := httptest.NewRequest(http.MethodGet, "/audit-log?limit=1", nil)
+	firstRec := httptest.NewRecorder()
+	mux.ServeHTTP(firstRec, first)
+
+	var firstPage []hushhush.AuditLogEntry
+	require.NoError(t, json.Unmarshal(firstRec.Body.Bytes(), &firstPage))
+	require.Len(t, firstPage, 1)
+
+	second := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/audit-log?after=%d", firstPage[0].ID), nil)
+	secondRec := httptest.NewRecorder()
+	mux.ServeHTTP(secondRec, second)
+
+	var secondPage []hushhush.AuditLogEntry
+	require.NoError(t, json.Unmarshal(secondRec.Body.Bytes(), &secondPage))
+	require.Len(t, secondPage, 1)
+	require.Equal(t, "b", secondPage[0].ObjectID)
+}
+
+func TestQueryAuditLogMalformedAfterIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?after=not-a-number", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestQueryAuditLogLimitOutOfRangeIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?limit=501", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 

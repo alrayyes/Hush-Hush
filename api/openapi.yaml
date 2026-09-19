@@ -327,9 +327,31 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: after
+          in: query
+          required: false
+          description: |
+            Cursor: restrict to entries recorded after this entry's own
+            id. Combine with limit to page forward through a large log -
+            id-based rather than offset-based, so a concurrent write
+            during paging can't shift or double-count a row
+            (design.md's "Audit log UI" decision).
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          required: false
+          description: Maximum entries to return. Defaults to 50, capped at 500.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 500
+            default: 50
       responses:
         "200":
-          description: Matching audit log entries, oldest first.
+          description: Matching audit log entries, oldest first, one page.
           content:
             application/json:
               schema:
@@ -819,8 +841,14 @@ components:
 
     AuditLogEntry:
       type: object
-      required: [object_id, action, timestamp, ip]
+      required: [id, object_id, action, timestamp, ip]
       properties:
+        id:
+          type: integer
+          format: int64
+          description: |
+            This entry's own id - stable and strictly increasing, so it
+            doubles as the cursor for the `after` query parameter.
         object_id:
           $ref: "#/components/schemas/ObjectId"
         action:

@@ -4,6 +4,7 @@ import { actorLabel, attributionByObject } from './attribution';
 
 function entry(overrides: Partial<AuditLogEntry>): AuditLogEntry {
 	return {
+		id: 1,
 		object_id: 'a',
 		action: 'create',
 		timestamp: '2026-01-01T00:00:00Z',

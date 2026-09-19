@@ -73,9 +73,9 @@
 
 ## 11. Frontend: Audit Log Page (alrayyes/hush-hush#215)
 
-- [ ] 11.1 Implement the audit log page: table, filters (object, actor/token, date range) as removable chips applied instantly, cursor-based pagination, and verify against a running server with more entries than one page
-- [ ] 11.2 Implement "export visible page" as CSV and JSON, and verify the downloaded file matches exactly what's currently filtered/shown
-- [ ] 11.3 Verify an entry with no actor (an unauthenticated read) renders as "none" rather than blank or erroring
+- [x] 11.1 Implement the audit log page: table, filters (object, actor/token, date range) as removable chips applied instantly, cursor-based pagination, and verify against a running server with more entries than one page - `GET /audit-log` had no pagination at all before this; added `after`/`limit` query parameters and an entry `id` field to `AuditLogEntry` (design.md's "Audit log UI" decision names the mechanism). Verified end to end against the real built binary: seeded three objects via a bearer token, fetched a two-entry first page, took its last entry's `id` as `after`, confirmed the second page picks up exactly where the first left off
+- [x] 11.2 Implement "export visible page" as CSV and JSON, and verify the downloaded file matches exactly what's currently filtered/shown - the serialization itself (`src/lib/audit-export.ts`) is unit tested (exact rows, quote escaping, empty-page header-only case); triggering and inspecting a real browser download wasn't checkable this session (no browser tool), so that half is unverified
+- [x] 11.3 Verify an entry with no actor (an unauthenticated read) renders as "none" rather than blank or erroring - unit tested directly (`auditActorLabel`), including the case that also has a caller present, to prove it's not silently falling back to that instead
 
 ## 12. Build, Docs, and End-to-End Validation (alrayyes/hush-hush#208)
 

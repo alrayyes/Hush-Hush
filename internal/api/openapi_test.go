@@ -192,6 +192,15 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "query audit log paginated",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				require.NoError(t, s.RecordAuditLog(t.Context(), "contract_page", store.AuditActionCreate, "", "203.0.113.1", "", ""))
+
+				return httptest.NewRequest(http.MethodGet, "/audit-log?limit=10", nil)
+			},
+		},
+		{
 			name: "begin registration",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()

@@ -68,3 +68,11 @@ exportable as CSV or JSON.
   page
 - **THEN** a CSV or JSON file downloads containing exactly the entries
   currently shown, not the full unfiltered log
+
+#### Scenario: Paging through a log with more entries than one page
+
+- **WHEN** the log has more entries than fit on one page and the
+  authenticated admin pages forward
+- **THEN** the next page picks up exactly where the previous one left off,
+  by the previous page's last entry's own id - never by a row offset that
+  could shift or double-count a row under a concurrent write

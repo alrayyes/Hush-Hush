@@ -99,6 +99,56 @@ func TestQueryAuditLogFiltersByActor(t *testing.T) {
 	require.Equal(t, "token", entries[0].ActorType)
 }
 
+func TestQueryAuditLogReturnsIDsAssignedInOrder(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "", "203.0.113.2", "", ""))
+
+	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.NotZero(t, entries[0].ID)
+	require.Greater(t, entries[1].ID, entries[0].ID)
+}
+
+func TestQueryAuditLogAfterCursorReturnsOnlyLaterEntries(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "", "203.0.113.2", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "c", store.AuditActionCreate, "", "203.0.113.3", "", ""))
+
+	first, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, first, 1)
+	require.Equal(t, "a", first[0].ObjectID)
+
+	rest, err := s.QueryAuditLog(ctx, store.AuditLogFilter{After: first[0].ID})
+	require.NoError(t, err)
+	require.Len(t, rest, 2)
+	require.Equal(t, "b", rest[0].ObjectID)
+	require.Equal(t, "c", rest[1].ObjectID)
+}
+
+func TestQueryAuditLogLimitCapsResultCount(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	for range 5 {
+		require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	}
+
+	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Limit: 2})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+}
+
 func TestQueryAuditLogReturnsIP(t *testing.T) {
 	t.Parallel()
 

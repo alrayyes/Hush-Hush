@@ -63,6 +63,7 @@ func nullableString(v string) sql.NullString {
 // AuditLogEntry is one recorded audit log entry. Matches
 // components.schemas.AuditLogEntry in api/openapi.yaml.
 type AuditLogEntry struct {
+	ID        int64
 	ObjectID  string
 	Action    AuditAction
 	Timestamp string
@@ -74,17 +75,38 @@ type AuditLogEntry struct {
 
 // AuditLogFilter narrows a QueryAuditLog call. A zero-value field means
 // that filter is unset; every set field combines with AND, per
-// api/openapi.yaml's queryAuditLog description.
+// api/openapi.yaml's queryAuditLog description. After and Limit are the
+// cursor-pagination pair (design.md's "Audit log UI" decision) - After
+// is the previous page's last entry's own ID, and a zero Limit means no
+// limit at all rather than some implicit default, since a direct store
+// caller (a test, a future CLI command) may genuinely want everything.
 type AuditLogFilter struct {
 	ObjectID string
 	Caller   string
 	Actor    string
 	From     time.Time
 	To       time.Time
+	After    int64
+	Limit    int
 }
 
 // QueryAuditLog returns matching entries, oldest first.
 func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]AuditLogEntry, error) {
+	query, args := buildAuditLogQuery(filter)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query audit log: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return scanAuditLogRows(rows)
+}
+
+// buildAuditLogQuery assembles QueryAuditLog's SQL and its parameterized
+// arguments - split out of QueryAuditLog itself only to stay under
+// golangci-lint's funlen limit.
+func buildAuditLogQuery(filter AuditLogFilter) (string, []any) {
 	var (
 		clauses []string
 		args    []any
@@ -115,23 +137,27 @@ func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]Aud
 		args = append(args, filter.To.UTC().Format(time.RFC3339))
 	}
 
-	query := `SELECT object_id, action, caller, ip, timestamp, actor_type, actor_id FROM audit_log`
+	if filter.After != 0 {
+		clauses = append(clauses, "id > ?")
+		args = append(args, filter.After)
+	}
+
+	query := `SELECT id, object_id, action, caller, ip, timestamp, actor_type, actor_id FROM audit_log`
 	if len(clauses) > 0 {
 		// clauses are fixed strings from this function alone ("object_id
 		// = ?" and the like) - every actual value travels through args
 		// and a placeholder, never through this concatenation.
-		query += " WHERE " + strings.Join(clauses, " AND ") //nolint:gosec // clauses are static, values are parameterized
+		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
 
 	query += " ORDER BY id"
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("query audit log: %w", err)
+	if filter.Limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, filter.Limit)
 	}
-	defer func() { _ = rows.Close() }()
 
-	return scanAuditLogRows(rows)
+	return query, args
 }
 
 // scanAuditLogRows drains rows into entries - split out of QueryAuditLog
@@ -146,7 +172,7 @@ func scanAuditLogRows(rows *sql.Rows) ([]AuditLogEntry, error) {
 			caller, actorType, actorID sql.NullString
 		)
 
-		if err := rows.Scan(&e.ObjectID, &action, &caller, &e.IP, &e.Timestamp, &actorType, &actorID); err != nil {
+		if err := rows.Scan(&e.ID, &e.ObjectID, &action, &caller, &e.IP, &e.Timestamp, &actorType, &actorID); err != nil {
 			return nil, fmt.Errorf("scan audit log entry: %w", err)
 		}
 

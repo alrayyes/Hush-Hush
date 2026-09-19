@@ -12,6 +12,7 @@ async function handleLogout() {
 
 <nav>
 	<a href="/">Secrets</a>
+	<a href="/audit-log">Audit log</a>
 	<a href="/settings">Settings</a>
 	<button type="button" onclick={handleLogout}>Log out</button>
 </nav>
