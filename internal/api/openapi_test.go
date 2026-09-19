@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -188,7 +189,52 @@ func contractCases() []contractCase {
 				return httptest.NewRequest(http.MethodGet, "/audit-log?from=not-a-timestamp", nil)
 			},
 		},
+		{
+			name: "begin registration",
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest(http.MethodPost, "/auth/register/begin", nil)
+			},
+		},
+		{
+			name: "begin registration on an existing account without a session",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedCredential(t, s)
+
+				return httptest.NewRequest(http.MethodPost, "/auth/register/begin", nil)
+			},
+		},
+		{
+			name: "begin login with no admin account",
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest(http.MethodPost, "/auth/login/begin", nil)
+			},
+		},
+		{
+			name:                   "logout without a session or CSRF token",
+			requestIsSchemaInvalid: true,
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+			},
+		},
 	}
+}
+
+// seedCredential creates a credential directly through the store, for a
+// contract case that only needs an admin account to already exist rather
+// than a full registration ceremony.
+func seedCredential(t *testing.T, s *store.Store) {
+	t.Helper()
+
+	require.NoError(t, s.CreateCredential(t.Context(), store.Credential{
+		ID: "contract-cred", PublicKey: []byte("pubkey"), CreatedAt: time.Now().UTC().Format(time.RFC3339),
+	}))
 }
 
 // checkContractCase runs one contractCase's request through the real mux
@@ -248,7 +294,7 @@ func checkContractCase(t *testing.T, router routers.Router, tc contractCase) {
 func seedObject(t *testing.T, s *store.Store, id string) {
 	t.Helper()
 
-	mux := hushhush.NewMux(s)
+	mux := hushhush.NewMux(s, testPublicURL)
 	req := createRequest(t, hushhush.CreateObjectRequest{ID: id, Value: []byte("sealed-ciphertext")}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)

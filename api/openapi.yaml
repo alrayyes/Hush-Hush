@@ -363,7 +363,7 @@ paths:
           description: The credential was stored and a session issued.
           headers:
             Set-Cookie:
-              description: The new session cookie.
+              description: The new session cookie, and a second, readable csrf_token cookie carrying its CSRF token.
               schema:
                 type: string
           content:
@@ -422,7 +422,7 @@ paths:
           description: The assertion was verified and a session issued.
           headers:
             Set-Cookie:
-              description: The new session cookie.
+              description: The new session cookie, and a second, readable csrf_token cookie carrying its CSRF token.
               schema:
                 type: string
         "401":
@@ -432,10 +432,16 @@ paths:
     post:
       operationId: logout
       summary: End the current session
-      description: Invalidates the session presented with the request.
+      description: |
+        Invalidates the session presented with the request. State-changing
+        and session-authenticated, so it requires the session's own CSRF
+        token echoed back in a header, on top of the cookie itself - the
+        gap `SameSite=Lax` alone leaves open.
       tags: [auth]
       security:
         - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/csrfToken"
       responses:
         "204":
           description: The session was invalidated.
@@ -658,6 +664,19 @@ components:
       description: The token's id.
       schema:
         $ref: "#/components/schemas/TokenId"
+
+    csrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: |
+        The current session's own CSRF token - required on every
+        session-authenticated request that changes state. Delivered as a
+        second, readable `csrf_token` cookie alongside the (httpOnly)
+        session cookie at login/registration time; the frontend reads that
+        cookie and echoes its value back here.
+      schema:
+        type: string
 
   responses:
     BadRequest:

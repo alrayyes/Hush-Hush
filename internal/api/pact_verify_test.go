@@ -51,7 +51,7 @@ func TestPactProviderVerification(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	srv := httptest.NewServer(hushhush.NewMux(s))
+	srv := httptest.NewServer(hushhush.NewMux(s, testPublicURL))
 	t.Cleanup(srv.Close)
 
 	pactFile, err := filepath.Abs("../../pacts/hush-hush-cli-hush-hush-server.json")

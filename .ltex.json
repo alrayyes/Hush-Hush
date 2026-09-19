@@ -72,7 +72,8 @@
       "aufaitux",
       "Vite",
       "dialogs",
-      "filesystem"
+      "filesystem",
+      "httpOnly"
     ]
   },
   "ltex.disabledRules": {
