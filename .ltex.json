@@ -49,7 +49,27 @@
       "testify",
       "toolchain",
       "toolchains",
-      "unexported"
+      "unexported",
+      "OpenSpec",
+      "WebAuthn",
+      "COSE",
+      "AAGUID",
+      "RPID",
+      "RPOrigins",
+      "Svelte",
+      "SvelteKit",
+      "shadcn-svelte",
+      "adapter-static",
+      "passkey",
+      "passkeys",
+      "hardcoded",
+      "hardcoding",
+      "nullable",
+      "scaffolded",
+      "namespaced",
+      "Vite",
+      "dialogs",
+      "filesystem"
     ]
   },
   "ltex.disabledRules": {
@@ -67,7 +87,8 @@
       "COMMA_COMPOUND_SENTENCE",
       "COMMA_COMPOUND_SENTENCE_2",
       "OXFORD_SPELLING_Z_NOT_S",
-      "UH_UH_COMMA"
+      "UH_UH_COMMA",
+      "RELY_ON"
     ]
   }
 }
