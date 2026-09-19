@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.9.0](https://github.com/alrayyes/Hush-Hush/compare/v2.8.0...v2.9.0) (2026-09-19)
+
+
+### Features
+
+* **web:** audit log page with cursor pagination and export ([ecd91e8](https://github.com/alrayyes/Hush-Hush/commit/ecd91e87ae061aa73ac61e601ae5be725c0e834f))
+* **web:** audit log page with cursor pagination and export ([#215](https://github.com/alrayyes/Hush-Hush/issues/215)) ([d2dcb8a](https://github.com/alrayyes/Hush-Hush/commit/d2dcb8a89c2f559a4fbf1b662151fa9b8ba3d153))
+
+
+### Bug Fixes
+
+* **web:** let the login page register the first passkey ([#238](https://github.com/alrayyes/Hush-Hush/issues/238)) ([586644d](https://github.com/alrayyes/Hush-Hush/commit/586644d12185f84db96692a4fd3713e0ff4d6164))
+
 ## [2.8.0](https://github.com/alrayyes/Hush-Hush/compare/v2.7.0...v2.8.0) (2026-09-19)
 
 
