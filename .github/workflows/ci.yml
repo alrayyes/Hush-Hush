@@ -156,6 +156,12 @@ jobs:
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: go mod edit -fmt
         run: go mod edit -fmt go.mod && git diff --exit-code go.mod
+      - name: go mod tidy -diff
+        # Broader than the -fmt check above: catches a stale require, a
+        # non-canonical version string, or an orphaned go.sum entry that
+        # -mod=readonly alone won't - go-mod.md's own reasoning for why
+        # this is a separate, wider check kept out of pre-commit.
+        run: go mod tidy -diff
 
   # goreleaser's config is validated here without cutting a release - a typo
   # in .goreleaser.yml otherwise only surfaces the day a release actually
