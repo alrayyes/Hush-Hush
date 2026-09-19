@@ -20,6 +20,7 @@ let { version }: { version: string } = $props();
 		font-size: 0.85rem;
 		color: #666;
 		display: flex;
+		justify-content: center;
 		gap: 0.5rem;
 		align-items: center;
 	}
