@@ -1,0 +1,181 @@
+// Thin wrapper over fetch for the Go API - same origin, no base URL, per
+// design.md's "SvelteKit + adapter-static" decision ("every data access
+// goes through the Go API via fetch"). Every state-changing call reads
+// the session's CSRF token from the readable csrf_token cookie and
+// echoes it back, matching auth/spec.md's double-submit requirement.
+
+export class ApiError extends Error {
+	status: number;
+
+	constructor(status: number, message: string) {
+		super(message);
+		this.status = status;
+	}
+}
+
+function csrfToken(): string {
+	const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+
+	return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function request(
+	path: string,
+	init: RequestInit = {},
+): Promise<Response> {
+	const method = (init.method ?? 'GET').toUpperCase();
+	const headers = new Headers(init.headers);
+
+	if (method !== 'GET' && method !== 'HEAD') {
+		headers.set('X-CSRF-Token', csrfToken());
+	}
+
+	if (init.body !== undefined && !headers.has('Content-Type')) {
+		headers.set('Content-Type', 'application/json');
+	}
+
+	const res = await fetch(path, {
+		...init,
+		headers,
+		credentials: 'same-origin',
+	});
+
+	if (!res.ok) {
+		let message = res.statusText;
+
+		try {
+			const body = (await res.json()) as { error?: string };
+			if (typeof body.error === 'string') {
+				message = body.error;
+			}
+		} catch {
+			// No JSON body (or an empty one) - the status text is the best we have.
+		}
+
+		throw new ApiError(res.status, message);
+	}
+
+	return res;
+}
+
+// WebAuthn ceremony payloads are opaque to this client - api/openapi.yaml
+// documents RegistrationOptions/LoginOptions/*FinishRequest as
+// additionalProperties: true, passed straight through to and from
+// @simplewebauthn/browser.
+
+export async function beginLogin(): Promise<Record<string, unknown>> {
+	const res = await request('/auth/login/begin', { method: 'POST' });
+
+	return res.json();
+}
+
+export async function finishLogin(credential: unknown): Promise<void> {
+	await request('/auth/login/finish', {
+		method: 'POST',
+		body: JSON.stringify({ credential }),
+	});
+}
+
+export async function logout(): Promise<void> {
+	await request('/auth/logout', { method: 'POST' });
+}
+
+// checkSession reports whether the current visitor holds a valid session,
+// via a session-gated endpoint that carries no secret data of its own -
+// there's no dedicated "who am I" endpoint to call instead.
+export async function checkSession(): Promise<boolean> {
+	try {
+		await request('/credentials');
+
+		return true;
+	} catch (err) {
+		if (err instanceof ApiError && err.status === 401) {
+			return false;
+		}
+
+		throw err;
+	}
+}
+
+export interface ObjectMetadata {
+	id: string;
+	description?: string;
+	used_by?: string[];
+}
+
+export async function listObjects(): Promise<ObjectMetadata[]> {
+	const res = await request('/objects');
+
+	return res.json();
+}
+
+export async function getObjectValue(id: string): Promise<string> {
+	const res = await request(`/objects/${encodeURIComponent(id)}`);
+	const bytes = new Uint8Array(await res.arrayBuffer());
+
+	// Chunked rather than String.fromCharCode(...bytes): spreading a large
+	// typed array as call arguments risks "Maximum call stack size
+	// exceeded", and a sealed value has no size limit this client can
+	// assume.
+	let binary = '';
+	const chunkSize = 0x8000;
+	for (let i = 0; i < bytes.length; i += chunkSize) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+	}
+
+	return btoa(binary);
+}
+
+export interface CreateObjectRequest {
+	id: string;
+	value: string;
+	description?: string;
+	used_by?: string[];
+}
+
+export async function createObject(
+	req: CreateObjectRequest,
+): Promise<ObjectMetadata> {
+	const res = await request('/objects', {
+		method: 'POST',
+		body: JSON.stringify(req),
+	});
+
+	return res.json();
+}
+
+export async function updateObject(
+	id: string,
+	value: string,
+): Promise<ObjectMetadata> {
+	const res = await request(`/objects/${encodeURIComponent(id)}`, {
+		method: 'PUT',
+		body: JSON.stringify({ value }),
+	});
+
+	return res.json();
+}
+
+export async function deleteObject(id: string): Promise<void> {
+	await request(`/objects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export interface AuditLogEntry {
+	object_id: string;
+	action: 'create' | 'read' | 'update' | 'delete';
+	timestamp: string;
+	caller?: string;
+	ip: string;
+	actor_type?: 'token' | 'session';
+	actor_id?: string;
+}
+
+// queryAuditLog fetches the whole log, unfiltered - fine for the
+// secrets overview's own per-object attribution lookup at this scale;
+// alrayyes/hush-hush#215 adds real filters and pagination for the
+// dedicated audit log page, which is a different, much larger view.
+export async function queryAuditLog(): Promise<AuditLogEntry[]> {
+	const res = await request('/audit-log');
+
+	return res.json();
+}

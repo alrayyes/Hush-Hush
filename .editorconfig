@@ -15,6 +15,9 @@ indent_style = tab
 indent_style = space
 indent_size = 2
 
+[*.{js,mjs,cjs,ts,tsx,jsx,svelte,css}]
+indent_style = tab
+
 [*.md]
 indent_style = space
 indent_size = 2

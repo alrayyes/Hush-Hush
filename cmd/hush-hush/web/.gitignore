@@ -1,0 +1,30 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+
+# /build is NOT ignored, unlike a normal SvelteKit project: go:embed
+# needs it present at compile time, and nothing yet rebuilds it as part
+# of `go build`/`go test` or CI (alrayyes/hush-hush#208 wires a real
+# frontend build stage into Dockerfile; the plain `go test`/lint CI job
+# still has no such step). Until then this stays committed, same as the
+# placeholder it replaces - run `bun run build` before committing a
+# frontend change so it doesn't go stale relative to src/.
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
