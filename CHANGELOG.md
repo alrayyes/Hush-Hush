@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.1](https://github.com/alrayyes/Hush-Hush/compare/v2.5.0...v2.5.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **api:** accept a session as a credential on /objects ([e10ad10](https://github.com/alrayyes/Hush-Hush/commit/e10ad100604146f3d97f55c4610eef9b124c59d2))
+* **api:** accept a session as a credential on /objects ([#203](https://github.com/alrayyes/Hush-Hush/issues/203)) ([9aed1e4](https://github.com/alrayyes/Hush-Hush/commit/9aed1e47add13fbaaaa79789a1279489a87069ff))
+
 ## [2.5.0](https://github.com/alrayyes/Hush-Hush/compare/v2.4.0...v2.5.0) (2026-09-19)
 
 
