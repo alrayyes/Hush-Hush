@@ -29,6 +29,8 @@ type objectStore interface {
 	CreateCredential(ctx context.Context, c store.Credential) error
 	ListCredentials(ctx context.Context) ([]store.Credential, error)
 	UpdateCredentialUsage(ctx context.Context, id string, signCount uint32, lastUsedAt string) error
+	RenameCredential(ctx context.Context, id, nickname string) error
+	DeleteCredential(ctx context.Context, id string) error
 
 	CreateSession(ctx context.Context, sess store.Session) error
 	GetSession(ctx context.Context, id string) (store.Session, error)
@@ -70,6 +72,10 @@ func NewMux(s objectStore, publicURL string) *http.ServeMux {
 	mux.HandleFunc("POST /auth/login/begin", handleBeginLogin(s, wa))
 	mux.HandleFunc("POST /auth/login/finish", handleFinishLogin(s, wa))
 	mux.HandleFunc("POST /auth/logout", requireSession(s, requireCSRF(handleLogout(s))))
+
+	mux.HandleFunc("GET /credentials", requireSession(s, handleListCredentials(s)))
+	mux.HandleFunc("PATCH /credentials/{id}", requireSession(s, requireCSRF(handleRenameCredential(s))))
+	mux.HandleFunc("DELETE /credentials/{id}", requireSession(s, requireCSRF(handleDeleteCredential(s))))
 
 	return mux
 }

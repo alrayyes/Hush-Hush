@@ -64,3 +64,51 @@ func TestUpdateCredentialUsageUnknownIDIsErrCredentialNotFound(t *testing.T) {
 	err := s.UpdateCredentialUsage(t.Context(), "nope", 1, time.Now().UTC().Format(time.RFC3339))
 	require.ErrorIs(t, err, store.ErrCredentialNotFound)
 }
+
+func TestRenameCredentialUpdatesNickname(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	require.NoError(t, s.CreateCredential(t.Context(), store.Credential{
+		ID: "cred-1", PublicKey: []byte("pubkey"), Nickname: "old", CreatedAt: time.Now().UTC().Format(time.RFC3339),
+	}))
+
+	require.NoError(t, s.RenameCredential(t.Context(), "cred-1", "new"))
+
+	creds, err := s.ListCredentials(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, "new", creds[0].Nickname)
+}
+
+func TestRenameCredentialUnknownIDIsErrCredentialNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.RenameCredential(t.Context(), "nope", "new")
+	require.ErrorIs(t, err, store.ErrCredentialNotFound)
+}
+
+func TestDeleteCredentialRemovesIt(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	require.NoError(t, s.CreateCredential(t.Context(), store.Credential{
+		ID: "cred-1", PublicKey: []byte("pubkey"), CreatedAt: time.Now().UTC().Format(time.RFC3339),
+	}))
+
+	require.NoError(t, s.DeleteCredential(t.Context(), "cred-1"))
+
+	creds, err := s.ListCredentials(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, creds)
+}
+
+func TestDeleteCredentialUnknownIDIsErrCredentialNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.DeleteCredential(t.Context(), "nope")
+	require.ErrorIs(t, err, store.ErrCredentialNotFound)
+}

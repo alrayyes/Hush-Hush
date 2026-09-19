@@ -2,6 +2,8 @@ package api_test
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -223,6 +225,47 @@ func contractCases() []contractCase {
 				return httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 			},
 		},
+		{
+			name: "list credentials without a session",
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest(http.MethodGet, "/credentials", nil)
+			},
+		},
+		{
+			name: "list credentials",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedCredential(t, s)
+
+				req := httptest.NewRequest(http.MethodGet, "/credentials", nil)
+				req.AddCookie(seedSessionCookie(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "delete unknown credential",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				// Two credentials seeded, so the "last remaining
+				// credential" 409 guard doesn't shadow the 404 this case
+				// means to exercise.
+				seedCredential(t, s)
+				seedCredential(t, s)
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodDelete, "/credentials/does-not-exist", nil)
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
 	}
 }
 
@@ -233,8 +276,41 @@ func seedCredential(t *testing.T, s *store.Store) {
 	t.Helper()
 
 	require.NoError(t, s.CreateCredential(t.Context(), store.Credential{
-		ID: "contract-cred", PublicKey: []byte("pubkey"), CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		ID: randomTestID(t), PublicKey: []byte("pubkey"), CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	}))
+}
+
+// randomTestID returns a short random hex string - a test-local stand-in
+// for the ids this package's own unexported randomToken generates
+// (api_test is a separate package and can't reach that unexported
+// helper), used wherever a test only needs a value unique enough to
+// avoid a primary-key collision.
+func randomTestID(t *testing.T) string {
+	t.Helper()
+
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	require.NoError(t, err)
+
+	return hex.EncodeToString(b)
+}
+
+// seedSessionCookie creates a session directly through the store, for a
+// contract case that needs an authenticated session without a full
+// login ceremony.
+func seedSessionCookie(t *testing.T, s *store.Store) *http.Cookie {
+	t.Helper()
+
+	id := randomTestID(t)
+	csrf := randomTestID(t)
+
+	now := time.Now().UTC()
+	require.NoError(t, s.CreateSession(t.Context(), store.Session{
+		ID: id, CSRFToken: csrf,
+		CreatedAt: now.Format(time.RFC3339), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339),
+	}))
+
+	return &http.Cookie{Name: "session", Value: id} //nolint:gosec // request-side cookie, no response attributes to set
 }
 
 // checkContractCase runs one contractCase's request through the real mux
