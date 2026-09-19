@@ -183,6 +183,7 @@ export async function deleteObject(id: string): Promise<void> {
 }
 
 export interface AuditLogEntry {
+	id: number;
 	object_id: string;
 	action: 'create' | 'read' | 'update' | 'delete';
 	timestamp: string;
@@ -192,12 +193,34 @@ export interface AuditLogEntry {
 	actor_id?: string;
 }
 
-// queryAuditLog fetches the whole log, unfiltered - fine for the
-// secrets overview's own per-object attribution lookup at this scale;
-// alrayyes/hush-hush#215 adds real filters and pagination for the
-// dedicated audit log page, which is a different, much larger view.
-export async function queryAuditLog(): Promise<AuditLogEntry[]> {
-	const res = await request('/audit-log');
+export interface AuditLogQuery {
+	object_id?: string;
+	actor?: string;
+	caller?: string;
+	from?: string;
+	to?: string;
+	after?: number;
+	limit?: number;
+}
+
+// queryAuditLog fetches one page of the audit log - unfiltered and
+// unpaginated (the whole log up to /audit-log's own default limit) is
+// enough for the secrets overview's own per-object attribution lookup;
+// the dedicated audit log page (alrayyes/hush-hush#215) passes real
+// filters and walks pages via after/limit (design.md's "Audit log UI"
+// decision - id-based cursor, not offset).
+export async function queryAuditLog(
+	query: AuditLogQuery = {},
+): Promise<AuditLogEntry[]> {
+	const params = new URLSearchParams();
+	for (const [key, value] of Object.entries(query)) {
+		if (value !== undefined && value !== '') {
+			params.set(key, String(value));
+		}
+	}
+
+	const qs = params.toString();
+	const res = await request(qs ? `/audit-log?${qs}` : '/audit-log');
 
 	return res.json();
 }

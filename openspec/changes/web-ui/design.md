@@ -181,6 +181,15 @@ currently visible page as CSV/JSON" button, not a separate unbounded
 server-side export job - reuses the same paginated query rather than
 building a second code path.
 
+Mechanism, added while implementing #215: `GET /audit-log` gains `after`
+(a cursor - the previous page's last entry's own `id`) and `limit`
+(default 50, capped at 500) query parameters, and `AuditLogEntry` gains
+that `id` field for the frontend to carry forward as the next page's
+`after`. No response envelope or `next_cursor` field - the last entry in
+a page already carries everything the next request needs, and the
+existing plain-array response shape stays exactly as every other
+consumer (the CLI, the pact fixture) already expects it.
+
 **The CLI's own audit-log command is out of this change's scope
 entirely - a separate issue in `hush-hush-cli`, not a task here.** That
 repo is a different deployable with its own release cycle; this change
