@@ -15,6 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testPublicURL is the PUBLIC_URL every handler test's mux is configured
+// with, so WebAuthn ceremony tests have a valid relying party to begin a
+// ceremony against without each one repeating the value.
+const testPublicURL = "https://hush-hush.example.test"
+
 // newTestMux and its backing store are shared by every handler test in this
 // package - each test gets its own in-memory database.
 func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
@@ -24,7 +29,7 @@ func newTestMux(t *testing.T) (*http.ServeMux, *store.Store) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, s.Close()) })
 
-	return hushhush.NewMux(s), s
+	return hushhush.NewMux(s, testPublicURL), s
 }
 
 // issueToken mints a write token valid against s, for a test that needs a

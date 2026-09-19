@@ -25,13 +25,36 @@ type objectStore interface {
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
 	ValidateWriteToken(ctx context.Context, token string) (bool, error)
+
+	CreateCredential(ctx context.Context, c store.Credential) error
+	ListCredentials(ctx context.Context) ([]store.Credential, error)
+	UpdateCredentialUsage(ctx context.Context, id string, signCount uint32, lastUsedAt string) error
+
+	CreateSession(ctx context.Context, sess store.Session) error
+	GetSession(ctx context.Context, id string) (store.Session, error)
+	DeleteSession(ctx context.Context, id string) error
+
+	SaveCeremony(ctx context.Context, id, kind string, data []byte, createdAt, expiresAt string) error
+	GetAndDeleteCeremony(ctx context.Context, id, kind string) ([]byte, error)
 }
 
 // NewMux wires the handlers registered against api/openapi.yaml. Every
 // create, update, and delete call is checked against s's issued write
 // tokens (alrayyes/hush-hush#72) - reads need no authorization, per the
 // settled v1 design (openspec/changes/secrets-object-store/design.md).
-func NewMux(s objectStore) *http.ServeMux {
+//
+// publicURL is the server's own PUBLIC_URL config, used only to derive
+// the WebAuthn relying party's RPID/RPOrigins (design.md's "Relying party
+// ID/origin" decision) - empty is a valid, expected value for a
+// deployment that hasn't enabled the web UI yet, in which case every
+// /auth/* ceremony endpoint answers with a configuration error rather
+// than the server refusing to start.
+func NewMux(s objectStore, publicURL string) *http.ServeMux {
+	wa, err := newWebAuthn(publicURL)
+	if err != nil {
+		wa = nil
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth)
 	mux.HandleFunc("POST /objects", requireWriteToken(s, handleCreateObject(s)))
@@ -41,6 +64,12 @@ func NewMux(s objectStore) *http.ServeMux {
 	mux.HandleFunc("PUT /objects/{id}", requireWriteToken(s, handleUpdateObject(s)))
 	mux.HandleFunc("DELETE /objects/{id}", requireWriteToken(s, handleDeleteObject(s)))
 	mux.HandleFunc("GET /audit-log", handleQueryAuditLog(s))
+
+	mux.HandleFunc("POST /auth/register/begin", handleBeginRegistration(s, wa))
+	mux.HandleFunc("POST /auth/register/finish", handleFinishRegistration(s, wa))
+	mux.HandleFunc("POST /auth/login/begin", handleBeginLogin(s, wa))
+	mux.HandleFunc("POST /auth/login/finish", handleFinishLogin(s, wa))
+	mux.HandleFunc("POST /auth/logout", requireSession(s, requireCSRF(handleLogout(s))))
 
 	return mux
 }

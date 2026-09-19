@@ -93,3 +93,4 @@ Pangea
 Setproduct
 [Aa]ufaitux
 antipattern
+httpOnly

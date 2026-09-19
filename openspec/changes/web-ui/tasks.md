@@ -17,12 +17,12 @@
 
 ## 3. Server: WebAuthn Ceremonies and Session Issuance (alrayyes/hush-hush#201)
 
-- [ ] 3.1 Wire `go-webauthn/webauthn`, configured from `PUBLIC_URL` (RPID/RPOrigins derived, not read from request headers), and verify the server returns a clear configuration error when `PUBLIC_URL` is unset and a ceremony is attempted
-- [ ] 3.2 Implement registration begin/finish, and verify a first-ever registration creates the admin account plus its credential and issues a session, and that a second registration on an existing account adds a credential without affecting existing sessions
-- [ ] 3.3 Implement login begin/finish, and verify a successful assertion updates the credential's sign counter and last-used-at and issues a session with a regenerated session id
-- [ ] 3.4 Verify a login whose assertion's signature counter does not exceed the stored counter is rejected and issues no session
-- [ ] 3.5 Implement session validation middleware, logout, and CSRF-token enforcement on state-changing requests, and verify an expired or logged-out session is treated as unauthenticated
-- [ ] 3.6 Verify a valid session does not authenticate a request to an endpoint that requires the write bearer token
+- [x] 3.1 Wire `go-webauthn/webauthn`, configured from `PUBLIC_URL` (RPID/RPOrigins derived, not read from request headers), and verify the server returns a clear configuration error when `PUBLIC_URL` is unset and a ceremony is attempted
+- [x] 3.2 Implement registration begin/finish, and verify a first-ever registration creates the admin account plus its credential and issues a session, and that a second registration on an existing account adds a credential without affecting existing sessions
+- [x] 3.3 Implement login begin/finish, and verify a successful assertion updates the credential's sign counter and last-used-at and issues a session with a regenerated session id
+- [x] 3.4 Verify a login whose assertion's signature counter does not exceed the stored counter is rejected and issues no session
+- [x] 3.5 Implement session validation middleware, logout, and CSRF-token enforcement on state-changing requests (a double-submit `csrf_token` cookie alongside the httpOnly session one, checked against the `X-CSRF-Token` header), and verify an expired or logged-out session is treated as unauthenticated
+- [x] 3.6 Verify a valid session does not authenticate a request to an endpoint that requires the write bearer token
 
 ## 4. Server: Credential Management (alrayyes/hush-hush#202)
 

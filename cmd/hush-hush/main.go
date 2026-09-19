@@ -41,6 +41,12 @@ var (
 type config struct {
 	Addr   string `mapstructure:"addr"`
 	DBPath string `mapstructure:"db_path"`
+	// PublicURL is the address a browser actually reaches this server at -
+	// unrelated to Addr, which is only the bind address. Optional: empty
+	// means the web UI's WebAuthn endpoints are unusable (each answers its
+	// own configuration error) but everything else runs unchanged
+	// (openspec/changes/web-ui/design.md's Migration Plan).
+	PublicURL string `mapstructure:"public_url"`
 }
 
 // Validate catches a bad value at startup rather than wherever it's first
@@ -65,8 +71,9 @@ func loadConfig() (config, error) {
 	v.SetDefault("db_path", "hush-hush.db")
 
 	for key, env := range map[string]string{
-		"addr":    "ADDR",
-		"db_path": "DB_PATH",
+		"addr":       "ADDR",
+		"db_path":    "DB_PATH",
+		"public_url": "PUBLIC_URL",
 	} {
 		if err := v.BindEnv(key, env); err != nil {
 			return config{}, fmt.Errorf("bind %s: %w", env, err)
@@ -145,7 +152,7 @@ func serve() error {
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.NewMux(s),
+		Handler:           hushhush.NewMux(s, cfg.PublicURL),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
