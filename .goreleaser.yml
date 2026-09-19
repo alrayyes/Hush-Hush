@@ -8,8 +8,8 @@ before:
     # whatever's already on disk at cmd/hush-hush/web/build/ at compile
     # time, and a released binary shouldn't depend on that directory's
     # committed copy being fresh (design.md's "Build embedding" decision).
-    - bun --cwd cmd/hush-hush/web install --frozen-lockfile
-    - bun --cwd cmd/hush-hush/web run build
+    - bun install --cwd cmd/hush-hush/web --frozen-lockfile
+    - bun run --cwd cmd/hush-hush/web build
     - go mod download
 
 builds:
