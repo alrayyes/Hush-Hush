@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.0](https://github.com/alrayyes/Hush-Hush/compare/v2.7.0...v2.8.0) (2026-09-19)
+
+
+### Features
+
+* **web:** settings page, footer, changelog page ([bcb7d31](https://github.com/alrayyes/Hush-Hush/commit/bcb7d31f9ab240cf0603762d49de3b3c034132c0))
+* **web:** settings page, footer, changelog page ([#207](https://github.com/alrayyes/Hush-Hush/issues/207)) ([023b75b](https://github.com/alrayyes/Hush-Hush/commit/023b75b0b49c97001c0a17a4420e02dde31ed821))
+
 ## [2.7.0](https://github.com/alrayyes/Hush-Hush/compare/v2.6.0...v2.7.0) (2026-09-19)
 
 
