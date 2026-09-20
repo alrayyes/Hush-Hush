@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { goto } from '$app/navigation';
+import { goto, invalidate } from '$app/navigation';
 import { getAuthStatus } from '$lib/api';
 import { login, registerPasskey } from '$lib/auth';
 
@@ -34,6 +34,7 @@ async function handleLogin() {
 
 	try {
 		await login();
+		await invalidate('app:auth');
 		await goto('/');
 	} catch {
 		// web-ui/spec.md's "Failed ceremony shows an error, not a crash"
@@ -60,6 +61,7 @@ async function handleRegister() {
 
 	try {
 		await registerPasskey();
+		await invalidate('app:auth');
 		await goto('/');
 	} catch {
 		error =

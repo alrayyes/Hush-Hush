@@ -19,12 +19,17 @@
 
 ## 2. Shared chrome
 
-- [ ] 2.1 Move nav markup from `(app)/+layout.svelte` into
+- [x] 2.1 Move nav markup from `(app)/+layout.svelte` into
       `src/routes/+layout.svelte`, gated on `checkSession()`, leaving
       `(app)/+layout.svelte` with only its redirect guard; verify with a
       component test that the nav appears with a session and is absent
-      without one, on both a route under `(app)` and `changelog`.
-- [ ] 2.2 Add an axe-core scan (`@axe-core/playwright`, WCAG 2.1 AA tags)
+      without one, on both a route under `(app)` and `changelog`. No
+      component-test harness exists in this repo (confirmed absent
+      during #248/#250 too) - verified instead with a real Playwright
+      journey test (`e2e/journey.spec.ts`) against the built binary,
+      the same substitution slice 1 made for its own "component test"
+      asks.
+- [x] 2.2 Add an axe-core scan (`@axe-core/playwright`, WCAG 2.1 AA tags)
       to the journey test that already logs in and navigates the app;
       verify it reports zero violations.
 

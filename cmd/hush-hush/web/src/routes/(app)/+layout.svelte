@@ -1,35 +1,8 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
-import { logout } from '$lib/api';
-
+// Nav markup and logout live in the shared root layout now
+// (web-ui-design-system/tasks.md #2.1) - +layout.ts's redirect-when-
+// unauthenticated guard is the only thing this layout still owns.
 let { children } = $props();
-
-async function handleLogout() {
-	await logout();
-	await goto('/login');
-}
 </script>
 
-<nav>
-	<a href="/">Secrets</a>
-	<a href="/audit-log">Audit log</a>
-	<a href="/settings">Settings</a>
-	<button type="button" onclick={handleLogout}>Log out</button>
-</nav>
-
 {@render children()}
-
-<style>
-	nav {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--space-4);
-		padding: var(--space-4);
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	nav button {
-		margin-left: auto;
-	}
-</style>
