@@ -8,6 +8,7 @@ import {
 	getObjectValue,
 	updateObject,
 } from '$lib/api';
+import { utf8ToBase64 } from '$lib/encoding';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -29,12 +30,14 @@ let createOpen = $state(false);
 let createError = $state('');
 let createId = $state('');
 let createValue = $state('');
+let createPlainText = $state(false);
 let createDescription = $state('');
 let createUsedBy = $state('');
 
 function resetCreateForm() {
 	createId = '';
 	createValue = '';
+	createPlainText = false;
 	createDescription = '';
 	createUsedBy = '';
 	createError = '';
@@ -47,7 +50,13 @@ async function submitCreate(event: SubmitEvent) {
 	try {
 		await createObject({
 			id: createId,
-			value: createValue,
+			// createPlainText is an explicit, off-by-default opt-in - the
+			// field otherwise means exactly what its label says, already-
+			// sealed ciphertext, sent as-is. Base64 alone is an encoding,
+			// not encryption: this mode stores a trivially-reversible
+			// obfuscation of whatever's typed, not a real secret the
+			// server can't read (alrayyes/hush-hush#268).
+			value: createPlainText ? utf8ToBase64(createValue) : createValue,
 			description: createDescription || undefined,
 			used_by: parseUsedBy(createUsedBy),
 		});
@@ -142,8 +151,15 @@ async function confirmDelete() {
 						<label for="create-id">Id</label>
 						<input id="create-id" bind:value={createId} required />
 
-						<label for="create-value">Ciphertext (base64)</label>
+						<label for="create-value">
+							{createPlainText ? 'Value (plain text)' : 'Ciphertext (base64)'}
+						</label>
 						<textarea id="create-value" bind:value={createValue} required rows="4"></textarea>
+
+						<label class="checkbox">
+							<input type="checkbox" bind:checked={createPlainText} />
+							Plain text - base64-encoded for you, <strong>not encrypted</strong>
+						</label>
 
 						<label for="create-description">Description</label>
 						<input id="create-description" bind:value={createDescription} />
@@ -334,6 +350,16 @@ async function confirmDelete() {
 	form textarea {
 		width: 100%;
 		box-sizing: border-box;
+	}
+
+	.checkbox {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.checkbox input {
+		width: auto;
 	}
 
 	.actions {
