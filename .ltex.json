@@ -79,7 +79,11 @@
       "Biome",
       "gitignored",
       "toolset",
-      "localStorage"
+      "localStorage",
+      "combobox",
+      "comboboxes",
+      "listbox",
+      "listboxes"
     ]
   },
   "ltex.disabledRules": {

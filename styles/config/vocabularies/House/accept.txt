@@ -103,3 +103,6 @@ unprefixed
 namespaces
 ADRs?
 frontend's
+combobox(es)?
+combobox's
+listbox(es)?
