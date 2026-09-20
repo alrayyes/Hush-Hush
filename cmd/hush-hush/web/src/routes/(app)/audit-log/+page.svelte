@@ -199,30 +199,28 @@ function exportCSV() {
 		<p role="alert" class="error">{loadError}</p>
 	{/if}
 
-	<div class="table-scroll">
-		<table aria-busy={loading}>
-			<thead>
+	<table class="responsive-table" aria-busy={loading}>
+		<thead>
+			<tr>
+				<th scope="col">Object</th>
+				<th scope="col">Action</th>
+				<th scope="col">Actor</th>
+				<th scope="col">Caller</th>
+				<th scope="col">Timestamp</th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each entries as entry (entry.id)}
 				<tr>
-					<th scope="col">Object</th>
-					<th scope="col">Action</th>
-					<th scope="col">Actor</th>
-					<th scope="col">Caller</th>
-					<th scope="col">Timestamp</th>
+					<td data-label="Object">{entry.object_id}</td>
+					<td data-label="Action">{entry.action}</td>
+					<td data-label="Actor">{auditActorLabel(entry)}</td>
+					<td data-label="Caller">{entry.caller ?? ''}</td>
+					<td data-label="Timestamp">{entry.timestamp}</td>
 				</tr>
-			</thead>
-			<tbody>
-				{#each entries as entry (entry.id)}
-					<tr>
-						<td>{entry.object_id}</td>
-						<td>{entry.action}</td>
-						<td>{auditActorLabel(entry)}</td>
-						<td>{entry.caller ?? ''}</td>
-						<td>{entry.timestamp}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+			{/each}
+		</tbody>
+	</table>
 
 	<div class="pagination">
 		<button type="button" onclick={previousPage} disabled={cursorStack.length === 0 || loading}>
@@ -289,18 +287,6 @@ function exportCSV() {
 
 	.error {
 		color: var(--color-error);
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	th,
-	td {
-		text-align: left;
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
 	}
 
 	.pagination {

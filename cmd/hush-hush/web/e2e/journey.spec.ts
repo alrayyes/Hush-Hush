@@ -48,15 +48,24 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(results.violations).toEqual([]);
 
-	// The New secret dialog's consumer combobox, listbox expanded - the
-	// hand-written ARIA APG combobox (alrayyes/hush-hush#251) is the
-	// newest, most complex interactive widget added since the last scan.
+	// A real secret with real width pressure - #271's own gap: the
+	// public-pages-only viewport test never caught the authenticated
+	// pages' tables scrolling sideways in their own box at 320px. The
+	// same dialog also exercises the consumer combobox's listbox, open
+	// and populated - the hand-written ARIA APG combobox
+	// (alrayyes/hush-hush#251) is the newest, most complex interactive
+	// widget added since the last scan.
 	await page.getByRole('button', { name: 'New secret' }).click();
 	// bits-ui's Dialog autofocuses the first field (Id) on open, racing any
 	// interaction with a later field started right away - wait for that
-	// autofocus to settle before touching the combobox, or its own focus
+	// autofocus to settle before touching a later field, or its own focus
 	// gets stolen back mid-fill.
 	await expect(page.getByLabel('Id')).toBeFocused();
+	await page.locator('#create-id').fill('mattermost_deploy_webhook');
+	await page.locator('#create-value').fill(btoa('placeholder'));
+	await page
+		.locator('#create-description')
+		.fill('prod deploy webhook for homelab/vps-docker');
 	await page.locator('#create-used-by').fill('homelab');
 	await page.getByRole('listbox').waitFor();
 	const comboboxResults = await new AxeBuilder({ page })
@@ -64,10 +73,41 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(comboboxResults.violations).toEqual([]);
 	await page.getByRole('option', { name: 'Add "homelab"' }).click();
-	await page
-		.getByRole('dialog')
-		.getByRole('button', { name: 'Cancel' })
-		.click();
+	await page.getByRole('button', { name: 'Create' }).click();
+	await page.getByRole('button', { name: 'New secret' }).waitFor();
+
+	await page.setViewportSize({ width: 320, height: 720 });
+	// Client-side nav clicks, not page.goto() - /audit-log is also a real
+	// API path (alrayyes/hush-hush#272), so a hard navigation there
+	// serves the API's own JSON instead of the SPA at all.
+	for (const linkName of ['Secrets', 'Audit log', 'Settings']) {
+		await nav.getByRole('link', { name: linkName }).click();
+		await expect(page.locator('main')).toBeVisible();
+
+		// Checks every scrollable element on the page, not just the
+		// document - a table with overflow-x: auto never overflows the
+		// document (it scrolls sideways within its own box instead),
+		// which is exactly what let this regression ship unnoticed the
+		// first time. Scoped to overflow-x: scroll/auto specifically -
+		// overflow: hidden (the visually-hidden <thead> pattern) also
+		// reports a scrollWidth/clientWidth mismatch by design, with no
+		// visible scrollbar to go with it.
+		const widest = await page.evaluate(() =>
+			Math.max(
+				0,
+				...Array.from(document.querySelectorAll('*'))
+					.filter((el) =>
+						['scroll', 'auto'].includes(getComputedStyle(el).overflowX),
+					)
+					.map((el) => el.scrollWidth - el.clientWidth),
+			),
+		);
+		expect(
+			widest,
+			`${linkName} has a horizontally scrollable element at 320px`,
+		).toBe(0);
+	}
+	await page.setViewportSize({ width: 1280, height: 800 });
 
 	await nav.getByRole('button', { name: 'Log out' }).click();
 	await page.waitForURL('/login');

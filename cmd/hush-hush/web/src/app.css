@@ -27,6 +27,36 @@
 	--font-size-sm: 0.85rem;
 	--font-size-base: 1rem;
 	--font-size-lg: 1.25rem;
+	--font-size-xl: 1.5rem;
+
+	--font-sans:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+		sans-serif;
+	--radius: 0.375rem;
+
+	--color-accent-contrast: #fff;
+	--color-danger: #b00020;
+	--color-danger-contrast: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-accent-contrast: #0a1a2e;
+		--color-danger: #ff6b6b;
+		--color-danger-contrast: #2e0a0a;
+	}
+}
+
+:root[data-theme="dark"] {
+	--color-accent-contrast: #0a1a2e;
+	--color-danger: #ff6b6b;
+	--color-danger-contrast: #2e0a0a;
+}
+
+:root[data-theme="light"] {
+	--color-accent-contrast: #fff;
+	--color-danger: #b00020;
+	--color-danger-contrast: #fff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -80,12 +110,216 @@ body {
 	margin: 0;
 	background: var(--color-bg);
 	color: var(--color-text);
+	font-family: var(--font-sans);
+	font-size: var(--font-size-base);
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
 }
 
-/* Mobile-first base: any table wide enough to overflow a phone-width
-   viewport scrolls within its own wrapper, not the page - every table on
-   every page gets one (web-ui-design-system/tasks.md #1.2's "no page
-   shall require horizontal scrolling" requirement). */
-.table-scroll {
-	overflow-x: auto;
+/* Hierarchy from weight and size, not decoration - a heading is the
+   browser's own serif default until this exists. */
+h1,
+h2,
+h3 {
+	font-family: inherit;
+	font-weight: 600;
+	line-height: 1.25;
+	margin: 0 0 var(--space-4);
+}
+
+h1 {
+	font-size: var(--font-size-xl);
+}
+
+h2 {
+	font-size: var(--font-size-lg);
+}
+
+p {
+	margin: 0 0 var(--space-4);
+}
+
+/* Links stay underlined - color alone isn't an accessible way to mark
+   one (WCAG 1.4.1), so the accent color is a bonus over the browser
+   default, not a replacement for the underline. */
+a {
+	color: var(--color-accent);
+}
+
+/* One consistent button treatment - every action in this app carries
+   the same weight, so there's no case yet for a second, "primary"
+   variant. .danger is the one exception: a destructive action (Delete,
+   Revoke) gets a visibly different color, not just the same gray
+   button as everything else. */
+button {
+	font-family: inherit;
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	padding: var(--space-2) var(--space-4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	background: var(--color-surface);
+	color: var(--color-text);
+	cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+	border-color: var(--color-accent);
+}
+
+button:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 1px;
+}
+
+button:disabled {
+	cursor: wait;
+	opacity: 0.6;
+}
+
+button.danger {
+	border-color: var(--color-danger);
+	color: var(--color-danger);
+}
+
+button.danger:hover:not(:disabled) {
+	background: var(--color-danger);
+	color: var(--color-danger-contrast);
+}
+
+input,
+textarea {
+	font-family: inherit;
+	font-size: var(--font-size-base);
+	color: var(--color-text);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: var(--space-2);
+}
+
+input:focus-visible,
+textarea:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 1px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+th {
+	font-weight: 600;
+}
+
+.responsive-table {
+	width: 100%;
+}
+
+/* Shared by every page's bits-ui Dialog/AlertDialog - portal-rendered
+   outside each component's own scoped styles, so this has to be global
+   rather than duplicated per page (as it was until this design pass). */
+.overlay {
+	position: fixed;
+	inset: 0;
+	background: var(--color-overlay);
+}
+
+.dialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--color-surface);
+	color: var(--color-text);
+	padding: var(--space-6);
+	border-radius: var(--radius);
+	max-width: 32rem;
+	width: 90vw;
+	max-height: 85vh;
+	overflow-y: auto;
+}
+
+/* Mobile-first: a table reflows into a stack of cards below the
+   breakpoint instead of scrolling sideways in its own box - a table
+   wide enough to need that isn't actually readable at 320px either
+   way. Every <td> needs a matching data-label attribute, read by the
+   ::before content below; <thead> is hidden rather than removed, so
+   the semantic table structure (and a screen reader's own table
+   navigation) survives at every width. */
+.responsive-table thead {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.responsive-table tr {
+	display: block;
+	margin-bottom: var(--space-4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: var(--space-2) var(--space-4);
+}
+
+.responsive-table td {
+	display: flex;
+	gap: var(--space-4);
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-2) 0;
+	border-bottom: 1px solid var(--color-border-subtle);
+	text-align: right;
+}
+
+.responsive-table tr td:last-child {
+	border-bottom: none;
+}
+
+.responsive-table td[data-label]::before {
+	content: attr(data-label);
+	font-weight: 600;
+	text-align: left;
+	margin-right: var(--space-4);
+}
+
+.responsive-table td.row-actions {
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}
+
+@media (min-width: 40rem) {
+	.responsive-table thead {
+		position: static;
+		width: auto;
+		height: auto;
+		overflow: visible;
+		clip-path: none;
+		white-space: normal;
+	}
+
+	.responsive-table tr {
+		display: table-row;
+		margin-bottom: 0;
+		border: none;
+		border-radius: 0;
+		padding: 0;
+	}
+
+	.responsive-table td {
+		display: table-cell;
+		border-bottom: 1px solid var(--color-border);
+		text-align: left;
+		padding: var(--space-2);
+	}
+
+	.responsive-table td[data-label]::before {
+		content: none;
+	}
+
+	.responsive-table tr td:last-child {
+		border-bottom: 1px solid var(--color-border);
+	}
 }

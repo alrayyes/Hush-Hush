@@ -113,12 +113,6 @@ async function handleRegister() {
 
 	button {
 		padding: var(--space-3) var(--space-6);
-		font-size: var(--font-size-base);
-		cursor: pointer;
-	}
-
-	button:disabled {
-		cursor: wait;
 	}
 
 	.error {
