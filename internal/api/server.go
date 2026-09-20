@@ -87,6 +87,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("POST /auth/login/begin", handleBeginLogin(s, wa))
 	mux.HandleFunc("POST /auth/login/finish", handleFinishLogin(s, wa))
 	mux.HandleFunc("POST /auth/logout", requireSession(s, requireCSRF(handleLogout(s))))
+	mux.HandleFunc("GET /auth/status", handleAuthStatus(s))
 
 	mux.HandleFunc("GET /credentials", requireSession(s, handleListCredentials(s)))
 	mux.HandleFunc("PATCH /credentials/{id}", requireSession(s, requireCSRF(handleRenameCredential(s))))

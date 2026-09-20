@@ -1,9 +1,32 @@
 <script lang="ts">
+import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
+import { getAuthStatus } from '$lib/api';
 import { login, registerPasskey } from '$lib/auth';
 
 let pending = $state(false);
 let error = $state('');
+
+// bootstrapped is undefined while the status check is in flight or has
+// failed, so the login page shows neither action until it resolves -
+// avoids flashing the wrong one, and avoids ever offering "register" to
+// an already-bootstrapped install or "log in" to a fresh one with no way
+// in (openspec/changes/gate-passkey-registration-ui/design.md's "Loading
+// state" decision).
+let bootstrapped = $state<boolean | undefined>(undefined);
+let statusFailed = $state(false);
+
+async function loadStatus() {
+	statusFailed = false;
+
+	try {
+		bootstrapped = await getAuthStatus();
+	} catch {
+		statusFailed = true;
+	}
+}
+
+onMount(loadStatus);
 
 async function handleLogin() {
 	pending = true;
@@ -28,10 +51,9 @@ async function handleLogin() {
 // The server accepts an anonymous registration only when no admin
 // account exists yet (auth/spec.md's "Registering a first passkey"
 // scenario) - registering another one afterward is settings' own job,
-// behind a real session. This is deliberately the secondary action
-// here, not the primary one: it's the bootstrap path for a fresh
-// install, not a second way to log in (alrayyes/hush-hush#237 - before
-// this, there was no way to reach it at all on a fresh install).
+// behind a real session. Only reachable here while bootstrapped is
+// false, since the page renders exactly one primary action
+// (alrayyes/hush-hush#248).
 async function handleRegister() {
 	pending = true;
 	error = '';
@@ -54,22 +76,29 @@ async function handleRegister() {
 
 <main class="login">
 	<h1>hush-hush</h1>
-	<p>Sign in with a passkey registered to this account.</p>
 
-	<button type="button" onclick={handleLogin} disabled={pending}>
-		{pending ? 'Waiting for your passkey…' : 'Log in with a passkey'}
-	</button>
+	{#if statusFailed}
+		<p role="alert" class="error">Couldn't reach the server. Try again.</p>
+		<button type="button" onclick={loadStatus}>Retry</button>
+	{:else if bootstrapped === undefined}
+		<p>Checking account status…</p>
+	{:else if bootstrapped}
+		<p>Sign in with a passkey registered to this account.</p>
+
+		<button type="button" onclick={handleLogin} disabled={pending}>
+			{pending ? 'Waiting for your passkey…' : 'Log in with a passkey'}
+		</button>
+	{:else}
+		<p>No account yet - register the first passkey to set one up.</p>
+
+		<button type="button" onclick={handleRegister} disabled={pending}>
+			{pending ? 'Waiting for your passkey…' : 'Register passkey'}
+		</button>
+	{/if}
 
 	{#if error}
 		<p role="alert" class="error">{error}</p>
 	{/if}
-
-	<p class="register">
-		No account yet?
-		<button type="button" class="link" onclick={handleRegister} disabled={pending}>
-			Register the first passkey
-		</button>
-	</p>
 </main>
 
 <style>
@@ -92,22 +121,5 @@ async function handleRegister() {
 
 	.error {
 		color: #b00020;
-	}
-
-	.register {
-		margin-top: 2rem;
-		font-size: 0.85rem;
-		color: #666;
-	}
-
-	.link {
-		padding: 0;
-		background: none;
-		border: none;
-		font: inherit;
-		font-size: inherit;
-		color: #0057b3;
-		text-decoration: underline;
-		cursor: pointer;
 	}
 </style>
