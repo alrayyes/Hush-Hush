@@ -106,3 +106,6 @@ frontend's
 combobox(es)?
 combobox's
 listbox(es)?
+browsable
+denormalized
+substring
