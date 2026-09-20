@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.0](https://github.com/alrayyes/Hush-Hush/compare/v2.10.1...v2.11.0) (2026-09-20)
+
+
+### Features
+
+* **web-ui:** add global design tokens, mobile-first layout, e2e tests ([fa1aa01](https://github.com/alrayyes/Hush-Hush/commit/fa1aa011ab8a69d9caf796fd1ea85f60cabfff07))
+* **web-ui:** add global design tokens, mobile-first layout, e2e tests ([08b30db](https://github.com/alrayyes/Hush-Hush/commit/08b30db8d56d3cc4e5449e33476ca6a10ec9433f)), closes [#249](https://github.com/alrayyes/Hush-Hush/issues/249)
+
 ## [2.10.1](https://github.com/alrayyes/Hush-Hush/compare/v2.10.0...v2.10.1) (2026-09-20)
 
 
