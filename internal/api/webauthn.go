@@ -83,6 +83,11 @@ func (u adminUser) WebAuthnCredentials() []webauthn.Credential {
 			Authenticator: webauthn.Authenticator{
 				SignCount: c.SignCount,
 			},
+			// go-webauthn's own ValidateLogin rejects the ceremony
+			// outright if this disagrees with what the live assertion
+			// reports (alrayyes/hush-hush#260) - has to be reconstructed
+			// here the same way SignCount already is.
+			Flags: webauthn.CredentialFlags{BackupEligible: c.BackupEligible},
 		})
 	}
 

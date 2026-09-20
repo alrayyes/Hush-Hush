@@ -81,6 +81,59 @@ func TestLoginWithNonAdvancingCounterIsRejectedAsClonedAuthenticator(t *testing.
 	require.EqualValues(t, 5, creds[0].SignCount, "a rejected login must not update the stored counter")
 }
 
+// TestLoginWithABackupEligibleCredentialsNonAdvancingCounterSucceeds covers
+// the gap auth/spec.md's original "Cloned authenticator detected" scenario
+// left: a synced/multi-device passkey (BE flag set) commonly reports a
+// signature counter that never advances, or that resets across devices -
+// Apple's and Google's own passkey documentation says as much, and
+// go-webauthn's own Authenticator.CloneWarning doc comment leaves treating
+// it as a hard rejection or not as "Relying Party-specific". Rejecting here
+// would lock a real admin out of their own account on the second login
+// with a synced passkey - alrayyes/hush-hush#260.
+func TestLoginWithABackupEligibleCredentialsNonAdvancingCounterSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	beginReq := httptest.NewRequest(http.MethodPost, "/auth/register/begin", nil)
+	beginRec := httptest.NewRecorder()
+	mux.ServeHTTP(beginRec, beginReq)
+	require.Equal(t, http.StatusOK, beginRec.Code, beginRec.Body.String())
+
+	options, err := virtualwebauthn.ParseAttestationOptions(beginRec.Body.String())
+	require.NoError(t, err)
+
+	// hasResidentKey/BackupEligible - a real synced passkey (Chrome's own
+	// password manager, iCloud Keychain, ...), unlike register_test.go's
+	// plain registerCredential helper's device-bound authenticator.
+	authenticator := virtualwebauthn.NewAuthenticatorWithOptions(virtualwebauthn.AuthenticatorOptions{
+		BackupEligible: true,
+		BackupState:    true,
+	})
+	credential := virtualwebauthn.NewCredential(virtualwebauthn.KeyTypeEC2)
+	attestation := virtualwebauthn.CreateAttestationResponse(testRelyingParty(), authenticator, credential, *options)
+
+	body := fmt.Sprintf(`{"credential":%s,"nickname":%q}`, attestation, "synced passkey")
+	finishReq := httptest.NewRequest(http.MethodPost, "/auth/register/finish", bytes.NewReader([]byte(body)))
+	finishReq.Header.Set("Content-Type", "application/json")
+	finishReq.AddCookie(cookieFrom(t, beginRec, "webauthn_ceremony"))
+	finishRec := httptest.NewRecorder()
+	mux.ServeHTTP(finishRec, finishReq)
+	require.Equal(t, http.StatusCreated, finishRec.Code, finishRec.Body.String())
+
+	authenticator.AddCredential(credential)
+
+	// Counter left at its zero value for both logins - exactly what a
+	// counter-less synced passkey reports every time.
+	require.Equal(t, http.StatusNoContent, loginWith(t, mux, authenticator, credential).Code)
+	rec := loginWith(t, mux, authenticator, credential)
+	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+
+	creds, err := s.ListCredentials(t.Context())
+	require.NoError(t, err)
+	require.NotEmpty(t, creds[0].LastUsedAt, "a successful login must still record its usage")
+}
+
 func TestLoginBeginWithNoAdminAccountIsBadRequest(t *testing.T) {
 	t.Parallel()
 

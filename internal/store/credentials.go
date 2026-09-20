@@ -23,13 +23,21 @@ type Credential struct {
 	Nickname   string
 	CreatedAt  string
 	LastUsedAt string // "" means never used
+
+	// BackupEligible records the WebAuthn BE flag captured at
+	// registration - go-webauthn's own login validation rejects the
+	// ceremony outright if the credential it's handed disagrees with
+	// what the live assertion reports (spec: "This should NEVER
+	// change"), so this has to be carried through from registration to
+	// every later login, not just SignCount (alrayyes/hush-hush#260).
+	BackupEligible bool
 }
 
 // CreateCredential stores a newly registered credential.
 func (s *Store) CreateCredential(ctx context.Context, c Credential) error {
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO webauthn_credentials (id, public_key, sign_count, aaguid, nickname, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		c.ID, c.PublicKey, c.SignCount, c.AAGUID, c.Nickname, c.CreatedAt,
+		`INSERT INTO webauthn_credentials (id, public_key, sign_count, aaguid, nickname, created_at, backup_eligible) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.PublicKey, c.SignCount, c.AAGUID, c.Nickname, c.CreatedAt, c.BackupEligible,
 	); err != nil {
 		return fmt.Errorf("create credential: %w", err)
 	}
@@ -43,7 +51,7 @@ func (s *Store) CreateCredential(ctx context.Context, c Credential) error {
 // keyed off exactly this.
 func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, public_key, sign_count, aaguid, nickname, created_at, last_used_at FROM webauthn_credentials ORDER BY created_at`)
+		`SELECT id, public_key, sign_count, aaguid, nickname, created_at, last_used_at, backup_eligible FROM webauthn_credentials ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("list credentials: %w", err)
 	}
@@ -57,7 +65,7 @@ func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 			lastUsedAt sql.NullString
 		)
 
-		if err := rows.Scan(&c.ID, &c.PublicKey, &c.SignCount, &c.AAGUID, &c.Nickname, &c.CreatedAt, &lastUsedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.PublicKey, &c.SignCount, &c.AAGUID, &c.Nickname, &c.CreatedAt, &lastUsedAt, &c.BackupEligible); err != nil {
 			return nil, fmt.Errorf("scan credential: %w", err)
 		}
 

@@ -217,6 +217,7 @@ func buildStoredCredential(credential *webauthn.Credential, nickname string, fal
 		ID: encodeCredentialID(credential.ID), PublicKey: credential.PublicKey,
 		SignCount: credential.Authenticator.SignCount, AAGUID: encodeCredentialID(credential.Authenticator.AAGUID),
 		Nickname: nickname, CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		BackupEligible: credential.Flags.BackupEligible,
 	}
 }
 
