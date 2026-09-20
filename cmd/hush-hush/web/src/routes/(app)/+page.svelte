@@ -176,8 +176,7 @@ async function confirmDelete() {
 	{#if data.objects.length === 0}
 		<p>No secrets stored yet.</p>
 	{:else}
-		<div class="table-scroll">
-		<table>
+		<table class="responsive-table">
 			<thead>
 				<tr>
 					<th scope="col">Id</th>
@@ -191,28 +190,29 @@ async function confirmDelete() {
 				{#each data.objects as object (object.id)}
 					{@const attribution = data.attribution.get(object.id)}
 					<tr>
-						<td>{object.id}</td>
-						<td>{object.description ?? ''}</td>
-						<td>
+						<td data-label="Id">{object.id}</td>
+						<td data-label="Description">{object.description ?? ''}</td>
+						<td data-label="Created">
 							{#if attribution}
 								{attribution.createdBy} &middot; {attribution.createdAt}
 							{/if}
 						</td>
-						<td>
+						<td data-label="Updated">
 							{#if attribution}
 								{attribution.updatedBy} &middot; {attribution.updatedAt}
 							{/if}
 						</td>
-						<td class="row-actions">
+						<td data-label="Actions" class="row-actions">
 							<button type="button" onclick={() => openView(object.id)}>View</button>
 							<button type="button" onclick={() => openEdit(object.id)}>Edit</button>
-							<button type="button" onclick={() => openDelete(object.id)}>Delete</button>
+							<button type="button" class="danger" onclick={() => openDelete(object.id)}>
+								Delete
+							</button>
 						</td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
-		</div>
 	{/if}
 </main>
 
@@ -271,7 +271,9 @@ async function confirmDelete() {
 			{/if}
 			<div class="actions">
 				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<AlertDialog.Action type="button" onclick={confirmDelete}>Delete</AlertDialog.Action>
+				<AlertDialog.Action type="button" class="danger" onclick={confirmDelete}>
+					Delete
+				</AlertDialog.Action>
 			</div>
 		</AlertDialog.Content>
 	</AlertDialog.Portal>
@@ -292,45 +294,12 @@ async function confirmDelete() {
 		justify-content: space-between;
 	}
 
-	table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	th,
-	td {
-		text-align: left;
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-	}
-
 	.row-actions button {
 		margin-right: var(--space-2);
 	}
 
 	.error {
 		color: var(--color-error);
-	}
-
-	:global(.overlay) {
-		position: fixed;
-		inset: 0;
-		background: var(--color-overlay);
-	}
-
-	:global(.dialog) {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		background: var(--color-surface);
-		color: var(--color-text);
-		padding: var(--space-6);
-		border-radius: 0.5rem;
-		max-width: 32rem;
-		width: 90vw;
-		max-height: 85vh;
-		overflow-y: auto;
 	}
 
 	form label {
