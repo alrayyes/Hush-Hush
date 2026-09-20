@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.0](https://github.com/alrayyes/Hush-Hush/compare/v2.13.0...v2.14.0) (2026-09-20)
+
+
+### Features
+
+* **web-ui:** consumer combobox for used_by in the create form ([d00dbfc](https://github.com/alrayyes/Hush-Hush/commit/d00dbfcf16dc5fdfc89d96f8124961d93523e234))
+* **web-ui:** consumer combobox for used_by in the create form ([b4b8f4e](https://github.com/alrayyes/Hush-Hush/commit/b4b8f4e1351d1f4e278ad9a14dd4d684b391aebc)), closes [#251](https://github.com/alrayyes/Hush-Hush/issues/251)
+
 ## [2.13.0](https://github.com/alrayyes/Hush-Hush/compare/v2.12.0...v2.13.0) (2026-09-20)
 
 
