@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.0](https://github.com/alrayyes/Hush-Hush/compare/v2.11.1...v2.12.0) (2026-09-20)
+
+
+### Features
+
+* **web-ui:** move nav into shared chrome, add axe-core scan ([8eca36f](https://github.com/alrayyes/Hush-Hush/commit/8eca36f027bcef672bb368fc259a6a991e017888))
+* **web-ui:** move nav into shared chrome, add axe-core scan ([729352d](https://github.com/alrayyes/Hush-Hush/commit/729352da194d3337f7797457a8ab0b7dfdc22726)), closes [#249](https://github.com/alrayyes/Hush-Hush/issues/249)
+
 ## [2.11.1](https://github.com/alrayyes/Hush-Hush/compare/v2.11.0...v2.11.1) (2026-09-20)
 
 
