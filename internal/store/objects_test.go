@@ -198,3 +198,26 @@ func TestListObjectsFiltersByUsedBy(t *testing.T) {
 	require.Len(t, objs, 1)
 	require.Equal(t, "shared_by_two", objs[0].ID)
 }
+
+func TestListConsumersOnFreshStoreIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	consumers, err := s.ListConsumers(context.Background())
+	require.NoError(t, err)
+	require.Empty(t, consumers)
+}
+
+func TestListConsumersReturnsEachDistinctNameOnce(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/mattermost"}, ""))
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/mattermost", "homelab/vps-docker"}, consumers)
+}

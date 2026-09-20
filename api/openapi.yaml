@@ -58,6 +58,11 @@ tags:
     description: Sealed secret objects - create, fetch, update, delete.
   - name: audit-log
     description: The record of every read and write against an object.
+  - name: consumers
+    description: |
+      Distinct `used_by` consumer names already recorded across every
+      object - for the web UI's create/edit form to offer instead of
+      free-text recall.
   - name: auth
     description: |
       WebAuthn passkey registration and login for the single admin
@@ -280,6 +285,32 @@ paths:
                 used_by: [homelab/vps-docker]
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /consumers:
+    get:
+      operationId: listConsumers
+      summary: List every distinct recorded consumer
+      description: |
+        Returns every distinct consumer name currently present in any
+        object's `used_by` list, sorted, with no duplicates - gated the
+        same way `GET /objects` is (a write token or a session), since
+        listing needs no id the caller already holds.
+      tags: [consumers]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Every distinct consumer name currently recorded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example: [homelab/mattermost, homelab/vps-docker]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /audit-log:
     get:

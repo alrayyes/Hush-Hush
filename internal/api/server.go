@@ -23,6 +23,7 @@ type objectStore interface {
 	CreateObject(ctx context.Context, id string, value []byte, usedBy []string, description string) error
 	GetObject(ctx context.Context, id string) (store.Object, error)
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
+	ListConsumers(ctx context.Context) ([]string, error)
 	UpdateObject(ctx context.Context, id string, value []byte) error
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
@@ -76,6 +77,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("GET /healthz", handleHealth(version))
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
+	mux.HandleFunc("GET /consumers", requireWriteAccess(s, false, handleListConsumers(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{id}", requireWriteAccess(s, true, handleUpdateObject(s)))

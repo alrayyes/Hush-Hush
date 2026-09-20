@@ -48,6 +48,27 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(results.violations).toEqual([]);
 
+	// The New secret dialog's consumer combobox, listbox expanded - the
+	// hand-written ARIA APG combobox (alrayyes/hush-hush#251) is the
+	// newest, most complex interactive widget added since the last scan.
+	await page.getByRole('button', { name: 'New secret' }).click();
+	// bits-ui's Dialog autofocuses the first field (Id) on open, racing any
+	// interaction with a later field started right away - wait for that
+	// autofocus to settle before touching the combobox, or its own focus
+	// gets stolen back mid-fill.
+	await expect(page.getByLabel('Id')).toBeFocused();
+	await page.locator('#create-used-by').fill('homelab');
+	await page.getByRole('listbox').waitFor();
+	const comboboxResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(comboboxResults.violations).toEqual([]);
+	await page.getByRole('option', { name: 'Add "homelab"' }).click();
+	await page
+		.getByRole('dialog')
+		.getByRole('button', { name: 'Cancel' })
+		.click();
+
 	await nav.getByRole('button', { name: 'Log out' }).click();
 	await page.waitForURL('/login');
 

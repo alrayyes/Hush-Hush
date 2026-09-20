@@ -196,6 +196,34 @@ func (s *Store) UpdateObject(ctx context.Context, id string, value []byte) error
 	return nil
 }
 
+// ListConsumers returns every distinct consumer name currently present in
+// any object's used_by list, sorted, with no duplicates - the secret
+// create/edit form offers these instead of relying on free-text recall
+// (alrayyes/hush-hush#251).
+func (s *Store) ListConsumers(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT consumer FROM used_by ORDER BY consumer`)
+	if err != nil {
+		return nil, fmt.Errorf("list consumers: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var consumers []string
+	for rows.Next() {
+		var consumer string
+		if err := rows.Scan(&consumer); err != nil {
+			return nil, fmt.Errorf("scan consumer: %w", err)
+		}
+
+		consumers = append(consumers, consumer)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate consumers: %w", err)
+	}
+
+	return consumers, nil
+}
+
 // DeleteObject permanently removes id, its used_by rows cascading with it
 // (schema.sql's ON DELETE CASCADE). It returns ErrNotFound if no object
 // exists under id.
