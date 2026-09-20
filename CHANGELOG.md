@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0](https://github.com/alrayyes/Hush-Hush/compare/v2.14.0...v2.15.0) (2026-09-20)
+
+
+### Features
+
+* **web-ui:** apply a real visual design pass, fix mobile table scroll ([#273](https://github.com/alrayyes/Hush-Hush/issues/273)) ([edc6f27](https://github.com/alrayyes/Hush-Hush/commit/edc6f27ac07b177adbd29f162bbb20c477941e16)), closes [#271](https://github.com/alrayyes/Hush-Hush/issues/271)
+
 ## [2.14.0](https://github.com/alrayyes/Hush-Hush/compare/v2.13.0...v2.14.0) (2026-09-20)
 
 
