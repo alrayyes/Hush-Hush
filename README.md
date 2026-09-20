@@ -89,6 +89,9 @@ curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 
 ### Web UI
 
+![Secrets overview, light mode](docs/screenshots/secrets-light.png)
+![Secrets overview, dark mode](docs/screenshots/secrets-dark.png)
+
 Set `PUBLIC_URL` (the URL you'll actually reach the server at - for
 example `https://hush-hush.example.com`, or `http://localhost:8080` for
 local use) and the binary serves a browser UI at `/` on top of the same

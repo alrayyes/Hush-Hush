@@ -111,7 +111,14 @@ jobs:
           # goreleaser's GitHub-shaped defaults resolve here without any
           # override block - unlike the gitea_urls/force_token this repo
           # needed when it lived on Forgejo.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          #
+          # RELEASE_TOKEN, not the default GITHUB_TOKEN: the same
+          # anti-recursion rule notify-sdks' own comment describes for a
+          # push also suppresses the `release: published` event a
+          # GITHUB_TOKEN-authored release would otherwise fire, and
+          # screenshots.yml needs that event to actually reach it
+          # (alrayyes/hush-hush#266).
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       # Free SLSA Build L2 provenance tying these binaries to this workflow
       # run - releases.md: adopt unconditionally, no cosign/SBOM needed yet.
