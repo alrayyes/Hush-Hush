@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.1](https://github.com/alrayyes/Hush-Hush/compare/v2.11.0...v2.11.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **auth:** persist a passkey's BackupEligible flag so login works ([0231c8e](https://github.com/alrayyes/Hush-Hush/commit/0231c8e050998dd93cefb284993f79ba48c55250))
+
 ## [2.11.0](https://github.com/alrayyes/Hush-Hush/compare/v2.10.1...v2.11.0) (2026-09-20)
 
 
