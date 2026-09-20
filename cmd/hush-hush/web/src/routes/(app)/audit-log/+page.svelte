@@ -199,28 +199,30 @@ function exportCSV() {
 		<p role="alert" class="error">{loadError}</p>
 	{/if}
 
-	<table aria-busy={loading}>
-		<thead>
-			<tr>
-				<th scope="col">Object</th>
-				<th scope="col">Action</th>
-				<th scope="col">Actor</th>
-				<th scope="col">Caller</th>
-				<th scope="col">Timestamp</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each entries as entry (entry.id)}
+	<div class="table-scroll">
+		<table aria-busy={loading}>
+			<thead>
 				<tr>
-					<td>{entry.object_id}</td>
-					<td>{entry.action}</td>
-					<td>{auditActorLabel(entry)}</td>
-					<td>{entry.caller ?? ''}</td>
-					<td>{entry.timestamp}</td>
+					<th scope="col">Object</th>
+					<th scope="col">Action</th>
+					<th scope="col">Actor</th>
+					<th scope="col">Caller</th>
+					<th scope="col">Timestamp</th>
 				</tr>
-			{/each}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{#each entries as entry (entry.id)}
+					<tr>
+						<td>{entry.object_id}</td>
+						<td>{entry.action}</td>
+						<td>{auditActorLabel(entry)}</td>
+						<td>{entry.caller ?? ''}</td>
+						<td>{entry.timestamp}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 
 	<div class="pagination">
 		<button type="button" onclick={previousPage} disabled={cursorStack.length === 0 || loading}>
@@ -235,8 +237,8 @@ function exportCSV() {
 <style>
 	main {
 		max-width: 70rem;
-		margin: 2rem auto;
-		padding: 0 1rem;
+		margin: var(--space-8) auto;
+		padding: 0 var(--space-4);
 	}
 
 	.filters {
@@ -267,10 +269,10 @@ function exportCSV() {
 	}
 
 	.chips li {
-		background: #eee;
+		background: var(--color-border-subtle);
 		border-radius: 1rem;
-		padding: 0.25rem 0.5rem;
-		font-size: 0.85rem;
+		padding: var(--space-1) var(--space-2);
+		font-size: var(--font-size-sm);
 	}
 
 	.chips button {
@@ -286,7 +288,7 @@ function exportCSV() {
 	}
 
 	.error {
-		color: #b00020;
+		color: var(--color-error);
 	}
 
 	table {
@@ -297,8 +299,8 @@ function exportCSV() {
 	th,
 	td {
 		text-align: left;
-		padding: 0.5rem;
-		border-bottom: 1px solid #ddd;
+		padding: var(--space-2);
+		border-bottom: 1px solid var(--color-border);
 	}
 
 	.pagination {

@@ -80,6 +80,14 @@
       "gitignored",
       "toolset",
       "localStorage",
+      "installability",
+      "grepping",
+      "theme-init",
+      "precaching",
+      "prerendered",
+      "color",
+      "colors",
+      "writeup",
       "combobox",
       "comboboxes",
       "listbox",
@@ -106,7 +114,9 @@
       "OXFORD_SPELLING_Z_NOT_S",
       "UH_UH_COMMA",
       "RELY_ON",
-      "A_INSTALL"
+      "A_INSTALL",
+      "PCT_SINGULAR_NOUN_PLURAL_VERB_AGREEMENT",
+      "SPURIOUS_APOSTROPHE"
     ]
   }
 }

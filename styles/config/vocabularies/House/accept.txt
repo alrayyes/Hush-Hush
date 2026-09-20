@@ -17,7 +17,7 @@ Redocly
 Renovate
 OpenAPI
 allowlist
-changelog
+[Cc]hangelog
 ruleset
 rulesets
 runbook
@@ -111,3 +111,12 @@ denormalized
 substring
 boolean
 affordance
+viewports?
+breakpoints?
+preformatted
+installability
+PWAs?
+precaching
+sanitization
+unsanitized
+favicons?

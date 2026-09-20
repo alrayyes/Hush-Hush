@@ -168,6 +168,7 @@ async function confirmDelete() {
 	{#if data.objects.length === 0}
 		<p>No secrets stored yet.</p>
 	{:else}
+		<div class="table-scroll">
 		<table>
 			<thead>
 				<tr>
@@ -203,6 +204,7 @@ async function confirmDelete() {
 				{/each}
 			</tbody>
 		</table>
+		</div>
 	{/if}
 </main>
 
@@ -270,12 +272,14 @@ async function confirmDelete() {
 <style>
 	main {
 		max-width: 60rem;
-		margin: 2rem auto;
-		padding: 0 1rem;
+		margin: var(--space-8) auto;
+		padding: 0 var(--space-4);
 	}
 
 	.page-header {
 		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
 		align-items: center;
 		justify-content: space-between;
 	}
@@ -288,22 +292,22 @@ async function confirmDelete() {
 	th,
 	td {
 		text-align: left;
-		padding: 0.5rem;
-		border-bottom: 1px solid #ddd;
+		padding: var(--space-2);
+		border-bottom: 1px solid var(--color-border);
 	}
 
 	.row-actions button {
-		margin-right: 0.5rem;
+		margin-right: var(--space-2);
 	}
 
 	.error {
-		color: #b00020;
+		color: var(--color-error);
 	}
 
 	:global(.overlay) {
 		position: fixed;
 		inset: 0;
-		background: rgb(0 0 0 / 40%);
+		background: var(--color-overlay);
 	}
 
 	:global(.dialog) {
@@ -311,8 +315,9 @@ async function confirmDelete() {
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		background: white;
-		padding: 1.5rem;
+		background: var(--color-surface);
+		color: var(--color-text);
+		padding: var(--space-6);
 		border-radius: 0.5rem;
 		max-width: 32rem;
 		width: 90vw;
