@@ -64,6 +64,9 @@ type objectStore interface {
 // for any request that doesn't match a known API route (design.md's
 // "Routing boundary" decision) - never intercepting /objects,
 // /audit-log, /healthz, or any /auth, /credentials, or /tokens path.
+// /audit-log is the one path both an API route and a page route claim;
+// handleAuditLogRoute decides between them per request rather than the
+// mux picking one at registration time (alrayyes/hush-hush#272).
 //
 // version is the running binary's own version, echoed by /healthz for
 // the web UI's footer to link to the changelog page.
@@ -82,7 +85,9 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{id}", requireWriteAccess(s, true, handleUpdateObject(s)))
 	mux.HandleFunc("DELETE /objects/{id}", requireWriteAccess(s, true, handleDeleteObject(s)))
-	mux.HandleFunc("GET /audit-log", handleQueryAuditLog(s))
+
+	staticHandler := handleStatic(webBuild)
+	mux.HandleFunc("GET /audit-log", handleAuditLogRoute(handleQueryAuditLog(s), staticHandler))
 
 	mux.HandleFunc("POST /auth/register/begin", handleBeginRegistration(s, wa))
 	mux.HandleFunc("POST /auth/register/finish", handleFinishRegistration(s, wa))
@@ -99,7 +104,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
 	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
 
-	mux.Handle("/", handleStatic(webBuild))
+	mux.Handle("/", staticHandler)
 
 	return mux
 }

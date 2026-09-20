@@ -94,7 +94,8 @@
       "listboxes",
       "browsable",
       "denormalized",
-      "substring"
+      "substring",
+      "Sec-Fetch-Dest"
     ]
   },
   "ltex.disabledRules": {
