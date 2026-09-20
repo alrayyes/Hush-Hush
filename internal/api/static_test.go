@@ -41,6 +41,25 @@ func TestRealStaticAssetIsServedAsItself(t *testing.T) {
 	require.NotEqual(t, testIndexHTML, rec.Body.String())
 }
 
+// alrayyes/hush-hush#272: /audit-log is both a page route and a real API
+// endpoint. A hard navigation (refresh, bookmark, Playwright's page.goto)
+// sets Sec-Fetch-Dest: document, a header the SPA's own fetch() call
+// never sends - that's the signal the fix relies on to tell the two
+// apart without moving the published API path (docs/adr/0015).
+func TestHardNavigationToAuditLogServesTheSPA(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log", nil)
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, testIndexHTML, rec.Body.String())
+}
+
 func TestKnownAPIRoutesAreUnaffectedByTheStaticFallback(t *testing.T) {
 	t.Parallel()
 

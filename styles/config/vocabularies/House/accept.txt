@@ -120,3 +120,5 @@ precaching
 sanitization
 unsanitized
 favicons?
+SPA
+SPA's
