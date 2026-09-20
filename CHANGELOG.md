@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0](https://github.com/alrayyes/Hush-Hush/compare/v2.12.0...v2.13.0) (2026-09-20)
+
+
+### Features
+
+* **web-ui:** opt-in plain-text-to-base64 toggle in New secret ([#269](https://github.com/alrayyes/Hush-Hush/issues/269)) ([e476b8f](https://github.com/alrayyes/Hush-Hush/commit/e476b8f73e393fcd3e6ef9c6cb49ccf52246b227)), closes [#268](https://github.com/alrayyes/Hush-Hush/issues/268)
+
 ## [2.12.0](https://github.com/alrayyes/Hush-Hush/compare/v2.11.1...v2.12.0) (2026-09-20)
 
 
