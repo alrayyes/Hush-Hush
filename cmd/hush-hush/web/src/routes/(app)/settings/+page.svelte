@@ -282,6 +282,7 @@ async function confirmRevoke() {
 					<th scope="col">Owner</th>
 					<th scope="col">Created</th>
 					<th scope="col">Expires</th>
+					<th scope="col">Last used</th>
 					<th scope="col">Status</th>
 					<th scope="col">Actions</th>
 				</tr>
@@ -293,6 +294,7 @@ async function confirmRevoke() {
 						<td>{token.owner ?? 'cli'}</td>
 						<td>{token.created_at}</td>
 						<td>{token.expires_at}</td>
+						<td>{token.last_used_at ?? 'never'}</td>
 						<td>{token.revoked ? 'Revoked' : 'Active'}</td>
 						<td class="row-actions">
 							{#if !token.revoked}

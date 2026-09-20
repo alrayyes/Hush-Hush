@@ -96,6 +96,16 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	// last_used_at: NULL until a token first authenticates a write, then
+	// its most recent success - the same signal webauthn_credentials'
+	// own last_used_at already gives an admin for a passkey
+	// (openspec/changes/tokens-last-used-at/proposal.md).
+	if err := addColumnIfMissing(db, "write_tokens", "last_used_at", "TEXT"); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	return &Store{db: db}, nil
 }
 

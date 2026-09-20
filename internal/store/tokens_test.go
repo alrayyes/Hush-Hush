@@ -213,6 +213,47 @@ func TestRevokeWriteTokenAlreadyRevokedIsErrTokenNotFound(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrTokenNotFound)
 }
 
+func TestCreateWriteTokenThenListReturnsNoLastUsedAt(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.Empty(t, wt.LastUsedAt)
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+	require.Empty(t, tokens[0].LastUsedAt)
+}
+
+func TestUpdateWriteTokenUsageRecordsLastUsedAt(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+
+	usedAt := time.Now().UTC().Format(time.RFC3339)
+	require.NoError(t, s.UpdateWriteTokenUsage(t.Context(), wt.ID, usedAt))
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+	require.Equal(t, usedAt, tokens[0].LastUsedAt)
+}
+
+func TestUpdateWriteTokenUsageUnknownIDIsErrTokenNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.UpdateWriteTokenUsage(t.Context(), "nope", time.Now().UTC().Format(time.RFC3339))
+	require.ErrorIs(t, err, store.ErrTokenNotFound)
+}
+
 func TestRevokingOneTokenLeavesOthersValid(t *testing.T) {
 	t.Parallel()
 

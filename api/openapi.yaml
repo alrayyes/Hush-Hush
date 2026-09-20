@@ -1021,6 +1021,10 @@ components:
           format: date-time
         revoked:
           type: boolean
+        last_used_at:
+          type: string
+          format: date-time
+          description: Absent if this token has never authenticated a request.
 
     TokenWithValue:
       allOf:

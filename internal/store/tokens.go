@@ -28,6 +28,7 @@ type WriteToken struct {
 	CreatedAt   string
 	ExpiresAt   string
 	Revoked     bool
+	LastUsedAt  string // "" means never used
 }
 
 // CreateWriteToken issues a new write-path token, valid for ttl from now,
@@ -109,7 +110,7 @@ func (s *Store) AuthenticateWriteToken(ctx context.Context, token string) (id st
 // which by design no longer exists anywhere to list.
 func (s *Store) ListWriteTokens(ctx context.Context) ([]WriteToken, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, description, owner, created_at, expires_at, revoked_at FROM write_tokens ORDER BY created_at`)
+		`SELECT id, description, owner, created_at, expires_at, revoked_at, last_used_at FROM write_tokens ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("list write tokens: %w", err)
 	}
@@ -118,16 +119,17 @@ func (s *Store) ListWriteTokens(ctx context.Context) ([]WriteToken, error) {
 	var tokens []WriteToken
 	for rows.Next() {
 		var (
-			t                WriteToken
-			owner, revokedAt sql.NullString
+			t                            WriteToken
+			owner, revokedAt, lastUsedAt sql.NullString
 		)
 
-		if err := rows.Scan(&t.ID, &t.Description, &owner, &t.CreatedAt, &t.ExpiresAt, &revokedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Description, &owner, &t.CreatedAt, &t.ExpiresAt, &revokedAt, &lastUsedAt); err != nil {
 			return nil, fmt.Errorf("scan write token: %w", err)
 		}
 
 		t.Owner = owner.String
 		t.Revoked = revokedAt.Valid
+		t.LastUsedAt = lastUsedAt.String
 		tokens = append(tokens, t)
 	}
 
@@ -157,6 +159,30 @@ func (s *Store) RevokeWriteToken(ctx context.Context, id string) error {
 	n, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("revoke write token: %w", err)
+	}
+
+	if n == 0 {
+		return ErrTokenNotFound
+	}
+
+	return nil
+}
+
+// UpdateWriteTokenUsage records a successful authentication's timestamp -
+// the same way UpdateCredentialUsage does for a passkey, so an admin can
+// tell a token nobody's used from one in daily use when deciding whether
+// to revoke it.
+func (s *Store) UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) error {
+	result, err := s.db.ExecContext(ctx,
+		`UPDATE write_tokens SET last_used_at = ? WHERE id = ?`, usedAt, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update write token usage: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("update write token usage: %w", err)
 	}
 
 	if n == 0 {

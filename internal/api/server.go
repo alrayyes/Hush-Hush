@@ -31,6 +31,7 @@ type objectStore interface {
 	CreateWriteToken(ctx context.Context, description string, ttl time.Duration, owner string) (store.WriteToken, string, error)
 	ListWriteTokens(ctx context.Context) ([]store.WriteToken, error)
 	RevokeWriteToken(ctx context.Context, id string) error
+	UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) error
 
 	CreateCredential(ctx context.Context, c store.Credential) error
 	ListCredentials(ctx context.Context) ([]store.Credential, error)
@@ -119,6 +120,17 @@ func requireWriteAccess(s objectStore, requireCSRFForSession bool, next http.Han
 		}
 
 		if validToken {
+			// tokens-last-used-at/proposal.md: the same signal
+			// webauthn_credentials' own last_used_at already gives an
+			// admin for a passkey, recorded the same way audit logging
+			// is - a failure here fails the request rather than
+			// silently going stale.
+			if err := s.UpdateWriteTokenUsage(r.Context(), tokenID, time.Now().UTC().Format(time.RFC3339)); err != nil {
+				writeInternalError(w, r, err)
+
+				return
+			}
+
 			next(w, r.WithContext(context.WithValue(r.Context(), tokenContextKey{}, tokenID)))
 
 			return
