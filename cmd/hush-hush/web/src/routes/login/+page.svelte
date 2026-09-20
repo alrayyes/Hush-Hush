@@ -105,13 +105,13 @@ async function handleRegister() {
 	.login {
 		max-width: 24rem;
 		margin: 4rem auto;
-		padding: 0 1rem;
+		padding: 0 var(--space-4);
 		text-align: center;
 	}
 
 	button {
-		padding: 0.75rem 1.5rem;
-		font-size: 1rem;
+		padding: var(--space-3) var(--space-6);
+		font-size: var(--font-size-base);
 		cursor: pointer;
 	}
 
@@ -120,6 +120,6 @@ async function handleRegister() {
 	}
 
 	.error {
-		color: #b00020;
+		color: var(--color-error);
 	}
 </style>

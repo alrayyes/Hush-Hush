@@ -20,8 +20,8 @@ let { data }: { data: PageData } = $props();
 <style>
 	main {
 		max-width: 60rem;
-		margin: 2rem auto;
-		padding: 0 1rem;
+		margin: var(--space-8) auto;
+		padding: 0 var(--space-4);
 	}
 
 	pre {

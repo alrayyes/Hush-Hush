@@ -22,10 +22,11 @@ async function handleLogout() {
 <style>
 	nav {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 1rem;
-		padding: 1rem;
-		border-bottom: 1px solid #ddd;
+		gap: var(--space-4);
+		padding: var(--space-4);
+		border-bottom: 1px solid var(--color-border);
 	}
 
 	nav button {

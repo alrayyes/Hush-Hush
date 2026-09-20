@@ -16,12 +16,13 @@ let { version }: { version: string } = $props();
 	footer {
 		max-width: 60rem;
 		margin: 3rem auto 1.5rem;
-		padding: 0 1rem;
-		font-size: 0.85rem;
-		color: #666;
+		padding: 0 var(--space-4);
+		font-size: var(--font-size-sm);
+		color: var(--color-text-muted);
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: center;
-		gap: 0.5rem;
+		gap: var(--space-2);
 		align-items: center;
 	}
 

@@ -190,36 +190,38 @@ async function confirmRevoke() {
 			</Dialog.Root>
 		</header>
 
-		<table>
-			<thead>
-				<tr>
-					<th scope="col">Nickname</th>
-					<th scope="col">Added</th>
-					<th scope="col">Last used</th>
-					<th scope="col">Actions</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.credentials as credential (credential.id)}
+		<div class="table-scroll">
+			<table>
+				<thead>
 					<tr>
-						<td>{credential.nickname ?? ''}</td>
-						<td>{credential.created_at}</td>
-						<td>{credential.last_used_at ?? 'never'}</td>
-						<td class="row-actions">
-							<button
-								type="button"
-								onclick={() => openRename(credential.id, credential.nickname)}
-							>
-								Rename
-							</button>
-							<button type="button" onclick={() => openDeleteCredential(credential.id)}>
-								Delete
-							</button>
-						</td>
+						<th scope="col">Nickname</th>
+						<th scope="col">Added</th>
+						<th scope="col">Last used</th>
+						<th scope="col">Actions</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each data.credentials as credential (credential.id)}
+						<tr>
+							<td>{credential.nickname ?? ''}</td>
+							<td>{credential.created_at}</td>
+							<td>{credential.last_used_at ?? 'never'}</td>
+							<td class="row-actions">
+								<button
+									type="button"
+									onclick={() => openRename(credential.id, credential.nickname)}
+								>
+									Rename
+								</button>
+								<button type="button" onclick={() => openDeleteCredential(credential.id)}>
+									Delete
+								</button>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</section>
 
 	<section>
@@ -275,36 +277,38 @@ async function confirmRevoke() {
 			</Dialog.Root>
 		</header>
 
-		<table>
-			<thead>
-				<tr>
-					<th scope="col">Description</th>
-					<th scope="col">Owner</th>
-					<th scope="col">Created</th>
-					<th scope="col">Expires</th>
-					<th scope="col">Last used</th>
-					<th scope="col">Status</th>
-					<th scope="col">Actions</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.tokens as token (token.id)}
+		<div class="table-scroll">
+			<table>
+				<thead>
 					<tr>
-						<td>{token.description}</td>
-						<td>{token.owner ?? 'cli'}</td>
-						<td>{token.created_at}</td>
-						<td>{token.expires_at}</td>
-						<td>{token.last_used_at ?? 'never'}</td>
-						<td>{token.revoked ? 'Revoked' : 'Active'}</td>
-						<td class="row-actions">
-							{#if !token.revoked}
-								<button type="button" onclick={() => openRevoke(token.id)}>Revoke</button>
-							{/if}
-						</td>
+						<th scope="col">Description</th>
+						<th scope="col">Owner</th>
+						<th scope="col">Created</th>
+						<th scope="col">Expires</th>
+						<th scope="col">Last used</th>
+						<th scope="col">Status</th>
+						<th scope="col">Actions</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each data.tokens as token (token.id)}
+						<tr>
+							<td>{token.description}</td>
+							<td>{token.owner ?? 'cli'}</td>
+							<td>{token.created_at}</td>
+							<td>{token.expires_at}</td>
+							<td>{token.last_used_at ?? 'never'}</td>
+							<td>{token.revoked ? 'Revoked' : 'Active'}</td>
+							<td class="row-actions">
+								{#if !token.revoked}
+									<button type="button" onclick={() => openRevoke(token.id)}>Revoke</button>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</section>
 </main>
 
@@ -373,8 +377,8 @@ async function confirmRevoke() {
 <style>
 	main {
 		max-width: 60rem;
-		margin: 2rem auto;
-		padding: 0 1rem;
+		margin: var(--space-8) auto;
+		padding: 0 var(--space-4);
 	}
 
 	section {
@@ -383,6 +387,8 @@ async function confirmRevoke() {
 
 	.section-header {
 		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
 		align-items: center;
 		justify-content: space-between;
 	}
@@ -395,27 +401,27 @@ async function confirmRevoke() {
 	th,
 	td {
 		text-align: left;
-		padding: 0.5rem;
-		border-bottom: 1px solid #ddd;
+		padding: var(--space-2);
+		border-bottom: 1px solid var(--color-border);
 	}
 
 	.row-actions button {
-		margin-right: 0.5rem;
+		margin-right: var(--space-2);
 	}
 
 	.error {
-		color: #b00020;
+		color: var(--color-error);
 	}
 
 	.warning {
-		color: #8a6100;
+		color: var(--color-warning);
 		font-weight: bold;
 	}
 
 	:global(.overlay) {
 		position: fixed;
 		inset: 0;
-		background: rgb(0 0 0 / 40%);
+		background: var(--color-overlay);
 	}
 
 	:global(.dialog) {
@@ -423,8 +429,9 @@ async function confirmRevoke() {
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		background: white;
-		padding: 1.5rem;
+		background: var(--color-surface);
+		color: var(--color-text);
+		padding: var(--space-6);
 		border-radius: 0.5rem;
 		max-width: 32rem;
 		width: 90vw;
@@ -434,7 +441,7 @@ async function confirmRevoke() {
 
 	form label {
 		display: block;
-		margin-top: 0.75rem;
+		margin-top: var(--space-3);
 	}
 
 	form input,
@@ -446,7 +453,7 @@ async function confirmRevoke() {
 	.actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1rem;
+		gap: var(--space-2);
+		margin-top: var(--space-4);
 	}
 </style>
