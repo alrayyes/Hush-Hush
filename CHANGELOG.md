@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.1](https://github.com/alrayyes/Hush-Hush/compare/v2.10.0...v2.10.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **web-ui:** gate the login page's primary action on bootstrap status ([fc74631](https://github.com/alrayyes/Hush-Hush/commit/fc74631f8a6cabad7d6294a30ae3036a6b068320))
+
 ## [2.10.0](https://github.com/alrayyes/Hush-Hush/compare/v2.9.2...v2.10.0) (2026-09-20)
 
 
