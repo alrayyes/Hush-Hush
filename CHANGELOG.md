@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0](https://github.com/alrayyes/Hush-Hush/compare/v2.9.2...v2.10.0) (2026-09-20)
+
+
+### Features
+
+* **tokens:** track a write token's last-used time ([f4b7118](https://github.com/alrayyes/Hush-Hush/commit/f4b7118ddd5e7ad4d6844fc5d84200a4a97db0b2))
+* **tokens:** track a write token's last-used time ([a61c229](https://github.com/alrayyes/Hush-Hush/commit/a61c229d80ea75ad50add7c4c05109d6090bb2d4)), closes [#250](https://github.com/alrayyes/Hush-Hush/issues/250)
+
 ## [2.9.2](https://github.com/alrayyes/Hush-Hush/compare/v2.9.1...v2.9.2) (2026-09-19)
 
 
