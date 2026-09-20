@@ -102,6 +102,18 @@ export async function logout(): Promise<void> {
 	await request('/auth/logout', { method: 'POST' });
 }
 
+// getAuthStatus reports whether an admin account exists yet - a
+// read-only, side-effect-free check (no cookie set, no ceremony started)
+// the login page uses to decide whether to offer registering the first
+// passkey or logging in with one
+// (openspec/changes/gate-passkey-registration-ui/design.md).
+export async function getAuthStatus(): Promise<boolean> {
+	const res = await request('/auth/status');
+	const body = (await res.json()) as { bootstrapped: boolean };
+
+	return body.bootstrapped;
+}
+
 // checkSession reports whether the current visitor holds a valid session,
 // via a session-gated endpoint that carries no secret data of its own -
 // there's no dedicated "who am I" endpoint to call instead.

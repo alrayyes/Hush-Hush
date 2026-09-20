@@ -109,3 +109,5 @@ listbox(es)?
 browsable
 denormalized
 substring
+boolean
+affordance

@@ -497,6 +497,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /auth/status:
+    get:
+      operationId: getAuthStatus
+      summary: Report whether an admin account exists yet
+      description: |
+        A read-only, side-effect-free check the login page uses to decide
+        whether to offer registering the first passkey or logging in with
+        one - no cookie set, no ceremony started. Leaks nothing new:
+        `POST /auth/login/begin` already reveals this same boolean today
+        via its 400 error body
+        (openspec/changes/gate-passkey-registration-ui/design.md).
+      tags: [auth]
+      security: []
+      responses:
+        "200":
+          description: Whether an admin account has been created yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
   /credentials:
     get:
       operationId: listCredentials
@@ -908,6 +929,14 @@ components:
             What went wrong, in terms safe to show a caller. Nothing here
             handles authentication with a detail worth holding back.
           examples: [unknown object]
+
+    AuthStatus:
+      type: object
+      required: [bootstrapped]
+      properties:
+        bootstrapped:
+          type: boolean
+          description: Whether an admin account has been created yet.
 
     RegistrationOptions:
       type: object
