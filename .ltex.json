@@ -83,7 +83,10 @@
       "combobox",
       "comboboxes",
       "listbox",
-      "listboxes"
+      "listboxes",
+      "browsable",
+      "denormalized",
+      "substring"
     ]
   },
   "ltex.disabledRules": {
