@@ -46,16 +46,26 @@ func Open(path string) (*Store, error) {
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
 
-	if err := addColumnIfMissing(db, "audit_log", "ip", "TEXT NOT NULL DEFAULT ''"); err != nil {
+	if err := migrateColumns(db); err != nil {
 		_ = db.Close()
 
 		return nil, err
 	}
 
-	if err := addColumnIfMissing(db, "objects", "description", "TEXT NOT NULL DEFAULT ''"); err != nil {
-		_ = db.Close()
+	return &Store{db: db}, nil
+}
 
-		return nil, err
+// migrateColumns adds every column that's been added to the schema since
+// this service's first release - CREATE TABLE IF NOT EXISTS is a no-op
+// against a database that already has the table, so each one needs its
+// own idempotent path to reach an existing file.
+func migrateColumns(db *sql.DB) error {
+	if err := addColumnIfMissing(db, "audit_log", "ip", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+
+	if err := addColumnIfMissing(db, "objects", "description", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
 	}
 
 	// owner: the admin account that created a token over HTTP, absent
@@ -63,9 +73,7 @@ func Open(path string) (*Store, error) {
 	// guessed value (openspec/changes/web-ui/design.md's "Token ownership
 	// is nullable, not backfilled or guessed" decision).
 	if err := addColumnIfMissing(db, "write_tokens", "owner", "TEXT"); err != nil {
-		_ = db.Close()
-
-		return nil, err
+		return err
 	}
 
 	// revoked_at: NULL while valid, set once revoked - a soft-delete so a
@@ -74,9 +82,7 @@ func Open(path string) (*Store, error) {
 	// "Token revocation moves from DELETE ... to a revoked_at timestamp
 	// column" decision).
 	if err := addColumnIfMissing(db, "write_tokens", "revoked_at", "TEXT"); err != nil {
-		_ = db.Close()
-
-		return nil, err
+		return err
 	}
 
 	// actor_type/actor_id: the verified credential (a token's id, or the
@@ -85,15 +91,11 @@ func Open(path string) (*Store, error) {
 	// rather than overwriting it (openspec/changes/web-ui/design.md's
 	// "Audit log actor" decision).
 	if err := addColumnIfMissing(db, "audit_log", "actor_type", "TEXT"); err != nil {
-		_ = db.Close()
-
-		return nil, err
+		return err
 	}
 
 	if err := addColumnIfMissing(db, "audit_log", "actor_id", "TEXT"); err != nil {
-		_ = db.Close()
-
-		return nil, err
+		return err
 	}
 
 	// last_used_at: NULL until a token first authenticates a write, then
@@ -101,12 +103,19 @@ func Open(path string) (*Store, error) {
 	// own last_used_at already gives an admin for a passkey
 	// (openspec/changes/tokens-last-used-at/proposal.md).
 	if err := addColumnIfMissing(db, "write_tokens", "last_used_at", "TEXT"); err != nil {
-		_ = db.Close()
-
-		return nil, err
+		return err
 	}
 
-	return &Store{db: db}, nil
+	// backup_eligible: the WebAuthn BE flag captured at registration -
+	// go-webauthn's own login validation rejects the ceremony outright
+	// if this disagrees with what a later assertion reports, so it has
+	// to survive a restart the same way sign_count does
+	// (alrayyes/hush-hush#260). Defaults false for a row that predates
+	// this column; a credential that's actually backup-eligible and was
+	// registered before this migration still needs re-registering to
+	// pick up the correct value - there's nothing to derive it from on
+	// an existing row.
+	return addColumnIfMissing(db, "webauthn_credentials", "backup_eligible", "INTEGER NOT NULL DEFAULT 0")
 }
 
 // addColumnIfMissing adds column to table if it isn't already there. The

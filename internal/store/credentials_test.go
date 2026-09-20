@@ -36,6 +36,29 @@ func TestCreateCredentialThenListReturnsIt(t *testing.T) {
 	require.Empty(t, creds[0].LastUsedAt)
 }
 
+// TestCreateCredentialPersistsBackupEligible covers alrayyes/hush-hush#260:
+// go-webauthn's own ValidateLogin rejects a login outright when the
+// credential it's handed has a different BackupEligible flag than the
+// live assertion reports - a synced/multi-device passkey (the kind every
+// major browser creates by default) sets this true, so a credential
+// stored with it silently dropped fails every login with "Backup Eligible
+// flag inconsistency detected during login validation".
+func TestCreateCredentialPersistsBackupEligible(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	require.NoError(t, s.CreateCredential(t.Context(), store.Credential{
+		ID: "cred-1", PublicKey: []byte("pubkey"), CreatedAt: now, BackupEligible: true,
+	}))
+
+	creds, err := s.ListCredentials(t.Context())
+	require.NoError(t, err)
+	require.Len(t, creds, 1)
+	require.True(t, creds[0].BackupEligible)
+}
+
 func TestUpdateCredentialUsageUpdatesSignCountAndLastUsedAt(t *testing.T) {
 	t.Parallel()
 
