@@ -31,6 +31,52 @@ func TestSessionListsObjectsWithoutABearerToken(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
+func TestBearerTokenAuthenticatedWriteRecordsLastUsedAt(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	wt, token, err := s.CreateWriteToken(t.Context(), "records usage", 3600e9, "")
+	require.NoError(t, err)
+
+	before, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, before, 1)
+	require.Empty(t, before[0].LastUsedAt)
+
+	req := httptest.NewRequest(http.MethodGet, "/objects", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	after, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, after, 1)
+	require.Equal(t, wt.ID, after[0].ID)
+	require.NotEmpty(t, after[0].LastUsedAt)
+}
+
+func TestSessionAuthenticatedWriteDoesNotTouchAnyTokensLastUsedAt(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+
+	_, _, err := s.CreateWriteToken(t.Context(), "untouched", 3600e9, "")
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/objects", nil)
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+	require.Empty(t, tokens[0].LastUsedAt)
+}
+
 func TestSessionCreatesAnObjectWithItsCSRFToken(t *testing.T) {
 	t.Parallel()
 

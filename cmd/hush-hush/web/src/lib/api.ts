@@ -261,6 +261,7 @@ export interface TokenMetadata {
 	created_at: string;
 	expires_at: string;
 	revoked: boolean;
+	last_used_at?: string;
 }
 
 export interface TokenWithValue extends TokenMetadata {

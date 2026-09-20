@@ -35,6 +35,7 @@ type TokenMetadata struct {
 	CreatedAt   string `json:"created_at"`
 	ExpiresAt   string `json:"expires_at"`
 	Revoked     bool   `json:"revoked"`
+	LastUsedAt  string `json:"last_used_at,omitempty"`
 }
 
 // TokenWithValue is the POST /tokens response - the only response that
@@ -53,6 +54,7 @@ func tokenMetadataFromStore(t store.WriteToken) TokenMetadata {
 		CreatedAt:   t.CreatedAt,
 		ExpiresAt:   t.ExpiresAt,
 		Revoked:     t.Revoked,
+		LastUsedAt:  t.LastUsedAt,
 	}
 }
 
