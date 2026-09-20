@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.15.1](https://github.com/alrayyes/Hush-Hush/compare/v2.15.0...v2.15.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **web-ui:** serve the SPA, not raw JSON, on a hard nav to /audit-log ([4df15da](https://github.com/alrayyes/Hush-Hush/commit/4df15da80581ea58c49cd29353712aeae79629d0))
+* **web-ui:** serve the SPA, not raw JSON, on a hard nav to /audit-log ([465c3ee](https://github.com/alrayyes/Hush-Hush/commit/465c3ee145f1a2bd9f5f8d80d40bf6fa657aaed4)), closes [#272](https://github.com/alrayyes/Hush-Hush/issues/272)
+
 ## [2.15.0](https://github.com/alrayyes/Hush-Hush/compare/v2.14.0...v2.15.0) (2026-09-20)
 
 
