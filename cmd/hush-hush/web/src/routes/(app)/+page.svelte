@@ -8,19 +8,11 @@ import {
 	getObjectValue,
 	updateObject,
 } from '$lib/api';
+import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
 import { utf8ToBase64 } from '$lib/encoding';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
-
-function parseUsedBy(raw: string): string[] | undefined {
-	const items = raw
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean);
-
-	return items.length > 0 ? items : undefined;
-}
 
 function apiErrorMessage(err: unknown, fallback: string): string {
 	return err instanceof ApiError ? err.message : fallback;
@@ -32,14 +24,14 @@ let createId = $state('');
 let createValue = $state('');
 let createPlainText = $state(false);
 let createDescription = $state('');
-let createUsedBy = $state('');
+let createUsedBy: string[] = $state([]);
 
 function resetCreateForm() {
 	createId = '';
 	createValue = '';
 	createPlainText = false;
 	createDescription = '';
-	createUsedBy = '';
+	createUsedBy = [];
 	createError = '';
 }
 
@@ -58,7 +50,7 @@ async function submitCreate(event: SubmitEvent) {
 			// server can't read (alrayyes/hush-hush#268).
 			value: createPlainText ? utf8ToBase64(createValue) : createValue,
 			description: createDescription || undefined,
-			used_by: parseUsedBy(createUsedBy),
+			used_by: createUsedBy.length > 0 ? createUsedBy : undefined,
 		});
 		createOpen = false;
 		resetCreateForm();
@@ -164,8 +156,8 @@ async function confirmDelete() {
 						<label for="create-description">Description</label>
 						<input id="create-description" bind:value={createDescription} />
 
-						<label for="create-used-by">Used by (comma-separated)</label>
-						<input id="create-used-by" bind:value={createUsedBy} />
+						<label for="create-used-by">Used by</label>
+						<ConsumerCombobox id="create-used-by" bind:value={createUsedBy} />
 
 						{#if createError}
 							<p role="alert" class="error">{createError}</p>

@@ -143,6 +143,15 @@ export async function listObjects(): Promise<ObjectMetadata[]> {
 	return res.json();
 }
 
+// listConsumers returns every distinct used_by consumer name already
+// recorded across every object - the create/edit form's combobox offers
+// these instead of relying on free-text recall (alrayyes/hush-hush#251).
+export async function listConsumers(): Promise<string[]> {
+	const res = await request('/consumers');
+
+	return res.json();
+}
+
 export async function getObjectValue(id: string): Promise<string> {
 	const res = await request(`/objects/${encodeURIComponent(id)}`);
 	const bytes = new Uint8Array(await res.arrayBuffer());
