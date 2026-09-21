@@ -14,8 +14,10 @@ import "embed"
 // _app/ directory, and go:embed excludes _-prefixed files and
 // directories unless the pattern says otherwise.
 //
-// web/build/index.html is a placeholder until alrayyes/hush-hush#206
-// scaffolds the real SvelteKit project here.
+// web/build isn't committed — Docker, goreleaser, and CI's own e2e job
+// all build it fresh from cmd/hush-hush/web first. web/build/index.html
+// is the one file that stays tracked (see .gitignore), a placeholder so
+// a bare `go build`, with no frontend build step first, still compiles.
 //
 //go:embed all:web/build
 var webBuild embed.FS

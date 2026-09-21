@@ -89,12 +89,15 @@ second resource needs it, not day one.
 project, built to `cmd/hush-hush/web/build/` and embedded into the binary
 by `cmd/hush-hush/embed.go` at compile time (`go:embed` can only reach a
 subdirectory of the file declaring it, which is why the frontend lives
-under `cmd/hush-hush/` rather than a repo-root `web/`). That directory
-stays committed rather than gitignored: nothing in `go build`/`go test`
-or the plain Go CI jobs rebuilds it, only `Dockerfile`'s own frontend
-stage and goreleaser's `before.hooks` do, so a frontend change needs
-`bun run build` run and its output committed in the same change, or a
-plain `go build` embeds stale content.
+under `cmd/hush-hush/` rather than a repo-root `web/`). That directory is
+gitignored, not committed: `Dockerfile`'s frontend stage, goreleaser's
+`before.hooks`, and CI's own `e2e` job all run `bun run build` fresh
+before anything embeds it for real. Only `cmd/hush-hush/web/build/
+index.html` stays tracked, as a placeholder — it's the one file that
+keeps a bare `go build`/`go test ./...`, with no frontend build step
+first, compiling at all (`go:embed all:web/build` needs at least one
+matching file present), the same shape this repo had before #206
+scaffolded the real SvelteKit app.
 
 ## The contract
 
