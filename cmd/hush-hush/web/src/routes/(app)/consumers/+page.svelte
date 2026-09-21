@@ -1,5 +1,12 @@
 <script lang="ts">
-import { goto } from '$app/navigation';
+import { AlertDialog, Dialog } from 'bits-ui';
+import { goto, invalidate } from '$app/navigation';
+import {
+	ApiError,
+	type ConsumerEntry,
+	deleteConsumer,
+	renameConsumer,
+} from '$lib/api';
 import {
 	CONSUMERS_PAGE_SIZE,
 	consumersHref,
@@ -26,6 +33,57 @@ function applyFilter() {
 }
 
 const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
+
+function apiErrorMessage(err: unknown, fallback: string): string {
+	return err instanceof ApiError ? err.message : fallback;
+}
+
+let renameOpen = $state(false);
+let renameCurrentName = $state('');
+let renameInput = $state('');
+let renameError = $state('');
+
+function openRename(consumer: ConsumerEntry) {
+	renameCurrentName = consumer.name;
+	renameInput = consumer.name;
+	renameError = '';
+	renameOpen = true;
+}
+
+async function submitRename(event: SubmitEvent) {
+	event.preventDefault();
+	renameError = '';
+
+	try {
+		await renameConsumer(renameCurrentName, renameInput);
+		renameOpen = false;
+		await invalidate('app:consumers');
+	} catch (err) {
+		renameError = apiErrorMessage(err, 'Failed to rename the consumer.');
+	}
+}
+
+let deleteOpen = $state(false);
+let deleteName = $state('');
+let deleteError = $state('');
+
+function openDelete(consumer: ConsumerEntry) {
+	deleteName = consumer.name;
+	deleteError = '';
+	deleteOpen = true;
+}
+
+async function confirmDelete() {
+	deleteError = '';
+
+	try {
+		await deleteConsumer(deleteName);
+		deleteOpen = false;
+		await invalidate('app:consumers');
+	} catch (err) {
+		deleteError = apiErrorMessage(err, 'Failed to delete the consumer.');
+	}
+}
 </script>
 
 <svelte:head>
@@ -61,6 +119,7 @@ const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
 				<tr>
 					<th scope="col">Consumer</th>
 					<th scope="col">Secrets</th>
+					<th scope="col">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -70,6 +129,18 @@ const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
 							<a href={secretsOverviewHref(consumer.name)}>{consumer.name}</a>
 						</td>
 						<td data-label="Secrets">{consumer.secret_count}</td>
+						<td data-label="Actions" class="row-actions">
+							<button type="button" onclick={() => openRename(consumer)}>
+								Rename
+							</button>
+							<button
+								type="button"
+								class="danger"
+								onclick={() => openDelete(consumer)}
+							>
+								Delete
+							</button>
+						</td>
 					</tr>
 				{/each}
 			</tbody>
@@ -94,6 +165,50 @@ const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
 		</nav>
 	{/if}
 </main>
+
+<Dialog.Root bind:open={renameOpen}>
+	<Dialog.Portal>
+		<Dialog.Overlay class="overlay" />
+		<Dialog.Content class="dialog">
+			<Dialog.Title>Rename consumer</Dialog.Title>
+			<form onsubmit={submitRename}>
+				<label for="rename-consumer-name">Name</label>
+				<input id="rename-consumer-name" bind:value={renameInput} required />
+
+				{#if renameError}
+					<p role="alert" class="error">{renameError}</p>
+				{/if}
+
+				<div class="actions">
+					<Dialog.Close type="button">Cancel</Dialog.Close>
+					<button type="submit">Save</button>
+				</div>
+			</form>
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
+
+<AlertDialog.Root bind:open={deleteOpen}>
+	<AlertDialog.Portal>
+		<AlertDialog.Overlay class="overlay" />
+		<AlertDialog.Content class="dialog">
+			<AlertDialog.Title>Delete "{deleteName}"?</AlertDialog.Title>
+			<AlertDialog.Description>
+				This removes the consumer from the directory. Secrets that still list
+				it as a user aren't deleted.
+			</AlertDialog.Description>
+			{#if deleteError}
+				<p role="alert" class="error">{deleteError}</p>
+			{/if}
+			<div class="actions">
+				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
+				<AlertDialog.Action type="button" onclick={confirmDelete}>
+					Delete
+				</AlertDialog.Action>
+			</div>
+		</AlertDialog.Content>
+	</AlertDialog.Portal>
+</AlertDialog.Root>
 
 <style>
 	main {
@@ -123,6 +238,31 @@ const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
 		width: 100%;
 		max-width: 20rem;
 		box-sizing: border-box;
+	}
+
+	.row-actions button {
+		margin-right: var(--space-2);
+	}
+
+	.error {
+		color: var(--color-error);
+	}
+
+	form label {
+		display: block;
+		margin-top: var(--space-3);
+	}
+
+	form input {
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--space-2);
+		margin-top: var(--space-4);
 	}
 
 	.pagination ol {

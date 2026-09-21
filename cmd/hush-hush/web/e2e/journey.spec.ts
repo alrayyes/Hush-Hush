@@ -159,6 +159,45 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('link', { name: 'Clear filter' }).click();
 	await page.waitForURL('/');
 
+	// #282: rename and delete are bulk used_by rewrites across every
+	// object recording the consumer, not CRUD on a dedicated resource -
+	// this drives both through the real UI, dialog and all, rather than
+	// only the handler-level tests in internal/api/consumers_test.go.
+	await nav.getByRole('link', { name: 'Consumers' }).click();
+	await expect(page.getByRole('heading', { name: 'Consumers' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Rename' }).click();
+	const renameDialog = page.getByRole('dialog', { name: 'Rename consumer' });
+	await expect(renameDialog).toBeVisible();
+	const renameResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(renameResults.violations).toEqual([]);
+	await renameDialog
+		.getByLabel('Name', { exact: true })
+		.fill('homelab-renamed');
+	await renameDialog.getByRole('button', { name: 'Save' }).click();
+	await expect(
+		page.getByRole('link', { name: 'homelab-renamed' }),
+	).toBeVisible();
+	await expect(
+		page.getByRole('link', { name: 'homelab', exact: true }),
+	).toHaveCount(0);
+
+	await page.getByRole('button', { name: 'Delete' }).click();
+	const deleteDialog = page.getByRole('alertdialog', {
+		name: 'Delete "homelab-renamed"?',
+	});
+	await expect(deleteDialog).toBeVisible();
+	const deleteResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(deleteResults.violations).toEqual([]);
+	await deleteDialog
+		.getByRole('button', { name: 'Delete', exact: true })
+		.click();
+	await expect(page.getByText('No consumers match yet.')).toBeVisible();
+
 	await page.setViewportSize({ width: 320, height: 720 });
 	// Client-side nav clicks, not page.goto() - a hard navigation to
 	// /audit-log is its own dedicated test below (#272), and this loop is
