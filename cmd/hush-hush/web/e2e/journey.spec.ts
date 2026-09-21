@@ -122,6 +122,18 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(results.violations).toEqual([]);
 
+	// #301: the current page's nav link carries aria-current="page" -
+	// checked here and again after navigating to Consumers below, so
+	// this proves it actually moves rather than sticking to whichever
+	// link loaded first.
+	await expect(nav.getByRole('link', { name: 'Secrets' })).toHaveAttribute(
+		'aria-current',
+		'page',
+	);
+	await expect(
+		nav.getByRole('link', { name: 'Consumers' }),
+	).not.toHaveAttribute('aria-current', 'page');
+
 	// A real secret with real width pressure - #271's own gap: the
 	// public-pages-only viewport test never caught the authenticated
 	// pages' tables scrolling sideways in their own box at 320px. The
@@ -204,6 +216,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// (alrayyes/hush-hush#252), plus its own axe-core scan.
 	await nav.getByRole('link', { name: 'Consumers' }).click();
 	await expect(page.getByRole('heading', { name: 'Consumers' })).toBeVisible();
+	await expect(nav.getByRole('link', { name: 'Consumers' })).toHaveAttribute(
+		'aria-current',
+		'page',
+	);
+	await expect(nav.getByRole('link', { name: 'Secrets' })).not.toHaveAttribute(
+		'aria-current',
+		'page',
+	);
 	await expect(page.getByRole('link', { name: 'homelab' })).toBeVisible();
 	const consumersResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
