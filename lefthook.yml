@@ -188,6 +188,24 @@ pre-push:
         golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
         go mod tidy -diff
 
+    # cmd/hush-hush/web is its own bun project (CONTRIBUTING.md), so its
+    # checks need `root` to run `bun run <script>` from that directory
+    # rather than the repo root, where those scripts don't exist. Scoped
+    # with `glob` to that directory the same way `redocly` above is scoped
+    # to `api/`, so a push touching nothing under `cmd/hush-hush/web` skips
+    # both. `bun run test:e2e` stays CI-only - it spins up the real Go
+    # binary as a Playwright webServer, a different order of runtime than
+    # these two.
+    - name: web-check
+      root: "cmd/hush-hush/web/"
+      glob: "cmd/hush-hush/web/**/*"
+      run: bun run check
+
+    - name: web-lint
+      root: "cmd/hush-hush/web/"
+      glob: "cmd/hush-hush/web/**/*"
+      run: bun run lint
+
     # These are `package.json` scripts rather than the commands spelled out,
     # because CI runs the same ones and a literal copied into two files drifts
     # the first time somebody edits one of them.
