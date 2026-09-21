@@ -366,6 +366,78 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /consumers/{name}:
+    patch:
+      operationId: renameConsumer
+      summary: Rename a consumer across every object that references it
+      description: |
+        Consumers aren't a stored resource of their own (`alrayyes/hush-hush#282`,
+        following ADR 0002's deferred consumer-identity decision) - this
+        replaces `name` with the request body's `name` in every stored
+        object's `used_by` list that currently records it. An object
+        already recording the target name keeps a single entry, not a
+        duplicate. If the target name already has its own recorded
+        objects, they merge under it: the response's `secret_count`
+        reflects every object now recording the new name, old and
+        already-there combined. A session-authenticated call needs its
+        CSRF token too; a bearer-token-authenticated one doesn't.
+      tags: [consumers]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/consumerName"
+        - $ref: "#/components/parameters/csrfTokenOptional"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameConsumerRequest"
+            example:
+              name: homelab/vps-docker-2
+      responses:
+        "200":
+          description: The consumer was renamed; the resulting entry under its new name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerEntry"
+              example:
+                name: homelab/vps-docker-2
+                secret_count: 3
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/UnknownConsumer"
+
+    delete:
+      operationId: deleteConsumer
+      summary: Remove a consumer from every object that references it
+      description: |
+        Strips `name` from the `used_by` list of every stored object that
+        currently records it - the objects themselves aren't touched
+        otherwise, and none are deleted even if this empties their
+        `used_by` list. A subsequent `GET /consumers` no longer lists this
+        name. A session-authenticated call needs its CSRF token too; a
+        bearer-token-authenticated one doesn't.
+      tags: [consumers]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/consumerName"
+        - $ref: "#/components/parameters/csrfTokenOptional"
+      responses:
+        "204":
+          description: The consumer was removed from every object that referenced it.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/UnknownConsumer"
+
   /audit-log:
     get:
       operationId: queryAuditLog
@@ -817,6 +889,21 @@ components:
       schema:
         $ref: "#/components/schemas/CredentialId"
 
+    consumerName:
+      name: name
+      in: path
+      required: true
+      description: |
+        The consumer's recorded name, taken verbatim from the rest of the
+        path - unlike `id`, this isn't restricted to a URL-safe pattern,
+        since a consumer name is free text that routinely contains `/`
+        (`homelab/vps-docker`). Send it unencoded; the server matches
+        everything after `/consumers/` as this value rather than treating
+        `/` as a path separator, so there's no `%2F`-escaping for a client
+        to get right or wrong.
+      schema:
+        type: string
+
     tokenId:
       name: id
       in: path
@@ -878,6 +965,15 @@ components:
             $ref: "#/components/schemas/Error"
           example:
             error: unknown object
+
+    UnknownConsumer:
+      description: No stored object's used_by list currently records this consumer.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: unknown consumer
 
   schemas:
     ObjectId:
@@ -975,6 +1071,18 @@ components:
             The total number of consumers matching the request's filter,
             across every page - not just this page's own count - so a
             caller can render page-number navigation.
+
+    RenameConsumerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: |
+            The consumer's new name. If it already matches another
+            recorded consumer, the two merge - every object recording
+            either ends up recording just the new name, no duplicates.
+          examples: [homelab/vps-docker-2]
 
     AuditLogEntry:
       type: object
