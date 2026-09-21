@@ -30,23 +30,24 @@ func handleStatic(build fs.FS) http.Handler {
 	})
 }
 
-// handleAuditLogRoute resolves /audit-log's dual identity: a SvelteKit
+// handleHardNavRoute resolves a path's dual identity as both a SvelteKit
 // page route and a real API endpoint (docs/adr/0015 keeps API paths
 // unprefixed, so the two share one path rather than one moving under a
 // new namespace). A hard navigation to it - a refresh, a bookmark, a
 // Playwright page.goto - is a real HTTP request Go's mux would otherwise
-// route straight to the JSON handler, ahead of the SPA fallback
-// (alrayyes/hush-hush#272).
+// route straight to the JSON handler, ahead of the SPA fallback.
+// /audit-log was the first case (alrayyes/hush-hush#272, docs/adr/0018);
+// /consumers is the same collision, fixed the same way rather than a
+// second bespoke dispatcher (alrayyes/hush-hush#295).
 //
 // The Fetch Metadata Sec-Fetch-Dest header
 // (https://developer.mozilla.org/en-US/docs/Glossary/Fetch_metadata_request_header)
 // is what tells the two apart: the browser sets it to "document" only
 // for that kind of top-level navigation, never for the SPA's own
-// fetch() call to the same path (audit-log/+page.ts's queryAuditLog),
-// and page script can't override it. No Sec-Fetch-Dest at all - curl,
-// an SDK, hush-hush-cli - keeps today's JSON response, so the published
-// API contract is unaffected.
-func handleAuditLogRoute(api, spa http.Handler) http.HandlerFunc {
+// fetch() call to the same path, and page script can't override it. No
+// Sec-Fetch-Dest at all - curl, an SDK, hush-hush-cli - keeps today's
+// JSON response, so the published API contract is unaffected.
+func handleHardNavRoute(api, spa http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Sec-Fetch-Dest") == "document" {
 			spa.ServeHTTP(w, r)
