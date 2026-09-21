@@ -60,6 +60,23 @@ func TestHardNavigationToAuditLogServesTheSPA(t *testing.T) {
 	require.Equal(t, testIndexHTML, rec.Body.String())
 }
 
+// alrayyes/hush-hush#295: /consumers is the same class of collision as
+// #272's /audit-log - a SvelteKit page route and a real API endpoint
+// sharing one path. Same fix, same signal.
+func TestHardNavigationToConsumersServesTheSPA(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/consumers", nil)
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, testIndexHTML, rec.Body.String())
+}
+
 func TestKnownAPIRoutesAreUnaffectedByTheStaticFallback(t *testing.T) {
 	t.Parallel()
 
@@ -72,6 +89,7 @@ func TestKnownAPIRoutesAreUnaffectedByTheStaticFallback(t *testing.T) {
 		{http.MethodGet, "/healthz"},
 		{http.MethodGet, "/objects"},
 		{http.MethodGet, "/audit-log"},
+		{http.MethodGet, "/consumers"},
 	} {
 		req := httptest.NewRequest(tc.method, tc.path, nil)
 		rec := httptest.NewRecorder()

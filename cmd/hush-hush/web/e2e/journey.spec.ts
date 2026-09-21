@@ -23,6 +23,21 @@ test('a hard navigation to /audit-log renders the app, not the raw API JSON', as
 	await expect(page.locator('nav')).toHaveCount(0);
 });
 
+// alrayyes/hush-hush#295: same collision as #272 above, on /consumers -
+// it shipped after that fix (#279's paginated consumer directory)
+// without the same treatment.
+test('a hard navigation to /consumers renders the app, not the raw API JSON', async ({
+	page,
+}) => {
+	const response = await page.goto('/consumers');
+
+	expect(response?.headers()['content-type']).toContain('text/html');
+
+	await page.waitForURL('/login');
+	await expect(page).toHaveTitle('Log in - hush-hush');
+	await expect(page.locator('nav')).toHaveCount(0);
+});
+
 // #281: the toggle lives in the shared root layout, so it has to work for
 // an anonymous visitor too, not just once logged in - /login is the one
 // page every visitor reaches with no session. resolveTheme's own cascade
