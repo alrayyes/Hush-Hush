@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.0](https://github.com/alrayyes/Hush-Hush/compare/v2.15.1...v2.16.0) (2026-09-21)
+
+
+### Features
+
+* **web-ui:** paginated, filterable consumer directory ([#279](https://github.com/alrayyes/Hush-Hush/issues/279)) ([7db6f97](https://github.com/alrayyes/Hush-Hush/commit/7db6f97889bc85c966e4557387a973a34ac8f14a))
+
 ## [2.15.1](https://github.com/alrayyes/Hush-Hush/compare/v2.15.0...v2.15.1) (2026-09-20)
 
 
