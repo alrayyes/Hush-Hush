@@ -34,12 +34,17 @@ The system SHALL return an object's stored ciphertext to any requester who suppl
 
 ### Requirement: Update a secret object's value
 
-The system SHALL allow a writer holding a valid bearer token to replace an existing object's sealed value while preserving its object id and used_by metadata.
+The system SHALL allow a writer holding a valid bearer token to replace an existing object's sealed value while preserving its object id, and, unless the update request also includes a new used_by list, its used_by metadata.
 
 #### Scenario: Writer rotates an existing object's value
 
-- **WHEN** a writer with a valid bearer token submits an update request with a new sealed value for an existing object id
+- **WHEN** a writer with a valid bearer token submits an update request with a new sealed value for an existing object id, omitting used_by
 - **THEN** the system replaces the stored value while the object id and used_by metadata remain unchanged
+
+#### Scenario: Writer replaces an existing object's used_by list
+
+- **WHEN** a writer with a valid bearer token submits an update request for an existing object id that includes a used_by field
+- **THEN** the system replaces the stored value and the object's used_by metadata with the request's own list
 
 #### Scenario: Update request without a valid bearer token is rejected
 
@@ -78,14 +83,14 @@ The system SHALL store, alongside each object, a queryable record of which consu
 - **WHEN** a caller queries an object's used_by metadata
 - **THEN** the system returns the list of recorded consumers for that object
 
-#### Scenario: used_by metadata persists across an update
+#### Scenario: used_by metadata persists across a plain value update
 
-- **WHEN** an object's value is updated
+- **WHEN** an object's value is updated without a used_by field in the request
 - **THEN** its used_by metadata is unchanged by the update
 
 ### Requirement: Optional description for a secret object
 
-The system SHALL allow a writer to set a free-text description on an object at creation, returned unchanged in that object's metadata. Description is fixed at creation, the same as used_by, and is not affected by a later value update.
+The system SHALL allow a writer to set a free-text description on an object at creation, returned unchanged in that object's metadata. Description is fixed at creation and is not affected by a later update.
 
 #### Scenario: Writer creates an object with a description
 

@@ -66,11 +66,17 @@ async function submitCreate(event: SubmitEvent) {
 let editOpen = $state(false);
 let editId = $state('');
 let editValue = $state('');
+let editUsedBy: string[] = $state([]);
 let editError = $state('');
 
 function openEdit(id: string) {
 	editId = id;
 	editValue = '';
+	// Copied, not the same array reference data.objects holds - the
+	// combobox mutates this in place as the user picks/adds consumers,
+	// and canceling shouldn't leave that mutation sitting on data the
+	// server never actually received.
+	editUsedBy = [...(data.objects.find((o) => o.id === id)?.used_by ?? [])];
 	editError = '';
 	editOpen = true;
 }
@@ -80,9 +86,12 @@ async function submitEdit(event: SubmitEvent) {
 	editError = '';
 
 	try {
-		await updateObject(editId, editValue);
+		await updateObject(editId, editValue, editUsedBy);
 		editOpen = false;
 		await invalidate('app:objects');
+		// An edit can introduce a consumer the directory page hasn't seen
+		// yet, or drop the last secret recording an existing one.
+		await invalidate('app:consumers');
 	} catch (err) {
 		editError = apiErrorMessage(err, 'Failed to update the secret.');
 	}
@@ -91,11 +100,13 @@ async function submitEdit(event: SubmitEvent) {
 let viewOpen = $state(false);
 let viewId = $state('');
 let viewValue = $state('');
+let viewUsedBy: string[] = $state([]);
 let viewError = $state('');
 
 async function openView(id: string) {
 	viewId = id;
 	viewValue = '';
+	viewUsedBy = data.objects.find((o) => o.id === id)?.used_by ?? [];
 	viewError = '';
 	viewOpen = true;
 
@@ -241,6 +252,16 @@ async function confirmDelete() {
 				<textarea readonly rows="6" value={viewValue} aria-label="Ciphertext (base64)"
 				></textarea>
 			{/if}
+			<p class="used-by-label">Used by</p>
+			{#if viewUsedBy.length > 0}
+				<ul class="used-by-list">
+					{#each viewUsedBy as consumer (consumer)}
+						<li>{consumer}</li>
+					{/each}
+				</ul>
+			{:else}
+				<p>No recorded consumers.</p>
+			{/if}
 			<div class="actions">
 				<Dialog.Close type="button">Close</Dialog.Close>
 			</div>
@@ -256,6 +277,9 @@ async function confirmDelete() {
 			<form onsubmit={submitEdit}>
 				<label for="edit-value">New ciphertext (base64)</label>
 				<textarea id="edit-value" bind:value={editValue} required rows="6"></textarea>
+
+				<label for="edit-used-by">Used by</label>
+				<ConsumerCombobox id="edit-used-by" bind:value={editUsedBy} />
 
 				{#if editError}
 					<p role="alert" class="error">{editError}</p>
@@ -337,6 +361,16 @@ async function confirmDelete() {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
+	}
+
+	.used-by-label {
+		margin-top: 0.75rem;
+		font-weight: bold;
+	}
+
+	.used-by-list {
+		margin: 0;
+		padding-left: 1.25rem;
 	}
 
 	.checkbox input {

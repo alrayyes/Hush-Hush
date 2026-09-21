@@ -175,13 +175,24 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 	return objs, nil
 }
 
-// UpdateObject replaces the stored value for id, leaving used_by untouched -
-// this call only ever touches the value. It returns ErrNotFound if no
-// object exists under id.
-func (s *Store) UpdateObject(ctx context.Context, id string, value []byte) error {
+// UpdateObject replaces the stored value for id, leaving description
+// untouched - there is no way to change it after creation
+// (specs/secret-objects/spec.md). usedBy is left untouched too when nil;
+// given non-nil (including an empty, non-nil slice), it fully replaces
+// id's recorded used_by lineage the same way CreateObject populates it -
+// the pointer is what tells "the caller didn't send used_by" apart from
+// "the caller sent an empty list to clear it" (alrayyes/hush-hush#299).
+// It returns ErrNotFound if no object exists under id.
+func (s *Store) UpdateObject(ctx context.Context, id string, value []byte, usedBy *[]string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	result, err := s.db.ExecContext(ctx,
+	result, err := tx.ExecContext(ctx,
 		`UPDATE objects SET value = ?, updated_at = ? WHERE id = ?`,
 		value, now, id,
 	)
@@ -196,6 +207,25 @@ func (s *Store) UpdateObject(ctx context.Context, id string, value []byte) error
 
 	if rows == 0 {
 		return ErrNotFound
+	}
+
+	if usedBy != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM used_by WHERE object_id = ?`, id); err != nil {
+			return fmt.Errorf("clear used_by: %w", err)
+		}
+
+		for _, consumer := range *usedBy {
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`,
+				id, consumer,
+			); err != nil {
+				return fmt.Errorf("insert used_by: %w", err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

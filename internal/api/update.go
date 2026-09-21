@@ -9,15 +9,20 @@ import (
 )
 
 // UpdateObjectRequest is the PUT /objects/{id} body. Matches
-// components.schemas.UpdateObjectRequest in api/openapi.yaml.
+// components.schemas.UpdateObjectRequest in api/openapi.yaml. UsedBy is a
+// pointer so an absent field decodes to nil - "leave used_by as it is" -
+// distinct from an explicit empty array, which clears it
+// (alrayyes/hush-hush#299).
 type UpdateObjectRequest struct {
-	Value []byte `json:"value"`
+	Value  []byte    `json:"value"`
+	UsedBy *[]string `json:"used_by,omitempty"`
 }
 
-// handleUpdateObject replaces an object's sealed value, leaving its id,
-// used_by, and description metadata unchanged - the response carries the
-// same shape create does, since both hand back the object's current
-// metadata.
+// handleUpdateObject replaces an object's sealed value, leaving its id and
+// description metadata unchanged. used_by is left unchanged too unless the
+// request includes it, in which case it fully replaces the object's
+// recorded consumers. The response carries the same shape create does,
+// since both hand back the object's current metadata.
 func handleUpdateObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req UpdateObjectRequest
@@ -35,7 +40,7 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 
 		id := r.PathValue("id")
 
-		err := s.UpdateObject(r.Context(), id, req.Value)
+		err := s.UpdateObject(r.Context(), id, req.Value, req.UsedBy)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):

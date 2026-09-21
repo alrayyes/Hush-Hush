@@ -150,6 +150,55 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
+	// #299: viewing a secret shows its recorded consumers, and editing one
+	// can change that list - both used to be create-only. View first,
+	// against the "homelab" used_by set at creation above.
+	await page.getByRole('button', { name: 'View' }).click();
+	const viewDialog = page.getByRole('dialog', {
+		name: 'mattermost_deploy_webhook',
+	});
+	await expect(
+		viewDialog.getByRole('listitem').getByText('homelab'),
+	).toBeVisible();
+	const viewResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(viewResults.violations).toEqual([]);
+	await viewDialog.getByRole('button', { name: 'Close' }).click();
+
+	// Edit: the combobox comes pre-filled with the existing "homelab"
+	// consumer, and adding "ci" alongside it is what proves the update
+	// actually reaches the server rather than only the local form state.
+	await page.getByRole('button', { name: 'Edit' }).click();
+	const editDialog = page.getByRole('dialog', {
+		name: 'Edit mattermost_deploy_webhook',
+	});
+	await expect(editDialog.getByLabel('Remove homelab')).toBeVisible();
+	await editDialog.locator('#edit-used-by').fill('ci');
+	await editDialog.getByRole('option', { name: 'Add "ci"' }).click();
+	await editDialog.locator('#edit-value').fill(btoa('rotated'));
+	const editResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(editResults.violations).toEqual([]);
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await editDialog.waitFor({ state: 'hidden' });
+
+	await page.getByRole('button', { name: 'View' }).click();
+	await expect(
+		viewDialog.getByRole('listitem').getByText('homelab'),
+	).toBeVisible();
+	await expect(viewDialog.getByRole('listitem').getByText('ci')).toBeVisible();
+	await viewDialog.getByRole('button', { name: 'Close' }).click();
+
+	// Drop "ci" again so the consumer directory below sees only the
+	// single "homelab" consumer its own assertions expect.
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await editDialog.getByLabel('Remove ci').click();
+	await editDialog.locator('#edit-value').fill(btoa('rotated-again'));
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await editDialog.waitFor({ state: 'hidden' });
+
 	// The secret just created recorded "homelab" as a consumer - the
 	// directory's own filtering and select-to-filter navigation
 	// (alrayyes/hush-hush#252), plus its own axe-core scan.
