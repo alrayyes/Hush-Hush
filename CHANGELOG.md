@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.17.0](https://github.com/alrayyes/Hush-Hush/compare/v2.16.0...v2.17.0) (2026-09-21)
+
+
+### Features
+
+* **api:** add consumer rename/delete endpoints to the spec ([f5e6229](https://github.com/alrayyes/Hush-Hush/commit/f5e6229797f25d1c44bd79ee4ae20fcc884c8d2f))
+* **api:** add consumer rename/delete endpoints to the spec ([41f57ec](https://github.com/alrayyes/Hush-Hush/commit/41f57ecce0a98352d0d4321468fb235b7fd0a6f2))
+* **web-ui:** add a manual light/dark theme toggle ([a4114b6](https://github.com/alrayyes/Hush-Hush/commit/a4114b6bf79fdbe31c07b49e2e2ee3a41b4c375f))
+* **web-ui:** add a manual light/dark theme toggle ([08862c8](https://github.com/alrayyes/Hush-Hush/commit/08862c86b4812ac12265d0c706ee7ff8f66569cb)), closes [#281](https://github.com/alrayyes/Hush-Hush/issues/281)
+
 ## [2.16.0](https://github.com/alrayyes/Hush-Hush/compare/v2.15.1...v2.16.0) (2026-09-21)
 
 
