@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.19.0](https://github.com/alrayyes/Hush-Hush/compare/v2.18.0...v2.19.0) (2026-09-21)
+
+
+### Features
+
+* **web-ui:** render the changelog as formatted Markdown ([d9c250b](https://github.com/alrayyes/Hush-Hush/commit/d9c250b015da37ee17b935fa49b1ab7dfebb59ca))
+* **web-ui:** render the changelog as formatted Markdown ([25191ca](https://github.com/alrayyes/Hush-Hush/commit/25191cac6716ef75d104d2fd1529c337f2e7a9ed)), closes [#249](https://github.com/alrayyes/Hush-Hush/issues/249)
+
 ## [2.18.0](https://github.com/alrayyes/Hush-Hush/compare/v2.17.1...v2.18.0) (2026-09-21)
 
 
