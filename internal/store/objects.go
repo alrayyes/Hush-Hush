@@ -16,6 +16,10 @@ var ErrAlreadyExists = errors.New("object already exists")
 // ErrNotFound is returned when no object exists under the given id.
 var ErrNotFound = errors.New("object not found")
 
+// ErrUnknownConsumer is returned by RenameConsumer and DeleteConsumer when
+// no stored object's used_by list currently records the given name.
+var ErrUnknownConsumer = errors.New("unknown consumer")
+
 // Object is a stored secret object: its sealed value, its recorded used_by
 // lineage, and its description. The service never decrypts Value - it is
 // opaque ciphertext.
@@ -297,6 +301,87 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 	}
 
 	return ConsumerPage{Consumers: consumers, Total: total}, nil
+}
+
+// RenameConsumer replaces oldName with newName in every stored object's
+// used_by list that currently records oldName, returning the resulting
+// entry under newName. Consumers aren't a stored resource of their own
+// (alrayyes/hush-hush#282, ADR 0002) - this is a bulk rewrite across
+// used_by, not a rename of a row with its own identity.
+//
+// If newName already has its own recorded objects, the two merge: an
+// object recording both ends up with a single used_by entry, not a
+// (object_id, consumer) primary-key violation, and the returned
+// SecretCount covers every object now recording newName, old and
+// already-there combined. Renaming a name to itself is a no-op. It
+// returns ErrUnknownConsumer if oldName isn't currently recorded
+// anywhere.
+func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (ConsumerEntry, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return ConsumerEntry{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var exists int
+	switch err := tx.QueryRowContext(ctx, `SELECT 1 FROM used_by WHERE consumer = ? LIMIT 1`, oldName).Scan(&exists); {
+	case errors.Is(err, sql.ErrNoRows):
+		return ConsumerEntry{}, ErrUnknownConsumer
+	case err != nil:
+		return ConsumerEntry{}, fmt.Errorf("check existing consumer: %w", err)
+	}
+
+	if oldName != newName {
+		// Drop the old entry wherever the object already records newName -
+		// otherwise the UPDATE below would try to insert a second
+		// (object_id, newName) row and violate used_by's primary key.
+		if _, err := tx.ExecContext(ctx, `
+			DELETE FROM used_by
+			WHERE consumer = ? AND object_id IN (
+				SELECT object_id FROM used_by WHERE consumer = ?
+			)`, oldName, newName,
+		); err != nil {
+			return ConsumerEntry{}, fmt.Errorf("drop merged used_by rows: %w", err)
+		}
+
+		if _, err := tx.ExecContext(ctx, `UPDATE used_by SET consumer = ? WHERE consumer = ?`, newName, oldName); err != nil {
+			return ConsumerEntry{}, fmt.Errorf("rename used_by rows: %w", err)
+		}
+	}
+
+	var count int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, newName).Scan(&count); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("count renamed consumer: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return ConsumerEntry{Name: newName, SecretCount: count}, nil
+}
+
+// DeleteConsumer strips name from the used_by list of every stored object
+// that currently records it. The objects themselves aren't touched
+// otherwise, and none are deleted even if this empties their used_by
+// list. It returns ErrUnknownConsumer if name isn't currently recorded
+// anywhere.
+func (s *Store) DeleteConsumer(ctx context.Context, name string) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM used_by WHERE consumer = ?`, name)
+	if err != nil {
+		return fmt.Errorf("delete consumer: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrUnknownConsumer
+	}
+
+	return nil
 }
 
 // escapeLike escapes SQLite LIKE's own wildcard characters (and the

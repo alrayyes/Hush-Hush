@@ -211,6 +211,68 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			// A single path segment, deliberately without a "/" - the
+			// OpenAPI spec's consumerName parameter uses the default
+			// "simple" path-param style, which (per the OpenAPI spec
+			// itself) only ever matches one segment; kin-openapi's
+			// gorillamux router enforces that and can't route a
+			// multi-segment name, even though the real Go handler's
+			// {name...} wildcard does handle one (proven at the handler
+			// level by TestRenameConsumerWithASlashInThePathSucceeds in
+			// consumers_test.go). This case exists to check the
+			// request/response shape against the schema, not that edge.
+			name: "rename consumer",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObjectWithConsumer(t, s, "contract_rename_consumer", "contract-old-name")
+
+				b := []byte(`{"name":"contract-new-name"}`)
+				req := httptest.NewRequest(http.MethodPatch, "/consumers/contract-old-name", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "rename unknown consumer",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				b := []byte(`{"name":"new"}`)
+				req := httptest.NewRequest(http.MethodPatch, "/consumers/contract_nonexistent", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			// Same single-segment-name constraint as "rename consumer"
+			// above.
+			name: "delete consumer",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObjectWithConsumer(t, s, "contract_delete_consumer", "contract-deleted-name")
+
+				req := httptest.NewRequest(http.MethodDelete, "/consumers/contract-deleted-name", nil)
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "delete unknown consumer",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				req := httptest.NewRequest(http.MethodDelete, "/consumers/contract_nonexistent", nil)
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
 			name: "query audit log",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()
@@ -475,6 +537,19 @@ func seedObject(t *testing.T, s *store.Store, id string) {
 
 	mux := hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion)
 	req := createRequest(t, hushhush.CreateObjectRequest{ID: id, Value: []byte("sealed-ciphertext")}, issueToken(t, s))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+}
+
+// seedObjectWithConsumer is seedObject's counterpart for a case that
+// renames or deletes a consumer, which needs an object actually recording
+// one in its used_by list to act on.
+func seedObjectWithConsumer(t *testing.T, s *store.Store, id, consumer string) {
+	t.Helper()
+
+	mux := hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion)
+	req := createRequest(t, hushhush.CreateObjectRequest{ID: id, Value: []byte("sealed-ciphertext"), UsedBy: []string{consumer}}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)

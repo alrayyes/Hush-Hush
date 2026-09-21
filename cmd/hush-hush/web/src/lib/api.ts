@@ -195,6 +195,29 @@ export async function listConsumersPage(
 	return res.json();
 }
 
+// renameConsumer and deleteConsumer send name (and, for a rename, newName)
+// unencoded in the path - api/openapi.yaml's consumerName parameter
+// deliberately isn't URL-safe (a consumer name routinely contains "/",
+// e.g. homelab/vps-docker) and documents matching everything after
+// /consumers/ verbatim, so there's no %2F-escaping for this client to get
+// right or wrong either.
+
+export async function renameConsumer(
+	name: string,
+	newName: string,
+): Promise<ConsumerEntry> {
+	const res = await request(`/consumers/${name}`, {
+		method: 'PATCH',
+		body: JSON.stringify({ name: newName }),
+	});
+
+	return res.json();
+}
+
+export async function deleteConsumer(name: string): Promise<void> {
+	await request(`/consumers/${name}`, { method: 'DELETE' });
+}
+
 export async function getObjectValue(id: string): Promise<string> {
 	const res = await request(`/objects/${encodeURIComponent(id)}`);
 	const bytes = new Uint8Array(await res.arrayBuffer());

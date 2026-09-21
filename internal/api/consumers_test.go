@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -162,4 +163,211 @@ func TestListConsumersWithInvalidPageSizeIsRejected(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func renameConsumerRequest(t *testing.T, name, newName, token string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPatch, "/consumers/"+name,
+		bytes.NewReader([]byte(`{"name":"`+newName+`"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	return req
+}
+
+func TestRenameConsumerUpdatesEveryObjectAndReturnsTheNewEntry(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, renameConsumerRequest(t, "homelab/vps-docker", "homelab/vps-docker-2", issueToken(t, s)))
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var body hushhush.ConsumerEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker-2", SecretCount: 1}, body)
+
+	obj, err := s.GetObject(context.Background(), "a")
+	require.NoError(t, err)
+	require.Contains(t, obj.UsedBy, "homelab/vps-docker-2")
+	require.NotContains(t, obj.UsedBy, "homelab/vps-docker")
+}
+
+func TestRenameConsumerWithASlashInThePathSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	// The consumer name itself contains a "/" - the route has to treat
+	// everything after /consumers/ as the name rather than a path
+	// segment boundary (api/openapi.yaml's consumerName parameter).
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, renameConsumerRequest(t, "homelab/mattermost", "homelab/mattermost-2", issueToken(t, s)))
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+func TestRenameConsumerUnknownNameReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, renameConsumerRequest(t, "nonexistent", "new", issueToken(t, s)))
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestRenameConsumerWithoutNameIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	req := httptest.NewRequest(http.MethodPatch, "/consumers/homelab/vps-docker", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestRenameConsumerWithoutBearerTokenOrSessionIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, renameConsumerRequest(t, "homelab/vps-docker", "new", ""))
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestSessionRenamesConsumerWithItsCSRFToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	req := renameConsumerRequest(t, "homelab/vps-docker", "new", "")
+	req.AddCookie(sessionCookie)
+	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+func TestSessionRenamesConsumerWithoutCSRFTokenIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	sessionCookie := seedSession(t, s)
+
+	req := renameConsumerRequest(t, "homelab/vps-docker", "new", "")
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func deleteConsumerRequest(t *testing.T, name, token string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodDelete, "/consumers/"+name, nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	return req
+}
+
+func TestDeleteConsumerRemovesItFromEveryObject(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, deleteConsumerRequest(t, "homelab/mattermost", issueToken(t, s)))
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+
+	consumers, err := s.ListConsumers(context.Background())
+	require.NoError(t, err)
+	require.NotContains(t, consumers, "homelab/mattermost")
+
+	obj, err := s.GetObject(context.Background(), "a")
+	require.NoError(t, err)
+	require.NotContains(t, obj.UsedBy, "homelab/mattermost")
+}
+
+func TestDeleteConsumerUnknownNameReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, deleteConsumerRequest(t, "nonexistent", issueToken(t, s)))
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestDeleteConsumerWithoutBearerTokenOrSessionIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, deleteConsumerRequest(t, "homelab/mattermost", ""))
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestSessionDeletesConsumerWithItsCSRFToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	req := deleteConsumerRequest(t, "homelab/mattermost", "")
+	req.AddCookie(sessionCookie)
+	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+}
+
+func TestSessionDeletesConsumerWithoutCSRFTokenIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	sessionCookie := seedSession(t, s)
+
+	req := deleteConsumerRequest(t, "homelab/mattermost", "")
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
