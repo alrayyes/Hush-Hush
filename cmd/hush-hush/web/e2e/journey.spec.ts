@@ -199,6 +199,45 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page.getByText('No consumers match yet.')).toBeVisible();
 
 	await page.setViewportSize({ width: 320, height: 720 });
+
+	// #294: the topbar's nav links, theme toggle, and Log out button used
+	// to each wrap onto their own line at phone width via `flex-wrap`
+	// fighting `margin-left: auto` - four-plus ragged rows before any page
+	// content was visible. Clustering every topbar control's own top
+	// offset (within a tolerance wider than the few px a link and a
+	// padded button can differ by even centered on the same line) catches
+	// that without pinning an exact pixel height to font metrics.
+	const topbarControls = [
+		...(await nav.getByRole('link').all()),
+		page.getByRole('button', { name: 'Log out' }),
+		page.getByRole('button', { name: /switch to (dark|light) mode/i }),
+	];
+	const boxes = await Promise.all(
+		topbarControls.map((control) => control.boundingBox()),
+	);
+	const tops: number[] = [];
+	for (const box of boxes) {
+		expect(
+			box,
+			'every topbar control should be visible at 320px',
+		).not.toBeNull();
+		if (box !== null) {
+			tops.push(box.y);
+		}
+	}
+	tops.sort((a, b) => a - b);
+	const rowTolerancePx = 16;
+	let topbarRows = tops.length > 0 ? 1 : 0;
+	for (let i = 1; i < tops.length; i++) {
+		if (tops[i] - tops[i - 1] > rowTolerancePx) {
+			topbarRows++;
+		}
+	}
+	expect(
+		topbarRows,
+		'topbar controls should read as at most two rows at 320px',
+	).toBeLessThanOrEqual(2);
+
 	// Client-side nav clicks, not page.goto() - a hard navigation to
 	// /audit-log is its own dedicated test below (#272), and this loop is
 	// about the mobile layout, not routing.
@@ -231,7 +270,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	}
 	await page.setViewportSize({ width: 1280, height: 800 });
 
-	await nav.getByRole('button', { name: 'Log out' }).click();
+	// Log out lives in .topbar-actions, not <nav> - it's an account
+	// action, not a navigation link (#294).
+	await page.getByRole('button', { name: 'Log out' }).click();
 	await page.waitForURL('/login');
 
 	await page.goto('/changelog');
