@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.17.1](https://github.com/alrayyes/Hush-Hush/compare/v2.17.0...v2.17.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **web-ui:** run web workspace lint/check in pre-push ([9d6e7d7](https://github.com/alrayyes/Hush-Hush/commit/9d6e7d7dab5bb1a6b594a72e4b5947e2b5070c15))
+* **web-ui:** run web workspace lint/check in pre-push ([7e6eea3](https://github.com/alrayyes/Hush-Hush/commit/7e6eea30dda8682312a0abc20a5cce92a5032526)), closes [#285](https://github.com/alrayyes/Hush-Hush/issues/285)
+
 ## [2.17.0](https://github.com/alrayyes/Hush-Hush/compare/v2.16.0...v2.17.0) (2026-09-21)
 
 
