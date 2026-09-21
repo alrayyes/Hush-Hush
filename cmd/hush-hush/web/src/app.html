@@ -5,6 +5,32 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 		<title>hush-hush</title>
+		<script>
+			// Render-blocking, ahead of the SvelteKit head injection and
+			// first paint below, so an explicit stored choice never
+			// flashes the OS-default theme first (design.md's "Preference
+			// cascade on load" decision, #281) - can't be a Svelte
+			// onMount, which only runs after that first paint. Keep this
+			// cascade in sync by hand with src/lib/theme.ts's
+			// resolveTheme, which this can't import. Don't spell out the
+			// literal SvelteKit head placeholder token in this comment -
+			// its substitution isn't scoped to one spot in this file, so
+			// writing it out here gets it replaced too, corrupting this
+			// script (confirmed live: broke the toggle e2e test with an
+			// "Unexpected token '<'" syntax error).
+			(() => {
+				try {
+					const stored = localStorage.getItem('theme');
+					const theme =
+						stored === 'light' || stored === 'dark'
+							? stored
+							: window.matchMedia('(prefers-color-scheme: dark)').matches
+								? 'dark'
+								: 'light';
+					document.documentElement.setAttribute('data-theme', theme);
+				} catch (_e) {}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

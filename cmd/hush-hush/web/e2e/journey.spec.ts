@@ -23,6 +23,43 @@ test('a hard navigation to /audit-log renders the app, not the raw API JSON', as
 	await expect(page.locator('nav')).toHaveCount(0);
 });
 
+// #281: the toggle lives in the shared root layout, so it has to work for
+// an anonymous visitor too, not just once logged in - /login is the one
+// page every visitor reaches with no session. resolveTheme's own cascade
+// (stored > OS > light) is unit-tested in theme.spec.ts; this only checks
+// the interactive part a unit test can't: a real click persisting past a
+// real reload.
+test('the theme toggle flips data-theme and persists across a reload for an anonymous visitor', async ({
+	page,
+}) => {
+	await page.goto('/login');
+
+	const toggle = page.getByRole('button', {
+		name: /switch to (dark|light) mode/i,
+	});
+	await expect(toggle).toBeVisible();
+
+	const initialTheme = await page.evaluate(() =>
+		document.documentElement.getAttribute('data-theme'),
+	);
+	expect(['light', 'dark']).toContain(initialTheme);
+
+	const flipped = initialTheme === 'dark' ? 'light' : 'dark';
+	await toggle.click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
+	await expect(toggle).toHaveAttribute(
+		'aria-pressed',
+		String(flipped === 'dark'),
+	);
+
+	await page.reload();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', flipped);
+	await expect(toggle).toHaveAttribute(
+		'aria-pressed',
+		String(flipped === 'dark'),
+	);
+});
+
 // web-ui-design-system/tasks.md #2.1/#2.2: the shared chrome's nav follows
 // a session onto every page, not just the ones under (app)/, and never
 // shows for an unauthenticated visitor - plus the a11y.md-mandated
