@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.21.0](https://github.com/alrayyes/Hush-Hush/compare/v2.20.0...v2.21.0) (2026-09-21)
+
+
+### Features
+
+* **web-ui:** icon-based theme toggle and an active-link indicator in the topbar nav ([#303](https://github.com/alrayyes/Hush-Hush/issues/303)) ([f90577d](https://github.com/alrayyes/Hush-Hush/commit/f90577dff005dfa07d7630fa6f83776dc3a16700))
+
 ## [2.20.0](https://github.com/alrayyes/Hush-Hush/compare/v2.19.1...v2.20.0) (2026-09-21)
 
 
