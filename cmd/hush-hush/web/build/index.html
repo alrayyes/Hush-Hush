@@ -1,17 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>hush-hush</title>
-</head>
-<body>
-<p>
-The real built SPA isn't committed to this repo — Docker, goreleaser, and
-CI's own e2e job all build it fresh from cmd/hush-hush/web before
-go:embed ever reads this directory for real. This placeholder only exists
-so a bare `go build`, with no frontend build step first, still compiles
-(go:embed all:web/build needs at least one matching file present) — run
-`bun install && bun run build` in cmd/hush-hush/web first for the real app.
-</p>
-</body>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<title>hush-hush</title>
+		<script>
+			// Render-blocking, ahead of the SvelteKit head injection and
+			// first paint below, so an explicit stored choice never
+			// flashes the OS-default theme first (design.md's "Preference
+			// cascade on load" decision, #281) - can't be a Svelte
+			// onMount, which only runs after that first paint. Keep this
+			// cascade in sync by hand with src/lib/theme.ts's
+			// resolveTheme, which this can't import. Don't spell out the
+			// literal SvelteKit head placeholder token in this comment -
+			// its substitution isn't scoped to one spot in this file, so
+			// writing it out here gets it replaced too, corrupting this
+			// script (confirmed live: broke the toggle e2e test with an
+			// "Unexpected token '<'" syntax error).
+			(() => {
+				try {
+					const stored = localStorage.getItem('theme');
+					const theme =
+						stored === 'light' || stored === 'dark'
+							? stored
+							: window.matchMedia('(prefers-color-scheme: dark)').matches
+								? 'dark'
+								: 'light';
+					document.documentElement.setAttribute('data-theme', theme);
+				} catch (_e) {}
+			})();
+		</script>
+		<link href="/_app/immutable/entry/start.Cf9LoFet.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/B425n_v7.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/LZywC0-R.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BuFlayix.js" rel="modulepreload">
+		<link href="/_app/immutable/entry/app.CwUddb6q.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/kNaey6uv.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/xihTtKlq.js" rel="modulepreload">
+		<link href="/_app/immutable/nodes/0.Bk6qkssx.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Bm1ZKI3-.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BSh9tx_r.js" rel="modulepreload">
+		
+		<link href="/_app/immutable/assets/0.DvTkgn8r.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">
+			<script>
+				{
+					__sveltekit_17onuu2 = {
+						base: ""
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("/_app/immutable/entry/start.Cf9LoFet.js"),
+						import("/_app/immutable/entry/app.CwUddb6q.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element);
+					});
+				}
+			</script>
+		</div>
+	</body>
 </html>
