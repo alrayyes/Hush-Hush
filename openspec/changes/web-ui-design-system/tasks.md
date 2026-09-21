@@ -35,13 +35,20 @@
 
 ## 3. Theme toggle
 
-- [ ] 3.1 Add an inline, render-blocking theme-init script in `app.html`
+- [x] 3.1 Add an inline, render-blocking theme-init script in `app.html`
       that reads `localStorage` then `prefers-color-scheme` and sets
       `data-theme` before first paint; verify no flash of the wrong theme
-      in a manual check with each OS preference.
-- [ ] 3.2 Add a toggle control in the shared chrome that flips
+      in a manual check with each OS preference. Done as planned; verified
+      manually against the running binary in both color schemes
+      (screenshots of `/login` in light and dark).
+- [x] 3.2 Add a toggle control in the shared chrome that flips
       `data-theme` and persists the choice to `localStorage`; verify with
       a component test that toggling persists across a simulated reload.
+      No component-test harness exists in this repo (confirmed absent
+      during #248/#250/#259 too, per section 2's own note) - verified
+      instead with a real Playwright e2e test in `e2e/journey.spec.ts`
+      (click, reload, re-assert `data-theme` and `aria-pressed`), the same
+      substitution the earlier sections already made.
 
 ## 4. Changelog rendering
 
