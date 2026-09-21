@@ -175,6 +175,42 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "list consumers",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObject(t, s, "contract_consumers")
+
+				req := httptest.NewRequest(http.MethodGet, "/consumers", nil)
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "list consumers paginated",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObject(t, s, "contract_consumers_page")
+
+				req := httptest.NewRequest(http.MethodGet, "/consumers?q=homelab&page=1&page_size=10", nil)
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name:                   "list consumers with an invalid page",
+			requestIsSchemaInvalid: true,
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				req := httptest.NewRequest(http.MethodGet, "/consumers?page=0", nil)
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
 			name: "query audit log",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()

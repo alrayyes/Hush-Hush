@@ -292,23 +292,77 @@ paths:
       summary: List every distinct recorded consumer
       description: |
         Returns every distinct consumer name currently present in any
-        object's `used_by` list, sorted, with no duplicates - gated the
-        same way `GET /objects` is (a write token or a session), since
-        listing needs no id the caller already holds.
+        object's `used_by` list - gated the same way `GET /objects` is (a
+        write token or a session), since listing needs no id the caller
+        already holds.
+
+        Called with none of `q`, `page`, or `page_size`, it returns the
+        original plain, unpaginated array of names, sorted, with no
+        duplicates - `consumer-combobox`'s (alrayyes/hush-hush#251) own
+        call site depends on this shape staying unchanged. Given any of
+        the three, it instead returns a `ConsumersPage`: one page of
+        consumers whose name contains `q` (case-insensitive) when given,
+        each with a count of the secret objects that reference it, plus
+        the total matching count so a caller can render page-number
+        navigation.
       tags: [consumers]
       security:
         - bearerAuth: []
         - cookieAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Restrict to consumers whose name contains this substring, case-insensitive.
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: 1-based page number. Given alone or with the other two, triggers the paginated response shape.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          description: Maximum consumers per page. Defaults to 20, capped at 100.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         "200":
-          description: Every distinct consumer name currently recorded.
+          description: |
+            Every distinct consumer name (no parameters given), or one
+            page of consumers matching the filter, each with its secret
+            count, plus the total matching count (any parameter given).
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
-              example: [homelab/mattermost, homelab/vps-docker]
+                oneOf:
+                  - type: array
+                    items:
+                      type: string
+                  - $ref: "#/components/schemas/ConsumersPage"
+              examples:
+                unpaginated:
+                  summary: No parameters given
+                  value: [homelab/mattermost, homelab/vps-docker]
+                paginated:
+                  summary: page given
+                  value:
+                    consumers:
+                      - name: homelab/mattermost
+                        secret_count: 2
+                      - name: homelab/vps-docker
+                        secret_count: 1
+                    total: 2
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -890,6 +944,37 @@ components:
       properties:
         used_by:
           $ref: "#/components/schemas/UsedByList"
+
+    ConsumerEntry:
+      type: object
+      required: [name, secret_count]
+      properties:
+        name:
+          type: string
+          description: A distinct consumer name recorded in some object's used_by list.
+        secret_count:
+          type: integer
+          format: int32
+          description: How many stored secret objects' used_by list includes this consumer.
+      example:
+        name: homelab/vps-docker
+        secret_count: 1
+
+    ConsumersPage:
+      type: object
+      required: [consumers, total]
+      properties:
+        consumers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsumerEntry"
+        total:
+          type: integer
+          format: int32
+          description: |
+            The total number of consumers matching the request's filter,
+            across every page - not just this page's own count - so a
+            caller can render page-number navigation.
 
     AuditLogEntry:
       type: object

@@ -98,11 +98,35 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
+	// The secret just created recorded "homelab" as a consumer - the
+	// directory's own filtering and select-to-filter navigation
+	// (alrayyes/hush-hush#252), plus its own axe-core scan.
+	await nav.getByRole('link', { name: 'Consumers' }).click();
+	await expect(page.getByRole('heading', { name: 'Consumers' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'homelab' })).toBeVisible();
+	const consumersResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(consumersResults.violations).toEqual([]);
+
+	await page.getByLabel('Filter by name').fill('nomatch');
+	await page.getByLabel('Filter by name').blur();
+	await expect(page.getByText('No consumers match "nomatch".')).toBeVisible();
+
+	await page.getByLabel('Filter by name').fill('homelab');
+	await page.getByLabel('Filter by name').blur();
+	await page.getByRole('link', { name: 'homelab' }).click();
+	await page.waitForURL('/?used_by=homelab');
+	await expect(page.getByText('Filtered to consumer homelab')).toBeVisible();
+	await expect(page.getByText('mattermost_deploy_webhook')).toBeVisible();
+	await page.getByRole('link', { name: 'Clear filter' }).click();
+	await page.waitForURL('/');
+
 	await page.setViewportSize({ width: 320, height: 720 });
 	// Client-side nav clicks, not page.goto() - a hard navigation to
 	// /audit-log is its own dedicated test below (#272), and this loop is
 	// about the mobile layout, not routing.
-	for (const linkName of ['Secrets', 'Audit log', 'Settings']) {
+	for (const linkName of ['Secrets', 'Consumers', 'Audit log', 'Settings']) {
 		await nav.getByRole('link', { name: linkName }).click();
 		await expect(page.locator('main')).toBeVisible();
 
