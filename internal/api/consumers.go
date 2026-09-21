@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -127,4 +128,70 @@ func consumersPageFrom(page store.ConsumerPage) ConsumersPage {
 	}
 
 	return ConsumersPage{Consumers: entries, Total: page.Total}
+}
+
+// RenameConsumerRequest is the PATCH /consumers/{name} body. Matches
+// components.schemas.RenameConsumerRequest in api/openapi.yaml.
+type RenameConsumerRequest struct {
+	Name string `json:"name"`
+}
+
+// handleRenameConsumer replaces name with the request body's name in
+// every stored object's used_by list that currently records name -
+// consumers aren't a stored resource of their own (alrayyes/hush-hush#282,
+// ADR 0002), so this is a bulk used_by rewrite, not CRUD on a dedicated
+// resource. A rename target that collides with an existing consumer name
+// merges the two rather than erroring.
+func handleRenameConsumer(s objectStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req RenameConsumerRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, r, http.StatusBadRequest, "malformed request body")
+
+			return
+		}
+
+		if req.Name == "" {
+			writeError(w, r, http.StatusBadRequest, "name is required")
+
+			return
+		}
+
+		entry, err := s.RenameConsumer(r.Context(), r.PathValue("name"), req.Name)
+		switch {
+		case err == nil:
+		case errors.Is(err, store.ErrUnknownConsumer):
+			writeError(w, r, http.StatusNotFound, "unknown consumer")
+
+			return
+		default:
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		writeJSON(w, http.StatusOK, ConsumerEntry{Name: entry.Name, SecretCount: entry.SecretCount})
+	}
+}
+
+// handleDeleteConsumer strips name from the used_by list of every stored
+// object that currently records it. The objects themselves aren't
+// deleted, even if this empties their used_by list.
+func handleDeleteConsumer(s objectStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := s.DeleteConsumer(r.Context(), r.PathValue("name"))
+		switch {
+		case err == nil:
+		case errors.Is(err, store.ErrUnknownConsumer):
+			writeError(w, r, http.StatusNotFound, "unknown consumer")
+
+			return
+		default:
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
 }

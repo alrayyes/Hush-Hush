@@ -25,6 +25,8 @@ type objectStore interface {
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	ListConsumers(ctx context.Context) ([]string, error)
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
+	RenameConsumer(ctx context.Context, oldName, newName string) (store.ConsumerEntry, error)
+	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, id string, value []byte) error
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
@@ -82,6 +84,12 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /consumers", requireWriteAccess(s, false, handleListConsumers(s)))
+	// {name...} rather than {name}: a consumer name routinely contains
+	// "/" (homelab/vps-docker) and has to match everything after
+	// /consumers/ as one value, not stop at the first path segment
+	// boundary (api/openapi.yaml's consumerName parameter).
+	mux.HandleFunc("PATCH /consumers/{name...}", requireWriteAccess(s, true, handleRenameConsumer(s)))
+	mux.HandleFunc("DELETE /consumers/{name...}", requireWriteAccess(s, true, handleDeleteConsumer(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{id}", requireWriteAccess(s, true, handleUpdateObject(s)))

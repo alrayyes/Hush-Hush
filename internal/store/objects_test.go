@@ -310,3 +310,111 @@ func TestListConsumersPageEscapesLikeWildcardsInTheFilter(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []store.ConsumerEntry{{Name: "homelab_prod", SecretCount: 1}}, page.Consumers)
 }
+
+func TestRenameConsumerUpdatesEveryObject(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"other"}, ""))
+
+	entry, err := s.RenameConsumer(ctx, "homelab/vps-docker", "homelab/vps-docker-2")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/vps-docker-2", SecretCount: 2}, entry)
+
+	a, err := s.GetObject(ctx, "a")
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/vps-docker-2"}, a.UsedBy)
+
+	b, err := s.GetObject(ctx, "b")
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/vps-docker-2"}, b.UsedBy)
+
+	c, err := s.GetObject(ctx, "c")
+	require.NoError(t, err)
+	require.Equal(t, []string{"other"}, c.UsedBy)
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.NotContains(t, consumers, "homelab/vps-docker")
+}
+
+func TestRenameConsumerMergesIntoAnExistingTarget(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	// "b" already records both names - the rename must merge to one
+	// entry rather than violating used_by's (object_id, consumer)
+	// primary key.
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"old"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"old", "new"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"new"}, ""))
+
+	entry, err := s.RenameConsumer(ctx, "old", "new")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "new", SecretCount: 3}, entry)
+
+	b, err := s.GetObject(ctx, "b")
+	require.NoError(t, err)
+	require.Equal(t, []string{"new"}, b.UsedBy)
+}
+
+func TestRenameConsumerToItselfIsANoOp(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+
+	entry, err := s.RenameConsumer(ctx, "homelab/vps-docker", "homelab/vps-docker")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/vps-docker", SecretCount: 1}, entry)
+
+	a, err := s.GetObject(ctx, "a")
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/vps-docker"}, a.UsedBy)
+}
+
+func TestRenameConsumerUnknownReturnsError(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	_, err := s.RenameConsumer(context.Background(), "nonexistent", "new")
+	require.ErrorIs(t, err, store.ErrUnknownConsumer)
+}
+
+func TestDeleteConsumerRemovesFromEveryObject(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker", "other"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/vps-docker"}, ""))
+
+	require.NoError(t, s.DeleteConsumer(ctx, "homelab/vps-docker"))
+
+	a, err := s.GetObject(ctx, "a")
+	require.NoError(t, err)
+	require.Equal(t, []string{"other"}, a.UsedBy)
+
+	b, err := s.GetObject(ctx, "b")
+	require.NoError(t, err)
+	require.Empty(t, b.UsedBy)
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.NotContains(t, consumers, "homelab/vps-docker")
+}
+
+func TestDeleteConsumerUnknownReturnsError(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.DeleteConsumer(context.Background(), "nonexistent")
+	require.ErrorIs(t, err, store.ErrUnknownConsumer)
+}
