@@ -1,4 +1,5 @@
 <script lang="ts">
+import { renderChangelog } from '$lib/markdown';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -11,7 +12,9 @@ let { data }: { data: PageData } = $props();
 <main>
 	<h1>Changelog</h1>
 	{#if data.changelog}
-		<pre>{data.changelog}</pre>
+		<div class="changelog">
+			{@html renderChangelog(data.changelog)}
+		</div>
 	{:else}
 		<p>No changelog available.</p>
 	{/if}
@@ -24,8 +27,7 @@ let { data }: { data: PageData } = $props();
 		padding: 0 var(--space-4);
 	}
 
-	pre {
-		white-space: pre-wrap;
-		word-wrap: break-word;
+	.changelog {
+		overflow-wrap: break-word;
 	}
 </style>
