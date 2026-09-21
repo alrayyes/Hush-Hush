@@ -1,4 +1,5 @@
 <script lang="ts">
+import { page } from '$app/state';
 import '../app.css';
 import { goto, invalidate } from '$app/navigation';
 import { logout } from '$lib/api';
@@ -17,6 +18,19 @@ async function handleLogout() {
 	await invalidate('app:auth');
 	await goto('/login');
 }
+
+// #301: the current page gets both a visual difference and
+// aria-current="page" - either alone loses half the audience (a11y
+// research linked from that issue). Exact pathname match, not a prefix
+// one: /consumers?used_by=... and /consumers?page=2 both keep
+// page.url.pathname === '/consumers', but nothing here nests routes
+// under one another the way a prefix match would need to handle.
+const navLinks = [
+	{ href: '/', label: 'Secrets' },
+	{ href: '/consumers', label: 'Consumers' },
+	{ href: '/audit-log', label: 'Audit log' },
+	{ href: '/settings', label: 'Settings' },
+];
 </script>
 
 <svelte:head>
@@ -26,10 +40,14 @@ async function handleLogout() {
 <div class="topbar">
 	{#if data.authenticated}
 		<nav>
-			<a href="/">Secrets</a>
-			<a href="/consumers">Consumers</a>
-			<a href="/audit-log">Audit log</a>
-			<a href="/settings">Settings</a>
+			{#each navLinks as link (link.href)}
+				<a
+					href={link.href}
+					aria-current={page.url.pathname === link.href ? 'page' : undefined}
+				>
+					{link.label}
+				</a>
+			{/each}
 		</nav>
 	{/if}
 	<div class="topbar-actions">
@@ -65,6 +83,18 @@ async function handleLogout() {
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-2);
+	}
+
+	nav a {
+		padding-bottom: var(--space-1);
+		border-bottom: 2px solid transparent;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	nav a[aria-current='page'] {
+		border-bottom-color: var(--color-accent);
+		font-weight: bold;
 	}
 
 	.topbar-actions {
