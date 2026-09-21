@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.19.1](https://github.com/alrayyes/Hush-Hush/compare/v2.19.0...v2.19.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **web-ui:** keep the topbar readable at phone width ([#296](https://github.com/alrayyes/Hush-Hush/issues/296)) ([a5b976e](https://github.com/alrayyes/Hush-Hush/commit/a5b976e1bc6c1a3379895637e4e63457d7fb100f))
+* **web-ui:** route a hard navigation to /consumers to the app ([f301f6c](https://github.com/alrayyes/Hush-Hush/commit/f301f6c5119b76e83ac6b6631f68448eb370c02f))
+* **web-ui:** route a hard navigation to /consumers to the app ([d144b62](https://github.com/alrayyes/Hush-Hush/commit/d144b629c50dd913d0cfe8a763816814d43754ae)), closes [#295](https://github.com/alrayyes/Hush-Hush/issues/295)
+
 ## [2.19.0](https://github.com/alrayyes/Hush-Hush/compare/v2.18.0...v2.19.0) (2026-09-21)
 
 
