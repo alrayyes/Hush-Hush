@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.20.0](https://github.com/alrayyes/Hush-Hush/compare/v2.19.1...v2.20.0) (2026-09-21)
+
+
+### Features
+
+* **web-ui:** view and update a secret's consumers after creation ([2c8a631](https://github.com/alrayyes/Hush-Hush/commit/2c8a631a26e299bdfb443bead8fbebf92854eef6))
+* **web-ui:** view and update a secret's consumers after creation ([66eed3a](https://github.com/alrayyes/Hush-Hush/commit/66eed3aea763eab6abb4a52e8b282ffff8d7c70f)), closes [#299](https://github.com/alrayyes/Hush-Hush/issues/299)
+
 ## [2.19.1](https://github.com/alrayyes/Hush-Hush/compare/v2.19.0...v2.19.1) (2026-09-21)
 
 
