@@ -221,3 +221,92 @@ func TestListConsumersReturnsEachDistinctNameOnce(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"homelab/mattermost", "homelab/vps-docker"}, consumers)
 }
+
+// seedConsumerFixture stores four objects with overlapping used_by lists -
+// homelab/mattermost referenced by three, homelab/vps-docker and
+// homelab/nas by one each, work/ci-runner by one - enough overlap to tell
+// a per-consumer count apart from an object count.
+func seedConsumerFixture(t *testing.T, s *store.Store) {
+	t.Helper()
+
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/mattermost", "homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"homelab/mattermost", "homelab/nas"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "d", []byte("v"), []string{"work/ci-runner"}, ""))
+}
+
+func TestListConsumersPageFiltersByNameSubstringCaseInsensitive(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	seedConsumerFixture(t, s)
+
+	page, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Name: "HOMELAB", Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, 3, page.Total)
+	require.Equal(t, []store.ConsumerEntry{
+		{Name: "homelab/mattermost", SecretCount: 3},
+		{Name: "homelab/nas", SecretCount: 1},
+		{Name: "homelab/vps-docker", SecretCount: 1},
+	}, page.Consumers)
+}
+
+func TestListConsumersPageReturnsOnePageAndTheTotalCount(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	seedConsumerFixture(t, s)
+
+	firstPage, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Page: 1, PageSize: 2})
+	require.NoError(t, err)
+	require.Equal(t, 4, firstPage.Total)
+	require.Equal(t, []store.ConsumerEntry{
+		{Name: "homelab/mattermost", SecretCount: 3},
+		{Name: "homelab/nas", SecretCount: 1},
+	}, firstPage.Consumers)
+
+	secondPage, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Page: 2, PageSize: 2})
+	require.NoError(t, err)
+	require.Equal(t, 4, secondPage.Total)
+	require.Equal(t, []store.ConsumerEntry{
+		{Name: "homelab/vps-docker", SecretCount: 1},
+		{Name: "work/ci-runner", SecretCount: 1},
+	}, secondPage.Consumers)
+}
+
+func TestListConsumersPagePastTheLastPageIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	seedConsumerFixture(t, s)
+
+	page, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Page: 3, PageSize: 2})
+	require.NoError(t, err)
+	require.Equal(t, 4, page.Total)
+	require.Empty(t, page.Consumers)
+}
+
+func TestListConsumersPageOnAFreshStoreIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	page, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Page: 1, PageSize: 20})
+	require.NoError(t, err)
+	require.Equal(t, 0, page.Total)
+	require.Empty(t, page.Consumers)
+}
+
+func TestListConsumersPageEscapesLikeWildcardsInTheFilter(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab_prod"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelabXprod"}, ""))
+
+	page, err := s.ListConsumersPage(ctx, store.ConsumerFilter{Name: "homelab_prod", Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, []store.ConsumerEntry{{Name: "homelab_prod", SecretCount: 1}}, page.Consumers)
+}

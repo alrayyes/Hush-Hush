@@ -137,8 +137,13 @@ export interface ObjectMetadata {
 	used_by?: string[];
 }
 
-export async function listObjects(): Promise<ObjectMetadata[]> {
-	const res = await request('/objects');
+// listObjects returns every stored object's metadata, or only those whose
+// recorded used_by lineage includes usedBy when given - the consumers
+// directory page's "select a consumer" navigation reuses this same
+// filter rather than a dedicated endpoint (alrayyes/hush-hush#252).
+export async function listObjects(usedBy?: string): Promise<ObjectMetadata[]> {
+	const qs = usedBy ? `?used_by=${encodeURIComponent(usedBy)}` : '';
+	const res = await request(`/objects${qs}`);
 
 	return res.json();
 }
@@ -148,6 +153,44 @@ export async function listObjects(): Promise<ObjectMetadata[]> {
 // these instead of relying on free-text recall (alrayyes/hush-hush#251).
 export async function listConsumers(): Promise<string[]> {
 	const res = await request('/consumers');
+
+	return res.json();
+}
+
+export interface ConsumerEntry {
+	name: string;
+	secret_count: number;
+}
+
+export interface ConsumersPage {
+	consumers: ConsumerEntry[];
+	total: number;
+}
+
+export interface ConsumersQuery {
+	q?: string;
+	page: number;
+	page_size: number;
+}
+
+// listConsumersPage fetches one page of the consumer directory, each
+// entry carrying its secret count and the total matching count for
+// page-number navigation - GET /consumers's paginated response shape,
+// returned because this always sends page/page_size
+// (alrayyes/hush-hush#252's own compatibility requirement: the
+// unfiltered, unpaginated array above is what a call with none of
+// q/page/page_size still gets back).
+export async function listConsumersPage(
+	query: ConsumersQuery,
+): Promise<ConsumersPage> {
+	const params = new URLSearchParams();
+	if (query.q) {
+		params.set('q', query.q);
+	}
+	params.set('page', String(query.page));
+	params.set('page_size', String(query.page_size));
+
+	const res = await request(`/consumers?${params.toString()}`);
 
 	return res.json();
 }

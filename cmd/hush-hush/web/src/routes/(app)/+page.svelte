@@ -55,6 +55,9 @@ async function submitCreate(event: SubmitEvent) {
 		createOpen = false;
 		resetCreateForm();
 		await invalidate('app:objects');
+		// A create can introduce a consumer the directory page hasn't seen
+		// yet, or add to an existing one's count.
+		await invalidate('app:consumers');
 	} catch (err) {
 		createError = apiErrorMessage(err, 'Failed to create the secret.');
 	}
@@ -120,6 +123,9 @@ async function confirmDelete() {
 		await deleteObject(deleteId);
 		deleteOpen = false;
 		await invalidate('app:objects');
+		// A delete can remove a consumer's last secret, dropping it from
+		// the directory entirely, or lower its count.
+		await invalidate('app:consumers');
 	} catch (err) {
 		deleteError = apiErrorMessage(err, 'Failed to delete the secret.');
 	}
@@ -172,6 +178,13 @@ async function confirmDelete() {
 			</Dialog.Portal>
 		</Dialog.Root>
 	</header>
+
+	{#if data.usedByFilter}
+		<p class="filter-banner">
+			Filtered to consumer <strong>{data.usedByFilter}</strong>
+			<a href="/">Clear filter</a>
+		</p>
+	{/if}
 
 	{#if data.objects.length === 0}
 		<p>No secrets stored yet.</p>
@@ -296,6 +309,13 @@ async function confirmDelete() {
 
 	.row-actions button {
 		margin-right: var(--space-2);
+	}
+
+	.filter-banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		align-items: center;
 	}
 
 	.error {

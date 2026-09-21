@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -222,6 +223,90 @@ func (s *Store) ListConsumers(ctx context.Context) ([]string, error) {
 	}
 
 	return consumers, nil
+}
+
+// ConsumerFilter narrows a ListConsumersPage call.
+type ConsumerFilter struct {
+	// Name restricts results to consumers whose name contains this
+	// substring, case-insensitive. Empty means no restriction.
+	Name string
+	// Page is the 1-based page number and PageSize the maximum number of
+	// consumers per page. Both must be positive.
+	Page     int
+	PageSize int
+}
+
+// ConsumerEntry is one consumer returned by ListConsumersPage: its name
+// and how many stored secret objects record it in their used_by list.
+type ConsumerEntry struct {
+	Name        string
+	SecretCount int
+}
+
+// ConsumerPage is one page of ListConsumersPage's filtered result, plus
+// the total count of matching consumers across every page - what a
+// caller needs to render page-number navigation.
+type ConsumerPage struct {
+	Consumers []ConsumerEntry
+	Total     int
+}
+
+// ListConsumersPage returns one page of distinct consumer names whose
+// name contains filter.Name (case-insensitive, every consumer when
+// empty), each with a count of the secret objects whose used_by includes
+// it, sorted by name - the consumer directory page's own listing
+// (alrayyes/hush-hush#252), distinct from ListConsumers's plain,
+// unpaginated array that consumer-combobox still relies on.
+func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (ConsumerPage, error) {
+	pattern := "%" + escapeLike(filter.Name) + "%"
+
+	var total int
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(DISTINCT consumer) FROM used_by WHERE consumer LIKE ? ESCAPE '\'`,
+		pattern,
+	).Scan(&total); err != nil {
+		return ConsumerPage{}, fmt.Errorf("count consumers: %w", err)
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT consumer, COUNT(*) AS secret_count
+		FROM used_by
+		WHERE consumer LIKE ? ESCAPE '\'
+		GROUP BY consumer
+		ORDER BY consumer
+		LIMIT ? OFFSET ?`,
+		pattern, filter.PageSize, (filter.Page-1)*filter.PageSize,
+	)
+	if err != nil {
+		return ConsumerPage{}, fmt.Errorf("list consumers page: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var consumers []ConsumerEntry
+	for rows.Next() {
+		var entry ConsumerEntry
+		if err := rows.Scan(&entry.Name, &entry.SecretCount); err != nil {
+			return ConsumerPage{}, fmt.Errorf("scan consumer: %w", err)
+		}
+
+		consumers = append(consumers, entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ConsumerPage{}, fmt.Errorf("iterate consumers: %w", err)
+	}
+
+	return ConsumerPage{Consumers: consumers, Total: total}, nil
+}
+
+// escapeLike escapes SQLite LIKE's own wildcard characters (and the
+// escape character itself) in s, so a name filter containing a literal
+// "%" or "_" matches only that literal text rather than acting as a
+// wildcard.
+func escapeLike(s string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+	return replacer.Replace(s)
 }
 
 // DeleteObject permanently removes id, its used_by rows cascading with it

@@ -24,6 +24,7 @@ type objectStore interface {
 	GetObject(ctx context.Context, id string) (store.Object, error)
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	ListConsumers(ctx context.Context) ([]string, error)
+	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
 	UpdateObject(ctx context.Context, id string, value []byte) error
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error

@@ -25,6 +25,7 @@ async function handleLogout() {
 {#if data.authenticated}
 	<nav>
 		<a href="/">Secrets</a>
+		<a href="/consumers">Consumers</a>
 		<a href="/audit-log">Audit log</a>
 		<a href="/settings">Settings</a>
 		<button type="button" onclick={handleLogout}>Log out</button>

@@ -1,8 +1,7 @@
 # Builds the SPA before the Go stage's go:embed ever reads
-# cmd/hush-hush/web/build/ - that directory stays committed as a fallback
-# for a plain `go build` outside Docker (design.md's "Build embedding"
-# decision), but a real image always ships whatever this stage produces
-# fresh, not that stale copy.
+# cmd/hush-hush/web/build/ - that directory isn't committed (only a
+# placeholder index.html is, see .gitignore/embed.go), so this stage's
+# real, fresh output is the only thing that ever backs a real image.
 FROM oven/bun:1.3.14-slim@sha256:d56a2534ffd262e92c12fd3249d3924d296d97086da773f821d7d0477435ea04 AS frontend-build
 
 WORKDIR /src/cmd/hush-hush/web
