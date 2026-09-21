@@ -181,12 +181,24 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// Edit: the combobox comes pre-filled with the existing "homelab"
 	// consumer, and adding "ci" alongside it is what proves the update
 	// actually reaches the server rather than only the local form state.
+	// The combobox's own GET /consumers call has to be awaited before
+	// typing into it, not just its "Remove homelab" chip becoming visible
+	// - bits-ui's Dialog re-asserts its initial focus target on a DOM
+	// mutation inside it, and that fetch resolving while the used-by
+	// field is mid-fill is exactly that mutation, stealing focus back to
+	// the ciphertext textarea and silently dropping the keystrokes.
+	const editConsumersLoaded = page.waitForResponse(
+		(res) =>
+			res.url().endsWith('/consumers') && res.request().method() === 'GET',
+	);
 	await page.getByRole('button', { name: 'Edit' }).click();
 	const editDialog = page.getByRole('dialog', {
 		name: 'Edit mattermost_deploy_webhook',
 	});
 	await expect(editDialog.getByLabel('Remove homelab')).toBeVisible();
+	await editConsumersLoaded;
 	await editDialog.locator('#edit-used-by').fill('ci');
+	await editDialog.getByRole('listbox').waitFor();
 	await editDialog.getByRole('option', { name: 'Add "ci"' }).click();
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
 	const editResults = await new AxeBuilder({ page })
