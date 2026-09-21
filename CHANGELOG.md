@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.0](https://github.com/alrayyes/Hush-Hush/compare/v2.17.1...v2.18.0) (2026-09-21)
+
+
+### Features
+
+* **api:** implement consumer rename/delete endpoints ([#289](https://github.com/alrayyes/Hush-Hush/issues/289)) ([6fa3749](https://github.com/alrayyes/Hush-Hush/commit/6fa37495338bdadc7cf97fcbef5ed5588835b76e))
+
 ## [2.17.1](https://github.com/alrayyes/Hush-Hush/compare/v2.17.0...v2.17.1) (2026-09-21)
 
 
