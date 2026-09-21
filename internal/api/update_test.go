@@ -15,7 +15,13 @@ import (
 func updateRequest(t *testing.T, id string, value []byte, token string) *http.Request {
 	t.Helper()
 
-	body, err := json.Marshal(hushhush.UpdateObjectRequest{Value: value})
+	return updateRequestWithUsedBy(t, id, value, nil, token)
+}
+
+func updateRequestWithUsedBy(t *testing.T, id string, value []byte, usedBy *[]string, token string) *http.Request {
+	t.Helper()
+
+	body, err := json.Marshal(hushhush.UpdateObjectRequest{Value: value, UsedBy: usedBy})
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPut, "/objects/"+id, bytes.NewReader(body))
@@ -65,6 +71,46 @@ func TestUpdateObjectPreservesDescription(t *testing.T) {
 	var meta hushhush.ObjectMetadata
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
 	require.Equal(t, "prod deploy webhook", meta.Description)
+}
+
+func TestUpdateObjectReplacesUsedByWhenGiven(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+
+	usedBy := []string{"ci", "homelab/nas"}
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateRequestWithUsedBy(t, "mattermost_deploy_webhook", []byte("new"), &usedBy, issueToken(t, s)))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var meta hushhush.ObjectMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
+	require.Equal(t, []string{"ci", "homelab/nas"}, meta.UsedBy)
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, []string{"ci", "homelab/nas"}, obj.UsedBy)
+}
+
+func TestUpdateObjectCanClearUsedByWithEmptyArray(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+
+	empty := []string{}
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateRequestWithUsedBy(t, "mattermost_deploy_webhook", []byte("new"), &empty, issueToken(t, s)))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Empty(t, obj.UsedBy)
 }
 
 func TestUpdateObjectUnknownIDReturnsNotFound(t *testing.T) {

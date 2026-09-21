@@ -256,10 +256,18 @@ export async function createObject(
 export async function updateObject(
 	id: string,
 	value: string,
+	usedBy?: string[],
 ): Promise<ObjectMetadata> {
 	const res = await request(`/objects/${encodeURIComponent(id)}`, {
 		method: 'PUT',
-		body: JSON.stringify({ value }),
+		// usedBy is omitted entirely (rather than sent as []) when the
+		// caller doesn't pass it - api/openapi.yaml's UpdateObjectRequest
+		// treats an absent used_by as "leave it as it is" and an empty
+		// array as "clear it", so those two have to stay distinguishable
+		// on the wire.
+		body: JSON.stringify(
+			usedBy === undefined ? { value } : { value, used_by: usedBy },
+		),
 	});
 
 	return res.json();

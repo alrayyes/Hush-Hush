@@ -98,19 +98,49 @@ func TestGetObjectUnknownID(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
-func TestUpdateObjectReplacesValuePreservingUsedBy(t *testing.T) {
+func TestUpdateObjectPreservesUsedByWhenNotSpecified(t *testing.T) {
 	t.Parallel()
 
 	s := openTestStore(t)
 	ctx := context.Background()
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
 
-	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new")))
+	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), nil))
 
 	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
 	require.NoError(t, err)
 	require.Equal(t, []byte("new"), obj.Value)
 	require.Equal(t, []string{"homelab/vps-docker"}, obj.UsedBy)
+}
+
+func TestUpdateObjectReplacesUsedByWhenSpecified(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+
+	usedBy := []string{"ci", "homelab/nas"}
+	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), &usedBy))
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, []string{"ci", "homelab/nas"}, obj.UsedBy)
+}
+
+func TestUpdateObjectClearsUsedByWithEmptySlice(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+
+	empty := []string{}
+	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), &empty))
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Empty(t, obj.UsedBy)
 }
 
 func TestUpdateObjectPreservesDescription(t *testing.T) {
@@ -120,7 +150,7 @@ func TestUpdateObjectPreservesDescription(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "prod deploy webhook"))
 
-	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new")))
+	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), nil))
 
 	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
 	require.NoError(t, err)
@@ -132,7 +162,7 @@ func TestUpdateObjectUnknownID(t *testing.T) {
 
 	s := openTestStore(t)
 
-	err := s.UpdateObject(context.Background(), "nope", []byte("v"))
+	err := s.UpdateObject(context.Background(), "nope", []byte("v"), nil)
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 

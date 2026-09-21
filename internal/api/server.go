@@ -27,7 +27,7 @@ type objectStore interface {
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
 	RenameConsumer(ctx context.Context, oldName, newName string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
-	UpdateObject(ctx context.Context, id string, value []byte) error
+	UpdateObject(ctx context.Context, id string, value []byte, usedBy *[]string) error
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)

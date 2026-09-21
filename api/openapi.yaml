@@ -208,8 +208,10 @@ paths:
       summary: Rotate an object's value
       description: |
         Replaces the stored ciphertext for an existing object. The
-        object's id, used_by, and description metadata are preserved
-        unchanged - this endpoint only ever touches the value. A
+        object's id and description metadata are always preserved
+        unchanged. used_by is preserved too, unless the request body
+        includes it - in which case it fully replaces the object's
+        recorded consumers, the same way creating an object sets it. A
         session-authenticated call needs its CSRF token too; a
         bearer-token-authenticated one doesn't.
       tags: [objects]
@@ -1004,6 +1006,14 @@ components:
           type: string
           format: byte
           description: The new sealed (encrypted) value, base64-encoded.
+        used_by:
+          allOf:
+            - $ref: "#/components/schemas/UsedByList"
+          description: |
+            Replaces the object's recorded used_by list, the same way
+            CreateObjectRequest's used_by sets it initially - omit this
+            field entirely to leave the existing list untouched. An
+            empty array clears it.
 
     ObjectMetadata:
       type: object
@@ -1020,15 +1030,16 @@ components:
       type: string
       description: |
         A free-text label set at creation, for a reader who only knows the
-        id. Fixed at creation - the same as used_by, it is unaffected by a
-        later value update.
+        id. Fixed at creation - there is no way to change it later.
       examples: ["prod deploy webhook for homelab/vps-docker"]
 
     UsedByList:
       type: array
       description: |
         The consumers (repos or hosts) recorded as depending on this
-        object. Set at creation; unaffected by later value updates.
+        object. Set at creation, and replaceable later via
+        UpdateObjectRequest's own used_by field - a plain value update
+        that omits it leaves the list as it was.
       items:
         type: string
       examples:
