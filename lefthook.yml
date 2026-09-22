@@ -206,6 +206,14 @@ pre-push:
       glob: "cmd/hush-hush/web/**/*"
       run: bun run lint
 
+    # @shadcn/lint (rules/tailwind.md) via oxlint - a separate job/script
+    # from web-lint above rather than folded into `bun run lint`, matching
+    # every other tool here having its own named job.
+    - name: web-lint-tailwind
+      root: "cmd/hush-hush/web/"
+      glob: "cmd/hush-hush/web/**/*"
+      run: bun run lint:tailwind
+
     # These are `package.json` scripts rather than the commands spelled out,
     # because CI runs the same ones and a literal copied into two files drifts
     # the first time somebody edits one of them.

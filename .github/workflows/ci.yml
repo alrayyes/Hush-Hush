@@ -334,6 +334,8 @@ jobs:
         run: bun run test
       - name: biome check
         run: bun run lint
+      - name: oxlint (@shadcn/lint)
+        run: bun run lint:tailwind
       - name: vite build
         run: bun run build
 
