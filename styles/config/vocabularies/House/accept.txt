@@ -90,6 +90,10 @@ Svelte's
 [Ss]caffold(?:ed|ing)?
 UI's
 shadcn-svelte
+shadcn
+shadcn's
+flowbite-svelte
+Flowbite
 Pangea
 Setproduct
 [Aa]ufaitux
@@ -123,3 +127,6 @@ unsanitized
 favicons?
 SPA
 SPA's
+mergeable
+refetches
+homelab
