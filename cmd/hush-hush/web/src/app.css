@@ -182,9 +182,15 @@
 
 	/* Links stay underlined - color alone isn't an accessible way to mark
 	   one (WCAG 1.4.1), so the accent color is a bonus over the browser
-	   default, not a replacement for the underline. */
+	   default, not a replacement for the underline. Explicit rather than
+	   relying on the browser default: Tailwind's own preflight
+	   (`@import "tailwindcss"` above) resets `a` to `text-decoration:
+	   inherit`, which resolves to `none` with nothing above it setting
+	   one - caught by the first real axe-core scan of a page with prose
+	   links (changelog's rendered commit links), not by inspection. */
 	a {
 		color: var(--color-accent);
+		text-decoration: underline;
 	}
 
 	/* One consistent button treatment - every action in this app carries
