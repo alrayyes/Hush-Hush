@@ -3,6 +3,7 @@ import { onMount } from 'svelte';
 import { goto, invalidate } from '$app/navigation';
 import { getAuthStatus } from '$lib/api';
 import { login, registerPasskey } from '$lib/auth';
+import { Button } from '$lib/components/ui/button/index.js';
 
 let pending = $state(false);
 let error = $state('');
@@ -81,21 +82,21 @@ async function handleRegister() {
 
 	{#if statusFailed}
 		<p role="alert" class="text-error">Couldn't reach the server. Try again.</p>
-		<button type="button" class="px-6 py-3" onclick={loadStatus}>Retry</button>
+		<Button onclick={loadStatus}>Retry</Button>
 	{:else if bootstrapped === undefined}
 		<p>Checking account status…</p>
 	{:else if bootstrapped}
 		<p>Sign in with a passkey registered to this account.</p>
 
-		<button type="button" class="px-6 py-3" onclick={handleLogin} disabled={pending}>
+		<Button onclick={handleLogin} disabled={pending}>
 			{pending ? 'Waiting for your passkey…' : 'Log in with a passkey'}
-		</button>
+		</Button>
 	{:else}
 		<p>No account yet - register the first passkey to set one up.</p>
 
-		<button type="button" class="px-6 py-3" onclick={handleRegister} disabled={pending}>
+		<Button onclick={handleRegister} disabled={pending}>
 			{pending ? 'Waiting for your passkey…' : 'Register passkey'}
-		</button>
+		</Button>
 	{/if}
 
 	{#if error}
