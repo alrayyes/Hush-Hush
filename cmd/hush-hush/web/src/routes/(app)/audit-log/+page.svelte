@@ -114,75 +114,107 @@ function exportCSV() {
 	<title>Audit log - hush-hush</title>
 </svelte:head>
 
-<main>
+<main class="mx-auto my-8 max-w-280 px-4">
 	<h1>Audit log</h1>
 
 	<form
-		class="filters"
+		class="mb-4 grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] items-end gap-x-4 gap-y-2"
 		onsubmit={(event) => {
 			event.preventDefault();
 			resetToFirstPage();
 		}}
 	>
-		<label for="filter-object">Object id</label>
-		<input id="filter-object" bind:value={objectFilter} onchange={resetToFirstPage} />
+		<label class="block text-sm" for="filter-object">Object id</label>
+		<input id="filter-object" class="w-full" bind:value={objectFilter} onchange={resetToFirstPage} />
 
-		<label for="filter-actor">Actor</label>
-		<input id="filter-actor" bind:value={actorFilter} onchange={resetToFirstPage} />
+		<label class="block text-sm" for="filter-actor">Actor</label>
+		<input id="filter-actor" class="w-full" bind:value={actorFilter} onchange={resetToFirstPage} />
 
-		<label for="filter-caller">Caller</label>
-		<input id="filter-caller" bind:value={callerFilter} onchange={resetToFirstPage} />
+		<label class="block text-sm" for="filter-caller">Caller</label>
+		<input id="filter-caller" class="w-full" bind:value={callerFilter} onchange={resetToFirstPage} />
 
-		<label for="filter-from">From</label>
+		<label class="block text-sm" for="filter-from">From</label>
 		<input
 			id="filter-from"
+			class="w-full"
 			type="datetime-local"
 			bind:value={fromFilter}
 			onchange={resetToFirstPage}
 		/>
 
-		<label for="filter-to">To</label>
-		<input id="filter-to" type="datetime-local" bind:value={toFilter} onchange={resetToFirstPage} />
+		<label class="block text-sm" for="filter-to">To</label>
+		<input
+			id="filter-to"
+			class="w-full"
+			type="datetime-local"
+			bind:value={toFilter}
+			onchange={resetToFirstPage}
+		/>
 	</form>
 
 	{#if objectFilter || actorFilter || callerFilter || fromFilter || toFilter}
-		<ul class="chips">
+		<ul class="mb-4 flex list-none flex-wrap gap-2 p-0">
 			{#if objectFilter}
-				<li>
+				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					object: {objectFilter}
-					<button type="button" onclick={() => clearFilter('object')} aria-label="Remove object filter">
+					<button
+						type="button"
+						class="border-0 bg-transparent"
+						onclick={() => clearFilter('object')}
+						aria-label="Remove object filter"
+					>
 						&times;
 					</button>
 				</li>
 			{/if}
 			{#if actorFilter}
-				<li>
+				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					actor: {actorFilter}
-					<button type="button" onclick={() => clearFilter('actor')} aria-label="Remove actor filter">
+					<button
+						type="button"
+						class="border-0 bg-transparent"
+						onclick={() => clearFilter('actor')}
+						aria-label="Remove actor filter"
+					>
 						&times;
 					</button>
 				</li>
 			{/if}
 			{#if callerFilter}
-				<li>
+				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					caller: {callerFilter}
-					<button type="button" onclick={() => clearFilter('caller')} aria-label="Remove caller filter">
+					<button
+						type="button"
+						class="border-0 bg-transparent"
+						onclick={() => clearFilter('caller')}
+						aria-label="Remove caller filter"
+					>
 						&times;
 					</button>
 				</li>
 			{/if}
 			{#if fromFilter}
-				<li>
+				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					from: {fromFilter}
-					<button type="button" onclick={() => clearFilter('from')} aria-label="Remove from filter">
+					<button
+						type="button"
+						class="border-0 bg-transparent"
+						onclick={() => clearFilter('from')}
+						aria-label="Remove from filter"
+					>
 						&times;
 					</button>
 				</li>
 			{/if}
 			{#if toFilter}
-				<li>
+				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					to: {toFilter}
-					<button type="button" onclick={() => clearFilter('to')} aria-label="Remove to filter">
+					<button
+						type="button"
+						class="border-0 bg-transparent"
+						onclick={() => clearFilter('to')}
+						aria-label="Remove to filter"
+					>
 						&times;
 					</button>
 				</li>
@@ -190,13 +222,13 @@ function exportCSV() {
 		</ul>
 	{/if}
 
-	<div class="export">
+	<div class="mb-4 flex gap-2">
 		<button type="button" onclick={exportCSV}>Export CSV</button>
 		<button type="button" onclick={exportJSON}>Export JSON</button>
 	</div>
 
 	{#if loadError}
-		<p role="alert" class="error">{loadError}</p>
+		<p role="alert" class="text-error">{loadError}</p>
 	{/if}
 
 	<table class="responsive-table" aria-busy={loading}>
@@ -222,7 +254,7 @@ function exportCSV() {
 		</tbody>
 	</table>
 
-	<div class="pagination">
+	<div class="mt-4 flex gap-2">
 		<button type="button" onclick={previousPage} disabled={cursorStack.length === 0 || loading}>
 			Previous
 		</button>
@@ -231,67 +263,3 @@ function exportCSV() {
 		</button>
 	</div>
 </main>
-
-<style>
-	main {
-		max-width: 70rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-
-	.filters {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-		gap: 0.5rem 1rem;
-		align-items: end;
-		margin-bottom: 1rem;
-	}
-
-	.filters label {
-		display: block;
-		font-size: 0.85rem;
-	}
-
-	.filters input {
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.chips {
-		list-style: none;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		padding: 0;
-		margin-bottom: 1rem;
-	}
-
-	.chips li {
-		background: var(--color-border-subtle);
-		border-radius: 1rem;
-		padding: var(--space-1) var(--space-2);
-		font-size: var(--font-size-sm);
-	}
-
-	.chips button {
-		background: none;
-		border: none;
-		cursor: pointer;
-	}
-
-	.export {
-		margin-bottom: 1rem;
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.error {
-		color: var(--color-error);
-	}
-
-	.pagination {
-		display: flex;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-</style>

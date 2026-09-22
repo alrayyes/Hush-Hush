@@ -9,25 +9,13 @@ let { data }: { data: PageData } = $props();
 	<title>Changelog - hush-hush</title>
 </svelte:head>
 
-<main>
+<main class="mx-auto my-8 max-w-240 px-4">
 	<h1>Changelog</h1>
 	{#if data.changelog}
-		<div class="changelog">
+		<div class="break-words">
 			{@html renderChangelog(data.changelog)}
 		</div>
 	{:else}
 		<p>No changelog available.</p>
 	{/if}
 </main>
-
-<style>
-	main {
-		max-width: 60rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-
-	.changelog {
-		overflow-wrap: break-word;
-	}
-</style>

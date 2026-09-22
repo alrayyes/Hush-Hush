@@ -90,21 +90,22 @@ async function confirmDelete() {
 	<title>Consumers - hush-hush</title>
 </svelte:head>
 
-<main>
-	<header class="page-header">
+<main class="mx-auto my-8 max-w-240 px-4">
+	<header class="flex flex-wrap items-center justify-between gap-2">
 		<h1>Consumers</h1>
 	</header>
 
 	<form
-		class="filter"
+		class="mb-4"
 		onsubmit={(event) => {
 			event.preventDefault();
 			applyFilter();
 		}}
 	>
-		<label for="consumer-filter">Filter by name</label>
+		<label class="block text-sm" for="consumer-filter">Filter by name</label>
 		<input
 			id="consumer-filter"
+			class="w-full max-w-xs"
 			bind:value={filterInput}
 			onchange={applyFilter}
 			placeholder="homelab"
@@ -129,7 +130,7 @@ async function confirmDelete() {
 							<a href={secretsOverviewHref(consumer.name)}>{consumer.name}</a>
 						</td>
 						<td data-label="Secrets">{consumer.secret_count}</td>
-						<td data-label="Actions" class="row-actions">
+						<td data-label="Actions" class="row-actions gap-2">
 							<button type="button" onclick={() => openRename(consumer)}>
 								Rename
 							</button>
@@ -148,14 +149,16 @@ async function confirmDelete() {
 	{/if}
 
 	{#if pages > 1}
-		<nav aria-label="Pagination" class="pagination">
-			<ol>
+		<nav aria-label="Pagination">
+			<ol class="mt-4 flex list-none flex-wrap gap-2 p-0">
 				{#each { length: pages } as _, i (i)}
 					{@const pageNumber = i + 1}
 					<li>
 						<a
 							href={consumersHref(pageNumber, data.q)}
 							aria-current={data.page === pageNumber ? 'page' : undefined}
+							class:font-bold={data.page === pageNumber}
+							class:underline={data.page === pageNumber}
 						>
 							{pageNumber}
 						</a>
@@ -172,14 +175,14 @@ async function confirmDelete() {
 		<Dialog.Content class="dialog">
 			<Dialog.Title>Rename consumer</Dialog.Title>
 			<form onsubmit={submitRename}>
-				<label for="rename-consumer-name">Name</label>
-				<input id="rename-consumer-name" bind:value={renameInput} required />
+				<label class="mt-3 block" for="rename-consumer-name">Name</label>
+				<input id="rename-consumer-name" class="w-full" bind:value={renameInput} required />
 
 				{#if renameError}
-					<p role="alert" class="error">{renameError}</p>
+					<p role="alert" class="text-error">{renameError}</p>
 				{/if}
 
-				<div class="actions">
+				<div class="mt-4 flex justify-end gap-2">
 					<Dialog.Close type="button">Cancel</Dialog.Close>
 					<button type="submit">Save</button>
 				</div>
@@ -198,9 +201,9 @@ async function confirmDelete() {
 				it as a user aren't deleted.
 			</AlertDialog.Description>
 			{#if deleteError}
-				<p role="alert" class="error">{deleteError}</p>
+				<p role="alert" class="text-error">{deleteError}</p>
 			{/if}
-			<div class="actions">
+			<div class="mt-4 flex justify-end gap-2">
 				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
 				<AlertDialog.Action type="button" onclick={confirmDelete}>
 					Delete
@@ -209,73 +212,3 @@ async function confirmDelete() {
 		</AlertDialog.Content>
 	</AlertDialog.Portal>
 </AlertDialog.Root>
-
-<style>
-	main {
-		max-width: 60rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-
-	.page-header {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.filter {
-		margin-bottom: 1rem;
-	}
-
-	.filter label {
-		display: block;
-		font-size: 0.85rem;
-	}
-
-	.filter input {
-		width: 100%;
-		max-width: 20rem;
-		box-sizing: border-box;
-	}
-
-	.row-actions button {
-		margin-right: var(--space-2);
-	}
-
-	.error {
-		color: var(--color-error);
-	}
-
-	form label {
-		display: block;
-		margin-top: var(--space-3);
-	}
-
-	form input {
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--space-2);
-		margin-top: var(--space-4);
-	}
-
-	.pagination ol {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		list-style: none;
-		padding: 0;
-		margin-top: 1rem;
-	}
-
-	.pagination a[aria-current='page'] {
-		font-weight: bold;
-		text-decoration: underline;
-	}
-</style>

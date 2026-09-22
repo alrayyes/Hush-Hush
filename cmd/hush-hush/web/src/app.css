@@ -1,11 +1,14 @@
-/* Design tokens - color, spacing, type scale - as CSS custom properties on
-   :root, redefined under prefers-color-scheme for the OS default and again
-   under [data-theme="dark"] for an explicit override once the theme toggle
-   (openspec/changes/web-ui-design-system/tasks.md #3) sets it. Every page's
-   own <style> block reads these instead of a hard-coded value, so a color
-   only ever needs changing here. */
+@import "tailwindcss";
 
-:root {
+/* Design tokens - color, as CSS custom properties under Tailwind v4's own
+   @theme (its naming convention, --color-*, is what turns each of these
+   into a bg, text and border utility) - redefined under
+   prefers-color-scheme for the OS default and again under
+   [data-theme="dark"] for an explicit override once the theme toggle
+   (openspec/changes/web-ui-design-system/tasks.md #3) sets it. Spacing and
+   type scale dropped in favor of Tailwind's own (space-1..8 already matched
+   it 1:1; font-size-sm/base/lg/xl are now text-sm/base/lg/xl). */
+@theme {
 	--color-bg: #fff;
 	--color-surface: #fff;
 	--color-overlay: rgb(0 0 0 / 40%);
@@ -17,27 +20,34 @@
 	--color-error: #b00020;
 	--color-warning: #8a6100;
 
-	--space-1: 0.25rem;
-	--space-2: 0.5rem;
-	--space-3: 0.75rem;
-	--space-4: 1rem;
-	--space-6: 1.5rem;
-	--space-8: 2rem;
-
-	--font-size-sm: 0.85rem;
-	--font-size-base: 1rem;
-	--font-size-lg: 1.25rem;
-	--font-size-xl: 1.5rem;
-
 	--font-sans:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
 		sans-serif;
 	--radius: 0.375rem;
 
+	/* Tailwind's default type scale doesn't line up with the app's existing
+	   one (its lg/xl are what this app calls xl/2xl), so these three are
+	   pinned rather than left at the default - text-lg/text-xl keep
+	   rendering at the sizes h1/h2 already use below, and anything a
+	   migrated component sets to text-lg/text-xl matches them too. */
+	--text-sm: 0.85rem;
+	--text-lg: 1.25rem;
+	--text-xl: 1.5rem;
+
 	--color-accent-contrast: #fff;
 	--color-danger: #b00020;
 	--color-danger-contrast: #fff;
+
+	/* Footer.svelte's own content width - between Tailwind's stock
+	   --container-4xl (56rem) and --container-5xl (64rem), so it gets its
+	   own named token rather than an arbitrary value on the component. */
+	--container-content: 60rem;
 }
+
+/* Matches the existing ThemeToggle mechanism (src/lib/theme.ts): an
+   explicit [data-theme] attribute wins over prefers-color-scheme, not
+   Tailwind's default media-only dark: variant. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @media (prefers-color-scheme: dark) {
 	:root {
@@ -100,226 +110,232 @@
 	--color-warning: #8a6100;
 }
 
+@layer base {
+	body {
+		margin: 0;
+		background: var(--color-bg);
+		color: var(--color-text);
+		font-family: var(--font-sans);
+		font-size: var(--text-base);
+		line-height: 1.5;
+		-webkit-font-smoothing: antialiased;
+	}
+
+	/* Hierarchy from weight and size, not decoration - a heading is the
+	   browser's own serif default until this exists. */
+	h1,
+	h2,
+	h3 {
+		font-family: inherit;
+		font-weight: 600;
+		line-height: 1.25;
+		margin: 0 0 var(--spacing-4);
+	}
+
+	h1 {
+		font-size: var(--text-xl);
+	}
+
+	h2 {
+		font-size: var(--text-lg);
+	}
+
+	p {
+		margin: 0 0 var(--spacing-4);
+	}
+
+	/* Links stay underlined - color alone isn't an accessible way to mark
+	   one (WCAG 1.4.1), so the accent color is a bonus over the browser
+	   default, not a replacement for the underline. */
+	a {
+		color: var(--color-accent);
+	}
+
+	/* One consistent button treatment - every action in this app carries
+	   the same weight, so there's no case yet for a second, "primary"
+	   variant. .danger is the one exception: a destructive action (Delete,
+	   Revoke) gets a visibly different color, not just the same gray
+	   button as everything else. */
+	button {
+		font-family: inherit;
+		font-size: var(--text-base);
+		font-weight: 500;
+		padding: var(--spacing-2) var(--spacing-4);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: var(--color-surface);
+		color: var(--color-text);
+		cursor: pointer;
+	}
+
+	button:hover:not(:disabled) {
+		border-color: var(--color-accent);
+	}
+
+	button:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 1px;
+	}
+
+	button:disabled {
+		cursor: wait;
+		opacity: 0.6;
+	}
+
+	button.danger {
+		border-color: var(--color-danger);
+		color: var(--color-danger);
+	}
+
+	button.danger:hover:not(:disabled) {
+		background: var(--color-danger);
+		color: var(--color-danger-contrast);
+	}
+
+	input,
+	textarea {
+		font-family: inherit;
+		font-size: var(--text-base);
+		color: var(--color-text);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: var(--spacing-2);
+	}
+
+	input:focus-visible,
+	textarea:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 1px;
+	}
+
+	table {
+		border-collapse: collapse;
+	}
+
+	th {
+		font-weight: 600;
+	}
+}
+
+@layer components {
+	/* Shared by every page's bits-ui Dialog/AlertDialog - portal-rendered
+	   outside each component's own scoped styles, so this has to live in a
+	   shared layer rather than being duplicated per page (as it was until
+	   the original design pass). */
+	.overlay {
+		position: fixed;
+		inset: 0;
+		background: var(--color-overlay);
+	}
+
+	.dialog {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: var(--color-surface);
+		color: var(--color-text);
+		padding: var(--spacing-6);
+		border-radius: var(--radius);
+		max-width: 32rem;
+		width: 90vw;
+		max-height: 85vh;
+		overflow-y: auto;
+	}
+
+	.responsive-table {
+		width: 100%;
+	}
+
+	/* Mobile-first: a table reflows into a stack of cards below the
+	   breakpoint instead of scrolling sideways in its own box - a table
+	   wide enough to need that isn't actually readable at 320px either
+	   way. Every <td> needs a matching data-label attribute, read by the
+	   ::before content below; <thead> is hidden rather than removed, so
+	   the semantic table structure (and a screen reader's own table
+	   navigation) survives at every width. No Tailwind utility covers this
+	   pattern, so it stays hand-written. */
+	.responsive-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
+	.responsive-table tr {
+		display: block;
+		margin-bottom: var(--spacing-4);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: var(--spacing-2) var(--spacing-4);
+	}
+
+	.responsive-table td {
+		display: flex;
+		gap: var(--spacing-4);
+		justify-content: space-between;
+		align-items: center;
+		padding: var(--spacing-2) 0;
+		border-bottom: 1px solid var(--color-border-subtle);
+		text-align: right;
+	}
+
+	.responsive-table tr td:last-child {
+		border-bottom: none;
+	}
+
+	.responsive-table td[data-label]::before {
+		content: attr(data-label);
+		font-weight: 600;
+		text-align: left;
+		margin-right: var(--spacing-4);
+	}
+
+	.responsive-table td.row-actions {
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+
+	@media (min-width: 40rem) {
+		.responsive-table thead {
+			position: static;
+			width: auto;
+			height: auto;
+			overflow: visible;
+			clip-path: none;
+			white-space: normal;
+		}
+
+		.responsive-table tr {
+			display: table-row;
+			margin-bottom: 0;
+			border: none;
+			border-radius: 0;
+			padding: 0;
+		}
+
+		.responsive-table td {
+			display: table-cell;
+			border-bottom: 1px solid var(--color-border);
+			text-align: left;
+			padding: var(--spacing-2);
+		}
+
+		.responsive-table td[data-label]::before {
+			content: none;
+		}
+
+		.responsive-table tr td:last-child {
+			border-bottom: 1px solid var(--color-border);
+		}
+	}
+}
+
 *,
 *::before,
 *::after {
 	box-sizing: border-box;
-}
-
-body {
-	margin: 0;
-	background: var(--color-bg);
-	color: var(--color-text);
-	font-family: var(--font-sans);
-	font-size: var(--font-size-base);
-	line-height: 1.5;
-	-webkit-font-smoothing: antialiased;
-}
-
-/* Hierarchy from weight and size, not decoration - a heading is the
-   browser's own serif default until this exists. */
-h1,
-h2,
-h3 {
-	font-family: inherit;
-	font-weight: 600;
-	line-height: 1.25;
-	margin: 0 0 var(--space-4);
-}
-
-h1 {
-	font-size: var(--font-size-xl);
-}
-
-h2 {
-	font-size: var(--font-size-lg);
-}
-
-p {
-	margin: 0 0 var(--space-4);
-}
-
-/* Links stay underlined - color alone isn't an accessible way to mark
-   one (WCAG 1.4.1), so the accent color is a bonus over the browser
-   default, not a replacement for the underline. */
-a {
-	color: var(--color-accent);
-}
-
-/* One consistent button treatment - every action in this app carries
-   the same weight, so there's no case yet for a second, "primary"
-   variant. .danger is the one exception: a destructive action (Delete,
-   Revoke) gets a visibly different color, not just the same gray
-   button as everything else. */
-button {
-	font-family: inherit;
-	font-size: var(--font-size-base);
-	font-weight: 500;
-	padding: var(--space-2) var(--space-4);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius);
-	background: var(--color-surface);
-	color: var(--color-text);
-	cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-	border-color: var(--color-accent);
-}
-
-button:focus-visible {
-	outline: 2px solid var(--color-accent);
-	outline-offset: 1px;
-}
-
-button:disabled {
-	cursor: wait;
-	opacity: 0.6;
-}
-
-button.danger {
-	border-color: var(--color-danger);
-	color: var(--color-danger);
-}
-
-button.danger:hover:not(:disabled) {
-	background: var(--color-danger);
-	color: var(--color-danger-contrast);
-}
-
-input,
-textarea {
-	font-family: inherit;
-	font-size: var(--font-size-base);
-	color: var(--color-text);
-	background: var(--color-surface);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius);
-	padding: var(--space-2);
-}
-
-input:focus-visible,
-textarea:focus-visible {
-	outline: 2px solid var(--color-accent);
-	outline-offset: 1px;
-}
-
-table {
-	border-collapse: collapse;
-}
-
-th {
-	font-weight: 600;
-}
-
-.responsive-table {
-	width: 100%;
-}
-
-/* Shared by every page's bits-ui Dialog/AlertDialog - portal-rendered
-   outside each component's own scoped styles, so this has to be global
-   rather than duplicated per page (as it was until this design pass). */
-.overlay {
-	position: fixed;
-	inset: 0;
-	background: var(--color-overlay);
-}
-
-.dialog {
-	position: fixed;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	background: var(--color-surface);
-	color: var(--color-text);
-	padding: var(--space-6);
-	border-radius: var(--radius);
-	max-width: 32rem;
-	width: 90vw;
-	max-height: 85vh;
-	overflow-y: auto;
-}
-
-/* Mobile-first: a table reflows into a stack of cards below the
-   breakpoint instead of scrolling sideways in its own box - a table
-   wide enough to need that isn't actually readable at 320px either
-   way. Every <td> needs a matching data-label attribute, read by the
-   ::before content below; <thead> is hidden rather than removed, so
-   the semantic table structure (and a screen reader's own table
-   navigation) survives at every width. */
-.responsive-table thead {
-	position: absolute;
-	width: 1px;
-	height: 1px;
-	overflow: hidden;
-	clip-path: inset(50%);
-	white-space: nowrap;
-}
-
-.responsive-table tr {
-	display: block;
-	margin-bottom: var(--space-4);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius);
-	padding: var(--space-2) var(--space-4);
-}
-
-.responsive-table td {
-	display: flex;
-	gap: var(--space-4);
-	justify-content: space-between;
-	align-items: center;
-	padding: var(--space-2) 0;
-	border-bottom: 1px solid var(--color-border-subtle);
-	text-align: right;
-}
-
-.responsive-table tr td:last-child {
-	border-bottom: none;
-}
-
-.responsive-table td[data-label]::before {
-	content: attr(data-label);
-	font-weight: 600;
-	text-align: left;
-	margin-right: var(--space-4);
-}
-
-.responsive-table td.row-actions {
-	justify-content: flex-end;
-	flex-wrap: wrap;
-}
-
-@media (min-width: 40rem) {
-	.responsive-table thead {
-		position: static;
-		width: auto;
-		height: auto;
-		overflow: visible;
-		clip-path: none;
-		white-space: normal;
-	}
-
-	.responsive-table tr {
-		display: table-row;
-		margin-bottom: 0;
-		border: none;
-		border-radius: 0;
-		padding: 0;
-	}
-
-	.responsive-table td {
-		display: table-cell;
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-		padding: var(--space-2);
-	}
-
-	.responsive-table td[data-label]::before {
-		content: none;
-	}
-
-	.responsive-table tr td:last-child {
-		border-bottom: 1px solid var(--color-border);
-	}
 }

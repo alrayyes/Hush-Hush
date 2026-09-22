@@ -1,0 +1,10 @@
+{
+	"jsPlugins": ["@shadcn/lint"],
+	"rules": {
+		"shadcn/no-restyle": "warn",
+		"shadcn/no-raw-colors": "warn",
+		"shadcn/no-arbitrary-values": "warn",
+		"shadcn/no-inline-styles": "warn",
+		"shadcn/require-static-classes": "warn"
+	}
+}

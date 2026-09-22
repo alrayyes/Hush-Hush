@@ -41,21 +41,31 @@ const label = $derived(
 
 <button
 	type="button"
-	class="theme-toggle"
+	class="theme-toggle ml-auto inline-flex h-9 w-9 items-center justify-center rounded border border-border bg-transparent p-0 text-inherit focus:outline-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
 	onclick={toggle}
 	aria-pressed={theme === 'dark'}
 	aria-label={label}
 	title={label}
 >
 	{#if theme === 'dark'}
-		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<svg
+			class="h-5 w-5"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+			focusable="false"
+		>
 			<path
 				fill="currentColor"
 				d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 4a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm9 3a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1ZM5 12a1 1 0 0 1-1 1H3a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm14.071-6.071a1 1 0 0 1 0 1.414l-.707.707a1 1 0 1 1-1.415-1.414l.708-.708a1 1 0 0 1 1.414 0ZM7.05 17.657a1 1 0 0 1 0 1.414l-.707.707a1 1 0 1 1-1.415-1.414l.708-.708a1 1 0 0 1 1.414 0Zm11.314 1.414a1 1 0 0 1-1.414 0l-.708-.707a1 1 0 0 1 1.415-1.415l.707.708a1 1 0 0 1 0 1.414ZM6.343 6.343a1 1 0 0 1-1.414 0l-.708-.707a1 1 0 0 1 1.415-1.415l.707.708a1 1 0 0 1 0 1.414ZM12 19a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1Z"
 			/>
 		</svg>
 	{:else}
-		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<svg
+			class="h-5 w-5"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+			focusable="false"
+		>
 			<path
 				fill="currentColor"
 				d="M20.354 15.354A9 9 0 0 1 8.646 3.646a9.003 9.003 0 1 0 11.708 11.708Z"
@@ -63,34 +73,3 @@ const label = $derived(
 		</svg>
 	{/if}
 </button>
-
-<style>
-	.theme-toggle {
-		margin-left: auto;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		padding: 0;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: none;
-		color: inherit;
-		cursor: pointer;
-	}
-
-	.theme-toggle:focus {
-		outline: none;
-	}
-
-	.theme-toggle:focus-visible {
-		outline: 2px solid currentColor;
-		outline-offset: 2px;
-	}
-
-	.theme-toggle svg {
-		width: 1.25rem;
-		height: 1.25rem;
-	}
-</style>

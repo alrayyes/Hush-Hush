@@ -158,11 +158,11 @@ async function confirmRevoke() {
 	<title>Settings - hush-hush</title>
 </svelte:head>
 
-<main>
+<main class="mx-auto my-8 max-w-240 px-4">
 	<h1>Settings</h1>
 
-	<section>
-		<header class="section-header">
+	<section class="mb-12">
+		<header class="flex flex-wrap items-center justify-between gap-2">
 			<h2>Passkeys</h2>
 			<Dialog.Root bind:open={addOpen}>
 				<Dialog.Trigger>Add passkey</Dialog.Trigger>
@@ -171,14 +171,14 @@ async function confirmRevoke() {
 					<Dialog.Content class="dialog">
 						<Dialog.Title>Add a passkey</Dialog.Title>
 						<form onsubmit={submitAdd}>
-							<label for="add-nickname">Nickname (optional)</label>
-							<input id="add-nickname" bind:value={addNickname} />
+							<label class="mt-3 block" for="add-nickname">Nickname (optional)</label>
+							<input id="add-nickname" class="w-full" bind:value={addNickname} />
 
 							{#if addError}
-								<p role="alert" class="error">{addError}</p>
+								<p role="alert" class="text-error">{addError}</p>
 							{/if}
 
-							<div class="actions">
+							<div class="mt-4 flex justify-end gap-2">
 								<Dialog.Close type="button">Cancel</Dialog.Close>
 								<button type="submit" disabled={addPending}>
 									{addPending ? 'Waiting for your browser…' : 'Register'}
@@ -205,7 +205,7 @@ async function confirmRevoke() {
 						<td data-label="Nickname">{credential.nickname ?? ''}</td>
 						<td data-label="Added">{credential.created_at}</td>
 						<td data-label="Last used">{credential.last_used_at ?? 'never'}</td>
-						<td data-label="Actions" class="row-actions">
+						<td data-label="Actions" class="row-actions gap-2">
 							<button
 								type="button"
 								onclick={() => openRename(credential.id, credential.nickname)}
@@ -226,8 +226,8 @@ async function confirmRevoke() {
 		</table>
 	</section>
 
-	<section>
-		<header class="section-header">
+	<section class="mb-12">
+		<header class="flex flex-wrap items-center justify-between gap-2">
 			<h2>Bearer tokens</h2>
 			<Dialog.Root
 				bind:open={createTokenOpen}
@@ -241,23 +241,29 @@ async function confirmRevoke() {
 					<Dialog.Content class="dialog">
 						{#if createdToken}
 							<Dialog.Title>Token created</Dialog.Title>
-							<p role="alert" class="warning">
+							<p role="alert" class="font-bold text-warning">
 								This value is shown once. It will not be shown again - store it now.
 							</p>
-							<textarea readonly rows="3" value={createdToken.value} aria-label="Token value"
+							<textarea
+								readonly
+								rows="3"
+								value={createdToken.value}
+								aria-label="Token value"
+								class="w-full"
 							></textarea>
-							<div class="actions">
+							<div class="mt-4 flex justify-end gap-2">
 								<button type="button" onclick={closeCreateToken}>Done</button>
 							</div>
 						{:else}
 							<Dialog.Title>Create a token</Dialog.Title>
 							<form onsubmit={submitCreateToken}>
-								<label for="token-description">Description</label>
-								<input id="token-description" bind:value={tokenDescription} required />
+								<label class="mt-3 block" for="token-description">Description</label>
+								<input id="token-description" class="w-full" bind:value={tokenDescription} required />
 
-								<label for="token-ttl">Valid for (days)</label>
+								<label class="mt-3 block" for="token-ttl">Valid for (days)</label>
 								<input
 									id="token-ttl"
+									class="w-full"
 									type="number"
 									min="1"
 									bind:value={tokenTTLDays}
@@ -265,10 +271,10 @@ async function confirmRevoke() {
 								/>
 
 								{#if tokenError}
-									<p role="alert" class="error">{tokenError}</p>
+									<p role="alert" class="text-error">{tokenError}</p>
 								{/if}
 
-								<div class="actions">
+								<div class="mt-4 flex justify-end gap-2">
 									<Dialog.Close type="button">Cancel</Dialog.Close>
 									<button type="submit">Create</button>
 								</div>
@@ -300,7 +306,7 @@ async function confirmRevoke() {
 						<td data-label="Expires">{token.expires_at}</td>
 						<td data-label="Last used">{token.last_used_at ?? 'never'}</td>
 						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
-						<td data-label="Actions" class="row-actions">
+						<td data-label="Actions" class="row-actions gap-2">
 							{#if !token.revoked}
 								<button type="button" class="danger" onclick={() => openRevoke(token.id)}>
 									Revoke
@@ -320,14 +326,14 @@ async function confirmRevoke() {
 		<Dialog.Content class="dialog">
 			<Dialog.Title>Rename passkey</Dialog.Title>
 			<form onsubmit={submitRename}>
-				<label for="rename-nickname">Nickname</label>
-				<input id="rename-nickname" bind:value={renameNickname} required />
+				<label class="mt-3 block" for="rename-nickname">Nickname</label>
+				<input id="rename-nickname" class="w-full" bind:value={renameNickname} required />
 
 				{#if renameError}
-					<p role="alert" class="error">{renameError}</p>
+					<p role="alert" class="text-error">{renameError}</p>
 				{/if}
 
-				<div class="actions">
+				<div class="mt-4 flex justify-end gap-2">
 					<Dialog.Close type="button">Cancel</Dialog.Close>
 					<button type="submit">Save</button>
 				</div>
@@ -345,9 +351,9 @@ async function confirmRevoke() {
 				You won't be able to log in with it any more.
 			</AlertDialog.Description>
 			{#if deleteCredentialError}
-				<p role="alert" class="error">{deleteCredentialError}</p>
+				<p role="alert" class="text-error">{deleteCredentialError}</p>
 			{/if}
-			<div class="actions">
+			<div class="mt-4 flex justify-end gap-2">
 				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
 				<AlertDialog.Action type="button" onclick={confirmDeleteCredential}>
 					Delete
@@ -366,63 +372,12 @@ async function confirmRevoke() {
 				Anything still using it will stop being able to write.
 			</AlertDialog.Description>
 			{#if revokeError}
-				<p role="alert" class="error">{revokeError}</p>
+				<p role="alert" class="text-error">{revokeError}</p>
 			{/if}
-			<div class="actions">
+			<div class="mt-4 flex justify-end gap-2">
 				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
 				<AlertDialog.Action type="button" onclick={confirmRevoke}>Revoke</AlertDialog.Action>
 			</div>
 		</AlertDialog.Content>
 	</AlertDialog.Portal>
 </AlertDialog.Root>
-
-<style>
-	main {
-		max-width: 60rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-
-	section {
-		margin-bottom: 3rem;
-	}
-
-	.section-header {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.row-actions button {
-		margin-right: var(--space-2);
-	}
-
-	.error {
-		color: var(--color-error);
-	}
-
-	.warning {
-		color: var(--color-warning);
-		font-weight: bold;
-	}
-
-	form label {
-		display: block;
-		margin-top: var(--space-3);
-	}
-
-	form input,
-	:global(.dialog) textarea {
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--space-2);
-		margin-top: var(--space-4);
-	}
-</style>
