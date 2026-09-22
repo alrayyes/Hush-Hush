@@ -20,6 +20,17 @@ CREATE TABLE IF NOT EXISTS used_by (
     PRIMARY KEY (object_id, consumer)
 );
 
+-- A consumer added directly (alrayyes/hush-hush#324), before any object's
+-- used_by references it - used_by.object_id is a NOT NULL foreign key,
+-- so there's nowhere else to record a name with zero secrets yet.
+-- Additive to used_by's own distinct consumer names, not a replacement:
+-- ListConsumers/ListConsumersPage union both (openspec/changes/
+-- web-ui-shadcn/design.md's "New consumers table" decision).
+CREATE TABLE IF NOT EXISTS consumers (
+    name TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL
+);
+
 -- No foreign key to objects: an audit entry documents that an action
 -- happened, and it must survive the object itself being deleted - that's
 -- the whole point of an audit trail.

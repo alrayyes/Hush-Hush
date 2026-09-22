@@ -34,6 +34,17 @@ func TestOpenAppliesSchemaToFreshDatabaseWebAuthnTables(t *testing.T) {
 	require.Contains(t, tables, "webauthn_ceremonies")
 }
 
+func TestOpenAppliesSchemaToFreshDatabaseConsumersTable(t *testing.T) {
+	t.Parallel()
+
+	s, err := store.Open(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	tables := tableNames(t, s)
+	require.Contains(t, tables, "consumers")
+}
+
 func TestOpenMigratesExistingTokensAndAuditLogWithNewColumns(t *testing.T) {
 	// Simulates a database created before owner/revoked_at (write_tokens)
 	// and actor_type/actor_id (audit_log) existed, to prove

@@ -20,6 +20,11 @@ var ErrNotFound = errors.New("object not found")
 // no stored object's used_by list currently records the given name.
 var ErrUnknownConsumer = errors.New("unknown consumer")
 
+// ErrConsumerAlreadyExists is returned by AddConsumer when name already
+// appears in the directory, whether added directly or recorded by an
+// object's used_by list.
+var ErrConsumerAlreadyExists = errors.New("consumer already exists")
+
 // Object is a stored secret object: its sealed value, its recorded used_by
 // lineage, and its description. The service never decrypts Value - it is
 // opaque ciphertext.
@@ -231,12 +236,44 @@ func (s *Store) UpdateObject(ctx context.Context, id string, value []byte, usedB
 	return nil
 }
 
+// AddConsumer adds name to the directory with no secret referencing it yet
+// (alrayyes/hush-hush#324) - used_by has no way to record a bare name
+// itself (object_id is a NOT NULL foreign key), hence the separate
+// consumers table. Returns ErrConsumerAlreadyExists if name already
+// appears in the directory, whether added directly or recorded by an
+// object's used_by list.
+func (s *Store) AddConsumer(ctx context.Context, name string) error {
+	var exists int
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT 1 WHERE EXISTS (SELECT 1 FROM consumers WHERE name = ?)
+			OR EXISTS (SELECT 1 FROM used_by WHERE consumer = ?)`,
+		name, name,
+	).Scan(&exists); err == nil {
+		return ErrConsumerAlreadyExists
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("check existing consumer: %w", err)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	if _, err := s.db.ExecContext(ctx,
+		`INSERT INTO consumers (name, created_at) VALUES (?, ?)`, name, now,
+	); err != nil {
+		return fmt.Errorf("insert consumer: %w", err)
+	}
+
+	return nil
+}
+
 // ListConsumers returns every distinct consumer name currently present in
-// any object's used_by list, sorted, with no duplicates - the secret
-// create/edit form offers these instead of relying on free-text recall
-// (alrayyes/hush-hush#251).
+// any object's used_by list or added directly via AddConsumer, sorted,
+// with no duplicates - the secret create/edit form offers these instead
+// of relying on free-text recall (alrayyes/hush-hush#251).
 func (s *Store) ListConsumers(ctx context.Context) ([]string, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT consumer FROM used_by ORDER BY consumer`)
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT consumer FROM used_by
+		UNION
+		SELECT name FROM consumers
+		ORDER BY 1`)
 	if err != nil {
 		return nil, fmt.Errorf("list consumers: %w", err)
 	}
@@ -285,29 +322,38 @@ type ConsumerPage struct {
 	Total     int
 }
 
-// ListConsumersPage returns one page of distinct consumer names whose
-// name contains filter.Name (case-insensitive, every consumer when
+// ListConsumersPage returns one page of distinct consumer names (recorded
+// by an object's used_by list, added directly via AddConsumer, or both)
+// whose name contains filter.Name (case-insensitive, every consumer when
 // empty), each with a count of the secret objects whose used_by includes
-// it, sorted by name - the consumer directory page's own listing
-// (alrayyes/hush-hush#252), distinct from ListConsumers's plain,
-// unpaginated array that consumer-combobox still relies on.
+// it - 0 for a name that only exists via AddConsumer - sorted by name.
+// The consumer directory page's own listing (alrayyes/hush-hush#252),
+// distinct from ListConsumers's plain, unpaginated array that
+// consumer-combobox still relies on.
 func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (ConsumerPage, error) {
 	pattern := "%" + escapeLike(filter.Name) + "%"
 
+	const namesCTE = `WITH names AS (
+		SELECT consumer AS name FROM used_by
+		UNION
+		SELECT name FROM consumers
+	)`
+
 	var total int
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(DISTINCT consumer) FROM used_by WHERE consumer LIKE ? ESCAPE '\'`,
+		namesCTE+` SELECT COUNT(*) FROM names WHERE name LIKE ? ESCAPE '\'`,
 		pattern,
 	).Scan(&total); err != nil {
 		return ConsumerPage{}, fmt.Errorf("count consumers: %w", err)
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT consumer, COUNT(*) AS secret_count
-		FROM used_by
-		WHERE consumer LIKE ? ESCAPE '\'
-		GROUP BY consumer
-		ORDER BY consumer
+	rows, err := s.db.QueryContext(ctx, namesCTE+`
+		SELECT n.name, COUNT(u.object_id) AS secret_count
+		FROM names n
+		LEFT JOIN used_by u ON u.consumer = n.name
+		WHERE n.name LIKE ? ESCAPE '\'
+		GROUP BY n.name
+		ORDER BY n.name
 		LIMIT ? OFFSET ?`,
 		pattern, filter.PageSize, (filter.Page-1)*filter.PageSize,
 	)
@@ -337,7 +383,9 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 // used_by list that currently records oldName, returning the resulting
 // entry under newName. Consumers aren't a stored resource of their own
 // (alrayyes/hush-hush#282, ADR 0002) - this is a bulk rewrite across
-// used_by, not a rename of a row with its own identity.
+// used_by, not a rename of a row with its own identity, except for a
+// name added directly via AddConsumer, which does have its own row in
+// consumers to move.
 //
 // If newName already has its own recorded objects, the two merge: an
 // object recording both ends up with a single used_by entry, not a
@@ -345,7 +393,7 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 // SecretCount covers every object now recording newName, old and
 // already-there combined. Renaming a name to itself is a no-op. It
 // returns ErrUnknownConsumer if oldName isn't currently recorded
-// anywhere.
+// anywhere, in used_by or in consumers.
 func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (ConsumerEntry, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -354,7 +402,11 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 	defer func() { _ = tx.Rollback() }()
 
 	var exists int
-	switch err := tx.QueryRowContext(ctx, `SELECT 1 FROM used_by WHERE consumer = ? LIMIT 1`, oldName).Scan(&exists); {
+	switch err := tx.QueryRowContext(ctx, `
+		SELECT 1 WHERE EXISTS (SELECT 1 FROM used_by WHERE consumer = ?)
+			OR EXISTS (SELECT 1 FROM consumers WHERE name = ?)`,
+		oldName, oldName,
+	).Scan(&exists); {
 	case errors.Is(err, sql.ErrNoRows):
 		return ConsumerEntry{}, ErrUnknownConsumer
 	case err != nil:
@@ -377,11 +429,30 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 		if _, err := tx.ExecContext(ctx, `UPDATE used_by SET consumer = ? WHERE consumer = ?`, newName, oldName); err != nil {
 			return ConsumerEntry{}, fmt.Errorf("rename used_by rows: %w", err)
 		}
+
+		if _, err := tx.ExecContext(ctx, `DELETE FROM consumers WHERE name = ?`, oldName); err != nil {
+			return ConsumerEntry{}, fmt.Errorf("drop old consumer entry: %w", err)
+		}
 	}
 
 	var count int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, newName).Scan(&count); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("count renamed consumer: %w", err)
+	}
+
+	// newName has no used_by rows of its own yet - keep it visible in the
+	// directory the same way AddConsumer does, rather than the rename
+	// making it disappear. INSERT OR IGNORE: a no-op if newName already
+	// has its own consumers row (renaming to itself, or newName already
+	// existed there).
+	if count == 0 {
+		now := time.Now().UTC().Format(time.RFC3339)
+		if _, err := tx.ExecContext(ctx,
+			`INSERT OR IGNORE INTO consumers (name, created_at) VALUES (?, ?)`,
+			newName, now,
+		); err != nil {
+			return ConsumerEntry{}, fmt.Errorf("record renamed consumer: %w", err)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -392,23 +463,44 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 }
 
 // DeleteConsumer strips name from the used_by list of every stored object
-// that currently records it. The objects themselves aren't touched
-// otherwise, and none are deleted even if this empties their used_by
-// list. It returns ErrUnknownConsumer if name isn't currently recorded
-// anywhere.
+// that currently records it, and removes its consumers row if it has
+// one. The objects themselves aren't touched otherwise, and none are
+// deleted even if this empties their used_by list. It returns
+// ErrUnknownConsumer if name isn't currently recorded anywhere, in
+// used_by or in consumers.
 func (s *Store) DeleteConsumer(ctx context.Context, name string) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM used_by WHERE consumer = ?`, name)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("delete consumer: %w", err)
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	usedByResult, err := tx.ExecContext(ctx, `DELETE FROM used_by WHERE consumer = ?`, name)
+	if err != nil {
+		return fmt.Errorf("delete consumer from used_by: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
+	usedByRows, err := usedByResult.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("check rows affected: %w", err)
+		return fmt.Errorf("check used_by rows affected: %w", err)
 	}
 
-	if rows == 0 {
+	consumersResult, err := tx.ExecContext(ctx, `DELETE FROM consumers WHERE name = ?`, name)
+	if err != nil {
+		return fmt.Errorf("delete consumer entry: %w", err)
+	}
+
+	consumersRows, err := consumersResult.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check consumers rows affected: %w", err)
+	}
+
+	if usedByRows == 0 && consumersRows == 0 {
 		return ErrUnknownConsumer
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

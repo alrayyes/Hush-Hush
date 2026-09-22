@@ -371,3 +371,103 @@ func TestSessionDeletesConsumerWithoutCSRFTokenIsRejected(t *testing.T) {
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func addConsumerRequest(t *testing.T, name, token string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, "/consumers",
+		bytes.NewReader([]byte(`{"name":"`+name+`"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	return req
+}
+
+func TestAddConsumerCreatesEntryWithZeroSecrets(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, addConsumerRequest(t, "homelab/new-device", issueToken(t, s)))
+
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	var body hushhush.ConsumerEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/new-device", SecretCount: 0}, body)
+
+	consumers, err := s.ListConsumers(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/new-device"}, consumers)
+}
+
+func TestAddConsumerDuplicateNameReturnsConflict(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, addConsumerRequest(t, "homelab/mattermost", issueToken(t, s)))
+
+	require.Equal(t, http.StatusConflict, rec.Code)
+}
+
+func TestAddConsumerWithoutNameIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/consumers", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestAddConsumerWithoutBearerTokenOrSessionIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, addConsumerRequest(t, "homelab/new-device", ""))
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestSessionAddsConsumerWithItsCSRFToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	req := addConsumerRequest(t, "homelab/new-device", "")
+	req.AddCookie(sessionCookie)
+	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+}
+
+func TestSessionAddsConsumerWithoutCSRFTokenIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+
+	req := addConsumerRequest(t, "homelab/new-device", "")
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}

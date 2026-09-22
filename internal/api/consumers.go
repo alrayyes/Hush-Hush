@@ -130,6 +130,46 @@ func consumersPageFrom(page store.ConsumerPage) ConsumersPage {
 	return ConsumersPage{Consumers: entries, Total: page.Total}
 }
 
+// AddConsumerRequest is the POST /consumers body. Matches
+// components.schemas.AddConsumerRequest in api/openapi.yaml.
+type AddConsumerRequest struct {
+	Name string `json:"name"`
+}
+
+// handleAddConsumer adds a consumer to the directory with no secret
+// referencing it yet (alrayyes/hush-hush#324) - every other consumer
+// here only exists because some object's used_by recorded it.
+func handleAddConsumer(s objectStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req AddConsumerRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, r, http.StatusBadRequest, "malformed request body")
+
+			return
+		}
+
+		if req.Name == "" {
+			writeError(w, r, http.StatusBadRequest, "name is required")
+
+			return
+		}
+
+		switch err := s.AddConsumer(r.Context(), req.Name); {
+		case err == nil:
+		case errors.Is(err, store.ErrConsumerAlreadyExists):
+			writeError(w, r, http.StatusConflict, "consumer already exists")
+
+			return
+		default:
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, ConsumerEntry{Name: req.Name, SecretCount: 0})
+	}
+}
+
 // RenameConsumerRequest is the PATCH /consumers/{name} body. Matches
 // components.schemas.RenameConsumerRequest in api/openapi.yaml.
 type RenameConsumerRequest struct {

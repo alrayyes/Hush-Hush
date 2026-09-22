@@ -218,6 +218,20 @@ export async function deleteConsumer(name: string): Promise<void> {
 	await request(`/consumers/${name}`, { method: 'DELETE' });
 }
 
+// addConsumer adds name to the directory with no secret referencing it
+// yet (alrayyes/hush-hush#324) - POST /consumers, distinct from every
+// other consumer above which only ever exists because some object's
+// used_by recorded it. Rejected with a 409 ApiError if name is already
+// in the directory.
+export async function addConsumer(name: string): Promise<ConsumerEntry> {
+	const res = await request('/consumers', {
+		method: 'POST',
+		body: JSON.stringify({ name }),
+	});
+
+	return res.json();
+}
+
 export async function getObjectValue(id: string): Promise<string> {
 	const res = await request(`/objects/${encodeURIComponent(id)}`);
 	const bytes = new Uint8Array(await res.arrayBuffer());

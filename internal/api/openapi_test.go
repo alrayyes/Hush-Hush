@@ -211,6 +211,33 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "add consumer",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				b := []byte(`{"name":"contract-added-consumer"}`)
+				req := httptest.NewRequest(http.MethodPost, "/consumers", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "add duplicate consumer",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObjectWithConsumer(t, s, "contract_add_duplicate", "contract-existing-consumer")
+
+				b := []byte(`{"name":"contract-existing-consumer"}`)
+				req := httptest.NewRequest(http.MethodPost, "/consumers", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
 			// A single path segment, deliberately without a "/" - the
 			// OpenAPI spec's consumerName parameter uses the default
 			// "simple" path-param style, which (per the OpenAPI spec
