@@ -112,6 +112,58 @@ func auditLogFilterFrom(r *http.Request) (store.AuditLogFilter, error) {
 	return filter, nil
 }
 
+// AuditActorOption is one selectable actor value in a
+// queryAuditLogFilterOptions response. Matches
+// components.schemas.AuditActorOption in api/openapi.yaml.
+type AuditActorOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+// AuditLogFilterOptions is the queryAuditLogFilterOptions response shape.
+// Matches components.schemas.AuditLogFilterOptions in api/openapi.yaml.
+type AuditLogFilterOptions struct {
+	ObjectIDs []string           `json:"object_ids"`
+	Actors    []AuditActorOption `json:"actors"`
+	Callers   []string           `json:"callers"`
+}
+
+// handleQueryAuditLogFilterOptions returns every distinct object id,
+// actor, and caller currently recorded in the audit log - what backs the
+// web UI's own filter select boxes with real values instead of a
+// free-text guess. Unauthenticated, same as GET /audit-log itself.
+func handleQueryAuditLogFilterOptions(s objectStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		options, err := s.QueryAuditLogFilterOptions(r.Context())
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		writeJSON(w, http.StatusOK, auditLogFilterOptionsFrom(options))
+	}
+}
+
+func auditLogFilterOptionsFrom(options store.AuditLogFilterOptions) AuditLogFilterOptions {
+	objectIDs := options.ObjectIDs
+	if objectIDs == nil {
+		objectIDs = []string{}
+	}
+
+	callers := options.Callers
+	if callers == nil {
+		callers = []string{}
+	}
+
+	actors := make([]AuditActorOption, len(options.Actors))
+	for i, a := range options.Actors {
+		actors[i] = AuditActorOption{Value: a.Value, Label: a.Label}
+	}
+
+	return AuditLogFilterOptions{ObjectIDs: objectIDs, Actors: actors, Callers: callers}
+}
+
 func auditLogEntriesFrom(rows []store.AuditLogEntry) []AuditLogEntry {
 	entries := make([]AuditLogEntry, len(rows))
 	for i, row := range rows {

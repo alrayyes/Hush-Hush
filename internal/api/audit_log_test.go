@@ -130,3 +130,58 @@ func TestQueryAuditLogLimitOutOfRangeIsRejected(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
+
+func TestQueryAuditLogFilterOptionsReturnsDistinctValues(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "read", "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "update", "homelab/vps-docker", "203.0.113.2", "session", "admin"))
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log/filter-options", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var body hushhush.AuditLogFilterOptions
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, []string{"a"}, body.ObjectIDs)
+	require.Equal(t, []string{"homelab/vps-docker"}, body.Callers)
+	require.ElementsMatch(t, []hushhush.AuditActorOption{
+		{Value: "none", Label: "none"},
+		{Value: "admin", Label: "admin"},
+	}, body.Actors)
+}
+
+func TestQueryAuditLogFilterOptionsOnAFreshLogReturnsEmptyArrays(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log/filter-options", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"object_ids":[],"actors":[],"callers":[]}`, rec.Body.String())
+}
+
+func TestQueryAuditLogWithActorNoneMatchesUnauthenticatedReads(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "read", "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", "create", "", "203.0.113.2", "session", "admin"))
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?actor=none", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	var entries []hushhush.AuditLogEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &entries))
+	require.Len(t, entries, 1)
+	require.Equal(t, "a", entries[0].ObjectID)
+}

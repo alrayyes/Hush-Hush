@@ -511,7 +511,11 @@ paths:
           description: |
             Restrict to entries authenticated by this verified actor - a
             token id, or the admin account's own actor_id. Unlike caller,
-            this is never self-reported.
+            this is never self-reported. The literal value `none` is a
+            sentinel matching an unauthenticated read (no real actor_id
+            ever takes that value) - `GET /audit-log/filter-options`
+            returns it as one of the actor filter's own selectable
+            values, alongside every real actor.
           schema:
             type: string
         - name: from
@@ -561,6 +565,37 @@ paths:
                   $ref: "#/components/schemas/AuditLogEntry"
         "400":
           $ref: "#/components/responses/BadRequest"
+
+  /audit-log/filter-options:
+    get:
+      operationId: queryAuditLogFilterOptions
+      summary: List the values GET /audit-log's own filters can select from
+      description: |
+        Returns every distinct object id, actor, and caller currently
+        recorded in the audit log - computed from the audit log itself,
+        not from `GET /objects`'s currently-existing objects, since an
+        audit entry outlives the object it's about by design. Backs the
+        web UI's object-id and actor/caller filter select boxes with
+        values that actually appear in the log, rather than a free-text
+        guess.
+      tags: [audit-log]
+      responses:
+        "200":
+          description: The distinct object ids, actors, and callers recorded in the audit log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogFilterOptions"
+              example:
+                object_ids: [mattermost_deploy_webhook]
+                actors:
+                  - value: admin
+                    label: admin
+                  - value: a1b2c3d4e5f6a7b8
+                    label: "token:a1b2c3d4e5f6a7b8"
+                  - value: none
+                    label: none
+                callers: [homelab/vps-docker]
 
   /auth/register/begin:
     post:
@@ -1199,6 +1234,40 @@ components:
           description: |
             The specific token id or admin account this call was
             authenticated as - absent for an unauthenticated read.
+
+    AuditActorOption:
+      type: object
+      required: [value, label]
+      properties:
+        value:
+          type: string
+          description: What to send back as the `actor` query parameter to select this actor.
+        label:
+          type: string
+          description: What to show the user - "admin", "token:<id>", or "none".
+      example:
+        value: a1b2c3d4e5f6a7b8
+        label: "token:a1b2c3d4e5f6a7b8"
+
+    AuditLogFilterOptions:
+      type: object
+      required: [object_ids, actors, callers]
+      properties:
+        object_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectId"
+          description: Every distinct object id currently recorded in the audit log.
+        actors:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditActorOption"
+          description: Every distinct actor currently recorded in the audit log.
+        callers:
+          type: array
+          items:
+            type: string
+          description: Every distinct caller currently recorded in the audit log.
 
     Health:
       type: object

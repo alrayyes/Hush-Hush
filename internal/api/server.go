@@ -32,6 +32,7 @@ type objectStore interface {
 	DeleteObject(ctx context.Context, id string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
+	QueryAuditLogFilterOptions(ctx context.Context) (store.AuditLogFilterOptions, error)
 	AuthenticateWriteToken(ctx context.Context, token string) (id string, valid bool, err error)
 	CreateWriteToken(ctx context.Context, description string, ttl time.Duration, owner string) (store.WriteToken, string, error)
 	ListWriteTokens(ctx context.Context) ([]store.WriteToken, error)
@@ -101,6 +102,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("DELETE /objects/{id}", requireWriteAccess(s, true, handleDeleteObject(s)))
 
 	mux.HandleFunc("GET /audit-log", handleHardNavRoute(handleQueryAuditLog(s), staticHandler))
+	mux.HandleFunc("GET /audit-log/filter-options", handleQueryAuditLogFilterOptions(s))
 
 	mux.HandleFunc("POST /auth/register/begin", handleBeginRegistration(s, wa))
 	mux.HandleFunc("POST /auth/register/finish", handleFinishRegistration(s, wa))

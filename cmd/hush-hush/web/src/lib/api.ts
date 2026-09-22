@@ -334,6 +334,27 @@ export async function queryAuditLog(
 	return res.json();
 }
 
+export interface AuditActorOption {
+	value: string;
+	label: string;
+}
+
+export interface AuditLogFilterOptions {
+	object_ids: string[];
+	actors: AuditActorOption[];
+	callers: string[];
+}
+
+// queryAuditLogFilterOptions fetches the distinct object ids, actors, and
+// callers that actually appear in the audit log - what backs the audit
+// log page's own object-id and actor/caller filter select boxes
+// (alrayyes/hush-hush#323), rather than a free-text guess.
+export async function queryAuditLogFilterOptions(): Promise<AuditLogFilterOptions> {
+	const res = await request('/audit-log/filter-options');
+
+	return res.json();
+}
+
 export interface Credential {
 	id: string;
 	nickname?: string;
