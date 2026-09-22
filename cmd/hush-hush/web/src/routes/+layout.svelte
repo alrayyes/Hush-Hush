@@ -4,6 +4,7 @@ import '../app.css';
 import { goto, invalidate } from '$app/navigation';
 import { logout } from '$lib/api';
 import favicon from '$lib/assets/favicon.svg';
+import { Button } from '$lib/components/ui/button/index.js';
 import Footer from '$lib/Footer.svelte';
 import ThemeToggle from '$lib/ThemeToggle.svelte';
 import type { LayoutData } from './$types';
@@ -49,22 +50,23 @@ const navLinks = [
 	{#if data.authenticated}
 		<nav class="flex flex-wrap items-center gap-2 sm:flex-1 sm:gap-4">
 			{#each navLinks as link (link.href)}
-				<a
+				<Button
 					href={link.href}
+					variant="ghost"
 					aria-current={page.url.pathname === link.href ? 'page' : undefined}
 					class={page.url.pathname === link.href
-						? 'border-b-2 border-accent pb-1 font-bold text-inherit no-underline'
-						: 'border-b-2 border-transparent pb-1 text-inherit no-underline'}
+						? 'h-auto rounded-none border-b-2 border-accent px-1 py-1 font-bold no-underline'
+						: 'h-auto rounded-none border-b-2 border-transparent px-1 py-1 no-underline'}
 				>
 					{link.label}
-				</a>
+				</Button>
 			{/each}
 		</nav>
 	{/if}
 	<div class="topbar-actions flex items-center gap-2">
 		<ThemeToggle />
 		{#if data.authenticated}
-			<button type="button" onclick={handleLogout}>Log out</button>
+			<Button variant="outline" onclick={handleLogout}>Log out</Button>
 		{/if}
 	</div>
 </div>

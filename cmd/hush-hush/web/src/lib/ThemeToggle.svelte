@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { Button } from '$lib/components/ui/button/index.js';
 import {
 	applyTheme,
 	readStoredTheme,
@@ -39,9 +40,10 @@ const label = $derived(
 );
 </script>
 
-<button
-	type="button"
-	class="theme-toggle ml-auto inline-flex h-9 w-9 items-center justify-center rounded border border-border bg-transparent p-0 text-inherit focus:outline-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+<Button
+	variant="ghost"
+	size="icon"
+	class="ml-auto"
 	onclick={toggle}
 	aria-pressed={theme === 'dark'}
 	aria-label={label}
@@ -72,4 +74,4 @@ const label = $derived(
 			/>
 		</svg>
 	{/if}
-</button>
+</Button>
