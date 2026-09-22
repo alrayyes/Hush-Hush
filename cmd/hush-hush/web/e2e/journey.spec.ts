@@ -319,6 +319,63 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page.getByRole('alert')).toHaveText('consumer already exists');
 	await addDialog.getByRole('button', { name: 'Cancel' }).click();
 
+	// #323: the object-id and actor filters are select boxes populated
+	// from what actually appears in the log, not free text - this
+	// exercises both against the real entries the flow above already
+	// produced (a create + read + update for mattermost_deploy_webhook,
+	// each carrying a real actor).
+	await nav.getByRole('link', { name: 'Audit log' }).click();
+	await expect(page.getByRole('heading', { name: 'Audit log' })).toBeVisible();
+	const auditLogResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(auditLogResults.violations).toEqual([]);
+
+	const rows = page.locator('tbody tr');
+	const actorTrigger = page.getByRole('button', { name: 'Actor', exact: true });
+	const objectTrigger = page.getByRole('button', {
+		name: 'Object id',
+		exact: true,
+	});
+
+	await actorTrigger.click();
+	await page.getByRole('option', { name: 'none', exact: true }).click();
+	await expect(page.getByText('actor: none')).toBeVisible();
+	// Exactly the two "View" clicks above recorded a read with no
+	// verified actor - waiting on the row count itself (not just the
+	// chip, which updates synchronously before the refetch resolves)
+	// avoids asserting against the table's still-unfiltered content.
+	await expect(rows).toHaveCount(2);
+	for (const row of await rows.all()) {
+		await expect(row.getByRole('cell').nth(2)).toHaveText('none');
+	}
+
+	await actorTrigger.click();
+	await page.getByRole('option', { name: 'Any actor' }).click();
+	await expect(page.getByText('actor: none')).toHaveCount(0);
+	await expect(rows).toHaveCount(5);
+
+	await objectTrigger.click();
+	await page.getByRole('option', { name: 'mattermost_deploy_webhook' }).click();
+	await expect(
+		page.getByText('object: mattermost_deploy_webhook'),
+	).toBeVisible();
+	await expect(rows).toHaveCount(5);
+	for (const row of await rows.all()) {
+		await expect(row.getByRole('cell').first()).toHaveText(
+			'mattermost_deploy_webhook',
+		);
+	}
+
+	await page
+		.locator('li')
+		.filter({ hasText: 'object: mattermost_deploy_webhook' })
+		.getByRole('button')
+		.click();
+	await expect(page.getByText('object: mattermost_deploy_webhook')).toHaveCount(
+		0,
+	);
+
 	await page.setViewportSize({ width: 320, height: 720 });
 
 	// #294: the topbar's nav links, theme toggle, and Log out button used

@@ -6,6 +6,9 @@ import {
 	queryAuditLog,
 } from '$lib/api';
 import { auditActorLabel, toCSV, toJSON } from '$lib/audit-export';
+import { Button } from '$lib/components/ui/button/index.js';
+import { Label } from '$lib/components/ui/label/index.js';
+import * as Select from '$lib/components/ui/select/index.js';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -20,10 +23,13 @@ let entries: AuditLogEntry[] = $state(data.entries);
 let loading = $state(false);
 let loadError = $state('');
 
-// Applied filters - object/actor/caller are plain text, from/to are
-// datetime-local strings converted to RFC 3339 on request. Removing a
-// chip (or changing a field) refetches immediately, no "Apply" step
-// (design.md's "Audit log UI" decision).
+// Applied filters - object/actor/caller are select boxes populated from
+// data.filterOptions (alrayyes/hush-hush#323), from/to are datetime-local
+// strings converted to RFC 3339 on request. "" means no filter for all
+// three selects, matching the free-text fields' own empty-string unset
+// state before this change. Removing a chip (or changing a field)
+// refetches immediately, no "Apply" step (design.md's "Audit log UI"
+// decision).
 let objectFilter = $state('');
 let actorFilter = $state('');
 let callerFilter = $state('');
@@ -91,6 +97,16 @@ function clearFilter(name: 'object' | 'actor' | 'caller' | 'from' | 'to') {
 	resetToFirstPage();
 }
 
+// actorLabel resolves a filter-options value back to its label, for the
+// select's own closed-state display and for the applied-filter chip -
+// the value sent to the server (a raw token id, or the "none" sentinel)
+// isn't what a visitor should read back.
+function actorLabel(value: string): string {
+	return (
+		data.filterOptions.actors.find((a) => a.value === value)?.label ?? value
+	);
+}
+
 function downloadBlob(content: string, mimeType: string, filename: string) {
 	const blob = new Blob([content], { type: mimeType });
 	const url = URL.createObjectURL(blob);
@@ -125,18 +141,60 @@ function exportCSV() {
 		}}
 	>
 		<div class="flex flex-col gap-1">
-			<label class="text-sm" for="filter-object">Object id</label>
-			<input id="filter-object" class="w-full" bind:value={objectFilter} onchange={resetToFirstPage} />
+			<Label id="filter-object-label">Object id</Label>
+			<Select.Root
+				type="single"
+				bind:value={objectFilter}
+				onValueChange={resetToFirstPage}
+			>
+				<Select.Trigger aria-labelledby="filter-object-label" class="w-full">
+					<Select.Value placeholder="Any object" />
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item value="" label="Any object" />
+					{#each data.filterOptions.object_ids as objectID (objectID)}
+						<Select.Item value={objectID} label={objectID} />
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 
 		<div class="flex flex-col gap-1">
-			<label class="text-sm" for="filter-actor">Actor</label>
-			<input id="filter-actor" class="w-full" bind:value={actorFilter} onchange={resetToFirstPage} />
+			<Label id="filter-actor-label">Actor</Label>
+			<Select.Root
+				type="single"
+				bind:value={actorFilter}
+				onValueChange={resetToFirstPage}
+			>
+				<Select.Trigger aria-labelledby="filter-actor-label" class="w-full">
+					<Select.Value placeholder="Any actor" />
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item value="" label="Any actor" />
+					{#each data.filterOptions.actors as actor (actor.value)}
+						<Select.Item value={actor.value} label={actor.label} />
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 
 		<div class="flex flex-col gap-1">
-			<label class="text-sm" for="filter-caller">Caller</label>
-			<input id="filter-caller" class="w-full" bind:value={callerFilter} onchange={resetToFirstPage} />
+			<Label id="filter-caller-label">Caller</Label>
+			<Select.Root
+				type="single"
+				bind:value={callerFilter}
+				onValueChange={resetToFirstPage}
+			>
+				<Select.Trigger aria-labelledby="filter-caller-label" class="w-full">
+					<Select.Value placeholder="Any caller" />
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item value="" label="Any caller" />
+					{#each data.filterOptions.callers as caller (caller)}
+						<Select.Item value={caller} label={caller} />
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 
 		<div class="flex flex-col gap-1">
@@ -167,74 +225,79 @@ function exportCSV() {
 			{#if objectFilter}
 				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					object: {objectFilter}
-					<button
-						type="button"
-						class="border-0 bg-transparent"
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
 						onclick={() => clearFilter('object')}
 						aria-label="Remove object filter"
 					>
 						&times;
-					</button>
+					</Button>
 				</li>
 			{/if}
 			{#if actorFilter}
 				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
-					actor: {actorFilter}
-					<button
-						type="button"
-						class="border-0 bg-transparent"
+					actor: {actorLabel(actorFilter)}
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
 						onclick={() => clearFilter('actor')}
 						aria-label="Remove actor filter"
 					>
 						&times;
-					</button>
+					</Button>
 				</li>
 			{/if}
 			{#if callerFilter}
 				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					caller: {callerFilter}
-					<button
-						type="button"
-						class="border-0 bg-transparent"
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
 						onclick={() => clearFilter('caller')}
 						aria-label="Remove caller filter"
 					>
 						&times;
-					</button>
+					</Button>
 				</li>
 			{/if}
 			{#if fromFilter}
 				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					from: {fromFilter}
-					<button
-						type="button"
-						class="border-0 bg-transparent"
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
 						onclick={() => clearFilter('from')}
 						aria-label="Remove from filter"
 					>
 						&times;
-					</button>
+					</Button>
 				</li>
 			{/if}
 			{#if toFilter}
 				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					to: {toFilter}
-					<button
-						type="button"
-						class="border-0 bg-transparent"
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
 						onclick={() => clearFilter('to')}
 						aria-label="Remove to filter"
 					>
 						&times;
-					</button>
+					</Button>
 				</li>
 			{/if}
 		</ul>
 	{/if}
 
 	<div class="mb-4 flex gap-2">
-		<button type="button" onclick={exportCSV}>Export CSV</button>
-		<button type="button" onclick={exportJSON}>Export JSON</button>
+		<Button variant="outline" onclick={exportCSV}>Export CSV</Button>
+		<Button variant="outline" onclick={exportJSON}>Export JSON</Button>
 	</div>
 
 	{#if loadError}
@@ -265,11 +328,15 @@ function exportCSV() {
 	</table>
 
 	<div class="mt-4 flex gap-2">
-		<button type="button" onclick={previousPage} disabled={cursorStack.length === 0 || loading}>
+		<Button
+			variant="outline"
+			onclick={previousPage}
+			disabled={cursorStack.length === 0 || loading}
+		>
 			Previous
-		</button>
-		<button type="button" onclick={nextPage} disabled={entries.length === 0 || loading}>
+		</Button>
+		<Button variant="outline" onclick={nextPage} disabled={entries.length === 0 || loading}>
 			Next
-		</button>
+		</Button>
 	</div>
 </main>

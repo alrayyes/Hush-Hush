@@ -1,8 +1,11 @@
-import { queryAuditLog } from '$lib/api';
+import { queryAuditLog, queryAuditLogFilterOptions } from '$lib/api';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {
-	const entries = await queryAuditLog();
+	const [entries, filterOptions] = await Promise.all([
+		queryAuditLog(),
+		queryAuditLogFilterOptions(),
+	]);
 
-	return { entries };
+	return { entries, filterOptions };
 };
