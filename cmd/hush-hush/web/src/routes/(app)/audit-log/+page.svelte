@@ -118,38 +118,48 @@ function exportCSV() {
 	<h1>Audit log</h1>
 
 	<form
-		class="mb-4 grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] items-end gap-x-4 gap-y-2"
+		class="mb-4 grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-x-4 gap-y-3"
 		onsubmit={(event) => {
 			event.preventDefault();
 			resetToFirstPage();
 		}}
 	>
-		<label class="block text-sm" for="filter-object">Object id</label>
-		<input id="filter-object" class="w-full" bind:value={objectFilter} onchange={resetToFirstPage} />
+		<div class="flex flex-col gap-1">
+			<label class="text-sm" for="filter-object">Object id</label>
+			<input id="filter-object" class="w-full" bind:value={objectFilter} onchange={resetToFirstPage} />
+		</div>
 
-		<label class="block text-sm" for="filter-actor">Actor</label>
-		<input id="filter-actor" class="w-full" bind:value={actorFilter} onchange={resetToFirstPage} />
+		<div class="flex flex-col gap-1">
+			<label class="text-sm" for="filter-actor">Actor</label>
+			<input id="filter-actor" class="w-full" bind:value={actorFilter} onchange={resetToFirstPage} />
+		</div>
 
-		<label class="block text-sm" for="filter-caller">Caller</label>
-		<input id="filter-caller" class="w-full" bind:value={callerFilter} onchange={resetToFirstPage} />
+		<div class="flex flex-col gap-1">
+			<label class="text-sm" for="filter-caller">Caller</label>
+			<input id="filter-caller" class="w-full" bind:value={callerFilter} onchange={resetToFirstPage} />
+		</div>
 
-		<label class="block text-sm" for="filter-from">From</label>
-		<input
-			id="filter-from"
-			class="w-full"
-			type="datetime-local"
-			bind:value={fromFilter}
-			onchange={resetToFirstPage}
-		/>
+		<div class="flex flex-col gap-1">
+			<label class="text-sm" for="filter-from">From</label>
+			<input
+				id="filter-from"
+				class="w-full"
+				type="datetime-local"
+				bind:value={fromFilter}
+				onchange={resetToFirstPage}
+			/>
+		</div>
 
-		<label class="block text-sm" for="filter-to">To</label>
-		<input
-			id="filter-to"
-			class="w-full"
-			type="datetime-local"
-			bind:value={toFilter}
-			onchange={resetToFirstPage}
-		/>
+		<div class="flex flex-col gap-1">
+			<label class="text-sm" for="filter-to">To</label>
+			<input
+				id="filter-to"
+				class="w-full"
+				type="datetime-local"
+				bind:value={toFilter}
+				onchange={resetToFirstPage}
+			/>
+		</div>
 	</form>
 
 	{#if objectFilter || actorFilter || callerFilter || fromFilter || toFilter}
