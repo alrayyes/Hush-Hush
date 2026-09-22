@@ -69,7 +69,7 @@ the page count grows enough that hand-styling becomes the bottleneck.
 condition above, and shadcn-svelte generates component source directly on
 top of Bits UI and Tailwind v4 - both already dependencies by then - so
 the original dependency-surface objection no longer held. The rest of
-this decision (Bits UI for headless behavior underneath) stands; only the
+this decision (Bits UI for headless behaviour underneath) stands; only the
 "hand-styled otherwise" half changed.
 
 **Build embedding: frontend built to `cmd/hush-hush/web/build/`, embedded
