@@ -95,7 +95,8 @@
       "browsable",
       "denormalized",
       "substring",
-      "Sec-Fetch-Dest"
+      "Sec-Fetch-Dest",
+      "Stoplight"
     ]
   },
   "ltex.disabledRules": {

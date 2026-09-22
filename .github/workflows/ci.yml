@@ -255,6 +255,43 @@ jobs:
       - name: redocly lint
         run: bun run lint:api
 
+  # Renders the spec `api` just linted as a docs page (docs/api/index.html,
+  # Stoplight Elements - alrayyes/dotfiles#631) and publishes it to GitHub
+  # Pages. `needs: api` so a spec that fails Redocly never gets deployed;
+  # `push`-only because `api` also runs on `pull_request`, where there's no
+  # Pages environment to deploy into.
+  #
+  # The uploaded artifact mirrors docs/api/ and api/ at their real repo
+  # paths rather than flattening either into the site root - index.html's
+  # apiDescriptionUrl is a relative "../../api/openapi.yaml", and that only
+  # resolves if the deployed layout matches the repo's.
+  pages:
+    needs: api
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Stage the artifact
+        run: |
+          mkdir -p _site/docs/api _site/api
+          cp docs/api/index.html _site/docs/api/index.html
+          cp api/openapi.yaml _site/api/openapi.yaml
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        id: deployment
+
   # package.json's own canonical shape - sort-package-json fills the same
   # role here that Prettier fills for everything else.
   package-json:
