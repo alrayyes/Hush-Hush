@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.26.0](https://github.com/alrayyes/Hush-Hush/compare/v2.25.0...v2.26.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** migrate login page to shadcn-svelte components ([#332](https://github.com/alrayyes/Hush-Hush/issues/332)) ([5290e03](https://github.com/alrayyes/Hush-Hush/commit/5290e034a537cadfb8fce2e2cb4cf7d8305a13e2))
+
 ## [2.25.0](https://github.com/alrayyes/Hush-Hush/compare/v2.24.0...v2.25.0) (2026-09-22)
 
 
