@@ -6,5 +6,15 @@
 		"shadcn/no-arbitrary-values": "warn",
 		"shadcn/no-inline-styles": "warn",
 		"shadcn/require-static-classes": "warn"
-	}
+	},
+	"overrides": [
+		{
+			"files": ["src/lib/components/ui/**"],
+			"rules": {
+				"shadcn/no-restyle": "off",
+				"shadcn/no-arbitrary-values": "off",
+				"shadcn/require-static-classes": "off"
+			}
+		}
+	]
 }

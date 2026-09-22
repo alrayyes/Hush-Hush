@@ -42,6 +42,42 @@
 	   --container-4xl (56rem) and --container-5xl (64rem), so it gets its
 	   own named token rather than an arbitrary value on the component. */
 	--container-content: 60rem;
+
+	/* shadcn-svelte's expected token names, aliased onto the tokens above
+	   rather than a second set of real values (openspec/changes/
+	   web-ui-shadcn/design.md's "Token mapping" decision). Every one of
+	   these resolves to a var() that's already dark-mode aware, so none of
+	   them need their own dark-mode override below.
+	   --color-accent/--color-accent-foreground keep their existing brand-
+	   blue meaning even for shadcn's own "highlighted option" semantic
+	   (Select's data-highlighted state, the only generated component that
+	   uses it) - a solid brand-color highlight reads as an intentional
+	   selection state here, not a collision worth a second variable. */
+	--color-background: var(--color-bg);
+	--color-foreground: var(--color-text);
+	--color-card: var(--color-surface);
+	--color-card-foreground: var(--color-text);
+	--color-popover: var(--color-surface);
+	--color-popover-foreground: var(--color-text);
+	--color-primary: var(--color-accent);
+	--color-primary-foreground: var(--color-accent-contrast);
+	--color-accent-foreground: var(--color-accent-contrast);
+	--color-destructive: var(--color-danger);
+	--color-input: var(--color-border);
+	--color-ring: var(--color-accent);
+	--color-secondary: var(--color-border-subtle);
+	--color-secondary-foreground: var(--color-text);
+	--color-muted: var(--color-border-subtle);
+	--color-muted-foreground: var(--color-text-muted);
+
+	/* This app's own --radius is treated as shadcn's "lg" reference point,
+	   since it's already what every existing button/input/dialog corner
+	   uses - sm/md/xl are the standard shadcn offsets from that one value,
+	   not new design decisions. */
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
 }
 
 /* Matches the existing ThemeToggle mechanism (src/lib/theme.ts): an
