@@ -64,6 +64,14 @@ more dependency surface than a few pages need; over Melt UI,
 whose Svelte 5 support was still migrating as of this research. Revisit if
 the page count grows enough that hand-styling becomes the bottleneck.
 
+**Superseded 2026-09-22** (alrayyes/hush-hush#317,
+`openspec/changes/web-ui-shadcn/`): the app reached 8 pages, the revisit
+condition above, and shadcn-svelte generates component source directly on
+top of Bits UI and Tailwind v4 - both already dependencies by then - so
+the original dependency-surface objection no longer held. The rest of
+this decision (Bits UI for headless behavior underneath) stands; only the
+"hand-styled otherwise" half changed.
+
 **Build embedding: frontend built to `cmd/hush-hush/web/build/`, embedded
 into the Go binary with `go:embed`, served for every non-`/api`-prefixed
 path (or however the existing router is namespaced - see tasks.md for the
