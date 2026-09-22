@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.22.0](https://github.com/alrayyes/Hush-Hush/compare/v2.21.0...v2.22.0) (2026-09-22)
+
+
+### Features
+
+* **api:** add a stoplight elements docs page ([#305](https://github.com/alrayyes/Hush-Hush/issues/305)) ([f83c114](https://github.com/alrayyes/Hush-Hush/commit/f83c114c72c88363a96b43a9c5c4b23cd16d76b6))
+
 ## [2.21.0](https://github.com/alrayyes/Hush-Hush/compare/v2.20.0...v2.21.0) (2026-09-21)
 
 
