@@ -76,46 +76,29 @@ async function handleRegister() {
 	<title>Log in - hush-hush</title>
 </svelte:head>
 
-<main class="login">
+<main class="mx-auto my-16 max-w-sm px-4 text-center">
 	<h1>hush-hush</h1>
 
 	{#if statusFailed}
-		<p role="alert" class="error">Couldn't reach the server. Try again.</p>
-		<button type="button" onclick={loadStatus}>Retry</button>
+		<p role="alert" class="text-error">Couldn't reach the server. Try again.</p>
+		<button type="button" class="px-6 py-3" onclick={loadStatus}>Retry</button>
 	{:else if bootstrapped === undefined}
 		<p>Checking account status…</p>
 	{:else if bootstrapped}
 		<p>Sign in with a passkey registered to this account.</p>
 
-		<button type="button" onclick={handleLogin} disabled={pending}>
+		<button type="button" class="px-6 py-3" onclick={handleLogin} disabled={pending}>
 			{pending ? 'Waiting for your passkey…' : 'Log in with a passkey'}
 		</button>
 	{:else}
 		<p>No account yet - register the first passkey to set one up.</p>
 
-		<button type="button" onclick={handleRegister} disabled={pending}>
+		<button type="button" class="px-6 py-3" onclick={handleRegister} disabled={pending}>
 			{pending ? 'Waiting for your passkey…' : 'Register passkey'}
 		</button>
 	{/if}
 
 	{#if error}
-		<p role="alert" class="error">{error}</p>
+		<p role="alert" class="text-error">{error}</p>
 	{/if}
 </main>
-
-<style>
-	.login {
-		max-width: 24rem;
-		margin: 4rem auto;
-		padding: 0 var(--space-4);
-		text-align: center;
-	}
-
-	button {
-		padding: var(--space-3) var(--space-6);
-	}
-
-	.error {
-		color: var(--color-error);
-	}
-</style>

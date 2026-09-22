@@ -2,7 +2,7 @@
 	<title>Disclaimer - hush-hush</title>
 </svelte:head>
 
-<main>
+<main class="mx-auto my-8 max-w-160 px-4">
 	<h1>Disclaimer</h1>
 	<p>
 		hush-hush is self-hosted software: whoever runs this instance operates
@@ -11,11 +11,3 @@
 		guarantee, and no warranty of any kind, per its GPL-3.0 licence.
 	</p>
 </main>
-
-<style>
-	main {
-		max-width: 40rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-</style>

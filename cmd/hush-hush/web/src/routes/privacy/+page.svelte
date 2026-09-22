@@ -2,7 +2,7 @@
 	<title>Privacy - hush-hush</title>
 </svelte:head>
 
-<main>
+<main class="mx-auto my-8 max-w-160 px-4">
 	<h1>Privacy</h1>
 	<p>
 		hush-hush sends no telemetry or analytics anywhere. Everything this
@@ -13,11 +13,3 @@
 		decrypts.
 	</p>
 </main>
-
-<style>
-	main {
-		max-width: 40rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-</style>
