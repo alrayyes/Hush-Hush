@@ -89,14 +89,15 @@ function onKeydown(event: KeyboardEvent) {
 }
 </script>
 
-<div class="combobox">
+<div class="relative">
 	{#if value.length > 0}
-		<ul class="chips">
+		<ul class="m-0 mb-2 flex list-none flex-wrap gap-2 p-0">
 			{#each value as consumer (consumer)}
-				<li>
+				<li class="flex items-center gap-1 rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					{consumer}
 					<button
 						type="button"
+						class="border-0 bg-transparent p-0 text-sm font-normal leading-none"
 						onclick={() => removeConsumer(consumer)}
 						aria-label={`Remove ${consumer}`}
 					>
@@ -107,11 +108,12 @@ function onKeydown(event: KeyboardEvent) {
 		</ul>
 	{/if}
 
-	<div class="input-wrapper">
+	<div class="relative">
 		<input
 			bind:this={input}
 			{id}
 			type="text"
+			class="w-full"
 			role="combobox"
 			aria-expanded={open && options.length > 0}
 			aria-controls={listboxId}
@@ -131,13 +133,18 @@ function onKeydown(event: KeyboardEvent) {
 		/>
 
 		{#if open && options.length > 0}
-			<ul id={listboxId} role="listbox" class="options">
+			<ul
+				id={listboxId}
+				role="listbox"
+				class="absolute inset-x-0 top-[calc(100%+0.25rem)] z-10 m-0 max-h-48 list-none overflow-y-auto rounded border border-border bg-surface py-1"
+			>
 				{#each options as option, i (option)}
 					<li
 						id={`${listboxId}-${i}`}
 						role="option"
 						aria-selected={i === activeIndex}
-						class:active={i === activeIndex}
+						class="cursor-pointer p-2"
+						class:bg-border-subtle={i === activeIndex}
 						onmousedown={(event) => {
 							event.preventDefault();
 							addConsumer(option);
@@ -150,70 +157,3 @@ function onKeydown(event: KeyboardEvent) {
 		{/if}
 	</div>
 </div>
-
-<style>
-	.combobox {
-		position: relative;
-	}
-
-	.chips {
-		list-style: none;
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		padding: 0;
-		margin: 0 0 var(--space-2);
-	}
-
-	.chips li {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		background: var(--color-border-subtle);
-		border-radius: 1rem;
-		padding: var(--space-1) var(--space-2);
-		font-size: var(--font-size-sm);
-	}
-
-	.chips button {
-		padding: 0;
-		border: none;
-		background: none;
-		font: inherit;
-		line-height: 1;
-		cursor: pointer;
-	}
-
-	.input-wrapper {
-		position: relative;
-	}
-
-	.input-wrapper input {
-		width: 100%;
-	}
-
-	.options {
-		position: absolute;
-		z-index: 1;
-		top: calc(100% + var(--space-1));
-		left: 0;
-		right: 0;
-		max-height: 12rem;
-		overflow-y: auto;
-		margin: 0;
-		padding: var(--space-1) 0;
-		list-style: none;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-	}
-
-	.options li {
-		padding: var(--space-2);
-		cursor: pointer;
-	}
-
-	.options li.active {
-		background: var(--color-border-subtle);
-	}
-</style>

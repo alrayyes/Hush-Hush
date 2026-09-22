@@ -147,8 +147,8 @@ async function confirmDelete() {
 	<title>Secrets - hush-hush</title>
 </svelte:head>
 
-<main>
-	<header class="page-header">
+<main class="mx-auto my-8 max-w-240 px-4">
+	<header class="flex flex-wrap items-center justify-between gap-2">
 		<h1>Secrets</h1>
 		<Dialog.Root bind:open={createOpen}>
 			<Dialog.Trigger>New secret</Dialog.Trigger>
@@ -157,30 +157,31 @@ async function confirmDelete() {
 				<Dialog.Content class="dialog">
 					<Dialog.Title>Create a secret</Dialog.Title>
 					<form onsubmit={submitCreate}>
-						<label for="create-id">Id</label>
-						<input id="create-id" bind:value={createId} required />
+						<label class="mt-3 block" for="create-id">Id</label>
+						<input id="create-id" class="w-full" bind:value={createId} required />
 
-						<label for="create-value">
+						<label class="mt-3 block" for="create-value">
 							{createPlainText ? 'Value (plain text)' : 'Ciphertext (base64)'}
 						</label>
-						<textarea id="create-value" bind:value={createValue} required rows="4"></textarea>
+						<textarea id="create-value" class="w-full" bind:value={createValue} required rows="4"
+						></textarea>
 
-						<label class="checkbox">
+						<label class="mt-3 flex items-center gap-2">
 							<input type="checkbox" bind:checked={createPlainText} />
 							Plain text - base64-encoded for you, <strong>not encrypted</strong>
 						</label>
 
-						<label for="create-description">Description</label>
-						<input id="create-description" bind:value={createDescription} />
+						<label class="mt-3 block" for="create-description">Description</label>
+						<input id="create-description" class="w-full" bind:value={createDescription} />
 
-						<label for="create-used-by">Used by</label>
+						<label class="mt-3 block" for="create-used-by">Used by</label>
 						<ConsumerCombobox id="create-used-by" bind:value={createUsedBy} />
 
 						{#if createError}
-							<p role="alert" class="error">{createError}</p>
+							<p role="alert" class="text-error">{createError}</p>
 						{/if}
 
-						<div class="actions">
+						<div class="mt-4 flex justify-end gap-2">
 							<Dialog.Close type="button">Cancel</Dialog.Close>
 							<button type="submit">Create</button>
 						</div>
@@ -191,7 +192,7 @@ async function confirmDelete() {
 	</header>
 
 	{#if data.usedByFilter}
-		<p class="filter-banner">
+		<p class="flex flex-wrap items-center gap-2">
 			Filtered to consumer <strong>{data.usedByFilter}</strong>
 			<a href="/">Clear filter</a>
 		</p>
@@ -226,7 +227,7 @@ async function confirmDelete() {
 								{attribution.updatedBy} &middot; {attribution.updatedAt}
 							{/if}
 						</td>
-						<td data-label="Actions" class="row-actions">
+						<td data-label="Actions" class="row-actions gap-2">
 							<button type="button" onclick={() => openView(object.id)}>View</button>
 							<button type="button" onclick={() => openEdit(object.id)}>Edit</button>
 							<button type="button" class="danger" onclick={() => openDelete(object.id)}>
@@ -247,14 +248,14 @@ async function confirmDelete() {
 			<Dialog.Title>{viewId}</Dialog.Title>
 			<Dialog.Description>Sealed ciphertext, base64-encoded.</Dialog.Description>
 			{#if viewError}
-				<p role="alert" class="error">{viewError}</p>
+				<p role="alert" class="text-error">{viewError}</p>
 			{:else}
 				<textarea readonly rows="6" value={viewValue} aria-label="Ciphertext (base64)"
 				></textarea>
 			{/if}
-			<p class="used-by-label">Used by</p>
+			<p class="mt-3 font-bold">Used by</p>
 			{#if viewUsedBy.length > 0}
-				<ul class="used-by-list">
+				<ul class="m-0 pl-5">
 					{#each viewUsedBy as consumer (consumer)}
 						<li>{consumer}</li>
 					{/each}
@@ -262,7 +263,7 @@ async function confirmDelete() {
 			{:else}
 				<p>No recorded consumers.</p>
 			{/if}
-			<div class="actions">
+			<div class="mt-4 flex justify-end gap-2">
 				<Dialog.Close type="button">Close</Dialog.Close>
 			</div>
 		</Dialog.Content>
@@ -275,17 +276,18 @@ async function confirmDelete() {
 		<Dialog.Content class="dialog">
 			<Dialog.Title>Edit {editId}</Dialog.Title>
 			<form onsubmit={submitEdit}>
-				<label for="edit-value">New ciphertext (base64)</label>
-				<textarea id="edit-value" bind:value={editValue} required rows="6"></textarea>
+				<label class="mt-3 block" for="edit-value">New ciphertext (base64)</label>
+				<textarea id="edit-value" class="w-full" bind:value={editValue} required rows="6"
+				></textarea>
 
-				<label for="edit-used-by">Used by</label>
+				<label class="mt-3 block" for="edit-used-by">Used by</label>
 				<ConsumerCombobox id="edit-used-by" bind:value={editUsedBy} />
 
 				{#if editError}
-					<p role="alert" class="error">{editError}</p>
+					<p role="alert" class="text-error">{editError}</p>
 				{/if}
 
-				<div class="actions">
+				<div class="mt-4 flex justify-end gap-2">
 					<Dialog.Close type="button">Cancel</Dialog.Close>
 					<button type="submit">Save</button>
 				</div>
@@ -304,9 +306,9 @@ async function confirmDelete() {
 				failing.
 			</AlertDialog.Description>
 			{#if deleteError}
-				<p role="alert" class="error">{deleteError}</p>
+				<p role="alert" class="text-error">{deleteError}</p>
 			{/if}
-			<div class="actions">
+			<div class="mt-4 flex justify-end gap-2">
 				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
 				<AlertDialog.Action type="button" class="danger" onclick={confirmDelete}>
 					Delete
@@ -315,72 +317,3 @@ async function confirmDelete() {
 		</AlertDialog.Content>
 	</AlertDialog.Portal>
 </AlertDialog.Root>
-
-<style>
-	main {
-		max-width: 60rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
-	}
-
-	.page-header {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.row-actions button {
-		margin-right: var(--space-2);
-	}
-
-	.filter-banner {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-	}
-
-	.error {
-		color: var(--color-error);
-	}
-
-	form label {
-		display: block;
-		margin-top: 0.75rem;
-	}
-
-	form input,
-	form textarea {
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.checkbox {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-
-	.used-by-label {
-		margin-top: 0.75rem;
-		font-weight: bold;
-	}
-
-	.used-by-list {
-		margin: 0;
-		padding-left: 1.25rem;
-	}
-
-	.checkbox input {
-		width: auto;
-	}
-
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-</style>
