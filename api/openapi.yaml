@@ -368,6 +368,48 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+    post:
+      operationId: addConsumer
+      summary: Add a consumer with no secret referencing it yet
+      description: |
+        Adds `name` to the directory (`alrayyes/hush-hush#324`) without
+        requiring any object's `used_by` list to reference it first -
+        unlike every other consumer here, which only ever exist because
+        some object's `used_by` recorded them. The new entry appears in
+        `GET /consumers` with a `secret_count` of 0 until something
+        actually uses it. A session-authenticated call needs its CSRF
+        token too; a bearer-token-authenticated one doesn't.
+      tags: [consumers]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/csrfTokenOptional"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddConsumerRequest"
+            example:
+              name: homelab/new-device
+      responses:
+        "201":
+          description: The consumer was added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerEntry"
+              example:
+                name: homelab/new-device
+                secret_count: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/ConsumerAlreadyExists"
+
   /consumers/{name}:
     patch:
       operationId: renameConsumer
@@ -977,6 +1019,17 @@ components:
           example:
             error: unknown consumer
 
+    ConsumerAlreadyExists:
+      description: |
+        This name already appears in the directory, whether added
+        directly or recorded by an object's used_by list.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: consumer already exists
+
   schemas:
     ObjectId:
       type: string
@@ -1082,6 +1135,15 @@ components:
             The total number of consumers matching the request's filter,
             across every page - not just this page's own count - so a
             caller can render page-number navigation.
+
+    AddConsumerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: The consumer's name. Rejected if it already appears in the directory.
+          examples: [homelab/new-device]
 
     RenameConsumerRequest:
       type: object

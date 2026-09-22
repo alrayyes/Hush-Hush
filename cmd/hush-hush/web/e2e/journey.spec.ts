@@ -294,6 +294,31 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	await expect(page.getByText('No consumers match yet.')).toBeVisible();
 
+	// #324: a consumer can be added directly, with no secret referencing
+	// it yet - it should show up with a secret count of 0, and adding the
+	// same name again should be rejected rather than silently duplicating.
+	await page.getByRole('button', { name: 'Add consumer' }).click();
+	const addDialog = page.getByRole('dialog', { name: 'Add a consumer' });
+	await expect(addDialog).toBeVisible();
+	const addResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(addResults.violations).toEqual([]);
+	await addDialog.getByLabel('Name', { exact: true }).fill('homelab-new');
+	await addDialog.getByRole('button', { name: 'Add' }).click();
+	await expect(addDialog).toBeHidden();
+	const addedRow = page
+		.getByRole('row')
+		.filter({ has: page.getByRole('link', { name: 'homelab-new' }) });
+	await expect(addedRow).toBeVisible();
+	await expect(addedRow.getByRole('cell').nth(1)).toHaveText('0');
+
+	await page.getByRole('button', { name: 'Add consumer' }).click();
+	await addDialog.getByLabel('Name', { exact: true }).fill('homelab-new');
+	await addDialog.getByRole('button', { name: 'Add' }).click();
+	await expect(page.getByRole('alert')).toHaveText('consumer already exists');
+	await addDialog.getByRole('button', { name: 'Cancel' }).click();
+
 	await page.setViewportSize({ width: 320, height: 720 });
 
 	// #294: the topbar's nav links, theme toggle, and Log out button used

@@ -1,12 +1,17 @@
 <script lang="ts">
-import { AlertDialog, Dialog } from 'bits-ui';
 import { goto, invalidate } from '$app/navigation';
 import {
 	ApiError,
+	addConsumer,
 	type ConsumerEntry,
 	deleteConsumer,
 	renameConsumer,
 } from '$lib/api';
+import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+import * as Dialog from '$lib/components/ui/dialog/index.js';
+import { Input } from '$lib/components/ui/input/index.js';
+import { Label } from '$lib/components/ui/label/index.js';
 import {
 	CONSUMERS_PAGE_SIZE,
 	consumersHref,
@@ -36,6 +41,29 @@ const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
 
 function apiErrorMessage(err: unknown, fallback: string): string {
 	return err instanceof ApiError ? err.message : fallback;
+}
+
+let addOpen = $state(false);
+let addName = $state('');
+let addError = $state('');
+
+function resetAddForm() {
+	addName = '';
+	addError = '';
+}
+
+async function submitAdd(event: SubmitEvent) {
+	event.preventDefault();
+	addError = '';
+
+	try {
+		await addConsumer(addName);
+		addOpen = false;
+		resetAddForm();
+		await invalidate('app:consumers');
+	} catch (err) {
+		addError = apiErrorMessage(err, 'Failed to add the consumer.');
+	}
 }
 
 let renameOpen = $state(false);
@@ -93,6 +121,39 @@ async function confirmDelete() {
 <main class="mx-auto my-8 max-w-240 px-4">
 	<header class="flex flex-wrap items-center justify-between gap-2">
 		<h1>Consumers</h1>
+		<Dialog.Root
+			bind:open={addOpen}
+			onOpenChange={(open) => {
+				if (!open) resetAddForm();
+			}}
+		>
+			<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
+				Add consumer
+			</Dialog.Trigger>
+			<Dialog.Content>
+				<Dialog.Header>
+					<Dialog.Title>Add a consumer</Dialog.Title>
+					<Dialog.Description>
+						Adds it to the directory before any secret references it.
+					</Dialog.Description>
+				</Dialog.Header>
+				<form onsubmit={submitAdd}>
+					<Label for="add-consumer-name">Name</Label>
+					<Input id="add-consumer-name" class="mt-1 w-full" bind:value={addName} required />
+
+					{#if addError}
+						<p role="alert" class="mt-3 text-error">{addError}</p>
+					{/if}
+
+					<Dialog.Footer>
+						<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+							Cancel
+						</Dialog.Close>
+						<Button type="submit">Add</Button>
+					</Dialog.Footer>
+				</form>
+			</Dialog.Content>
+		</Dialog.Root>
 	</header>
 
 	<form
@@ -102,10 +163,10 @@ async function confirmDelete() {
 			applyFilter();
 		}}
 	>
-		<label class="block text-sm" for="consumer-filter">Filter by name</label>
-		<input
+		<Label for="consumer-filter">Filter by name</Label>
+		<Input
 			id="consumer-filter"
-			class="w-full max-w-xs"
+			class="mt-1 w-full max-w-xs"
 			bind:value={filterInput}
 			onchange={applyFilter}
 			placeholder="homelab"
@@ -131,16 +192,12 @@ async function confirmDelete() {
 						</td>
 						<td data-label="Secrets">{consumer.secret_count}</td>
 						<td data-label="Actions" class="row-actions gap-2">
-							<button type="button" onclick={() => openRename(consumer)}>
+							<Button variant="outline" size="sm" onclick={() => openRename(consumer)}>
 								Rename
-							</button>
-							<button
-								type="button"
-								class="danger"
-								onclick={() => openDelete(consumer)}
-							>
+							</Button>
+							<Button variant="destructive" size="sm" onclick={() => openDelete(consumer)}>
 								Delete
-							</button>
+							</Button>
 						</td>
 					</tr>
 				{/each}
@@ -170,45 +227,43 @@ async function confirmDelete() {
 </main>
 
 <Dialog.Root bind:open={renameOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay class="overlay" />
-		<Dialog.Content class="dialog">
+	<Dialog.Content>
+		<Dialog.Header>
 			<Dialog.Title>Rename consumer</Dialog.Title>
-			<form onsubmit={submitRename}>
-				<label class="mt-3 block" for="rename-consumer-name">Name</label>
-				<input id="rename-consumer-name" class="w-full" bind:value={renameInput} required />
+		</Dialog.Header>
+		<form onsubmit={submitRename}>
+			<Label for="rename-consumer-name">Name</Label>
+			<Input id="rename-consumer-name" class="mt-1 w-full" bind:value={renameInput} required />
 
-				{#if renameError}
-					<p role="alert" class="text-error">{renameError}</p>
-				{/if}
+			{#if renameError}
+				<p role="alert" class="mt-3 text-error">{renameError}</p>
+			{/if}
 
-				<div class="mt-4 flex justify-end gap-2">
-					<Dialog.Close type="button">Cancel</Dialog.Close>
-					<button type="submit">Save</button>
-				</div>
-			</form>
-		</Dialog.Content>
-	</Dialog.Portal>
+			<Dialog.Footer>
+				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>Cancel</Dialog.Close>
+				<Button type="submit">Save</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
 </Dialog.Root>
 
 <AlertDialog.Root bind:open={deleteOpen}>
-	<AlertDialog.Portal>
-		<AlertDialog.Overlay class="overlay" />
-		<AlertDialog.Content class="dialog">
+	<AlertDialog.Content>
+		<AlertDialog.Header>
 			<AlertDialog.Title>Delete "{deleteName}"?</AlertDialog.Title>
 			<AlertDialog.Description>
 				This removes the consumer from the directory. Secrets that still list
 				it as a user aren't deleted.
 			</AlertDialog.Description>
-			{#if deleteError}
-				<p role="alert" class="text-error">{deleteError}</p>
-			{/if}
-			<div class="mt-4 flex justify-end gap-2">
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<AlertDialog.Action type="button" onclick={confirmDelete}>
-					Delete
-				</AlertDialog.Action>
-			</div>
-		</AlertDialog.Content>
-	</AlertDialog.Portal>
+		</AlertDialog.Header>
+		{#if deleteError}
+			<p role="alert" class="text-error">{deleteError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={confirmDelete}>
+				Delete
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
 </AlertDialog.Root>
