@@ -25,6 +25,7 @@ type objectStore interface {
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	ListConsumers(ctx context.Context) ([]string, error)
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
+	AddConsumer(ctx context.Context, name string) error
 	RenameConsumer(ctx context.Context, oldName, newName string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, id string, value []byte, usedBy *[]string) error
@@ -87,6 +88,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /consumers", handleHardNavRoute(requireWriteAccess(s, false, handleListConsumers(s)), staticHandler))
+	mux.HandleFunc("POST /consumers", requireWriteAccess(s, true, handleAddConsumer(s)))
 	// {name...} rather than {name}: a consumer name routinely contains
 	// "/" (homelab/vps-docker) and has to match everything after
 	// /consumers/ as one value, not stop at the first path segment

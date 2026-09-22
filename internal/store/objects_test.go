@@ -448,3 +448,75 @@ func TestDeleteConsumerUnknownReturnsError(t *testing.T) {
 	err := s.DeleteConsumer(context.Background(), "nonexistent")
 	require.ErrorIs(t, err, store.ErrUnknownConsumer)
 }
+
+func TestAddConsumerCreatesEntryWithZeroSecrets(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, s.AddConsumer(ctx, "homelab/new-device"))
+
+	page, err := s.ListConsumersPage(ctx, store.ConsumerFilter{Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerPage{
+		Consumers: []store.ConsumerEntry{{Name: "homelab/new-device", SecretCount: 0}},
+		Total:     1,
+	}, page)
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/new-device"}, consumers)
+}
+
+func TestAddConsumerRejectsDuplicateAlreadyAddedDirectly(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.AddConsumer(ctx, "homelab/new-device"))
+
+	err := s.AddConsumer(ctx, "homelab/new-device")
+	require.ErrorIs(t, err, store.ErrConsumerAlreadyExists)
+}
+
+func TestAddConsumerRejectsNameAlreadyUsedByAnObject(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+
+	err := s.AddConsumer(ctx, "homelab/vps-docker")
+	require.ErrorIs(t, err, store.ErrConsumerAlreadyExists)
+}
+
+func TestRenameConsumerAddedDirectlyWithZeroSecrets(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.AddConsumer(ctx, "homelab/typo"))
+
+	entry, err := s.RenameConsumer(ctx, "homelab/typo", "homelab/fixed")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/fixed", SecretCount: 0}, entry)
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/fixed"}, consumers)
+}
+
+func TestDeleteConsumerAddedDirectlyWithZeroSecrets(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.AddConsumer(ctx, "homelab/unused"))
+
+	require.NoError(t, s.DeleteConsumer(ctx, "homelab/unused"))
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.Empty(t, consumers)
+}
