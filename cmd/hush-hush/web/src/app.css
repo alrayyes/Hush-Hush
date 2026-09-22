@@ -37,6 +37,11 @@
 	--color-accent-contrast: #fff;
 	--color-danger: #b00020;
 	--color-danger-contrast: #fff;
+
+	/* Footer.svelte's own content width - between Tailwind's stock
+	   --container-4xl (56rem) and --container-5xl (64rem), so it gets its
+	   own named token rather than an arbitrary value on the component. */
+	--container-content: 60rem;
 }
 
 /* Matches the existing ThemeToggle mechanism (src/lib/theme.ts): an
