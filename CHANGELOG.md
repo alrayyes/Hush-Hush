@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.27.0](https://github.com/alrayyes/Hush-Hush/compare/v2.26.0...v2.27.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** migrate secrets overview page to shadcn-svelte components ([#335](https://github.com/alrayyes/Hush-Hush/issues/335)) ([d0e90be](https://github.com/alrayyes/Hush-Hush/commit/d0e90bec07439d0daa618d074376e6c0f1c88569))
+* **web-ui:** migrate settings page to shadcn-svelte components ([#336](https://github.com/alrayyes/Hush-Hush/issues/336)) ([d89f9dc](https://github.com/alrayyes/Hush-Hush/commit/d89f9dc6d2c044513acdbc41eb5af4c39f72eda3))
+
 ## [2.26.0](https://github.com/alrayyes/Hush-Hush/compare/v2.25.0...v2.26.0) (2026-09-22)
 
 
