@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.0](https://github.com/alrayyes/Hush-Hush/compare/v2.24.0...v2.25.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** migrate shared chrome to shadcn-svelte components ([#330](https://github.com/alrayyes/Hush-Hush/issues/330)) ([dd6e8a6](https://github.com/alrayyes/Hush-Hush/commit/dd6e8a6f049625b9a39f882b877443423a928873))
+
 ## [2.24.0](https://github.com/alrayyes/Hush-Hush/compare/v2.23.0...v2.24.0) (2026-09-22)
 
 
