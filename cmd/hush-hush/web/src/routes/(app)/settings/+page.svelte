@@ -1,5 +1,4 @@
 <script lang="ts">
-import { AlertDialog, Dialog } from 'bits-ui';
 import { invalidate } from '$app/navigation';
 import {
 	ApiError,
@@ -10,6 +9,12 @@ import {
 	type TokenWithValue,
 } from '$lib/api';
 import { registerPasskey } from '$lib/auth';
+import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+import * as Dialog from '$lib/components/ui/dialog/index.js';
+import { Input } from '$lib/components/ui/input/index.js';
+import { Label } from '$lib/components/ui/label/index.js';
+import { Textarea } from '$lib/components/ui/textarea/index.js';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -165,28 +170,31 @@ async function confirmRevoke() {
 		<header class="flex flex-wrap items-center justify-between gap-2">
 			<h2>Passkeys</h2>
 			<Dialog.Root bind:open={addOpen}>
-				<Dialog.Trigger>Add passkey</Dialog.Trigger>
-				<Dialog.Portal>
-					<Dialog.Overlay class="overlay" />
-					<Dialog.Content class="dialog">
+				<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
+					Add passkey
+				</Dialog.Trigger>
+				<Dialog.Content>
+					<Dialog.Header>
 						<Dialog.Title>Add a passkey</Dialog.Title>
-						<form onsubmit={submitAdd}>
-							<label class="mt-3 block" for="add-nickname">Nickname (optional)</label>
-							<input id="add-nickname" class="w-full" bind:value={addNickname} />
+					</Dialog.Header>
+					<form onsubmit={submitAdd}>
+						<Label for="add-nickname">Nickname (optional)</Label>
+						<Input id="add-nickname" class="mt-1 w-full" bind:value={addNickname} />
 
-							{#if addError}
-								<p role="alert" class="text-error">{addError}</p>
-							{/if}
+						{#if addError}
+							<p role="alert" class="mt-3 text-error">{addError}</p>
+						{/if}
 
-							<div class="mt-4 flex justify-end gap-2">
-								<Dialog.Close type="button">Cancel</Dialog.Close>
-								<button type="submit" disabled={addPending}>
-									{addPending ? 'Waiting for your browser…' : 'Register'}
-								</button>
-							</div>
-						</form>
-					</Dialog.Content>
-				</Dialog.Portal>
+						<Dialog.Footer>
+							<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+								Cancel
+							</Dialog.Close>
+							<Button type="submit" disabled={addPending}>
+								{addPending ? 'Waiting for your browser…' : 'Register'}
+							</Button>
+						</Dialog.Footer>
+					</form>
+				</Dialog.Content>
 			</Dialog.Root>
 		</header>
 
@@ -206,19 +214,20 @@ async function confirmRevoke() {
 						<td data-label="Added">{credential.created_at}</td>
 						<td data-label="Last used">{credential.last_used_at ?? 'never'}</td>
 						<td data-label="Actions" class="row-actions gap-2">
-							<button
-								type="button"
+							<Button
+								variant="outline"
+								size="sm"
 								onclick={() => openRename(credential.id, credential.nickname)}
 							>
 								Rename
-							</button>
-							<button
-								type="button"
-								class="danger"
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
 								onclick={() => openDeleteCredential(credential.id)}
 							>
 								Delete
-							</button>
+							</Button>
 						</td>
 					</tr>
 				{/each}
@@ -235,53 +244,63 @@ async function confirmRevoke() {
 					if (!open) resetTokenForm();
 				}}
 			>
-				<Dialog.Trigger>New token</Dialog.Trigger>
-				<Dialog.Portal>
-					<Dialog.Overlay class="overlay" />
-					<Dialog.Content class="dialog">
-						{#if createdToken}
+				<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
+					New token
+				</Dialog.Trigger>
+				<Dialog.Content>
+					{#if createdToken}
+						<Dialog.Header>
 							<Dialog.Title>Token created</Dialog.Title>
-							<p role="alert" class="font-bold text-warning">
-								This value is shown once. It will not be shown again - store it now.
-							</p>
-							<textarea
-								readonly
-								rows="3"
-								value={createdToken.value}
-								aria-label="Token value"
-								class="w-full"
-							></textarea>
-							<div class="mt-4 flex justify-end gap-2">
-								<button type="button" onclick={closeCreateToken}>Done</button>
-							</div>
-						{:else}
+						</Dialog.Header>
+						<p role="alert" class="font-bold text-warning">
+							This value is shown once. It will not be shown again - store it now.
+						</p>
+						<Textarea
+							readonly
+							rows={3}
+							value={createdToken.value}
+							aria-label="Token value"
+							class="w-full"
+						/>
+						<Dialog.Footer>
+							<Button onclick={closeCreateToken}>Done</Button>
+						</Dialog.Footer>
+					{:else}
+						<Dialog.Header>
 							<Dialog.Title>Create a token</Dialog.Title>
-							<form onsubmit={submitCreateToken}>
-								<label class="mt-3 block" for="token-description">Description</label>
-								<input id="token-description" class="w-full" bind:value={tokenDescription} required />
+						</Dialog.Header>
+						<form onsubmit={submitCreateToken}>
+							<Label for="token-description">Description</Label>
+							<Input
+								id="token-description"
+								class="mt-1 mb-3 w-full"
+								bind:value={tokenDescription}
+								required
+							/>
 
-								<label class="mt-3 block" for="token-ttl">Valid for (days)</label>
-								<input
-									id="token-ttl"
-									class="w-full"
-									type="number"
-									min="1"
-									bind:value={tokenTTLDays}
-									required
-								/>
+							<Label for="token-ttl">Valid for (days)</Label>
+							<Input
+								id="token-ttl"
+								class="mt-1 w-full"
+								type="number"
+								min="1"
+								bind:value={tokenTTLDays}
+								required
+							/>
 
-								{#if tokenError}
-									<p role="alert" class="text-error">{tokenError}</p>
-								{/if}
+							{#if tokenError}
+								<p role="alert" class="mt-3 text-error">{tokenError}</p>
+							{/if}
 
-								<div class="mt-4 flex justify-end gap-2">
-									<Dialog.Close type="button">Cancel</Dialog.Close>
-									<button type="submit">Create</button>
-								</div>
-							</form>
-						{/if}
-					</Dialog.Content>
-				</Dialog.Portal>
+							<Dialog.Footer>
+								<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+									Cancel
+								</Dialog.Close>
+								<Button type="submit">Create</Button>
+							</Dialog.Footer>
+						</form>
+					{/if}
+				</Dialog.Content>
 			</Dialog.Root>
 		</header>
 
@@ -308,9 +327,9 @@ async function confirmRevoke() {
 						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
 						<td data-label="Actions" class="row-actions gap-2">
 							{#if !token.revoked}
-								<button type="button" class="danger" onclick={() => openRevoke(token.id)}>
+								<Button variant="destructive" size="sm" onclick={() => openRevoke(token.id)}>
 									Revoke
-								</button>
+								</Button>
 							{/if}
 						</td>
 					</tr>
@@ -321,63 +340,62 @@ async function confirmRevoke() {
 </main>
 
 <Dialog.Root bind:open={renameOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay class="overlay" />
-		<Dialog.Content class="dialog">
+	<Dialog.Content>
+		<Dialog.Header>
 			<Dialog.Title>Rename passkey</Dialog.Title>
-			<form onsubmit={submitRename}>
-				<label class="mt-3 block" for="rename-nickname">Nickname</label>
-				<input id="rename-nickname" class="w-full" bind:value={renameNickname} required />
+		</Dialog.Header>
+		<form onsubmit={submitRename}>
+			<Label for="rename-nickname">Nickname</Label>
+			<Input id="rename-nickname" class="mt-1 w-full" bind:value={renameNickname} required />
 
-				{#if renameError}
-					<p role="alert" class="text-error">{renameError}</p>
-				{/if}
+			{#if renameError}
+				<p role="alert" class="mt-3 text-error">{renameError}</p>
+			{/if}
 
-				<div class="mt-4 flex justify-end gap-2">
-					<Dialog.Close type="button">Cancel</Dialog.Close>
-					<button type="submit">Save</button>
-				</div>
-			</form>
-		</Dialog.Content>
-	</Dialog.Portal>
+			<Dialog.Footer>
+				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>Cancel</Dialog.Close>
+				<Button type="submit">Save</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
 </Dialog.Root>
 
 <AlertDialog.Root bind:open={deleteCredentialOpen}>
-	<AlertDialog.Portal>
-		<AlertDialog.Overlay class="overlay" />
-		<AlertDialog.Content class="dialog">
+	<AlertDialog.Content>
+		<AlertDialog.Header>
 			<AlertDialog.Title>Delete this passkey?</AlertDialog.Title>
 			<AlertDialog.Description>
 				You won't be able to log in with it any more.
 			</AlertDialog.Description>
-			{#if deleteCredentialError}
-				<p role="alert" class="text-error">{deleteCredentialError}</p>
-			{/if}
-			<div class="mt-4 flex justify-end gap-2">
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<AlertDialog.Action type="button" onclick={confirmDeleteCredential}>
-					Delete
-				</AlertDialog.Action>
-			</div>
-		</AlertDialog.Content>
-	</AlertDialog.Portal>
+		</AlertDialog.Header>
+		{#if deleteCredentialError}
+			<p role="alert" class="text-error">{deleteCredentialError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={confirmDeleteCredential}>
+				Delete
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
 </AlertDialog.Root>
 
 <AlertDialog.Root bind:open={revokeOpen}>
-	<AlertDialog.Portal>
-		<AlertDialog.Overlay class="overlay" />
-		<AlertDialog.Content class="dialog">
+	<AlertDialog.Content>
+		<AlertDialog.Header>
 			<AlertDialog.Title>Revoke this token?</AlertDialog.Title>
 			<AlertDialog.Description>
 				Anything still using it will stop being able to write.
 			</AlertDialog.Description>
-			{#if revokeError}
-				<p role="alert" class="text-error">{revokeError}</p>
-			{/if}
-			<div class="mt-4 flex justify-end gap-2">
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<AlertDialog.Action type="button" onclick={confirmRevoke}>Revoke</AlertDialog.Action>
-			</div>
-		</AlertDialog.Content>
-	</AlertDialog.Portal>
+		</AlertDialog.Header>
+		{#if revokeError}
+			<p role="alert" class="text-error">{revokeError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={confirmRevoke}>
+				Revoke
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
 </AlertDialog.Root>
