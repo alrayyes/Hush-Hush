@@ -332,6 +332,47 @@
 			border-bottom: 1px solid var(--color-border);
 		}
 	}
+
+	/* CHANGELOG.md's own rendered markdown (changelog/+page.svelte) - h1,
+	   h2 and h3 share one font-weight/size in the base layer above, which
+	   left every release's version, its Features/Bug Fixes sub-heading and
+	   the bullets under it reading as one undifferentiated block
+	   (alrayyes/hush-hush#315). A rule between releases and a smaller,
+	   muted treatment for the category sub-heading are what a heading
+	   hierarchy needs beyond a browser default. */
+	.changelog-content h2 {
+		margin-top: var(--spacing-8);
+		padding-top: var(--spacing-6);
+		border-top: 1px solid var(--color-border-subtle);
+	}
+
+	.changelog-content h2:first-child {
+		margin-top: 0;
+		padding-top: 0;
+		border-top: none;
+	}
+
+	.changelog-content h3 {
+		margin-top: var(--spacing-4);
+		font-size: var(--text-sm);
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.changelog-content ul {
+		margin: 0 0 var(--spacing-4);
+		padding-left: var(--spacing-6);
+	}
+
+	.changelog-content li {
+		margin-bottom: var(--spacing-2);
+		line-height: 1.6;
+	}
+
+	.changelog-content li:last-child {
+		margin-bottom: 0;
+	}
 }
 
 *,
