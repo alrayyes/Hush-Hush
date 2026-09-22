@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.29.0](https://github.com/alrayyes/Hush-Hush/compare/v2.28.0...v2.29.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** add a direct add-consumer action, migrate the consumers page ([#341](https://github.com/alrayyes/Hush-Hush/issues/341)) ([b4a2980](https://github.com/alrayyes/Hush-Hush/commit/b4a29800b41bd101048c1143fb9eff93aeff0536))
+* **web-ui:** audit log select-box filters, migrate the page to shadcn-svelte ([#342](https://github.com/alrayyes/Hush-Hush/issues/342)) ([eeb1f65](https://github.com/alrayyes/Hush-Hush/commit/eeb1f6522c354911eab2afca53b2b2588c727b53))
+
 ## [2.28.0](https://github.com/alrayyes/Hush-Hush/compare/v2.27.0...v2.28.0) (2026-09-22)
 
 
