@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.24.0](https://github.com/alrayyes/Hush-Hush/compare/v2.23.0...v2.24.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** scaffold shadcn-svelte and generate core primitives ([#327](https://github.com/alrayyes/Hush-Hush/issues/327)) ([ff169f5](https://github.com/alrayyes/Hush-Hush/commit/ff169f5f706324a1712e0206208a82b6a1ad8ff1))
+
 ## [2.23.0](https://github.com/alrayyes/Hush-Hush/compare/v2.22.0...v2.23.0) (2026-09-22)
 
 
