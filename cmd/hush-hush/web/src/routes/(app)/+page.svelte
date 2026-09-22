@@ -1,5 +1,4 @@
 <script lang="ts">
-import { AlertDialog, Dialog } from 'bits-ui';
 import { invalidate } from '$app/navigation';
 import {
 	ApiError,
@@ -9,6 +8,13 @@ import {
 	updateObject,
 } from '$lib/api';
 import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
+import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+import * as Dialog from '$lib/components/ui/dialog/index.js';
+import { Input } from '$lib/components/ui/input/index.js';
+import { Label } from '$lib/components/ui/label/index.js';
+import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { utf8ToBase64 } from '$lib/encoding';
 import type { PageData } from './$types';
 
@@ -151,43 +157,55 @@ async function confirmDelete() {
 	<header class="flex flex-wrap items-center justify-between gap-2">
 		<h1>Secrets</h1>
 		<Dialog.Root bind:open={createOpen}>
-			<Dialog.Trigger>New secret</Dialog.Trigger>
-			<Dialog.Portal>
-				<Dialog.Overlay class="overlay" />
-				<Dialog.Content class="dialog">
+			<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
+				New secret
+			</Dialog.Trigger>
+			<Dialog.Content>
+				<Dialog.Header>
 					<Dialog.Title>Create a secret</Dialog.Title>
-					<form onsubmit={submitCreate}>
-						<label class="mt-3 block" for="create-id">Id</label>
-						<input id="create-id" class="w-full" bind:value={createId} required />
+				</Dialog.Header>
+				<form onsubmit={submitCreate}>
+					<Label for="create-id">Id</Label>
+					<Input id="create-id" class="mt-1 mb-3 w-full" bind:value={createId} required />
 
-						<label class="mt-3 block" for="create-value">
-							{createPlainText ? 'Value (plain text)' : 'Ciphertext (base64)'}
-						</label>
-						<textarea id="create-value" class="w-full" bind:value={createValue} required rows="4"
-						></textarea>
+					<Label for="create-value">
+						{createPlainText ? 'Value (plain text)' : 'Ciphertext (base64)'}
+					</Label>
+					<Textarea
+						id="create-value"
+						class="mt-1 mb-3 w-full"
+						bind:value={createValue}
+						required
+						rows={4}
+					/>
 
-						<label class="mt-3 flex items-center gap-2">
-							<input type="checkbox" bind:checked={createPlainText} />
-							Plain text - base64-encoded for you, <strong>not encrypted</strong>
-						</label>
+					<Label class="mb-3">
+						<Checkbox bind:checked={createPlainText} />
+						Plain text - base64-encoded for you, <strong>not encrypted</strong>
+					</Label>
 
-						<label class="mt-3 block" for="create-description">Description</label>
-						<input id="create-description" class="w-full" bind:value={createDescription} />
+					<Label for="create-description">Description</Label>
+					<Input
+						id="create-description"
+						class="mt-1 mb-3 w-full"
+						bind:value={createDescription}
+					/>
 
-						<label class="mt-3 block" for="create-used-by">Used by</label>
-						<ConsumerCombobox id="create-used-by" bind:value={createUsedBy} />
+					<Label for="create-used-by">Used by</Label>
+					<ConsumerCombobox id="create-used-by" bind:value={createUsedBy} />
 
-						{#if createError}
-							<p role="alert" class="text-error">{createError}</p>
-						{/if}
+					{#if createError}
+						<p role="alert" class="text-error">{createError}</p>
+					{/if}
 
-						<div class="mt-4 flex justify-end gap-2">
-							<Dialog.Close type="button">Cancel</Dialog.Close>
-							<button type="submit">Create</button>
-						</div>
-					</form>
-				</Dialog.Content>
-			</Dialog.Portal>
+					<Dialog.Footer>
+						<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+							Cancel
+						</Dialog.Close>
+						<Button type="submit">Create</Button>
+					</Dialog.Footer>
+				</form>
+			</Dialog.Content>
 		</Dialog.Root>
 	</header>
 
@@ -228,11 +246,19 @@ async function confirmDelete() {
 							{/if}
 						</td>
 						<td data-label="Actions" class="row-actions gap-2">
-							<button type="button" onclick={() => openView(object.id)}>View</button>
-							<button type="button" onclick={() => openEdit(object.id)}>Edit</button>
-							<button type="button" class="danger" onclick={() => openDelete(object.id)}>
+							<Button variant="outline" size="sm" onclick={() => openView(object.id)}>
+								View
+							</Button>
+							<Button variant="outline" size="sm" onclick={() => openEdit(object.id)}>
+								Edit
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								onclick={() => openDelete(object.id)}
+							>
 								Delete
-							</button>
+							</Button>
 						</td>
 					</tr>
 				{/each}
@@ -242,78 +268,78 @@ async function confirmDelete() {
 </main>
 
 <Dialog.Root bind:open={viewOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay class="overlay" />
-		<Dialog.Content class="dialog">
+	<Dialog.Content>
+		<Dialog.Header>
 			<Dialog.Title>{viewId}</Dialog.Title>
 			<Dialog.Description>Sealed ciphertext, base64-encoded.</Dialog.Description>
-			{#if viewError}
-				<p role="alert" class="text-error">{viewError}</p>
-			{:else}
-				<textarea readonly rows="6" value={viewValue} aria-label="Ciphertext (base64)"
-				></textarea>
-			{/if}
-			<p class="mt-3 font-bold">Used by</p>
-			{#if viewUsedBy.length > 0}
-				<ul class="m-0 pl-5">
-					{#each viewUsedBy as consumer (consumer)}
-						<li>{consumer}</li>
-					{/each}
-				</ul>
-			{:else}
-				<p>No recorded consumers.</p>
-			{/if}
-			<div class="mt-4 flex justify-end gap-2">
-				<Dialog.Close type="button">Close</Dialog.Close>
-			</div>
-		</Dialog.Content>
-	</Dialog.Portal>
+		</Dialog.Header>
+		{#if viewError}
+			<p role="alert" class="text-error">{viewError}</p>
+		{:else}
+			<Textarea readonly rows={6} value={viewValue} aria-label="Ciphertext (base64)" />
+		{/if}
+		<p class="mt-3 font-bold">Used by</p>
+		{#if viewUsedBy.length > 0}
+			<ul class="m-0 pl-5">
+				{#each viewUsedBy as consumer (consumer)}
+					<li>{consumer}</li>
+				{/each}
+			</ul>
+		{:else}
+			<p>No recorded consumers.</p>
+		{/if}
+	</Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={editOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay class="overlay" />
-		<Dialog.Content class="dialog">
+	<Dialog.Content>
+		<Dialog.Header>
 			<Dialog.Title>Edit {editId}</Dialog.Title>
-			<form onsubmit={submitEdit}>
-				<label class="mt-3 block" for="edit-value">New ciphertext (base64)</label>
-				<textarea id="edit-value" class="w-full" bind:value={editValue} required rows="6"
-				></textarea>
+		</Dialog.Header>
+		<form onsubmit={submitEdit}>
+			<Label for="edit-value">New ciphertext (base64)</Label>
+			<Textarea
+				id="edit-value"
+				class="mt-1 mb-3 w-full"
+				bind:value={editValue}
+				required
+				rows={6}
+			/>
 
-				<label class="mt-3 block" for="edit-used-by">Used by</label>
-				<ConsumerCombobox id="edit-used-by" bind:value={editUsedBy} />
+			<Label for="edit-used-by">Used by</Label>
+			<ConsumerCombobox id="edit-used-by" bind:value={editUsedBy} />
 
-				{#if editError}
-					<p role="alert" class="text-error">{editError}</p>
-				{/if}
+			{#if editError}
+				<p role="alert" class="text-error">{editError}</p>
+			{/if}
 
-				<div class="mt-4 flex justify-end gap-2">
-					<Dialog.Close type="button">Cancel</Dialog.Close>
-					<button type="submit">Save</button>
-				</div>
-			</form>
-		</Dialog.Content>
-	</Dialog.Portal>
+			<Dialog.Footer>
+				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+					Cancel
+				</Dialog.Close>
+				<Button type="submit">Save</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
 </Dialog.Root>
 
 <AlertDialog.Root bind:open={deleteOpen}>
-	<AlertDialog.Portal>
-		<AlertDialog.Overlay class="overlay" />
-		<AlertDialog.Content class="dialog">
+	<AlertDialog.Content>
+		<AlertDialog.Header>
 			<AlertDialog.Title>Delete {deleteId}?</AlertDialog.Title>
 			<AlertDialog.Description>
 				This permanently removes the object. Anything still depending on it will start
 				failing.
 			</AlertDialog.Description>
-			{#if deleteError}
-				<p role="alert" class="text-error">{deleteError}</p>
-			{/if}
-			<div class="mt-4 flex justify-end gap-2">
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<AlertDialog.Action type="button" class="danger" onclick={confirmDelete}>
-					Delete
-				</AlertDialog.Action>
-			</div>
-		</AlertDialog.Content>
-	</AlertDialog.Portal>
+		</AlertDialog.Header>
+		{#if deleteError}
+			<p role="alert" class="text-error">{deleteError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={confirmDelete}>
+				Delete
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
 </AlertDialog.Root>

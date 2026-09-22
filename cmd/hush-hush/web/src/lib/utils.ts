@@ -4,6 +4,7 @@ import { twMerge } from 'tailwind-merge';
 export type {
 	WithElementRef,
 	WithoutChild,
+	WithoutChildren,
 	WithoutChildrenOrChild,
 } from 'svelte-toolbelt';
 
