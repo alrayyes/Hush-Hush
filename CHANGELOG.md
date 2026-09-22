@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.28.0](https://github.com/alrayyes/Hush-Hush/compare/v2.27.0...v2.28.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** migrate static pages to shadcn-svelte components ([#338](https://github.com/alrayyes/Hush-Hush/issues/338)) ([8c75863](https://github.com/alrayyes/Hush-Hush/commit/8c75863023530e08496561f241fd0c8b9889252b))
+
 ## [2.27.0](https://github.com/alrayyes/Hush-Hush/compare/v2.26.0...v2.27.0) (2026-09-22)
 
 
