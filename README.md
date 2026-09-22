@@ -80,8 +80,9 @@ job, a separate repo with its own install path. See its own README for the
 full usage guide, including the age keypair a consumer needs to receive a
 secret.
 
-[`api/openapi.yaml`](api/openapi.yaml) is the full contract, including the
-audit-log query endpoint the CLI doesn't wrap - query it directly:
+[`api/openapi.yaml`](api/openapi.yaml) is the full contract, browsable at
+<https://alrayyes.github.io/Hush-Hush/docs/api/>, including the audit-log
+query endpoint the CLI doesn't wrap - query it directly:
 
 ```sh
 curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
