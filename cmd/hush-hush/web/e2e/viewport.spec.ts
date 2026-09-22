@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 // web-ui-design-system/tasks.md #1.2: every page's base styles target a
@@ -27,5 +28,20 @@ for (const path of PUBLIC_PAGES) {
 		await page.goto(path);
 
 		await expect(page.locator('main')).toBeVisible();
+	});
+
+	// rules/a11y.md: every page a journey test covers gets its own scan.
+	// /changelog, /disclaimer, and /privacy have no session-gated flow of
+	// their own to fold this into, unlike the authenticated pages the big
+	// journey test already scans - a plain navigate-and-scan here is the
+	// whole test.
+	test(`${path} has no a11y violations`, async ({ page }) => {
+		await page.goto(path);
+		await expect(page.locator('main')).toBeVisible();
+
+		const results = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+			.analyze();
+		expect(results.violations).toEqual([]);
 	});
 }
