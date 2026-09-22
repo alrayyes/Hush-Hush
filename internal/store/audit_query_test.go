@@ -161,3 +161,50 @@ func TestQueryAuditLogReturnsIP(t *testing.T) {
 	require.Len(t, entries, 1)
 	require.Equal(t, "203.0.113.1", entries[0].IP)
 }
+
+func TestQueryAuditLogFiltersByActorNoneMatchesUnauthenticatedReads(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "", "203.0.113.2", "session", "admin"))
+
+	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Actor: "none"})
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, "a", entries[0].ObjectID)
+	require.Empty(t, entries[0].ActorType)
+}
+
+func TestQueryAuditLogFilterOptionsReturnsDistinctValuesThatActuallyAppear(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionUpdate, "homelab/vps-docker", "203.0.113.2", "session", "admin"))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionCreate, "homelab/vps-docker", "203.0.113.3", "token", "a1b2c3d4e5f6a7b8"))
+
+	options, err := s.QueryAuditLogFilterOptions(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []string{"a", "b"}, options.ObjectIDs)
+	require.Equal(t, []string{"homelab/vps-docker"}, options.Callers)
+	require.ElementsMatch(t, []store.AuditActorOption{
+		{Value: "none", Label: "none"},
+		{Value: "admin", Label: "admin"},
+		{Value: "a1b2c3d4e5f6a7b8", Label: "token:a1b2c3d4e5f6a7b8"},
+	}, options.Actors)
+}
+
+func TestQueryAuditLogFilterOptionsOnAFreshStoreIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	options, err := s.QueryAuditLogFilterOptions(context.Background())
+	require.NoError(t, err)
+	require.Empty(t, options.ObjectIDs)
+	require.Empty(t, options.Callers)
+	require.Empty(t, options.Actors)
+}

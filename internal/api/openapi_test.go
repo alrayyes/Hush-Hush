@@ -300,6 +300,15 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "query audit log filter options",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObject(t, s, "contract_filter_options")
+
+				return httptest.NewRequest(http.MethodGet, "/audit-log/filter-options", nil)
+			},
+		},
+		{
 			name: "query audit log",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()
