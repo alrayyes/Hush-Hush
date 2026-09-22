@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.23.0](https://github.com/alrayyes/Hush-Hush/compare/v2.22.0...v2.23.0) (2026-09-22)
+
+
+### Features
+
+* **web-ui:** adopt Tailwind CSS ([83bd90c](https://github.com/alrayyes/Hush-Hush/commit/83bd90c62240678b667b06dfe5d98c5353afde4a))
+* **web-ui:** migrate login/changelog/privacy/disclaimer to Tailwind ([9b63b48](https://github.com/alrayyes/Hush-Hush/commit/9b63b482cedc20ddd4b85ec6bde490d89685d03f))
+* **web-ui:** migrate secrets/consumers/audit-log/settings to Tailwind ([74b6915](https://github.com/alrayyes/Hush-Hush/commit/74b6915b049cab8026b4b0e172efbc5cd66009cf))
+* **web-ui:** migrate shell components to Tailwind utilities ([0e4ef94](https://github.com/alrayyes/Hush-Hush/commit/0e4ef94c1600dfe8a1c96dae08fb1d3bdfb54183))
+* **web-ui:** wire Tailwind CSS v4 into the build ([19c062e](https://github.com/alrayyes/Hush-Hush/commit/19c062e77d7478845692efdaaf3aae41f8b3de46))
+
 ## [2.22.0](https://github.com/alrayyes/Hush-Hush/compare/v2.21.0...v2.22.0) (2026-09-22)
 
 
