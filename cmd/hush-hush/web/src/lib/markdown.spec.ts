@@ -8,10 +8,19 @@ import { describe, expect, it } from 'vitest';
 import { renderChangelog } from './markdown';
 
 describe('renderChangelog', () => {
-	it('renders a heading and a list item as HTML', () => {
-		const html = renderChangelog('# Title\n\n- one\n- two\n');
+	it('drops the leading top-level heading, since the changelog page renders its own <h1>', () => {
+		const html = renderChangelog(
+			'# Changelog\n\n## [1.0.0](https://example.com) (2026-01-01)\n\n### Features\n\n- one\n',
+		);
 
-		expect(html).toContain('<h1>Title</h1>');
+		expect(html).not.toContain('<h1>');
+		expect(html).toContain('<li>one</li>');
+	});
+
+	it('renders a non-leading heading and a list item as HTML', () => {
+		const html = renderChangelog('# Changelog\n\n## Title\n\n- one\n- two\n');
+
+		expect(html).toContain('<h2>Title</h2>');
 		expect(html).toContain('<li>one</li>');
 		expect(html).toContain('<li>two</li>');
 	});
