@@ -335,6 +335,33 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "mcp tools/list",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				req := httptest.NewRequest(http.MethodPost, "/mcp",
+					bytes.NewReader([]byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "application/json, text/event-stream")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name: "mcp without a bearer token",
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				req := httptest.NewRequest(http.MethodPost, "/mcp",
+					bytes.NewReader([]byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "application/json, text/event-stream")
+
+				return req
+			},
+		},
+		{
 			name: "begin registration",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()
