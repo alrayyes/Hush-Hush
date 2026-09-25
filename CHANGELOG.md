@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.31.0](https://github.com/alrayyes/Hush-Hush/compare/v2.30.0...v2.31.0) (2026-09-25)
+
+
+### Features
+
+* **api:** implement the MCP endpoint ([#352](https://github.com/alrayyes/Hush-Hush/issues/352)) ([b474894](https://github.com/alrayyes/Hush-Hush/commit/b47489425f9cb5eb20f296c963c7ca0f3546975e)), closes [#346](https://github.com/alrayyes/Hush-Hush/issues/346)
+* **web-ui:** register WebMCP tools for read-only object metadata ([441fa77](https://github.com/alrayyes/Hush-Hush/commit/441fa77e1b0e989ba6ca691525a2f523786e051d))
+* **web-ui:** register WebMCP tools for read-only object metadata ([ee161cd](https://github.com/alrayyes/Hush-Hush/commit/ee161cdb3caa3c214bdc7f6667ec3366172d849f)), closes [#347](https://github.com/alrayyes/Hush-Hush/issues/347)
+
 ## [2.30.0](https://github.com/alrayyes/Hush-Hush/compare/v2.29.0...v2.30.0) (2026-09-25)
 
 
