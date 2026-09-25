@@ -1,0 +1,45 @@
+# Fires the moment the spec itself changes on main, rather than waiting on
+# release.yml's own `notify-sdks` job (alrayyes/Hush-Hush#224), which only
+# dispatches once release-please actually cuts a release. release-please
+# can sit on a pending release PR for a while, so a spec-affecting merge
+# could otherwise wait days for the SDK repos to hear about it. This
+# workflow watches api/openapi.yaml directly and dispatches the same
+# `spec-updated` event each SDK repo's codegen.yml already listens for
+# (alrayyes/hush-hush-go#65 and its siblings), so a spec change and its
+# downstream client regeneration land the same day regardless of when the
+# next release happens to be cut.
+#
+# Firing twice for the same spec change - once here, once later from
+# release.yml when release-please catches up - is harmless: each SDK's own
+# codegen.yml already no-ops a run where its `hush-hush` submodule didn't
+# move, so the second dispatch just confirms there's nothing left to do.
+name: notify-sdks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - api/openapi.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        repo: [hush-hush-go, hush-hush-python, hush-hush-node, hush-hush-php]
+      fail-fast: false
+    steps:
+      # RELEASE_TOKEN, not the default GITHUB_TOKEN: a repository_dispatch
+      # needs write access to the *target* repo, which GITHUB_TOKEN never
+      # has outside the repo the workflow runs in - same reasoning as
+      # release.yml's own notify-sdks job.
+      - name: Dispatch spec-updated to ${{ matrix.repo }}
+        run: |
+          gh api "repos/alrayyes/${{ matrix.repo }}/dispatches" \
+            -f event_type=spec-updated
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
