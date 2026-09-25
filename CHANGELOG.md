@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.30.0](https://github.com/alrayyes/Hush-Hush/compare/v2.29.0...v2.30.0) (2026-09-25)
+
+
+### Features
+
+* **api:** describe an MCP endpoint in the spec ([251f12c](https://github.com/alrayyes/Hush-Hush/commit/251f12c07ec7f9f58a2c483c58bb41110c1c51a7))
+* **api:** describe an MCP endpoint in the spec ([e59be63](https://github.com/alrayyes/Hush-Hush/commit/e59be63d4b50ac7cd1d8712860e53266c5abd97c))
+
 ## [2.29.0](https://github.com/alrayyes/Hush-Hush/compare/v2.28.0...v2.29.0) (2026-09-22)
 
 
