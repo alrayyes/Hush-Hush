@@ -88,6 +88,37 @@ query endpoint the CLI doesn't wrap - query it directly:
 curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 ```
 
+### MCP
+
+`POST /mcp` serves the [MCP](https://modelcontextprotocol.io) Streamable
+HTTP transport, exposing the same five operations as
+[`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) - `inject`,
+`get`, `update`, `delete`, `list` - as MCP tools, for an agent doing
+infrastructure or deploy work that needs to read or write a secret as one
+step in a larger task. Point an MCP client at it with the same bearer
+token a write call needs:
+
+```json
+{
+  "mcpServers": {
+    "hush-hush": {
+      "url": "http://localhost:8080/mcp",
+      "headers": { "Authorization": "Bearer 9f8e7d6c..." }
+    }
+  }
+}
+```
+
+Every tool call needs that token, including `get` and `list` - stricter
+than their plain HTTP equivalents, since one authenticated MCP session is
+meant to do all five operations rather than five independently gated
+tools ([`docs/adr/0019-mcp-endpoint.md`](docs/adr/0019-mcp-endpoint.md)).
+`value` is base64-encoded sealed (age) ciphertext on both sides of a tool
+call, the same wire convention `api/openapi.yaml` already uses - this
+server never decrypts it. [`api/openapi.yaml`](api/openapi.yaml)
+documents the route's existence and auth requirement; the actual per-tool
+schemas come from a running server's own `tools/list` call, not the spec.
+
 ### Web UI
 
 ![Secrets overview, light mode](docs/screenshots/secrets-light.png)

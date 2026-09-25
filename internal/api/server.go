@@ -68,14 +68,15 @@ type objectStore interface {
 // webBuild is the embedded SPA's build output, served as the fallback
 // for any request that doesn't match a known API route (design.md's
 // "Routing boundary" decision) - never intercepting /objects,
-// /audit-log, /healthz, or any /auth, /credentials, or /tokens path.
-// /audit-log and /consumers are both paths an API route and a page route
-// claim; handleHardNavRoute decides between them per request rather than
-// the mux picking one at registration time (alrayyes/hush-hush#272,
-// alrayyes/hush-hush#295).
+// /audit-log, /healthz, /mcp, or any /auth, /credentials, or /tokens
+// path. /audit-log and /consumers are both paths an API route and a page
+// route claim; handleHardNavRoute decides between them per request
+// rather than the mux picking one at registration time
+// (alrayyes/hush-hush#272, alrayyes/hush-hush#295).
 //
 // version is the running binary's own version, echoed by /healthz for
-// the web UI's footer to link to the changelog page.
+// the web UI's footer to link to the changelog page, and by /mcp's own
+// Implementation.Version for an MCP client that asks.
 func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *http.ServeMux {
 	wa, err := newWebAuthn(publicURL)
 	if err != nil {
@@ -103,6 +104,8 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 
 	mux.HandleFunc("GET /audit-log", handleHardNavRoute(handleQueryAuditLog(s), staticHandler))
 	mux.HandleFunc("GET /audit-log/filter-options", handleQueryAuditLogFilterOptions(s))
+
+	mux.HandleFunc("POST /mcp", requireWriteAccess(s, true, handleMCP(s, version)))
 
 	mux.HandleFunc("POST /auth/register/begin", handleBeginRegistration(s, wa))
 	mux.HandleFunc("POST /auth/register/finish", handleFinishRegistration(s, wa))
