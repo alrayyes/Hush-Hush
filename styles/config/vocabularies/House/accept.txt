@@ -80,6 +80,10 @@ exfiltration
 hardcod(?:ed|ing)
 misconfig(?:ured|uration)
 APIs?
+MCP
+MCP's
+MCP-capable
+Streamable
 deletable
 RPID
 RPOrigins
