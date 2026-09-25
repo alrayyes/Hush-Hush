@@ -13,7 +13,38 @@ permissions:
   contents: read
 
 jobs:
+  # Cheap enough (checkout + one git diff, no build/browser/server) to run
+  # ahead of the real capture job and skip it outright when nothing under
+  # cmd/hush-hush/web/ moved -- a release cut purely from the object-store
+  # backend or a dependency bump was still paying for a full
+  # build+browser+capture cycle every time to produce byte-identical
+  # images add-paths further down would just leave uncommitted anyway.
+  check-ui-changed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prev_tag=$(gh release list --limit 2 --json tagName -q '.[1].tagName // empty')
+          if [ -z "$prev_tag" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT" # no prior release to diff against
+          elif git diff --quiet "$prev_tag"..HEAD -- cmd/hush-hush/web/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   screenshots:
+    needs: check-ui-changed
+    if: needs.check-ui-changed.outputs.changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
