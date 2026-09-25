@@ -58,3 +58,21 @@ bun run lint          # biome check: JS/TS/CSS/JSON lint and format check
 bun run lint:tailwind # oxlint + @shadcn/lint: Tailwind class usage
 bun run test          # vitest: unit tests for src/lib's pure logic
 ```
+
+## WebMCP tools
+
+Once logged in, the page declares two [WebMCP](https://webmachinelearning.github.io/webmcp/)
+tools for an in-browser agent - `list_objects` and `get_object_metadata`
+(`src/lib/webmcp.ts`), both wrapping the same `listObjects()` call the
+secrets overview page itself uses. Read-only and metadata-only: neither
+tool ever returns a secret's sealed value, nor performs a create,
+update, or delete.
+
+This does nothing in a browser without `document.modelContext` - every
+browser today, short of Chrome or Edge with `chrome://flags/#enable-webmcp-testing`
+manually enabled, since WebMCP is still an origin-trial API with no
+token this self-hosted project can practically ship
+(`docs/adr/0020-webmcp-tools.md`). Verify the real registration path with
+that flag enabled, or the
+[Model Context Tool Inspector](https://github.com/beaufortfrancois/model-context-tool-inspector)
+extension, against a running `hush-hush` instance you're logged into.

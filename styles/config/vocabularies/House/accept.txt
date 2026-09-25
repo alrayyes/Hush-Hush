@@ -84,6 +84,9 @@ MCP
 MCP's
 MCP-capable
 Streamable
+WebMCP
+polyfills?
+deployers?
 deletable
 RPID
 RPOrigins
