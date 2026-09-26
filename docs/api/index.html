@@ -4,16 +4,12 @@
     <meta charset="utf-8" />
     <title>hush-hush API</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://unpkg.com/@stoplight/elements@9.0.25/web-components.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/@stoplight/elements@9.0.25/styles.min.css"
-    />
   </head>
-  <body style="height: 100vh">
-    <elements-api
-      apiDescriptionUrl="../../api/openapi.yaml"
-      router="hash"
-    ></elements-api>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { createApiReference } from 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.72.1/esm.js'
+      createApiReference('#app', { url: '../../api/openapi.yaml' })
+    </script>
   </body>
 </html>
