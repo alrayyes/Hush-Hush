@@ -57,7 +57,7 @@ Every create, update, and delete call needs a bearer token - issue one by
 running the same binary again, directly against that database file:
 
 ```sh
-./hush-hush token issue --description "homelab/vps-docker deploy"
+./hush-hush token issue --description "homelab/example-app deploy"
 # id:    a1b2c3d4e5f6a7b8
 # token: 9f8e7d6c...
 #
