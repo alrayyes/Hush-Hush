@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.32.0](https://github.com/alrayyes/Hush-Hush/compare/v2.31.1...v2.32.0) (2026-09-26)
+
+
+### Features
+
+* **cmd:** add a healthcheck subcommand for the container's own HEALTHCHECK ([82064d4](https://github.com/alrayyes/Hush-Hush/commit/82064d4f5d3e5362828e1d6b440c277ed1f1f7b9)), closes [#376](https://github.com/alrayyes/Hush-Hush/issues/376)
+
 ## [2.31.1](https://github.com/alrayyes/Hush-Hush/compare/v2.31.0...v2.31.1) (2026-09-26)
 
 
@@ -16,7 +23,6 @@
 ### Features
 
 * **api:** implement the MCP endpoint ([#352](https://github.com/alrayyes/Hush-Hush/issues/352)) ([b474894](https://github.com/alrayyes/Hush-Hush/commit/b47489425f9cb5eb20f296c963c7ca0f3546975e)), closes [#346](https://github.com/alrayyes/Hush-Hush/issues/346)
-* **web-ui:** register WebMCP tools for read-only object metadata ([441fa77](https://github.com/alrayyes/Hush-Hush/commit/441fa77e1b0e989ba6ca691525a2f523786e051d))
 * **web-ui:** register WebMCP tools for read-only object metadata ([ee161cd](https://github.com/alrayyes/Hush-Hush/commit/ee161cdb3caa3c214bdc7f6667ec3366172d849f)), closes [#347](https://github.com/alrayyes/Hush-Hush/issues/347)
 
 ## [2.30.0](https://github.com/alrayyes/Hush-Hush/compare/v2.29.0...v2.30.0) (2026-09-25)
@@ -24,7 +30,6 @@
 
 ### Features
 
-* **api:** describe an MCP endpoint in the spec ([251f12c](https://github.com/alrayyes/Hush-Hush/commit/251f12c07ec7f9f58a2c483c58bb41110c1c51a7))
 * **api:** describe an MCP endpoint in the spec ([e59be63](https://github.com/alrayyes/Hush-Hush/commit/e59be63d4b50ac7cd1d8712860e53266c5abd97c))
 
 ## [2.29.0](https://github.com/alrayyes/Hush-Hush/compare/v2.28.0...v2.29.0) (2026-09-22)
