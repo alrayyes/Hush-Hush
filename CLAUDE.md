@@ -53,7 +53,8 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
   GitHub-primary repos use GitHub-native Dependabot
   (`.github/dependabot.yml`); Renovate is the answer on a Forgejo instance
   instead.
-- **`docs/api/index.html`** renders `api/openapi.yaml` with Stoplight
-  Elements - Redocly lints the spec, Elements just reads it. `ci.yml`'s
-  `pages` job deploys it to GitHub Pages on every push to `main`, gated on
-  the `api` lint job, at <https://alrayyes.github.io/Hush-Hush/docs/api/>.
+- **`docs/api/index.html`** renders `api/openapi.yaml` with Scalar
+  (`@scalar/api-reference`) - Redocly lints the spec, Scalar just reads it.
+  `ci.yml`'s `pages` job deploys it to GitHub Pages on every push to `main`,
+  gated on the `api` lint job, at
+  <https://alrayyes.github.io/Hush-Hush/docs/api/>.

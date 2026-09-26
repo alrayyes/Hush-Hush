@@ -256,7 +256,7 @@ jobs:
         run: bun run lint:api
 
   # Renders the spec `api` just linted as a docs page (docs/api/index.html,
-  # Stoplight Elements - alrayyes/dotfiles#631) and publishes it to GitHub
+  # Scalar - alrayyes/dotfiles#646) and publishes it to GitHub
   # Pages. `needs: api` so a spec that fails Redocly never gets deployed;
   # `push`-only because `api` also runs on `pull_request`, where there's no
   # Pages environment to deploy into.
