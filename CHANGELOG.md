@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.31.1](https://github.com/alrayyes/Hush-Hush/compare/v2.31.0...v2.31.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* bump github.com/go-webauthn/webauthn from 0.18.1 to 0.18.2 ([#362](https://github.com/alrayyes/Hush-Hush/issues/362)) ([537f3f5](https://github.com/alrayyes/Hush-Hush/commit/537f3f5b6039de743317c640e38f35ad00f6f54a))
+* bump github.com/pact-foundation/pact-go/v2 from 2.7.1 to 2.8.0 ([#364](https://github.com/alrayyes/Hush-Hush/issues/364)) ([93e4208](https://github.com/alrayyes/Hush-Hush/commit/93e420828b52b4fffcc6bdf7ed71e8ac53a2976f))
+* bump golang from `648f440` to `69a7b97` ([#360](https://github.com/alrayyes/Hush-Hush/issues/360)) ([ef45261](https://github.com/alrayyes/Hush-Hush/commit/ef45261f7b0c2ed561ab86f3b2aafc159a143342))
+* bump oven/bun from 1.3.14-slim to 1.4.2-slim ([#361](https://github.com/alrayyes/Hush-Hush/issues/361)) ([28777ba](https://github.com/alrayyes/Hush-Hush/commit/28777ba7655518736cc23ec249933d2f24ef6f24))
+
 ## [2.31.0](https://github.com/alrayyes/Hush-Hush/compare/v2.30.0...v2.31.0) (2026-09-25)
 
 
