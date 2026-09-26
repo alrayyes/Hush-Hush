@@ -1,0 +1,48 @@
+# Hush Hush
+
+> A standalone secrets object store: a writer only ever needs the service's
+> public key to add or rotate a value, and a consumer only ever needs an
+> object id to fetch it. Public-key encryption (age) end to end - the
+> server stores and serves sealed ciphertext and never computes or returns
+> plaintext.
+
+v1's read path is deliberately flat: fetching an object's ciphertext needs
+no authorization, only its id. The confidentiality boundary is entirely
+"who holds a matching private key" - every fetch is recorded to the audit
+log instead. Writes (create, update, delete) are gated by a bearer token.
+`POST /mcp` serves the same five operations over the Model Context
+Protocol's Streamable HTTP transport, for an agent that needs to read or
+write a secret as one step in a larger task.
+
+This file covers `/docs/api/` - the rendered API reference - not the rest
+of the `alrayyes/Hush-Hush` repo or its web UI.
+
+## Docs
+
+- [API reference](https://alrayyes.github.io/Hush-Hush/docs/api/): the
+  Stoplight Elements rendering of the OpenAPI contract below - browsable
+  endpoint list, request/response schemas, and examples.
+- [OpenAPI spec](https://alrayyes.github.io/Hush-Hush/api/openapi.yaml): the
+  machine-readable contract itself - endpoints, schemas, and auth
+  requirements for `objects`, `audit-log`, `consumers`, `auth`,
+  `credentials`, `tokens`, and `mcp`.
+- [README](https://github.com/alrayyes/Hush-Hush/blob/main/README.md):
+  install, configuration, Docker usage, and the MCP/web-UI setup this API
+  sits behind.
+- [ARCHITECTURE.md](https://github.com/alrayyes/Hush-Hush/blob/main/ARCHITECTURE.md):
+  the encryption model, read-path and write-path auth, and storage backend
+  behind this API's design.
+
+## SDKs
+
+- [hush-hush-go](https://github.com/alrayyes/hush-hush-go): typed Go client
+  generated from this API's OpenAPI spec.
+- [hush-hush-python](https://github.com/alrayyes/hush-hush-python): the same,
+  generated for Python.
+- [hush-hush-node](https://github.com/alrayyes/hush-hush-node): the same,
+  generated for Node.js/TypeScript.
+- [hush-hush-php](https://github.com/alrayyes/hush-hush-php): the same,
+  generated for PHP.
+- [hush-hush-cli](https://github.com/alrayyes/hush-hush-cli): the
+  command-line client (`inject`, `get`, `update`, `delete`) built on this
+  API.

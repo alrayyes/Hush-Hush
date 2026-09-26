@@ -264,7 +264,10 @@ jobs:
   # The uploaded artifact mirrors docs/api/ and api/ at their real repo
   # paths rather than flattening either into the site root - index.html's
   # apiDescriptionUrl is a relative "../../api/openapi.yaml", and that only
-  # resolves if the deployed layout matches the repo's.
+  # resolves if the deployed layout matches the repo's. docs/api/llms.txt
+  # rides along the same way, scoped to this subpath per llmstxt.org's own
+  # spec - the site root (https://alrayyes.github.io/Hush-Hush/) has nothing
+  # deployed to it, so there's no root-level llms.txt to write.
   pages:
     needs: api
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -285,6 +288,7 @@ jobs:
         run: |
           mkdir -p _site/docs/api _site/api
           cp docs/api/index.html _site/docs/api/index.html
+          cp docs/api/llms.txt _site/docs/api/llms.txt
           cp api/openapi.yaml _site/api/openapi.yaml
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
