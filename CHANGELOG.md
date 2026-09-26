@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.32.0](https://github.com/alrayyes/Hush-Hush/compare/v2.31.1...v2.32.0) (2026-09-26)
+
+
+### Features
+
+* **cmd:** add a healthcheck subcommand for the container's own HEALTHCHECK ([e4d1bba](https://github.com/alrayyes/Hush-Hush/commit/e4d1bba70bc89f67b53ab7875a968aa8e7295665))
+* **cmd:** add a healthcheck subcommand for the container's own HEALTHCHECK ([82064d4](https://github.com/alrayyes/Hush-Hush/commit/82064d4f5d3e5362828e1d6b440c277ed1f1f7b9)), closes [#376](https://github.com/alrayyes/Hush-Hush/issues/376)
+
 ## [2.31.1](https://github.com/alrayyes/Hush-Hush/compare/v2.31.0...v2.31.1) (2026-09-26)
 
 
