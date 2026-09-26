@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,6 +32,7 @@ var version = "dev"
 var (
 	errAddrRequired   = errors.New("addr: required")
 	errDBPathRequired = errors.New("db_path: required")
+	errHealthzStatus  = errors.New("healthz check failed")
 )
 
 // config is this binary's runtime configuration, shared by serving and the
@@ -127,8 +129,53 @@ func newRootCmd() *cobra.Command {
 	}
 
 	root.AddCommand(newTokenCmd())
+	root.AddCommand(newHealthcheckCmd())
 
 	return root
+}
+
+// newHealthcheckCmd exists for the container's own HEALTHCHECK: the image is
+// scratch-based (no shell, no curl, no wget), so there's nothing else inside
+// it that could exec a probe. It reads the same ADDR this process is already
+// serving on and asks its own /healthz over loopback - a nonzero exit is
+// Docker's signal to mark the container unhealthy.
+func newHealthcheckCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:    "healthcheck",
+		Short:  "Check that this server answers its own /healthz",
+		Hidden: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+
+			_, port, err := net.SplitHostPort(cfg.Addr)
+			if err != nil {
+				return fmt.Errorf("parse addr %q: %w", cfg.Addr, err)
+			}
+
+			ctx, cancel := context.WithTimeout(cmd.Context(), 2*time.Second)
+			defer cancel()
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+port+"/healthz", nil)
+			if err != nil {
+				return fmt.Errorf("build request: %w", err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return fmt.Errorf("request /healthz: %w", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("%w: /healthz returned %d", errHealthzStatus, resp.StatusCode)
+			}
+
+			return nil
+		},
+	}
 }
 
 func serve() error {
