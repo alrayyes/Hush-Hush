@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.37.0](https://github.com/alrayyes/Hush-Hush/compare/v2.36.1...v2.37.0) (2026-09-27)
+
+
+### Features
+
+* **store:** split objects.id into an internal id and a user-facing slug ([#404](https://github.com/alrayyes/Hush-Hush/issues/404)) ([1d4ae7a](https://github.com/alrayyes/Hush-Hush/commit/1d4ae7aa6486b67d80e454328b3da02badf864b3))
+
+
+### Bug Fixes
+
+* **ci:** drop wretry.action wrapper around release-please-action ([#417](https://github.com/alrayyes/Hush-Hush/issues/417)) ([f876263](https://github.com/alrayyes/Hush-Hush/commit/f87626320bc306a87d4609ca9dbe3f6105e60a2d))
+* **ci:** reference the App secrets that actually exist on this repo ([#413](https://github.com/alrayyes/Hush-Hush/issues/413)) ([4e5242a](https://github.com/alrayyes/Hush-Hush/commit/4e5242a08230b886f8502b9130adf98b011aff08)), closes [#412](https://github.com/alrayyes/Hush-Hush/issues/412)
+* **ci:** retry release-please, add a manual goreleaser dispatch ([#402](https://github.com/alrayyes/Hush-Hush/issues/402)) ([65e8a14](https://github.com/alrayyes/Hush-Hush/commit/65e8a14bfcadf9c157dc0f14cbffc4279b855e85))
+* **web-ui:** register a keyed consumer in the screenshots script ([#401](https://github.com/alrayyes/Hush-Hush/issues/401)) ([1f0a5b7](https://github.com/alrayyes/Hush-Hush/commit/1f0a5b717c5523ad9423f7d43ffd6cbce6047ee9))
+* **web-ui:** treat a failed authenticated lighthouse audit as a warning ([#407](https://github.com/alrayyes/Hush-Hush/issues/407)) ([a0db048](https://github.com/alrayyes/Hush-Hush/commit/a0db04894661f91f954d13c53006243029babf55))
+* **web-ui:** update objects API client for the id/slug split ([#405](https://github.com/alrayyes/Hush-Hush/issues/405)) ([76b7da0](https://github.com/alrayyes/Hush-Hush/commit/76b7da029b93c5e724b83db4aee8e60e0984872d))
+
+
+### Reverts
+
+* use RELEASE_TOKEN instead of a GitHub App installation token ([#416](https://github.com/alrayyes/Hush-Hush/issues/416)) ([ee73990](https://github.com/alrayyes/Hush-Hush/commit/ee73990d8881db2f4745184972eeddbe4e4809f7))
+
 ## [2.36.1](https://github.com/alrayyes/Hush-Hush/compare/v2.36.0...v2.36.1) (2026-09-27)
 
 
