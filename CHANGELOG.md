@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.38.0](https://github.com/alrayyes/Hush-Hush/compare/v2.37.1...v2.38.0) (2026-09-27)
+
+
+### Features
+
+* **tokens:** add a rotate endpoint with a caller-chosen TTL ([#424](https://github.com/alrayyes/Hush-Hush/issues/424)) ([1e3f540](https://github.com/alrayyes/Hush-Hush/commit/1e3f5409c8a2ee171ec4b88f67dff8a16012d220)), closes [#423](https://github.com/alrayyes/Hush-Hush/issues/423)
+
 ## [2.37.1](https://github.com/alrayyes/Hush-Hush/compare/v2.37.0...v2.37.1) (2026-09-27)
 
 
