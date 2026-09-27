@@ -26,7 +26,7 @@ function apiErrorMessage(err: unknown, fallback: string): string {
 
 let createOpen = $state(false);
 let createError = $state('');
-let createId = $state('');
+let createSlug = $state('');
 let createValue = $state('');
 let createDescription = $state('');
 let createUsedBy: string[] = $state([]);
@@ -40,7 +40,7 @@ const createRecipients = $derived(
 );
 
 function resetCreateForm() {
-	createId = '';
+	createSlug = '';
 	createValue = '';
 	createDescription = '';
 	createUsedBy = [];
@@ -65,7 +65,7 @@ async function submitCreate(event: SubmitEvent) {
 	try {
 		const value = await sealValue(createValue, createRecipients.recipients);
 		await createObject({
-			id: createId,
+			slug: createSlug,
 			value,
 			description: createDescription || undefined,
 			used_by: createUsedBy.length > 0 ? createUsedBy : undefined,
@@ -82,7 +82,7 @@ async function submitCreate(event: SubmitEvent) {
 }
 
 let editOpen = $state(false);
-let editId = $state('');
+let editSlug = $state('');
 let editValue = $state('');
 let editUsedBy: string[] = $state([]);
 let editEntries: ConsumerEntry[] = $state([]);
@@ -90,14 +90,14 @@ let editError = $state('');
 
 const editRecipients = $derived(resolveRecipients(editUsedBy, editEntries));
 
-function openEdit(id: string) {
-	editId = id;
+function openEdit(slug: string) {
+	editSlug = slug;
 	editValue = '';
 	// Copied, not the same array reference data.objects holds - the
 	// combobox mutates this in place as the user picks/adds consumers,
 	// and canceling shouldn't leave that mutation sitting on data the
 	// server never actually received.
-	editUsedBy = [...(data.objects.find((o) => o.id === id)?.used_by ?? [])];
+	editUsedBy = [...(data.objects.find((o) => o.slug === slug)?.used_by ?? [])];
 	editError = '';
 	editOpen = true;
 }
@@ -114,7 +114,7 @@ async function submitEdit(event: SubmitEvent) {
 
 	try {
 		const value = await sealValue(editValue, editRecipients.recipients);
-		await updateObject(editId, value, editUsedBy);
+		await updateObject(editSlug, value, editUsedBy);
 		editOpen = false;
 		await invalidate('app:objects');
 		// An edit can introduce a consumer the directory page hasn't seen
@@ -126,31 +126,31 @@ async function submitEdit(event: SubmitEvent) {
 }
 
 let viewOpen = $state(false);
-let viewId = $state('');
+let viewSlug = $state('');
 let viewValue = $state('');
 let viewUsedBy: string[] = $state([]);
 let viewError = $state('');
 
-async function openView(id: string) {
-	viewId = id;
+async function openView(slug: string) {
+	viewSlug = slug;
 	viewValue = '';
-	viewUsedBy = data.objects.find((o) => o.id === id)?.used_by ?? [];
+	viewUsedBy = data.objects.find((o) => o.slug === slug)?.used_by ?? [];
 	viewError = '';
 	viewOpen = true;
 
 	try {
-		viewValue = await getObjectValue(id);
+		viewValue = await getObjectValue(slug);
 	} catch (err) {
 		viewError = apiErrorMessage(err, 'Failed to fetch the secret.');
 	}
 }
 
 let deleteOpen = $state(false);
-let deleteId = $state('');
+let deleteSlug = $state('');
 let deleteError = $state('');
 
-function openDelete(id: string) {
-	deleteId = id;
+function openDelete(slug: string) {
+	deleteSlug = slug;
 	deleteError = '';
 	deleteOpen = true;
 }
@@ -159,7 +159,7 @@ async function confirmDelete() {
 	deleteError = '';
 
 	try {
-		await deleteObject(deleteId);
+		await deleteObject(deleteSlug);
 		deleteOpen = false;
 		await invalidate('app:objects');
 		// A delete can remove a consumer's last secret, dropping it from
@@ -188,7 +188,7 @@ async function confirmDelete() {
 				</Dialog.Header>
 				<form onsubmit={submitCreate}>
 					<Label for="create-id">Id</Label>
-					<Input id="create-id" class="mt-1 mb-3 w-full" bind:value={createId} required />
+					<Input id="create-id" class="mt-1 mb-3 w-full" bind:value={createSlug} required />
 
 					<Label for="create-value">Value</Label>
 					<Textarea
@@ -262,10 +262,10 @@ async function confirmDelete() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.objects as object (object.id)}
-					{@const attribution = data.attribution.get(object.id)}
+				{#each data.objects as object (object.slug)}
+					{@const attribution = data.attribution.get(object.slug)}
 					<tr>
-						<td data-label="Id">{object.id}</td>
+						<td data-label="Id">{object.slug}</td>
 						<td data-label="Description">{object.description ?? ''}</td>
 						<td data-label="Created">
 							{#if attribution}
@@ -278,16 +278,16 @@ async function confirmDelete() {
 							{/if}
 						</td>
 						<td data-label="Actions" class="row-actions gap-2">
-							<Button variant="outline" size="sm" onclick={() => openView(object.id)}>
+							<Button variant="outline" size="sm" onclick={() => openView(object.slug)}>
 								View
 							</Button>
-							<Button variant="outline" size="sm" onclick={() => openEdit(object.id)}>
+							<Button variant="outline" size="sm" onclick={() => openEdit(object.slug)}>
 								Edit
 							</Button>
 							<Button
 								variant="destructive"
 								size="sm"
-								onclick={() => openDelete(object.id)}
+								onclick={() => openDelete(object.slug)}
 							>
 								Delete
 							</Button>
@@ -302,7 +302,7 @@ async function confirmDelete() {
 <Dialog.Root bind:open={viewOpen}>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>{viewId}</Dialog.Title>
+			<Dialog.Title>{viewSlug}</Dialog.Title>
 			<Dialog.Description>Sealed ciphertext, base64-encoded.</Dialog.Description>
 		</Dialog.Header>
 		{#if viewError}
@@ -326,7 +326,7 @@ async function confirmDelete() {
 <Dialog.Root bind:open={editOpen}>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Edit {editId}</Dialog.Title>
+			<Dialog.Title>Edit {editSlug}</Dialog.Title>
 		</Dialog.Header>
 		<form onsubmit={submitEdit}>
 			<Label for="edit-value">New value</Label>
@@ -375,7 +375,7 @@ async function confirmDelete() {
 <AlertDialog.Root bind:open={deleteOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete {deleteId}?</AlertDialog.Title>
+			<AlertDialog.Title>Delete {deleteSlug}?</AlertDialog.Title>
 			<AlertDialog.Description>
 				This permanently removes the object. Anything still depending on it will start
 				failing.

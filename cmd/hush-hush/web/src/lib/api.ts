@@ -146,7 +146,7 @@ export async function checkSession(): Promise<boolean> {
 }
 
 export interface ObjectMetadata {
-	id: string;
+	slug: string;
 	description?: string;
 	used_by?: string[];
 }
@@ -279,15 +279,15 @@ export async function addConsumer(name: string): Promise<ConsumerEntry> {
 	return res.json();
 }
 
-export async function getObjectValue(id: string): Promise<string> {
-	const res = await request(`/objects/${encodeURIComponent(id)}`);
+export async function getObjectValue(slug: string): Promise<string> {
+	const res = await request(`/objects/${encodeURIComponent(slug)}`);
 	const bytes = new Uint8Array(await res.arrayBuffer());
 
 	return bytesToBase64(bytes);
 }
 
 export interface CreateObjectRequest {
-	id: string;
+	slug: string;
 	value: string;
 	description?: string;
 	used_by?: string[];
@@ -305,11 +305,11 @@ export async function createObject(
 }
 
 export async function updateObject(
-	id: string,
+	slug: string,
 	value: string,
 	usedBy?: string[],
 ): Promise<ObjectMetadata> {
-	const res = await request(`/objects/${encodeURIComponent(id)}`, {
+	const res = await request(`/objects/${encodeURIComponent(slug)}`, {
 		method: 'PUT',
 		// usedBy is omitted entirely (rather than sent as []) when the
 		// caller doesn't pass it - api/openapi.yaml's UpdateObjectRequest
@@ -324,8 +324,8 @@ export async function updateObject(
 	return res.json();
 }
 
-export async function deleteObject(id: string): Promise<void> {
-	await request(`/objects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export async function deleteObject(slug: string): Promise<void> {
+	await request(`/objects/${encodeURIComponent(slug)}`, { method: 'DELETE' });
 }
 
 export interface AuditLogEntry {
