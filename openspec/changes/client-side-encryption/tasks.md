@@ -42,19 +42,19 @@ it starts once this proposal's PR merges.
 
 ## 3. PRF-based credential wrapping on registration
 
-- [ ] 3.1 Detect `getClientExtensionResults().prf` support during the
+- [x] 3.1 Detect `getClientExtensionResults().prf` support during the
       WebAuthn registration ceremony; verify with a browser/unit test
       covering both a PRF-capable and a non-PRF-capable simulated
       authenticator
-- [ ] 3.2 On first registration, generate the user's escrowed writer
+- [x] 3.2 On first registration, generate the user's escrowed writer
       identity client-side and display its break-glass recovery phrase
       exactly once; verify with a UI test asserting the phrase is shown
       once and never re-displayed or requested from the server afterward
-- [ ] 3.3 Wrap a copy of the escrowed identity using the derived PRF
+- [x] 3.3 Wrap a copy of the escrowed identity using the derived PRF
       secret and store it against the new credential; verify with a
       store-layer test asserting one wrapped copy per PRF-capable
       credential, and none for a non-PRF credential
-- [ ] 3.4 Verify deleting one of several credentials leaves the identity
+- [x] 3.4 Verify deleting one of several credentials leaves the identity
       recoverable through any surviving credential's wrapped copy (a
       test exercising requirement `users`'s "Deleting one of several
       passkeys does not strand the identity" scenario)

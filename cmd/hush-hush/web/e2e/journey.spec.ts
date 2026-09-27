@@ -105,6 +105,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	await page.goto('/login');
 	await page.getByRole('button', { name: 'Register passkey' }).click();
+
+	// tasks.md group 3.2: a first-ever registration shows the escrowed
+	// identity's break-glass recovery phrase exactly once, before the
+	// login page navigates onward - closeRecoveryPhrase (login/+page.svelte)
+	// is what actually navigates to "/", not the registration itself.
+	await page
+		.getByRole('button', { name: "I've saved it" })
+		.click({ timeout: 10_000 });
 	await page.waitForURL('/');
 
 	// A real age keypair, generated in the test itself (not through the

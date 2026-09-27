@@ -31,13 +31,37 @@ type Credential struct {
 	// change"), so this has to be carried through from registration to
 	// every later login, not just SignCount (alrayyes/hush-hush#260).
 	BackupEligible bool
+
+	// UserID foreign-keys this credential to the users row it belongs to
+	// (openspec/changes/client-side-encryption/design.md's "users table
+	// and owner_id/user_id foreign keys" decision). Left empty leaves the
+	// column NULL - there is exactly one user in this change's scope, so
+	// every caller that creates a credential today has one to pass.
+	UserID string
+
+	// WrappedIdentity is this credential's own copy of the user's
+	// escrowed writer identity private key, wrapped with a key derived
+	// from this credential's WebAuthn PRF extension output and
+	// base64-encoded - empty for a credential that doesn't support PRF
+	// (specs/users/spec.md's "Per-credential wrapping of the escrowed
+	// identity" and "PRF support is detected at registration"
+	// requirements). Never the identity's plaintext private key - this
+	// package stores exactly what the client already wrapped, nothing
+	// more.
+	WrappedIdentity string
 }
 
 // CreateCredential stores a newly registered credential.
 func (s *Store) CreateCredential(ctx context.Context, c Credential) error {
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO webauthn_credentials (id, public_key, sign_count, aaguid, nickname, created_at, backup_eligible) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO webauthn_credentials (id, public_key, sign_count, aaguid, nickname, created_at, backup_eligible, user_id, wrapped_identity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.PublicKey, c.SignCount, c.AAGUID, c.Nickname, c.CreatedAt, c.BackupEligible,
+		// nullableString (audit.go) turns an empty string into a real SQL
+		// NULL rather than storing an empty string - both user_id and
+		// wrapped_identity are meant to be absent, not blank, when a
+		// caller has no value yet (a credential that doesn't support PRF,
+		// say).
+		nullableString(c.UserID), nullableString(c.WrappedIdentity),
 	); err != nil {
 		return fmt.Errorf("create credential: %w", err)
 	}
@@ -51,7 +75,7 @@ func (s *Store) CreateCredential(ctx context.Context, c Credential) error {
 // keyed off exactly this.
 func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, public_key, sign_count, aaguid, nickname, created_at, last_used_at, backup_eligible FROM webauthn_credentials ORDER BY created_at`)
+		`SELECT id, public_key, sign_count, aaguid, nickname, created_at, last_used_at, backup_eligible, user_id, wrapped_identity FROM webauthn_credentials ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("list credentials: %w", err)
 	}
@@ -61,15 +85,22 @@ func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 
 	for rows.Next() {
 		var (
-			c          Credential
-			lastUsedAt sql.NullString
+			c               Credential
+			lastUsedAt      sql.NullString
+			userID          sql.NullString
+			wrappedIdentity sql.NullString
 		)
 
-		if err := rows.Scan(&c.ID, &c.PublicKey, &c.SignCount, &c.AAGUID, &c.Nickname, &c.CreatedAt, &lastUsedAt, &c.BackupEligible); err != nil {
+		if err := rows.Scan(
+			&c.ID, &c.PublicKey, &c.SignCount, &c.AAGUID, &c.Nickname, &c.CreatedAt, &lastUsedAt, &c.BackupEligible,
+			&userID, &wrappedIdentity,
+		); err != nil {
 			return nil, fmt.Errorf("scan credential: %w", err)
 		}
 
 		c.LastUsedAt = lastUsedAt.String
+		c.UserID = userID.String
+		c.WrappedIdentity = wrappedIdentity.String
 		creds = append(creds, c)
 	}
 

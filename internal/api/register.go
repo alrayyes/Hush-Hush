@@ -35,6 +35,17 @@ type Credential struct {
 	Nickname   string `json:"nickname"`
 	CreatedAt  string `json:"created_at"`
 	LastUsedAt string `json:"last_used_at,omitempty"`
+
+	// WrappedIdentity is this credential's own PRF-wrapped copy of the
+	// user's escrowed writer identity private key, base64-encoded -
+	// absent for a credential that doesn't support PRF
+	// (specs/users/spec.md's "Per-credential wrapping of the escrowed
+	// identity" requirement). Safe to expose to the authenticated owner:
+	// it's already wrapped, and only unwrappable with that same
+	// credential's own PRF secret or the break-glass recovery phrase -
+	// this is what lets the client recover the identity locally to wrap
+	// a fresh copy when registering another credential.
+	WrappedIdentity string `json:"wrapped_identity,omitempty"`
 }
 
 // credentialFromStore builds the HTTP-facing shape. store.Credential.ID is
@@ -42,7 +53,10 @@ type Credential struct {
 // by handleFinishRegistration below), so this is a plain field copy, not
 // a re-encode.
 func credentialFromStore(c store.Credential) Credential {
-	return Credential{ID: c.ID, CreatedAt: c.CreatedAt, Nickname: c.Nickname, LastUsedAt: c.LastUsedAt}
+	return Credential{
+		ID: c.ID, CreatedAt: c.CreatedAt, Nickname: c.Nickname, LastUsedAt: c.LastUsedAt,
+		WrappedIdentity: c.WrappedIdentity,
+	}
 }
 
 // RegistrationFinishRequest is the POST /auth/register/finish body.
@@ -54,6 +68,28 @@ func credentialFromStore(c store.Credential) Credential {
 type RegistrationFinishRequest struct {
 	Credential json.RawMessage `json:"credential"`
 	Nickname   string          `json:"nickname"`
+
+	// WrappedIdentity is this credential's own PRF-wrapped copy of the
+	// user's escrowed writer identity private key, base64-encoded -
+	// omitted when the browser's registration reported no PRF support
+	// for this credential (specs/users/spec.md's "PRF support is
+	// detected at registration" requirement). The server never verifies
+	// or unwraps this - it's opaque ciphertext to this package, stored
+	// exactly as given.
+	WrappedIdentity string `json:"wrapped_identity,omitempty"`
+
+	// PublicKey and RecoveryWrappedIdentity are only sent on the
+	// account's first-ever registration (design.md's "Escrowed identity:
+	// client-generated, server stores only wrapped copies" decision):
+	// PublicKey is the escrowed identity's age recipient string, safe to
+	// store in the clear; RecoveryWrappedIdentity is its private key
+	// wrapped by a key derived from the one-time break-glass recovery
+	// phrase, which this server never sees. Store.SetUserEscrow is
+	// itself idempotent against a later registration resending these, so
+	// this handler doesn't need to re-derive "is this the first one"
+	// beyond what the client already decided.
+	PublicKey               string `json:"public_key,omitempty"`
+	RecoveryWrappedIdentity string `json:"recovery_wrapped_identity,omitempty"`
 }
 
 // handleBeginRegistration starts a WebAuthn registration ceremony.
@@ -81,7 +117,18 @@ func handleBeginRegistration(s objectStore, wa *webauthn.WebAuthn) http.HandlerF
 			return
 		}
 
-		creation, session, err := wa.BeginRegistration(user)
+		// WithExtensionPRFSupport requests the bare "prf":{} probe - go-
+		// webauthn's own client-extension-output validation (CreateCredential,
+		// called from verifyRegistration below) rejects a "prf" output the
+		// registration options never asked for, so the client's own
+		// create() call has to request exactly the same bare probe
+		// (identity.ts's prfExtensionInputs), not an eval - actually
+		// evaluating the extension to derive a secret happens in a
+		// separate, purely local assertion the client runs against its own
+		// browser afterward (specs/users/spec.md's "PRF support is
+		// detected at registration" requirement is about detecting
+		// support, not this server ever seeing a derived secret).
+		creation, session, err := wa.BeginRegistration(user, webauthn.WithExtensions(webauthn.WithExtensionPRFSupport()))
 		if err != nil {
 			writeError(w, r, http.StatusBadRequest, "begin registration: "+err.Error())
 
@@ -136,8 +183,15 @@ func handleFinishRegistration(s objectStore, wa *webauthn.WebAuthn) http.Handler
 			return
 		}
 
-		stored := buildStoredCredential(credential, req.Nickname, len(user.credentials)+1)
-		if err := persistAndAuthenticate(w, r, s, stored); err != nil {
+		userID, err := s.CurrentUserID(r.Context())
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		stored := buildStoredCredential(credential, req.Nickname, len(user.credentials)+1, userID, req.WrappedIdentity)
+		if err := persistAndAuthenticate(w, r, s, stored, req); err != nil {
 			writeInternalError(w, r, err)
 
 			return
@@ -148,14 +202,23 @@ func handleFinishRegistration(s objectStore, wa *webauthn.WebAuthn) http.Handler
 	}
 }
 
-// persistAndAuthenticate stores a newly verified credential and, if the
-// caller isn't already authenticated, issues a session - only the
+// persistAndAuthenticate stores a newly verified credential, records the
+// escrowed identity's public key and recovery-wrapped copy if this
+// request carried them (only the account's first-ever registration does -
+// store.SetUserEscrow is itself a no-op past that first time), and issues
+// a session if the caller isn't already authenticated - only the
 // bootstrap case (no session yet) issues one, since adding a passkey to
 // an already-authenticated session leaves that session untouched
 // (auth/spec.md's "Registering an additional passkey" scenario).
-func persistAndAuthenticate(w http.ResponseWriter, r *http.Request, s objectStore, stored store.Credential) error {
+func persistAndAuthenticate(w http.ResponseWriter, r *http.Request, s objectStore, stored store.Credential, req RegistrationFinishRequest) error {
 	if err := s.CreateCredential(r.Context(), stored); err != nil {
 		return fmt.Errorf("create credential: %w", err)
+	}
+
+	if req.PublicKey != "" {
+		if err := s.SetUserEscrow(r.Context(), stored.UserID, req.PublicKey, req.RecoveryWrappedIdentity); err != nil {
+			return fmt.Errorf("set user escrow: %w", err)
+		}
 	}
 
 	if !hasValidSession(r, s) {
@@ -207,8 +270,10 @@ func verifyRegistration(r *http.Request, s objectStore, wa *webauthn.WebAuthn, u
 
 // buildStoredCredential builds the row to persist for a just-verified
 // registration, falling back to a generated nickname when the caller
-// didn't supply one.
-func buildStoredCredential(credential *webauthn.Credential, nickname string, fallbackIndex int) store.Credential {
+// didn't supply one. userID and wrappedIdentity are passed through
+// verbatim - this function's only job is assembling the row, not deciding
+// who the user is or whether PRF wrapping applies.
+func buildStoredCredential(credential *webauthn.Credential, nickname string, fallbackIndex int, userID, wrappedIdentity string) store.Credential {
 	if nickname == "" {
 		nickname = fmt.Sprintf("passkey %d", fallbackIndex)
 	}
@@ -218,6 +283,7 @@ func buildStoredCredential(credential *webauthn.Credential, nickname string, fal
 		SignCount: credential.Authenticator.SignCount, AAGUID: encodeCredentialID(credential.Authenticator.AAGUID),
 		Nickname: nickname, CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		BackupEligible: credential.Flags.BackupEligible,
+		UserID:         userID, WrappedIdentity: wrappedIdentity,
 	}
 }
 

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -68,4 +69,40 @@ func soleUserID(db *sql.DB) (string, error) {
 	}
 
 	return newID, nil
+}
+
+// CurrentUserID returns the id of the sole existing users row. There is
+// exactly one user in this change's scope (design.md's Non-Goals) -
+// Open's own backfillOwnership guarantees a users row always exists by
+// the time this is called, so this is a plain lookup rather than another
+// insert-if-missing.
+func (s *Store) CurrentUserID(ctx context.Context) (string, error) {
+	var id string
+
+	if err := s.db.QueryRowContext(ctx, `SELECT id FROM users LIMIT 1`).Scan(&id); err != nil {
+		return "", fmt.Errorf("select current user: %w", err)
+	}
+
+	return id, nil
+}
+
+// SetUserEscrow records the escrowed writer identity's public key and its
+// recovery-phrase-wrapped private key copy against id, once
+// (openspec/changes/client-side-encryption/specs/users/spec.md's
+// "Escrowed identity generated once" scenario). A no-op if that user
+// already has a public key recorded: the client decides when a
+// registration is the account's first (getAuthStatus's bootstrapped ==
+// false) and only sends these fields then, but the server never trusts
+// that alone - overwriting an already-escrowed identity from a later
+// registration would silently strand every credential's existing wrapped
+// copy, which was wrapped against the original identity, not a new one.
+func (s *Store) SetUserEscrow(ctx context.Context, id, publicKey, recoveryWrappedIdentity string) error {
+	if _, err := s.db.ExecContext(ctx,
+		`UPDATE users SET public_key = ?, recovery_wrapped_identity = ? WHERE id = ? AND public_key IS NULL`,
+		publicKey, recoveryWrappedIdentity, id,
+	); err != nil {
+		return fmt.Errorf("set user escrow: %w", err)
+	}
+
+	return nil
 }

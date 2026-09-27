@@ -46,6 +46,9 @@ type objectStore interface {
 	RenameCredential(ctx context.Context, id, nickname string) error
 	DeleteCredential(ctx context.Context, id string) error
 
+	CurrentUserID(ctx context.Context) (string, error)
+	SetUserEscrow(ctx context.Context, id, publicKey, recoveryWrappedIdentity string) error
+
 	CreateSession(ctx context.Context, sess store.Session) error
 	GetSession(ctx context.Context, id string) (store.Session, error)
 	DeleteSession(ctx context.Context, id string) error
