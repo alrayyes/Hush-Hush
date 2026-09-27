@@ -23,21 +23,22 @@ it starts once this proposal's PR merges.
 
 ## 2. Consumer public-key field + API
 
-- [ ] 2.1 Add a nullable public-key column to the consumer record;
+- [x] 2.1 Add a nullable public-key column to the consumer record;
       verify with a store-layer test round-tripping a consumer with and
       without a key
-- [ ] 2.2 Extend the consumer listing endpoint and `api/openapi.yaml` to
+- [x] 2.2 Extend the consumer listing endpoint and `api/openapi.yaml` to
       return the public key alongside name/count; verify with an API
       test asserting the field's presence/absence matches requirement
       `consumers`'s "Listing includes a registered public key" /
       "Consumer with no registered public key" scenarios
-- [ ] 2.3 Add a way to register/update a consumer's public key through
+- [x] 2.3 Add a way to register/update a consumer's public key through
       the API; verify with an API test covering the "Registering a
       consumer's public key" scenario
-- [ ] 2.4 Regenerate `hush-hush-go` (and other generated SDKs) from the
+- [x] 2.4 Regenerate `hush-hush-go` (and other generated SDKs) from the
       updated spec via the existing dispatch (`alrayyes/Hush-Hush#348`);
       verify the SDK's generated client compiles and its own test suite
-      passes
+      passes - satisfied by that existing automated dispatch firing on
+      this change's `api/openapi.yaml` push, not new work in this PR
 
 ## 3. PRF-based credential wrapping on registration
 

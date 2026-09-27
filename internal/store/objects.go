@@ -307,11 +307,15 @@ type ConsumerFilter struct {
 	PageSize int
 }
 
-// ConsumerEntry is one consumer returned by ListConsumersPage: its name
-// and how many stored secret objects record it in their used_by list.
+// ConsumerEntry is one consumer returned by ListConsumersPage: its name,
+// how many stored secret objects record it in their used_by list, and its
+// registered age public key (empty if none has been set -
+// openspec/changes/client-side-encryption/specs/consumers/spec.md's
+// "Consumer public key registration" requirement).
 type ConsumerEntry struct {
 	Name        string
 	SecretCount int
+	PublicKey   string
 }
 
 // ConsumerPage is one page of ListConsumersPage's filtered result, plus
@@ -348,9 +352,10 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 	}
 
 	rows, err := s.db.QueryContext(ctx, namesCTE+`
-		SELECT n.name, COUNT(u.object_id) AS secret_count
+		SELECT n.name, COUNT(u.object_id) AS secret_count, c.public_key
 		FROM names n
 		LEFT JOIN used_by u ON u.consumer = n.name
+		LEFT JOIN consumers c ON c.name = n.name
 		WHERE n.name LIKE ? ESCAPE '\'
 		GROUP BY n.name
 		ORDER BY n.name
@@ -365,9 +370,11 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 	var consumers []ConsumerEntry
 	for rows.Next() {
 		var entry ConsumerEntry
-		if err := rows.Scan(&entry.Name, &entry.SecretCount); err != nil {
+		var publicKey sql.NullString
+		if err := rows.Scan(&entry.Name, &entry.SecretCount, &publicKey); err != nil {
 			return ConsumerPage{}, fmt.Errorf("scan consumer: %w", err)
 		}
+		entry.PublicKey = publicKey.String
 
 		consumers = append(consumers, entry)
 	}
@@ -384,16 +391,20 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 // entry under newName. Consumers aren't a stored resource of their own
 // (alrayyes/hush-hush#282, ADR 0002) - this is a bulk rewrite across
 // used_by, not a rename of a row with its own identity, except for a
-// name added directly via AddConsumer, which does have its own row in
-// consumers to move.
+// name added directly via AddConsumer, or one with a registered public
+// key, which does have its own row in consumers to move.
 //
 // If newName already has its own recorded objects, the two merge: an
 // object recording both ends up with a single used_by entry, not a
 // (object_id, consumer) primary-key violation, and the returned
 // SecretCount covers every object now recording newName, old and
-// already-there combined. Renaming a name to itself is a no-op. It
-// returns ErrUnknownConsumer if oldName isn't currently recorded
-// anywhere, in used_by or in consumers.
+// already-there combined. A registered public key survives the merge too:
+// newName's own key wins if it already had one, otherwise oldName's key
+// (if any) carries over - the surviving identity is newName, so its key
+// takes precedence rather than being silently overwritten by the one
+// being merged away. Renaming a name to itself is a no-op. It returns
+// ErrUnknownConsumer if oldName isn't currently recorded anywhere, in
+// used_by or in consumers.
 func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (ConsumerEntry, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -413,25 +424,17 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 		return ConsumerEntry{}, fmt.Errorf("check existing consumer: %w", err)
 	}
 
+	// Read both names' registered public keys before oldName's consumers
+	// row (if any) is deleted below - otherwise a key registered under
+	// oldName would be lost rather than carried over to newName.
+	resolvedKey, err := resolveRenamedPublicKey(ctx, tx, oldName, newName)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+
 	if oldName != newName {
-		// Drop the old entry wherever the object already records newName -
-		// otherwise the UPDATE below would try to insert a second
-		// (object_id, newName) row and violate used_by's primary key.
-		if _, err := tx.ExecContext(ctx, `
-			DELETE FROM used_by
-			WHERE consumer = ? AND object_id IN (
-				SELECT object_id FROM used_by WHERE consumer = ?
-			)`, oldName, newName,
-		); err != nil {
-			return ConsumerEntry{}, fmt.Errorf("drop merged used_by rows: %w", err)
-		}
-
-		if _, err := tx.ExecContext(ctx, `UPDATE used_by SET consumer = ? WHERE consumer = ?`, newName, oldName); err != nil {
-			return ConsumerEntry{}, fmt.Errorf("rename used_by rows: %w", err)
-		}
-
-		if _, err := tx.ExecContext(ctx, `DELETE FROM consumers WHERE name = ?`, oldName); err != nil {
-			return ConsumerEntry{}, fmt.Errorf("drop old consumer entry: %w", err)
+		if err := rewriteUsedByForRename(ctx, tx, oldName, newName); err != nil {
+			return ConsumerEntry{}, err
 		}
 	}
 
@@ -440,17 +443,14 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 		return ConsumerEntry{}, fmt.Errorf("count renamed consumer: %w", err)
 	}
 
-	// newName has no used_by rows of its own yet - keep it visible in the
-	// directory the same way AddConsumer does, rather than the rename
-	// making it disappear. INSERT OR IGNORE: a no-op if newName already
-	// has its own consumers row (renaming to itself, or newName already
-	// existed there).
-	if count == 0 {
-		now := time.Now().UTC().Format(time.RFC3339)
-		if _, err := tx.ExecContext(ctx,
-			`INSERT OR IGNORE INTO consumers (name, created_at) VALUES (?, ?)`,
-			newName, now,
-		); err != nil {
+	// newName needs its own consumers row whenever it has no used_by rows
+	// of its own yet (kept visible in the directory the same way
+	// AddConsumer does) or there's a resolved public key to persist -
+	// upserting either way rather than only inserting when missing, since
+	// oldName's key (if any) has to land on newName's row even when
+	// newName already has used_by rows of its own.
+	if count == 0 || resolvedKey != "" {
+		if err := upsertConsumerRow(ctx, tx, newName, resolvedKey); err != nil {
 			return ConsumerEntry{}, fmt.Errorf("record renamed consumer: %w", err)
 		}
 	}
@@ -459,7 +459,110 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	return ConsumerEntry{Name: newName, SecretCount: count}, nil
+	return ConsumerEntry{Name: newName, SecretCount: count, PublicKey: resolvedKey}, nil
+}
+
+// rewriteUsedByForRename is RenameConsumer's own used_by/consumers rewrite
+// for the oldName != newName case: drop the old entry wherever the object
+// already records newName (otherwise the UPDATE below would try to insert
+// a second (object_id, newName) row and violate used_by's primary key),
+// move every remaining used_by row from oldName to newName, then drop
+// oldName's own consumers row - its public key, if any, was already read
+// by resolveRenamedPublicKey before this runs.
+func rewriteUsedByForRename(ctx context.Context, tx renameSQLTx, oldName, newName string) error {
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM used_by
+		WHERE consumer = ? AND object_id IN (
+			SELECT object_id FROM used_by WHERE consumer = ?
+		)`, oldName, newName,
+	); err != nil {
+		return fmt.Errorf("drop merged used_by rows: %w", err)
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE used_by SET consumer = ? WHERE consumer = ?`, newName, oldName); err != nil {
+		return fmt.Errorf("rename used_by rows: %w", err)
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM consumers WHERE name = ?`, oldName); err != nil {
+		return fmt.Errorf("drop old consumer entry: %w", err)
+	}
+
+	return nil
+}
+
+// renameSQLTx is the subset of *sql.Tx that resolveRenamedPublicKey and
+// upsertConsumerRow need - just enough to run a query or exec against the
+// transaction RenameConsumer already opened, without passing the whole
+// *sql.Tx type further than necessary.
+type renameSQLTx interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// resolveRenamedPublicKey reads oldName's and newName's currently
+// registered public keys (within tx, before RenameConsumer's own rewrite
+// deletes oldName's row) and returns which one survives the rename:
+// newName's own key if it has one, otherwise oldName's (empty if neither
+// does).
+func resolveRenamedPublicKey(ctx context.Context, tx renameSQLTx, oldName, newName string) (string, error) {
+	var oldKey, newKey sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT public_key FROM consumers WHERE name = ?`, oldName).Scan(&oldKey); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("read old consumer public key: %w", err)
+	}
+	if err := tx.QueryRowContext(ctx, `SELECT public_key FROM consumers WHERE name = ?`, newName).Scan(&newKey); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("read new consumer public key: %w", err)
+	}
+
+	if newKey.String != "" {
+		return newKey.String, nil
+	}
+
+	return oldKey.String, nil
+}
+
+// upsertConsumerRow inserts a consumers row for name if none exists, or
+// updates its public_key if one already does - shared by RenameConsumer
+// (persisting a resolved key, or just keeping a used_by-only name visible
+// in the directory) and SetConsumerPublicKey. An empty publicKey stores
+// NULL, not an empty string.
+func upsertConsumerRow(ctx context.Context, tx renameSQLTx, name, publicKey string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO consumers (name, created_at, public_key) VALUES (?, ?, ?)
+		ON CONFLICT(name) DO UPDATE SET public_key = excluded.public_key`,
+		name, now, sql.NullString{String: publicKey, Valid: publicKey != ""},
+	); err != nil {
+		return fmt.Errorf("upsert consumer: %w", err)
+	}
+
+	return nil
+}
+
+// SetConsumerPublicKey registers or updates name's registered age public
+// key, upserting a consumers row if none exists yet - a name that only
+// exists via some object's used_by list has nowhere else to persist a key
+// until now, and AddConsumer's own existing-name check doesn't apply
+// here: registering a key for an already-referenced consumer is exactly
+// the expected use of this method, not a duplicate-add attempt.
+// publicKey must never be a private key - the caller (handleUpdateConsumer)
+// only ever forwards what the request body calls public_key, and the
+// server has no way to tell a private key apart from a public one, so
+// that boundary is enforced by never asking for anything else, not by
+// inspecting the value. Returns the resulting entry: name, the number of
+// stored secret objects whose used_by list references it (0 for a name
+// that exists only via this call), and the public key just set.
+func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string) (ConsumerEntry, error) {
+	if err := upsertConsumerRow(ctx, s.db, name, publicKey); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("set consumer public key: %w", err)
+	}
+
+	var count int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, name).Scan(&count); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("count consumer: %w", err)
+	}
+
+	return ConsumerEntry{Name: name, SecretCount: count, PublicKey: publicKey}, nil
 }
 
 // DeleteConsumer strips name from the used_by list of every stored object

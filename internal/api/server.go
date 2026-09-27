@@ -27,6 +27,7 @@ type objectStore interface {
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
 	AddConsumer(ctx context.Context, name string) error
 	RenameConsumer(ctx context.Context, oldName, newName string) (store.ConsumerEntry, error)
+	SetConsumerPublicKey(ctx context.Context, name, publicKey string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, id string, value []byte, usedBy *[]string) error
 	DeleteObject(ctx context.Context, id string) error
@@ -94,8 +95,12 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	// {name...} rather than {name}: a consumer name routinely contains
 	// "/" (homelab/vps-docker) and has to match everything after
 	// /consumers/ as one value, not stop at the first path segment
-	// boundary (api/openapi.yaml's consumerName parameter).
-	mux.HandleFunc("PATCH /consumers/{name...}", requireWriteAccess(s, true, handleRenameConsumer(s)))
+	// boundary (api/openapi.yaml's consumerName parameter). This is also
+	// why a public key gets its own request field on this same endpoint
+	// rather than a nested path like /consumers/{name}/public-key: a
+	// trailing path segment after a name that can itself contain "/"
+	// isn't reliably distinguishable from part of the name.
+	mux.HandleFunc("PATCH /consumers/{name...}", requireWriteAccess(s, true, handleUpdateConsumer(s)))
 	mux.HandleFunc("DELETE /consumers/{name...}", requireWriteAccess(s, true, handleDeleteConsumer(s)))
 	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
 	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))

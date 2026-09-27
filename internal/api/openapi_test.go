@@ -275,6 +275,35 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "register consumer public key",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObjectWithConsumer(t, s, "contract_register_public_key", "contract-keyed-consumer")
+
+				b := []byte(`{"public_key":"age1exampleplaceholderpublickey"}`)
+				req := httptest.NewRequest(http.MethodPatch, "/consumers/contract-keyed-consumer", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			name:                   "update consumer with neither name nor public_key",
+			requestIsSchemaInvalid: true,
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+				seedObjectWithConsumer(t, s, "contract_update_empty", "contract-empty-update-consumer")
+
+				b := []byte(`{}`)
+				req := httptest.NewRequest(http.MethodPatch, "/consumers/contract-empty-update-consumer", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
 			// Same single-segment-name constraint as "rename consumer"
 			// above.
 			name: "delete consumer",
