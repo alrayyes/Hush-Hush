@@ -213,12 +213,16 @@ function closeRotate() {
 						<Dialog.Title>Add a passkey</Dialog.Title>
 					</Dialog.Header>
 					<form onsubmit={submitAdd}>
-						<Label for="add-nickname">Nickname (optional)</Label>
-						<Input id="add-nickname" class="mt-1 w-full" bind:value={addNickname} />
+						<div class="space-y-4">
+							<div class="space-y-1">
+								<Label for="add-nickname">Nickname (optional)</Label>
+								<Input id="add-nickname" class="w-full" bind:value={addNickname} />
+							</div>
 
-						{#if addError}
-							<p role="alert" class="mt-3 text-error">{addError}</p>
-						{/if}
+							{#if addError}
+								<p role="alert" class="text-error">{addError}</p>
+							{/if}
+						</div>
 
 						<Dialog.Footer>
 							<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
@@ -236,10 +240,10 @@ function closeRotate() {
 		<table class="responsive-table">
 			<thead>
 				<tr>
-					<th scope="col">Nickname</th>
-					<th scope="col">Added</th>
-					<th scope="col">Last used</th>
-					<th scope="col">Actions</th>
+					<th scope="col" class="px-4 py-3">Nickname</th>
+					<th scope="col" class="px-4 py-3">Added</th>
+					<th scope="col" class="px-4 py-3">Last used</th>
+					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -248,7 +252,7 @@ function closeRotate() {
 						<td data-label="Nickname">{credential.nickname ?? ''}</td>
 						<td data-label="Added">{credential.created_at}</td>
 						<td data-label="Last used">{credential.last_used_at ?? 'never'}</td>
-						<td data-label="Actions" class="row-actions gap-2">
+						<td data-label="Actions" class="row-actions gap-3">
 							<Button
 								variant="outline"
 								size="sm"
@@ -287,16 +291,18 @@ function closeRotate() {
 						<Dialog.Header>
 							<Dialog.Title>Token created</Dialog.Title>
 						</Dialog.Header>
-						<p role="alert" class="font-bold text-warning">
-							This value is shown once. It will not be shown again - store it now.
-						</p>
-						<Textarea
-							readonly
-							rows={3}
-							value={createdToken.value}
-							aria-label="Token value"
-							class="w-full"
-						/>
+						<div class="space-y-4">
+							<p role="alert" class="font-bold text-warning">
+								This value is shown once. It will not be shown again - store it now.
+							</p>
+							<Textarea
+								readonly
+								rows={3}
+								value={createdToken.value}
+								aria-label="Token value"
+								class="w-full"
+							/>
+						</div>
 						<Dialog.Footer>
 							<Button onclick={closeCreateToken}>Done</Button>
 						</Dialog.Footer>
@@ -305,27 +311,33 @@ function closeRotate() {
 							<Dialog.Title>Create a token</Dialog.Title>
 						</Dialog.Header>
 						<form onsubmit={submitCreateToken}>
-							<Label for="token-description">Description</Label>
-							<Input
-								id="token-description"
-								class="mt-1 mb-3 w-full"
-								bind:value={tokenDescription}
-								required
-							/>
+							<div class="space-y-4">
+								<div class="space-y-1">
+									<Label for="token-description">Description</Label>
+									<Input
+										id="token-description"
+										class="w-full"
+										bind:value={tokenDescription}
+										required
+									/>
+								</div>
 
-							<Label for="token-ttl">Valid for (days)</Label>
-							<Input
-								id="token-ttl"
-								class="mt-1 w-full"
-								type="number"
-								min="1"
-								bind:value={tokenTTLDays}
-								required
-							/>
+								<div class="space-y-1">
+									<Label for="token-ttl">Valid for (days)</Label>
+									<Input
+										id="token-ttl"
+										class="w-full"
+										type="number"
+										min="1"
+										bind:value={tokenTTLDays}
+										required
+									/>
+								</div>
 
-							{#if tokenError}
-								<p role="alert" class="mt-3 text-error">{tokenError}</p>
-							{/if}
+								{#if tokenError}
+									<p role="alert" class="text-error">{tokenError}</p>
+								{/if}
+							</div>
 
 							<Dialog.Footer>
 								<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
@@ -342,13 +354,13 @@ function closeRotate() {
 		<table class="responsive-table">
 			<thead>
 				<tr>
-					<th scope="col">Description</th>
-					<th scope="col">Owner</th>
-					<th scope="col">Created</th>
-					<th scope="col">Expires</th>
-					<th scope="col">Last used</th>
-					<th scope="col">Status</th>
-					<th scope="col">Actions</th>
+					<th scope="col" class="px-4 py-3">Description</th>
+					<th scope="col" class="px-4 py-3">Owner</th>
+					<th scope="col" class="px-4 py-3">Created</th>
+					<th scope="col" class="px-4 py-3">Expires</th>
+					<th scope="col" class="px-4 py-3">Last used</th>
+					<th scope="col" class="px-4 py-3">Status</th>
+					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -360,7 +372,7 @@ function closeRotate() {
 						<td data-label="Expires">{token.expires_at}</td>
 						<td data-label="Last used">{token.last_used_at ?? 'never'}</td>
 						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
-						<td data-label="Actions" class="row-actions gap-2">
+						<td data-label="Actions" class="row-actions gap-3">
 							{#if !token.revoked}
 								<Button variant="outline" size="sm" onclick={() => openRotate(token.id)}>
 									Rotate
@@ -383,12 +395,16 @@ function closeRotate() {
 			<Dialog.Title>Rename passkey</Dialog.Title>
 		</Dialog.Header>
 		<form onsubmit={submitRename}>
-			<Label for="rename-nickname">Nickname</Label>
-			<Input id="rename-nickname" class="mt-1 w-full" bind:value={renameNickname} required />
+			<div class="space-y-4">
+				<div class="space-y-1">
+					<Label for="rename-nickname">Nickname</Label>
+					<Input id="rename-nickname" class="w-full" bind:value={renameNickname} required />
+				</div>
 
-			{#if renameError}
-				<p role="alert" class="mt-3 text-error">{renameError}</p>
-			{/if}
+				{#if renameError}
+					<p role="alert" class="text-error">{renameError}</p>
+				{/if}
+			</div>
 
 			<Dialog.Footer>
 				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>Cancel</Dialog.Close>
@@ -449,16 +465,18 @@ function closeRotate() {
 			<Dialog.Header>
 				<Dialog.Title>Token rotated</Dialog.Title>
 			</Dialog.Header>
-			<p role="alert" class="font-bold text-warning">
-				This value is shown once. It will not be shown again - store it now.
-			</p>
-			<Textarea
-				readonly
-				rows={3}
-				value={rotatedToken.value}
-				aria-label="Token value"
-				class="w-full"
-			/>
+			<div class="space-y-4">
+				<p role="alert" class="font-bold text-warning">
+					This value is shown once. It will not be shown again - store it now.
+				</p>
+				<Textarea
+					readonly
+					rows={3}
+					value={rotatedToken.value}
+					aria-label="Token value"
+					class="w-full"
+				/>
+			</div>
 			<Dialog.Footer>
 				<Button onclick={closeRotate}>Done</Button>
 			</Dialog.Footer>
@@ -467,19 +485,23 @@ function closeRotate() {
 				<Dialog.Title>Rotate this token?</Dialog.Title>
 			</Dialog.Header>
 			<form onsubmit={submitRotate}>
-				<Label for="rotate-ttl">Valid for (days)</Label>
-				<Input
-					id="rotate-ttl"
-					class="mt-1 w-full"
-					type="number"
-					min="1"
-					bind:value={rotateTTLDays}
-					required
-				/>
+				<div class="space-y-4">
+					<div class="space-y-1">
+						<Label for="rotate-ttl">Valid for (days)</Label>
+						<Input
+							id="rotate-ttl"
+							class="w-full"
+							type="number"
+							min="1"
+							bind:value={rotateTTLDays}
+							required
+						/>
+					</div>
 
-				{#if rotateError}
-					<p role="alert" class="mt-3 text-error">{rotateError}</p>
-				{/if}
+					{#if rotateError}
+						<p role="alert" class="text-error">{rotateError}</p>
+					{/if}
+				</div>
 
 				<Dialog.Footer>
 					<Dialog.Close class={buttonVariants({ variant: 'outline' })}>

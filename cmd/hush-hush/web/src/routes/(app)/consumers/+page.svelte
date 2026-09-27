@@ -138,12 +138,16 @@ async function confirmDelete() {
 					</Dialog.Description>
 				</Dialog.Header>
 				<form onsubmit={submitAdd}>
-					<Label for="add-consumer-name">Name</Label>
-					<Input id="add-consumer-name" class="mt-1 w-full" bind:value={addName} required />
+					<div class="space-y-4">
+						<div class="space-y-1">
+							<Label for="add-consumer-name">Name</Label>
+							<Input id="add-consumer-name" class="w-full" bind:value={addName} required />
+						</div>
 
-					{#if addError}
-						<p role="alert" class="mt-3 text-error">{addError}</p>
-					{/if}
+						{#if addError}
+							<p role="alert" class="text-error">{addError}</p>
+						{/if}
+					</div>
 
 					<Dialog.Footer>
 						<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
@@ -179,9 +183,9 @@ async function confirmDelete() {
 		<table class="responsive-table">
 			<thead>
 				<tr>
-					<th scope="col">Consumer</th>
-					<th scope="col">Secrets</th>
-					<th scope="col">Actions</th>
+					<th scope="col" class="px-4 py-3">Consumer</th>
+					<th scope="col" class="px-4 py-3">Secrets</th>
+					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -191,7 +195,7 @@ async function confirmDelete() {
 							<a href={secretsOverviewHref(consumer.name)}>{consumer.name}</a>
 						</td>
 						<td data-label="Secrets">{consumer.secret_count}</td>
-						<td data-label="Actions" class="row-actions gap-2">
+						<td data-label="Actions" class="row-actions gap-3">
 							<Button variant="outline" size="sm" onclick={() => openRename(consumer)}>
 								Rename
 							</Button>
@@ -232,12 +236,16 @@ async function confirmDelete() {
 			<Dialog.Title>Rename consumer</Dialog.Title>
 		</Dialog.Header>
 		<form onsubmit={submitRename}>
-			<Label for="rename-consumer-name">Name</Label>
-			<Input id="rename-consumer-name" class="mt-1 w-full" bind:value={renameInput} required />
+			<div class="space-y-4">
+				<div class="space-y-1">
+					<Label for="rename-consumer-name">Name</Label>
+					<Input id="rename-consumer-name" class="w-full" bind:value={renameInput} required />
+				</div>
 
-			{#if renameError}
-				<p role="alert" class="mt-3 text-error">{renameError}</p>
-			{/if}
+				{#if renameError}
+					<p role="alert" class="text-error">{renameError}</p>
+				{/if}
+			</div>
 
 			<Dialog.Footer>
 				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>Cancel</Dialog.Close>
