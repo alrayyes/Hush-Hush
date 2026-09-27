@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.34.0](https://github.com/alrayyes/Hush-Hush/compare/v2.33.0...v2.34.0) (2026-09-27)
+
+
+### Features
+
+* **api:** add a registered public key to consumers ([#393](https://github.com/alrayyes/Hush-Hush/issues/393)) ([ff157d5](https://github.com/alrayyes/Hush-Hush/commit/ff157d53cb3865d8773fbb581e0e69ae9907795f))
+
+
+### Bug Fixes
+
+* **web-ui:** stop changelog release headings rendering as body links ([#390](https://github.com/alrayyes/Hush-Hush/issues/390)) ([e81e5a4](https://github.com/alrayyes/Hush-Hush/commit/e81e5a42dfc019f28e530900fc5975b939ca1373)), closes [#387](https://github.com/alrayyes/Hush-Hush/issues/387)
+
 ## [2.33.0](https://github.com/alrayyes/Hush-Hush/compare/v2.32.0...v2.33.0) (2026-09-27)
 
 
