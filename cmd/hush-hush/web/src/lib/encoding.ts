@@ -1,11 +1,9 @@
-// utf8ToBase64 base64-encodes arbitrary text, UTF-8 safe - plain btoa()
-// only accepts Latin1 and throws on anything outside it (an emoji, an
-// accented character). Chunked the same way api.ts's own
-// getObjectValue decodes a binary string, to avoid spreading a large
-// array as call arguments.
-export function utf8ToBase64(text: string): string {
-	const bytes = new TextEncoder().encode(text);
-
+// bytesToBase64 base64-encodes raw bytes, chunked to avoid spreading a
+// large typed array as call arguments ("Maximum call stack size
+// exceeded") - shared by api.ts's getObjectValue (decoding a fetched
+// ciphertext) and sealing.ts's sealValue (encoding a freshly-sealed one),
+// neither of which has a size limit this client can assume.
+export function bytesToBase64(bytes: Uint8Array): string {
 	let binary = '';
 	const chunkSize = 0x8000;
 	for (let i = 0; i < bytes.length; i += chunkSize) {

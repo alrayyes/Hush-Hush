@@ -61,20 +61,20 @@ it starts once this proposal's PR merges.
 
 ## 4. Client-side age sealing, replacing the web UI's two old create modes
 
-- [ ] 4.1 Add a client-side age sealing library (`age-encryption`/`typage`
+- [x] 4.1 Add a client-side age sealing library (`age-encryption`/`typage`
       or `agewasm`) to `cmd/hush-hush/web`'s dependencies, pinned exact
       per this account's dependency-pinning convention; verify
       `bun install` succeeds and the lock file is committed
-- [ ] 4.2 Remove the "plain text (base64)" and "paste ciphertext" create
+- [x] 4.2 Remove the "plain text (base64)" and "paste ciphertext" create
       modes from the "New secret" dialog; verify with an updated e2e
       journey test (`cmd/hush-hush/web/e2e/journey.spec.ts`) asserting
       neither mode is reachable
-- [ ] 4.3 Implement client-side sealing against the resolved consumer
+- [x] 4.3 Implement client-side sealing against the resolved consumer
       recipients (built on group 2's public-key field) at create and
       update time; verify with an e2e test creating a secret and
       confirming the stored value is genuine ciphertext the test can
       decrypt with the matching consumer private key
-- [ ] 4.4 Update `ARCHITECTURE.md`'s write-path description to reflect
+- [x] 4.4 Update `ARCHITECTURE.md`'s write-path description to reflect
       real client-side sealing; verify by re-reading it against the
       shipped behaviour
 

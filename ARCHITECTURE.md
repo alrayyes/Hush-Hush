@@ -7,6 +7,12 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
 
 - **Storage**: SQLite (`modernc.org/sqlite`), one process, one writer.
 - **Write path**: a bearer token, or a web-UI session, both audit logged.
+  The web UI seals a secret's value client-side - age-encrypted in the
+  browser to its recorded consumers' registered public keys, before the
+  request ever leaves it - rather than accepting plaintext or requiring
+  the admin to seal it by hand outside the browser first; a bearer-token
+  write still sends ciphertext already sealed by whatever produced it,
+  since the API itself never seals or unseals anything either way.
 - **Read path**: unauthenticated - confidentiality comes from who holds a
   matching age private key, not from a server-side check.
 - **Web UI**: SvelteKit, built static and embedded into the Go binary with

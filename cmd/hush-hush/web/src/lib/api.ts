@@ -4,6 +4,8 @@
 // the session's CSRF token from the readable csrf_token cookie and
 // echoes it back, matching auth/spec.md's double-submit requirement.
 
+import { bytesToBase64 } from './encoding';
+
 export class ApiError extends Error {
 	status: number;
 
@@ -160,6 +162,12 @@ export async function listConsumers(): Promise<string[]> {
 export interface ConsumerEntry {
 	name: string;
 	secret_count: number;
+	// public_key is the consumer's registered age public key, absent
+	// entirely when none has been registered - api/openapi.yaml's
+	// ConsumerEntry schema, extended by alrayyes/Hush-Hush#393. Safe to
+	// hold client-side since it's public; the matching private key never
+	// reaches this API or this client.
+	public_key?: string;
 }
 
 export interface ConsumersPage {
@@ -202,6 +210,33 @@ export async function listConsumersPage(
 // /consumers/ verbatim, so there's no %2F-escaping for this client to get
 // right or wrong either.
 
+// listConsumerDirectory returns every consumer entry - name, secret
+// count, and registered public key when one is set - across every page,
+// looping past GET /consumers's own page_size cap (100) if the directory
+// is bigger than that. The create/edit form's ConsumerCombobox uses this
+// (rather than listConsumers's plain name array) to resolve each
+// selected consumer into a real age sealing recipient
+// (specs/consumers/spec.md's "Secret form offers existing consumers and
+// accepts a new one" requirement).
+export async function listConsumerDirectory(): Promise<ConsumerEntry[]> {
+	const pageSize = 100;
+	const entries: ConsumerEntry[] = [];
+	let page = 1;
+
+	for (;;) {
+		const result = await listConsumersPage({ page, page_size: pageSize });
+		entries.push(...result.consumers);
+
+		if (result.consumers.length === 0 || entries.length >= result.total) {
+			break;
+		}
+
+		page += 1;
+	}
+
+	return entries;
+}
+
 export async function renameConsumer(
 	name: string,
 	newName: string,
@@ -236,17 +271,7 @@ export async function getObjectValue(id: string): Promise<string> {
 	const res = await request(`/objects/${encodeURIComponent(id)}`);
 	const bytes = new Uint8Array(await res.arrayBuffer());
 
-	// Chunked rather than String.fromCharCode(...bytes): spreading a large
-	// typed array as call arguments risks "Maximum call stack size
-	// exceeded", and a sealed value has no size limit this client can
-	// assume.
-	let binary = '';
-	const chunkSize = 0x8000;
-	for (let i = 0; i < bytes.length; i += chunkSize) {
-		binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-	}
-
-	return btoa(binary);
+	return bytesToBase64(bytes);
 }
 
 export interface CreateObjectRequest {
