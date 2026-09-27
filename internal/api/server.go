@@ -20,7 +20,7 @@ import (
 // a handler-level test can satisfy it with a fake instead of a real
 // database (go-test.md's "reach for a fake before a mock").
 type objectStore interface {
-	CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description string) error
+	CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string) error
 	GetObject(ctx context.Context, slug string) (store.Object, error)
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	ListConsumers(ctx context.Context) ([]string, error)
@@ -47,6 +47,7 @@ type objectStore interface {
 	DeleteCredential(ctx context.Context, id string) error
 
 	CurrentUserID(ctx context.Context) (string, error)
+	CurrentUserPublicKey(ctx context.Context) (string, error)
 	SetUserEscrow(ctx context.Context, id, publicKey, recoveryWrappedIdentity string) error
 
 	CreateSession(ctx context.Context, sess store.Session) error
@@ -121,6 +122,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("POST /auth/login/finish", handleFinishLogin(s, wa))
 	mux.HandleFunc("POST /auth/logout", requireSession(s, requireCSRF(handleLogout(s))))
 	mux.HandleFunc("GET /auth/status", handleAuthStatus(s))
+	mux.HandleFunc("GET /auth/identity", requireSession(s, handleAuthIdentity(s)))
 
 	mux.HandleFunc("GET /credentials", requireSession(s, handleListCredentials(s)))
 	mux.HandleFunc("PATCH /credentials/{id}", requireSession(s, requireCSRF(handleRenameCredential(s))))

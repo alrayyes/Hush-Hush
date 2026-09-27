@@ -15,8 +15,8 @@ func TestListObjectsReturnsEveryObjectSortedByID(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "zeta", []byte("v"), nil, ""))
-	require.NoError(t, s.CreateObject(context.Background(), "alpha", []byte("v"), []string{"homelab/vps-docker"}, "prod deploy webhook"))
+	require.NoError(t, s.CreateObject(context.Background(), "zeta", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "alpha", []byte("v"), []string{"homelab/vps-docker"}, "prod deploy webhook", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects", nil)
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -52,8 +52,8 @@ func TestListObjectsFiltersByUsedBy(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "shared_by_two", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(context.Background(), "unrelated", []byte("v"), []string{"homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(context.Background(), "shared_by_two", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "unrelated", []byte("v"), []string{"homelab/mattermost"}, "", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects?used_by=homelab/vps-docker", nil)
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))

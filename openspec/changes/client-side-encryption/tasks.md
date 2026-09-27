@@ -80,11 +80,11 @@ it starts once this proposal's PR merges.
 
 ## 5. Opt-in owner-recipient checkbox
 
-- [ ] 5.1 Add the owner-recipient opt-in field to the create/update
+- [x] 5.1 Add the owner-recipient opt-in field to the create/update
       request shape and `api/openapi.yaml`; verify with an API test
       covering requirement `secret-objects`'s "Owner opts in to keep a
       readable copy" / "Owner recipient is not the default" scenarios
-- [ ] 5.2 Add the checkbox to the "New secret" dialog, wired to include
+- [x] 5.2 Add the checkbox to the "New secret" dialog, wired to include
       the owner's own public key as an additional sealing recipient when
       checked; verify with an e2e test asserting the owner's escrowed
       identity can decrypt an opted-in secret and cannot decrypt one that

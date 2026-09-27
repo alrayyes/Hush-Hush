@@ -831,6 +831,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthStatus"
 
+  /auth/identity:
+    get:
+      operationId: getOwnerIdentity
+      summary: Report the calling session's escrowed identity public key
+      description: |
+        The web UI's create/edit dialog reads this to offer the owner's
+        own public key as an additional sealing recipient when the
+        owner-recipient opt-in checkbox is checked
+        (specs/secret-objects/spec.md's "Opt-in owner-recipient inclusion
+        at create time" requirement). Session-gated, unlike
+        `GET /auth/status`: an age public key isn't secret on its own, but
+        every other endpoint that exposes stored data (`GET /consumers`
+        included) stays behind a session or bearer token, and this keeps
+        that same posture rather than carving out an exception.
+      tags: [auth]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: |
+            The session's user's escrowed identity public key, empty if
+            that user hasn't completed a first registration yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerIdentity"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /credentials:
     get:
       operationId: listCredentials
@@ -1171,6 +1200,8 @@ components:
           $ref: "#/components/schemas/UsedByList"
         description:
           $ref: "#/components/schemas/ObjectDescription"
+        keep_readable_copy:
+          $ref: "#/components/schemas/KeepReadableCopy"
 
     UpdateObjectRequest:
       type: object
@@ -1188,6 +1219,28 @@ components:
             CreateObjectRequest's used_by sets it initially - omit this
             field entirely to leave the existing list untouched. An
             empty array clears it.
+        keep_readable_copy:
+          $ref: "#/components/schemas/KeepReadableCopy"
+
+    KeepReadableCopy:
+      type: boolean
+      default: false
+      description: |
+        Requests that the owner's own escrowed identity public key be
+        included as an additional decrypt recipient, alongside whatever
+        consumer recipients the client already resolved
+        (specs/secret-objects/spec.md's "Opt-in owner-recipient inclusion
+        at create time" requirement). Omitting this field (the default)
+        means the owner is not added as a recipient - this service never
+        makes ownership imply decrypt access on its own.
+
+        This is a client-side sealing instruction, not something this
+        service enforces or verifies: it never decrypts, and never adds a
+        recipient to `value` itself - the caller has to add the owner's
+        public key (`GET /auth/identity`) to its own recipient list before
+        sealing. A create or update response echoes back exactly what that
+        same request asked for; it isn't persisted, so a later fetch never
+        carries this field.
 
     ObjectMetadata:
       type: object
@@ -1199,6 +1252,8 @@ components:
           $ref: "#/components/schemas/UsedByList"
         description:
           $ref: "#/components/schemas/ObjectDescription"
+        keep_readable_copy:
+          $ref: "#/components/schemas/KeepReadableCopy"
 
     ObjectDescription:
       type: string
@@ -1416,6 +1471,18 @@ components:
         bootstrapped:
           type: boolean
           description: Whether an admin account has been created yet.
+
+    OwnerIdentity:
+      type: object
+      properties:
+        public_key:
+          type: string
+          description: |
+            The session's user's escrowed writer identity public key (an
+            age recipient string), absent if that user hasn't completed a
+            first registration yet.
+          examples:
+            - age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqssgxdaz2
 
     RegistrationOptions:
       type: object

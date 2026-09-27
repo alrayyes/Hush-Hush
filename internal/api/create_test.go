@@ -199,3 +199,84 @@ func TestCreateObjectValueIsBase64EncodedOverTheWire(t *testing.T) {
 
 	require.Equal(t, http.StatusCreated, rec.Code)
 }
+
+// TestCreateObjectOwnerOptsInToKeepAReadableCopy covers
+// specs/secret-objects/spec.md's "Owner opts in to keep a readable copy"
+// scenario: setting keep_readable_copy on a create request is accepted
+// and echoed back in the response. The server never decrypts, so it has
+// no way to verify Value's own recipients here - proving the owner's
+// escrowed identity can actually decrypt what this flag describes is
+// cmd/hush-hush/web/e2e/journey.spec.ts's job (tasks.md's 5.2), against
+// the real client-side sealing this flag accompanies.
+func TestCreateObjectOwnerOptsInToKeepAReadableCopy(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	req := createRequest(t, hushhush.CreateObjectRequest{
+		Slug: "grafana_admin_password", Value: []byte("sealed-ciphertext"),
+		KeepReadableCopy: true,
+	}, issueToken(t, s))
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var meta hushhush.ObjectMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
+	require.True(t, meta.KeepReadableCopy)
+}
+
+// TestCreateObjectOwnerRecipientIsNotTheDefault covers specs/secret-
+// objects/spec.md's "Owner recipient is not the default" scenario:
+// omitting keep_readable_copy is what a request that never mentions it
+// (every other create test in this file) already exercises, so this
+// pins the response's own default explicitly instead of relying on
+// Go's zero value going unnoticed.
+func TestCreateObjectOwnerRecipientIsNotTheDefault(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	req := createRequest(t, hushhush.CreateObjectRequest{
+		Slug: "mattermost_deploy_webhook", Value: []byte("sealed-ciphertext"),
+	}, issueToken(t, s))
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var meta hushhush.ObjectMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
+	require.False(t, meta.KeepReadableCopy)
+}
+
+// TestCreateObjectRecordsOwnerFromTheCreatingSession covers specs/secret-
+// objects/spec.md's "Owner recorded from the creating session" scenario:
+// a create call, whether authenticated by a bearer token or a session,
+// records the sole existing user as the object's owner - accountability
+// metadata only, per design.md's "owner_id is accountability metadata,
+// not an access-control mechanism" decision, verified via the store
+// directly since ObjectMetadata never returns it.
+func TestCreateObjectRecordsOwnerFromTheCreatingSession(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	req := createRequest(t, hushhush.CreateObjectRequest{
+		Slug: "mattermost_deploy_webhook", Value: []byte("sealed-ciphertext"),
+	}, issueToken(t, s))
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	wantOwnerID, err := s.CurrentUserID(context.Background())
+	require.NoError(t, err)
+
+	obj, err := s.GetObject(context.Background(), "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, wantOwnerID, obj.OwnerID)
+}

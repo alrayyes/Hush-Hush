@@ -245,3 +245,26 @@ func TestSetUserEscrowIsIdempotentAgainstALaterRegistration(t *testing.T) {
 	require.Equal(t, "age1original", publicKey)
 	require.Equal(t, "recovery-wrapped-original", recoveryWrapped)
 }
+
+// TestCurrentUserPublicKeyBeforeAndAfterEscrow covers what the web UI's
+// owner-recipient opt-in checkbox reads: empty before the sole user has
+// completed a first registration, the escrowed identity's public key
+// once SetUserEscrow has recorded one.
+func TestCurrentUserPublicKeyBeforeAndAfterEscrow(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := t.Context()
+
+	publicKey, err := s.CurrentUserPublicKey(ctx)
+	require.NoError(t, err)
+	require.Empty(t, publicKey)
+
+	userID, err := s.CurrentUserID(ctx)
+	require.NoError(t, err)
+	require.NoError(t, s.SetUserEscrow(ctx, userID, "age1ownerkey", "recovery-wrapped"))
+
+	publicKey, err = s.CurrentUserPublicKey(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "age1ownerkey", publicKey)
+}
