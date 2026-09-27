@@ -52,6 +52,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	if err := backfillOwnership(db); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	return &Store{db: db}, nil
 }
 
@@ -115,7 +121,30 @@ func migrateColumns(db *sql.DB) error {
 	// registered before this migration still needs re-registering to
 	// pick up the correct value - there's nothing to derive it from on
 	// an existing row.
-	return addColumnIfMissing(db, "webauthn_credentials", "backup_eligible", "INTEGER NOT NULL DEFAULT 0")
+	if err := addColumnIfMissing(db, "webauthn_credentials", "backup_eligible", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+
+	// user_id: foreign-keys a credential to the users row it belongs to
+	// (openspec/changes/client-side-encryption/design.md's "users table
+	// and owner_id/user_id foreign keys" decision). Left nullable here -
+	// backfillOwnership (users.go) is what actually fills it in for
+	// every pre-existing row, since ADD COLUMN's DEFAULT can't be a
+	// dynamically generated id. This migration doesn't start setting it
+	// on a new registration; that's tasks.md group 3's job.
+	if err := addColumnIfMissing(db, "webauthn_credentials", "user_id", "TEXT REFERENCES users(id)"); err != nil {
+		return err
+	}
+
+	// owner_id: foreign-keys an object to the users row that created it,
+	// nullable during backfill (design.md's Migration Plan step 1) and
+	// left nullable afterward too - it's accountability metadata, not an
+	// access-control mechanism (design.md's own decision on that), so
+	// there's no invariant requiring every row to have one. backfillOwnership
+	// (users.go) fills it in for every pre-existing row; this migration
+	// doesn't start setting it on a new write, that's tasks.md group 5's
+	// job.
+	return addColumnIfMissing(db, "objects", "owner_id", "TEXT REFERENCES users(id)")
 }
 
 // addColumnIfMissing adds column to table if it isn't already there. The
