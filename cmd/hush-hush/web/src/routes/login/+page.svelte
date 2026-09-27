@@ -4,9 +4,25 @@ import { goto, invalidate } from '$app/navigation';
 import { getAuthStatus } from '$lib/api';
 import { login, registerPasskey } from '$lib/auth';
 import { Button } from '$lib/components/ui/button/index.js';
+import * as Dialog from '$lib/components/ui/dialog/index.js';
+import { Textarea } from '$lib/components/ui/textarea/index.js';
 
 let pending = $state(false);
 let error = $state('');
+
+// recoveryPhrase is only ever set once, right after a first-ever
+// registration succeeds (specs/users/spec.md's "Break-glass recovery
+// phrase" requirement: shown once, never re-displayed, never requested
+// back from the server). Navigating away from /login only happens once
+// this dialog closes - dismissing it any way (the "Continue" button, the
+// overlay, Escape) all funnel through the same closeRecoveryPhrase.
+let recoveryPhrase = $state<string | null>(null);
+
+async function closeRecoveryPhrase() {
+	recoveryPhrase = null;
+	await invalidate('app:auth');
+	await goto('/');
+}
 
 // bootstrapped is undefined while the status check is in flight or has
 // failed, so the login page shows neither action until it resolves -
@@ -61,9 +77,16 @@ async function handleRegister() {
 	error = '';
 
 	try {
-		await registerPasskey();
-		await invalidate('app:auth');
-		await goto('/');
+		const result = await registerPasskey();
+
+		if (result.recoveryPhrase) {
+			// The recovery phrase dialog itself is what navigates onward
+			// once dismissed - see closeRecoveryPhrase.
+			recoveryPhrase = result.recoveryPhrase;
+		} else {
+			await invalidate('app:auth');
+			await goto('/');
+		}
 	} catch {
 		error =
 			'Registration failed. If an account already exists, log in with an existing passkey instead.';
@@ -103,3 +126,30 @@ async function handleRegister() {
 		<p role="alert" class="text-error">{error}</p>
 	{/if}
 </main>
+
+<Dialog.Root
+	open={recoveryPhrase !== null}
+	onOpenChange={(open) => {
+		if (!open) closeRecoveryPhrase();
+	}}
+>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Save your recovery phrase</Dialog.Title>
+		</Dialog.Header>
+		<p role="alert" class="font-bold text-warning">
+			This phrase is shown once. It will not be shown again, and the server
+			never stores a copy - write it down and keep it somewhere safe.
+		</p>
+		<Textarea
+			readonly
+			rows={3}
+			value={recoveryPhrase ?? ''}
+			aria-label="Recovery phrase"
+			class="w-full"
+		/>
+		<Dialog.Footer>
+			<Button onclick={closeRecoveryPhrase}>I've saved it</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
