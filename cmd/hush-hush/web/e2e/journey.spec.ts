@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import * as age from 'age-encryption';
 
 // alrayyes/hush-hush#272: /audit-log is both a SvelteKit page route and a
 // real backend API endpoint, and Go's mux used to route a hard
@@ -106,6 +107,21 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('button', { name: 'Register passkey' }).click();
 	await page.waitForURL('/');
 
+	// A real age keypair, generated in the test itself (not through the
+	// app) - registering its public key against "homelab" here, before
+	// that consumer is ever picked below, is what proves the value the
+	// create dialog stores is genuinely sealed to it: this identity, and
+	// only this identity, can decrypt it back
+	// (openspec/changes/client-side-encryption/tasks.md's 4.3).
+	const homelabIdentity = await age.generateIdentity();
+	const homelabRecipient = await age.identityToRecipient(homelabIdentity);
+	const csrfToken =
+		(await context.cookies()).find((c) => c.name === 'csrf_token')?.value ?? '';
+	await page.request.patch('/consumers/homelab', {
+		headers: { 'X-CSRF-Token': csrfToken },
+		data: { public_key: homelabRecipient },
+	});
+
 	const nav = page.locator('nav');
 	await expect(nav.getByRole('link', { name: 'Secrets' })).toBeVisible();
 
@@ -141,24 +157,49 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// and populated - the hand-written ARIA APG combobox
 	// (alrayyes/hush-hush#251) is the newest, most complex interactive
 	// widget added since the last scan.
+	// The create dialog's ConsumerCombobox mounts fresh on this first open
+	// and fires its own GET /consumers?... - the same race the edit dialog
+	// below already guards against (see its own comment), so this is
+	// awaited before typing into #create-used-by for the same reason: a
+	// mid-fill resolution mutates the DOM and steals focus back.
+	const createConsumersLoaded = page.waitForResponse(
+		(res) =>
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
+	);
 	await page.getByRole('button', { name: 'New secret' }).click();
 	// bits-ui's Dialog autofocuses the first field (Id) on open, racing any
 	// interaction with a later field started right away - wait for that
 	// autofocus to settle before touching a later field, or its own focus
 	// gets stolen back mid-fill.
 	await expect(page.getByLabel('Id')).toBeFocused();
+	// #386/#393: the dialog's old "plain text (base64)" and "paste
+	// ciphertext" create modes are gone - one plaintext value field, sealed
+	// client-side, is the only way in. Scoped to this dialog, not the whole
+	// page - the (currently closed, but DOM-present) view dialog still
+	// legitimately describes the stored value as "Sealed ciphertext".
+	const createDialog = page.getByRole('dialog', { name: 'Create a secret' });
+	await expect(createDialog.getByLabel('Value', { exact: true })).toBeVisible();
+	await expect(createDialog.getByText(/plain text/i)).toHaveCount(0);
+	await expect(createDialog.getByText(/ciphertext/i)).toHaveCount(0);
+	const plaintextValue = 'prod deploy webhook secret, sealed client-side';
 	await page.locator('#create-id').fill('mattermost_deploy_webhook');
-	await page.locator('#create-value').fill(btoa('placeholder'));
+	await page.locator('#create-value').fill(plaintextValue);
 	await page
 		.locator('#create-description')
 		.fill('prod deploy webhook for homelab/vps-docker');
+	await createConsumersLoaded;
 	await page.locator('#create-used-by').fill('homelab');
 	await page.getByRole('listbox').waitFor();
 	const comboboxResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(comboboxResults.violations).toEqual([]);
-	await page.getByRole('option', { name: 'Add "homelab"' }).click();
+	// "homelab" already has a registered public key (set above), so the
+	// combobox offers it as an existing consumer, not an "Add" option -
+	// specs/consumers/spec.md's "Picking a consumer with a registered
+	// public key resolves a recipient" scenario.
+	await page.getByRole('option', { name: 'homelab', exact: true }).click();
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
@@ -172,6 +213,26 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		viewDialog.getByRole('listitem').getByText('homelab'),
 	).toBeVisible();
+
+	// The stored value is genuine age ciphertext, decryptable only with the
+	// matching consumer private key, not a lookalike or the plaintext just
+	// typed above - reads the same base64 this View dialog already fetched
+	// and displays, rather than a second request of its own (which would
+	// double-count as an extra unverified-actor read below). The fetch
+	// behind it (openView's own getObjectValue call) is async, so this
+	// waits for the textarea to actually hold it rather than the still-
+	// empty value from the instant the dialog opened.
+	const ciphertextField = page.getByLabel('Ciphertext (base64)');
+	await expect(ciphertextField).not.toHaveValue('');
+	const viewedCiphertext = await ciphertextField.inputValue();
+	const sealedBytes = Uint8Array.from(atob(viewedCiphertext), (c) =>
+		c.charCodeAt(0),
+	);
+	const decrypter = new age.Decrypter();
+	decrypter.addIdentity(homelabIdentity);
+	const decrypted = await decrypter.decrypt(sealedBytes, 'text');
+	expect(decrypted).toBe(plaintextValue);
+
 	const viewResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -189,7 +250,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// the ciphertext textarea and silently dropping the keystrokes.
 	const editConsumersLoaded = page.waitForResponse(
 		(res) =>
-			res.url().endsWith('/consumers') && res.request().method() === 'GET',
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
 	);
 	await page.getByRole('button', { name: 'Edit' }).click();
 	const editDialog = page.getByRole('dialog', {
@@ -200,6 +262,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await editDialog.locator('#edit-used-by').fill('ci');
 	await editDialog.getByRole('listbox').waitFor();
 	await editDialog.getByRole('option', { name: 'Add "ci"' }).click();
+	// "ci" has no registered public key - specs/consumers/spec.md's
+	// "Picking a consumer with no registered public key resolves no
+	// recipient" scenario: the form indicates this next to its chip rather
+	// than silently sealing to fewer recipients than picked ("homelab",
+	// already keyed above, still resolves one, so Save stays enabled).
+	await expect(editDialog.getByText('(no key)')).toBeVisible();
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
 	const editResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

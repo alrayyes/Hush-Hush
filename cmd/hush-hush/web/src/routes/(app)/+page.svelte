@@ -2,6 +2,7 @@
 import { invalidate } from '$app/navigation';
 import {
 	ApiError,
+	type ConsumerEntry,
 	createObject,
 	deleteObject,
 	getObjectValue,
@@ -10,12 +11,11 @@ import {
 import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
 import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { utf8ToBase64 } from '$lib/encoding';
+import { resolveRecipients, sealValue } from '$lib/sealing';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -28,14 +28,20 @@ let createOpen = $state(false);
 let createError = $state('');
 let createId = $state('');
 let createValue = $state('');
-let createPlainText = $state(false);
 let createDescription = $state('');
 let createUsedBy: string[] = $state([]);
+let createEntries: ConsumerEntry[] = $state([]);
+
+// Recomputed on every keystroke/selection so the "Create" button and its
+// zero-recipient warning below track the current form state, not just
+// its value at submit time.
+const createRecipients = $derived(
+	resolveRecipients(createUsedBy, createEntries),
+);
 
 function resetCreateForm() {
 	createId = '';
 	createValue = '';
-	createPlainText = false;
 	createDescription = '';
 	createUsedBy = [];
 	createError = '';
@@ -45,16 +51,22 @@ async function submitCreate(event: SubmitEvent) {
 	event.preventDefault();
 	createError = '';
 
+	// A secret sealed to zero recipients could never be decrypted by
+	// anyone - the create/edit modes this replaces at least produced
+	// something a consumer's own tooling could read; this guards against
+	// silently shipping something strictly worse
+	// (openspec/changes/client-side-encryption/tasks.md's 4.3).
+	if (createRecipients.recipients.length === 0) {
+		createError =
+			'Add at least one consumer with a registered public key before creating this secret.';
+		return;
+	}
+
 	try {
+		const value = await sealValue(createValue, createRecipients.recipients);
 		await createObject({
 			id: createId,
-			// createPlainText is an explicit, off-by-default opt-in - the
-			// field otherwise means exactly what its label says, already-
-			// sealed ciphertext, sent as-is. Base64 alone is an encoding,
-			// not encryption: this mode stores a trivially-reversible
-			// obfuscation of whatever's typed, not a real secret the
-			// server can't read (alrayyes/hush-hush#268).
-			value: createPlainText ? utf8ToBase64(createValue) : createValue,
+			value,
 			description: createDescription || undefined,
 			used_by: createUsedBy.length > 0 ? createUsedBy : undefined,
 		});
@@ -73,7 +85,10 @@ let editOpen = $state(false);
 let editId = $state('');
 let editValue = $state('');
 let editUsedBy: string[] = $state([]);
+let editEntries: ConsumerEntry[] = $state([]);
 let editError = $state('');
+
+const editRecipients = $derived(resolveRecipients(editUsedBy, editEntries));
 
 function openEdit(id: string) {
 	editId = id;
@@ -91,8 +106,15 @@ async function submitEdit(event: SubmitEvent) {
 	event.preventDefault();
 	editError = '';
 
+	if (editRecipients.recipients.length === 0) {
+		editError =
+			'Add at least one consumer with a registered public key before saving this secret.';
+		return;
+	}
+
 	try {
-		await updateObject(editId, editValue, editUsedBy);
+		const value = await sealValue(editValue, editRecipients.recipients);
+		await updateObject(editId, value, editUsedBy);
 		editOpen = false;
 		await invalidate('app:objects');
 		// An edit can introduce a consumer the directory page hasn't seen
@@ -168,9 +190,7 @@ async function confirmDelete() {
 					<Label for="create-id">Id</Label>
 					<Input id="create-id" class="mt-1 mb-3 w-full" bind:value={createId} required />
 
-					<Label for="create-value">
-						{createPlainText ? 'Value (plain text)' : 'Ciphertext (base64)'}
-					</Label>
+					<Label for="create-value">Value</Label>
 					<Textarea
 						id="create-value"
 						class="mt-1 mb-3 w-full"
@@ -178,11 +198,6 @@ async function confirmDelete() {
 						required
 						rows={4}
 					/>
-
-					<Label class="mb-3">
-						<Checkbox bind:checked={createPlainText} />
-						Plain text - base64-encoded for you, <strong>not encrypted</strong>
-					</Label>
 
 					<Label for="create-description">Description</Label>
 					<Input
@@ -192,7 +207,22 @@ async function confirmDelete() {
 					/>
 
 					<Label for="create-used-by">Used by</Label>
-					<ConsumerCombobox id="create-used-by" bind:value={createUsedBy} />
+					<ConsumerCombobox
+						id="create-used-by"
+						bind:value={createUsedBy}
+						bind:entries={createEntries}
+					/>
+					<p class="mt-1 mb-3 text-sm">
+						Sealed in your browser with age, to the registered public keys of
+						the consumers selected above - never sent in the clear.
+					</p>
+
+					{#if createRecipients.recipients.length === 0}
+						<p role="alert" class="mb-3 font-bold text-warning">
+							Add at least one consumer with a registered public key - a
+							secret sealed to nobody could never be decrypted.
+						</p>
+					{/if}
 
 					{#if createError}
 						<p role="alert" class="text-error">{createError}</p>
@@ -202,7 +232,9 @@ async function confirmDelete() {
 						<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
 							Cancel
 						</Dialog.Close>
-						<Button type="submit">Create</Button>
+						<Button type="submit" disabled={createRecipients.recipients.length === 0}>
+							Create
+						</Button>
 					</Dialog.Footer>
 				</form>
 			</Dialog.Content>
@@ -297,7 +329,7 @@ async function confirmDelete() {
 			<Dialog.Title>Edit {editId}</Dialog.Title>
 		</Dialog.Header>
 		<form onsubmit={submitEdit}>
-			<Label for="edit-value">New ciphertext (base64)</Label>
+			<Label for="edit-value">New value</Label>
 			<Textarea
 				id="edit-value"
 				class="mt-1 mb-3 w-full"
@@ -307,7 +339,22 @@ async function confirmDelete() {
 			/>
 
 			<Label for="edit-used-by">Used by</Label>
-			<ConsumerCombobox id="edit-used-by" bind:value={editUsedBy} />
+			<ConsumerCombobox
+				id="edit-used-by"
+				bind:value={editUsedBy}
+				bind:entries={editEntries}
+			/>
+			<p class="mt-1 mb-3 text-sm">
+				Sealed in your browser with age, to the registered public keys of
+				the consumers selected above - never sent in the clear.
+			</p>
+
+			{#if editRecipients.recipients.length === 0}
+				<p role="alert" class="mb-3 font-bold text-warning">
+					Add at least one consumer with a registered public key - a secret
+					sealed to nobody could never be decrypted.
+				</p>
+			{/if}
 
 			{#if editError}
 				<p role="alert" class="text-error">{editError}</p>
@@ -317,7 +364,9 @@ async function confirmDelete() {
 				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
 					Cancel
 				</Dialog.Close>
-				<Button type="submit">Save</Button>
+				<Button type="submit" disabled={editRecipients.recipients.length === 0}>
+					Save
+				</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

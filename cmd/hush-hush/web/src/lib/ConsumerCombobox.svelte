@@ -10,25 +10,42 @@
 // Each selection appends to `value` (a list) rather than replacing it -
 // used_by is multi-valued, so this is a tag picker built on the
 // combobox pattern, not a single-value one.
-import { listConsumers } from './api';
+//
+// entries is bindable so the parent form (the secret create/edit dialog)
+// can resolve each selected consumer's registered public key into a real
+// age sealing recipient without a second, duplicate fetch of its own
+// (openspec/changes/client-side-encryption, task group 4).
+import { type ConsumerEntry, listConsumerDirectory } from './api';
 
-let { value = $bindable([]), id }: { value: string[]; id: string } = $props();
+let {
+	value = $bindable([]),
+	entries = $bindable([]),
+	id,
+}: { value: string[]; entries?: ConsumerEntry[]; id: string } = $props();
 
-let known: string[] = $state([]);
 let query = $state('');
 let open = $state(false);
 let activeIndex = $state(-1);
 let input: HTMLInputElement | undefined = $state();
 
-listConsumers()
-	.then((consumers) => {
-		known = consumers;
+listConsumerDirectory()
+	.then((result) => {
+		entries = result;
 	})
 	.catch(() => {
-		// A failed lookup just means no suggestions - typing and adding a
-		// new consumer still works with an empty known list.
+		// A failed lookup just means no suggestions (and no known public
+		// keys) - typing and adding a new consumer still works.
 	});
 
+const known = $derived(entries.map((entry) => entry.name));
+// Public key per known consumer name, absent for one with none
+// registered - specs/consumers/spec.md's "Picking a consumer with no
+// registered public key resolves no recipient" scenario, surfaced below
+// as a visible note next to that consumer's chip rather than silently
+// sealing to fewer recipients than the admin picked.
+const keyByName = $derived(
+	new Map(entries.map((entry) => [entry.name, entry.public_key])),
+);
 const trimmedQuery = $derived(query.trim());
 const filtered = $derived(
 	known.filter(
@@ -95,6 +112,14 @@ function onKeydown(event: KeyboardEvent) {
 			{#each value as consumer (consumer)}
 				<li class="flex items-center gap-1 rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					{consumer}
+					{#if !keyByName.get(consumer)}
+						<span
+							class="font-bold text-warning"
+							title={`${consumer} has no registered public key - this secret won't be sealed to them`}
+						>
+							(no key)
+						</span>
+					{/if}
 					<button
 						type="button"
 						class="border-0 bg-transparent p-0 text-sm font-normal leading-none"

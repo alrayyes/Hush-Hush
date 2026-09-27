@@ -1,26 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { utf8ToBase64 } from './encoding';
+import { bytesToBase64 } from './encoding';
 
-describe('utf8ToBase64', () => {
-	it('encodes plain ASCII the same way btoa does', () => {
-		expect(utf8ToBase64('hello')).toBe(btoa('hello'));
+describe('bytesToBase64', () => {
+	it('encodes plain ASCII bytes the same way btoa does', () => {
+		const bytes = new TextEncoder().encode('hello');
+
+		expect(bytesToBase64(bytes)).toBe(btoa('hello'));
 	});
 
-	it('encodes multi-byte UTF-8 text that plain btoa cannot handle', () => {
-		const encoded = utf8ToBase64('café 🔐');
+	it('round-trips arbitrary binary data, not just text', () => {
+		const bytes = Uint8Array.from({ length: 256 }, (_, i) => i);
 
-		const decoded = new TextDecoder().decode(
-			Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0)),
+		const decoded = Uint8Array.from(atob(bytesToBase64(bytes)), (c) =>
+			c.charCodeAt(0),
 		);
-		expect(decoded).toBe('café 🔐');
+		expect(decoded).toEqual(bytes);
 	});
 
 	it('round-trips a large value without a call-stack overflow', () => {
-		const large = 'x'.repeat(200_000);
+		const bytes = new Uint8Array(200_000).fill(42);
 
-		const decoded = new TextDecoder().decode(
-			Uint8Array.from(atob(utf8ToBase64(large)), (c) => c.charCodeAt(0)),
+		const decoded = Uint8Array.from(atob(bytesToBase64(bytes)), (c) =>
+			c.charCodeAt(0),
 		);
-		expect(decoded).toBe(large);
+		expect(decoded).toEqual(bytes);
 	});
 });
