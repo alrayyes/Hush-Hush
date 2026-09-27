@@ -6,6 +6,14 @@
 -- tool earns its place the day this schema actually needs to change under
 -- existing data.
 
+-- owner_id (added via migrateColumns in store.go, not here) foreign-keys
+-- an object to the users row that created it, backfilled for every
+-- pre-existing row by store.go's backfillOwnership - see users below.
+-- It's accountability metadata, not an access-control mechanism
+-- (openspec/changes/client-side-encryption/design.md's "owner_id is
+-- accountability metadata, not an access-control mechanism" decision):
+-- this migration only backfills existing rows, nothing here yet sets it
+-- on a new write.
 CREATE TABLE IF NOT EXISTS objects (
     id TEXT PRIMARY KEY,
     value BLOB NOT NULL,
@@ -67,11 +75,25 @@ CREATE TABLE IF NOT EXISTS write_tokens (
     revoked_at TEXT
 );
 
--- No account_id anywhere in this schema: there is exactly one admin
--- account (openspec/changes/web-ui/design.md's "single admin account,
--- multiple passkeys" decision), so a row's mere existence in
--- webauthn_credentials already means it belongs to that one account -
--- nothing to key it against.
+-- Each account is a real row here now, keyed by an id generated the same
+-- way this package's other ids are (tokens.go's randomHex) rather than a
+-- separate UUID dependency - openspec/changes/client-side-encryption/
+-- design.md's "users table and owner_id/user_id foreign keys" decision.
+-- Exactly one row exists today: store.go's backfillOwnership inserts it
+-- once, for the pre-existing admin account, the first time Open() sees
+-- an empty table. Multi-user is explicitly deferred (design.md's
+-- Non-Goals) - nothing yet creates a second row.
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL
+);
+
+-- user_id (added via migrateColumns in store.go, not here - see that
+-- file's own "columns added since v1" convention) foreign-keys each
+-- credential to the users row it belongs to. There is still exactly one
+-- user today, but that's now a real users row rather than an implicit
+-- fact about this table the way it used to be - store.go's
+-- backfillOwnership sets user_id for every pre-existing credential.
 CREATE TABLE IF NOT EXISTS webauthn_credentials (
     id TEXT PRIMARY KEY,
     public_key BLOB NOT NULL,
