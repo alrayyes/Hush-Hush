@@ -135,10 +135,14 @@ endpoint answers with a configuration error instead of the server
 refusing to start - the API (and the CLI/SDKs that call it) work exactly
 the same either way.
 
-The first successful passkey registration creates the single
-administrator account this service has - there's no sign-up flow or
-invitation to send, and no separate default credential to rotate away
-from.
+The first successful passkey registration creates the single account
+this service has today - there's no sign-up flow or invitation to send,
+and no separate default credential to rotate away from. That same
+registration generates your escrowed writer identity and shows its
+break-glass recovery phrase exactly once - write it down before
+continuing, since the server never stores a copy and it's the only way
+back in if every passkey you register is ever lost outside this app's
+own settings page.
 
 ```sh
 PUBLIC_URL=http://localhost:8080 ./hush-hush
