@@ -142,6 +142,10 @@ async function confirmDelete() {
 						<div class="space-y-1">
 							<Label for="add-consumer-name">Name</Label>
 							<Input id="add-consumer-name" class="w-full" bind:value={addName} required />
+							<p class="text-sm text-text-muted">
+								The consumer registers its own public key separately - secrets
+								can't be sealed to it until then.
+							</p>
 						</div>
 
 						{#if addError}
