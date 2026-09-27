@@ -8,7 +8,7 @@ import (
 	"github.com/alrayyes/hush-hush/internal/store"
 )
 
-// UpdateObjectRequest is the PUT /objects/{id} body. Matches
+// UpdateObjectRequest is the PUT /objects/{slug} body. Matches
 // components.schemas.UpdateObjectRequest in api/openapi.yaml. UsedBy is a
 // pointer so an absent field decodes to nil - "leave used_by as it is" -
 // distinct from an explicit empty array, which clears it
@@ -18,7 +18,7 @@ type UpdateObjectRequest struct {
 	UsedBy *[]string `json:"used_by,omitempty"`
 }
 
-// handleUpdateObject replaces an object's sealed value, leaving its id and
+// handleUpdateObject replaces an object's sealed value, leaving its slug and
 // description metadata unchanged. used_by is left unchanged too unless the
 // request includes it, in which case it fully replaces the object's
 // recorded consumers. The response carries the same shape create does,
@@ -38,9 +38,9 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		id := r.PathValue("id")
+		slug := r.PathValue("slug")
 
-		err := s.UpdateObject(r.Context(), id, req.Value, req.UsedBy)
+		err := s.UpdateObject(r.Context(), slug, req.Value, req.UsedBy)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -53,7 +53,7 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		obj, err := s.GetObject(r.Context(), id)
+		obj, err := s.GetObject(r.Context(), slug)
 		if err != nil {
 			writeInternalError(w, r, err)
 
@@ -61,12 +61,12 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 		}
 
 		actorType, actorID := actorFrom(r)
-		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionUpdate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionUpdate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
 			writeInternalError(w, r, err)
 
 			return
 		}
 
-		writeJSON(w, http.StatusOK, ObjectMetadata{ID: obj.ID, UsedBy: obj.UsedBy, Description: obj.Description})
+		writeJSON(w, http.StatusOK, ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description})
 	}
 }

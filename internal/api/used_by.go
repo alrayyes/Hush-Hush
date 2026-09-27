@@ -19,7 +19,7 @@ type UsedBy struct {
 // unauthenticated, same as the get endpoint it shares a store call with.
 func handleGetObjectUsedBy(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		obj, err := s.GetObject(r.Context(), r.PathValue("id"))
+		obj, err := s.GetObject(r.Context(), r.PathValue("slug"))
 		if errors.Is(err, store.ErrNotFound) {
 			writeError(w, r, http.StatusNotFound, "unknown object")
 

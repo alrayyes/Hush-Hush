@@ -86,7 +86,7 @@ func contractCases() []contractCase {
 				t.Helper()
 
 				return createRequest(t, hushhush.CreateObjectRequest{
-					ID:     "contract_create",
+					Slug:   "contract_create",
 					Value:  []byte("sealed-ciphertext"),
 					UsedBy: []string{"homelab/vps-docker"},
 				}, issueToken(t, s))
@@ -98,7 +98,7 @@ func contractCases() []contractCase {
 				t.Helper()
 
 				return createRequest(t, hushhush.CreateObjectRequest{
-					ID: "contract_create_unauth", Value: []byte("v"),
+					Slug: "contract_create_unauth", Value: []byte("v"),
 				}, "")
 			},
 		},
@@ -628,7 +628,7 @@ func seedObject(t *testing.T, s *store.Store, id string) {
 	t.Helper()
 
 	mux := hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion)
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: id, Value: []byte("sealed-ciphertext")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: id, Value: []byte("sealed-ciphertext")}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)
@@ -641,7 +641,7 @@ func seedObjectWithConsumer(t *testing.T, s *store.Store, id, consumer string) {
 	t.Helper()
 
 	mux := hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion)
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: id, Value: []byte("sealed-ciphertext"), UsedBy: []string{consumer}}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: id, Value: []byte("sealed-ciphertext"), UsedBy: []string{consumer}}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)

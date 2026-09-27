@@ -92,18 +92,18 @@ it starts once this proposal's PR merges.
 
 ## 6. UUID/slug split on `objects`
 
-- [ ] 6.1 Add a `slug` column to `objects`, backfilled from each existing
+- [x] 6.1 Add a `slug` column to `objects`, backfilled from each existing
       row's current id value; verify with a migration test asserting
       every pre-existing object's slug equals its former id
-- [ ] 6.2 Point the API path, CLI argument, and audit log's object
+- [x] 6.2 Point the API path, CLI argument, and audit log's object
       reference at slug instead of the internal id; verify
       with an API test asserting fetch/update/delete all resolve by slug
       per requirement `secret-objects`'s "Internal id decoupled from
       user-facing slug"
-- [ ] 6.3 Update `api/openapi.yaml` and regenerate SDKs (same dispatch as
+- [x] 6.3 Update `api/openapi.yaml` and regenerate SDKs (same dispatch as
       group 2); verify the CLI's existing tests pass against the new
       path shape
-- [ ] 6.4 File the follow-up for `hush-hush-cli` to resolve `--used-by`
+- [x] 6.4 File the follow-up for `hush-hush-cli` to resolve `--used-by`
       against the new consumer public-key field if not already tracked
       (already opened as `alrayyes/hush-hush-cli#125`); verify the issue
       references this change

@@ -8,7 +8,7 @@
 
 A lightweight, standalone secrets object store: a writer only ever needs the
 service's public key to add or rotate a value, and a consumer only ever
-needs an object id to fetch it. Public-key encryption
+needs an object's slug to fetch it. Public-key encryption
 ([age](https://github.com/FiloSottile/age)) end to end - the server stores
 and serves sealed ciphertext and never computes or returns plaintext.
 

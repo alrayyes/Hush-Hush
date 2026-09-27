@@ -10,13 +10,13 @@ info:
   summary: A standalone secrets object store.
   description: |
     A writer only ever needs the service's public key to add or rotate a
-    value; a consumer only ever needs an object id to fetch it. Every
+    value; a consumer only ever needs an object's slug to fetch it. Every
     object is sealed (age) to one or more recipients chosen at write time -
     the service stores and serves ciphertext only, and never computes or
     returns plaintext.
 
     v1's read path is deliberately flat: fetching an object's ciphertext
-    needs no authorization, only its id. The confidentiality boundary is
+    needs no authorization, only its slug. The confidentiality boundary is
     entirely "who holds a matching private key" - every fetch is recorded
     to the audit log instead, which is what answers "did anyone access
     this" during a rotation or incident. Writes (create, update, delete)
@@ -105,15 +105,16 @@ paths:
       operationId: listObjects
       summary: List stored objects
       description: |
-        Returns every stored object's metadata (id, used_by, description) -
-        never the sealed value. Gated by a write token or a session unlike
-        every other read path here: an id-scoped read only ever discloses
-        what a caller already knows the id of, but enumerating every
-        object is a capability none of those reads grant on their own.
-        The web UI holds a session, never a bearer token, and uses this
-        for its secrets overview - the two credentials are equally valid
-        here (auth/spec.md's "A session authenticates secret-object
-        access" requirement).
+        Returns every stored object's metadata (slug, used_by, description)
+        - never the sealed value, and never the internal id as something
+        addressable. Gated by a write token or a session unlike every
+        other read path here: a slug-scoped read only ever discloses what
+        a caller already knows the slug of, but enumerating every object
+        is a capability none of those reads grant on their own. The web UI
+        holds a session, never a bearer token, and uses this for its
+        secrets overview - the two credentials are equally valid here
+        (auth/spec.md's "A session authenticates secret-object access"
+        requirement).
       tags: [objects]
       security:
         - bearerAuth: []
@@ -127,7 +128,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Matching objects' metadata, sorted by id.
+          description: Matching objects' metadata, sorted by slug.
           content:
             application/json:
               schema:
@@ -141,12 +142,13 @@ paths:
       operationId: createObject
       summary: Create a new sealed object
       description: |
-        Stores an already-sealed value under a new object id. The value is
-        opaque ciphertext to this service - it is never decrypted, and the
-        service has no notion of which recipients it was sealed to. A
-        session-authenticated call needs its CSRF token too; a
-        bearer-token-authenticated one doesn't, since there's no session
-        to have one.
+        Stores an already-sealed value under a new, caller-chosen slug -
+        the object's own internal id is generated server-side and never
+        returned as something addressable. The value is opaque ciphertext
+        to this service - it is never decrypted, and the service has no
+        notion of which recipients it was sealed to. A session-
+        authenticated call needs its CSRF token too; a bearer-token-
+        authenticated one doesn't, since there's no session to have one.
       tags: [objects]
       security:
         - bearerAuth: []
@@ -161,7 +163,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateObjectRequest"
             example:
-              id: mattermost_deploy_webhook
+              slug: mattermost_deploy_webhook
               value: YWdlLWVuY3J5cHRpb24ub3JnL3Yx
               used_by: [homelab/vps-docker]
       responses:
@@ -174,7 +176,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "409":
-          description: An object already exists under that id.
+          description: An object already exists under that slug.
           content:
             application/json:
               schema:
@@ -182,19 +184,19 @@ paths:
               example:
                 error: object already exists
 
-  /objects/{id}:
+  /objects/{slug}:
     get:
       operationId: getObject
       summary: Fetch an object's sealed ciphertext
       description: |
         Returns the stored ciphertext exactly as sealed, byte for byte -
         the service never decrypts it. Needs no authorization beyond
-        knowing the id: v1's confidentiality boundary is entirely "who
+        knowing the slug: v1's confidentiality boundary is entirely "who
         holds a matching private key," and every fetch is recorded to the
         audit log regardless of who made it.
       tags: [objects]
       parameters:
-        - $ref: "#/components/parameters/id"
+        - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
       responses:
         "200":
@@ -212,7 +214,7 @@ paths:
       summary: Rotate an object's value
       description: |
         Replaces the stored ciphertext for an existing object. The
-        object's id and description metadata are always preserved
+        object's slug and description metadata are always preserved
         unchanged. used_by is preserved too, unless the request body
         includes it - in which case it fully replaces the object's
         recorded consumers, the same way creating an object sets it. A
@@ -223,7 +225,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: "#/components/parameters/id"
+        - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
       requestBody:
@@ -250,7 +252,7 @@ paths:
       operationId: deleteObject
       summary: Remove an object
       description: |
-        Permanently removes an object. A subsequent fetch by this id
+        Permanently removes an object. A subsequent fetch by this slug
         returns 404. A session-authenticated call needs its CSRF token
         too; a bearer-token-authenticated one doesn't.
       tags: [objects]
@@ -258,7 +260,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: "#/components/parameters/id"
+        - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
       responses:
@@ -269,7 +271,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /objects/{id}/used-by:
+  /objects/{slug}/used-by:
     get:
       operationId: getObjectUsedBy
       summary: Query what depends on an object
@@ -279,7 +281,7 @@ paths:
         than left as an implied convention.
       tags: [objects]
       parameters:
-        - $ref: "#/components/parameters/id"
+        - $ref: "#/components/parameters/slug"
       responses:
         "200":
           description: The object's recorded consumers.
@@ -523,7 +525,7 @@ paths:
           required: false
           description: Restrict to entries for this object id.
           schema:
-            $ref: "#/components/schemas/ObjectId"
+            $ref: "#/components/schemas/ObjectSlug"
         - name: caller
           in: query
           required: false
@@ -1012,15 +1014,18 @@ components:
         `bearerAuth` regardless of any session presented alongside it.
 
   parameters:
-    id:
-      name: id
+    slug:
+      name: slug
       in: path
       required: true
       description: |
-        The object's id, which is the last path segment and so has to
-        survive being in a URL.
+        The object's slug - the caller-facing identifier a writer chose at
+        create time, the last path segment, and so has to survive being in
+        a URL. The object's internal id is never part of any path
+        (specs/secret-objects/spec.md's "Internal id decoupled from
+        user-facing slug" requirement).
       schema:
-        $ref: "#/components/schemas/ObjectId"
+        $ref: "#/components/schemas/ObjectSlug"
 
     caller:
       name: X-Caller
@@ -1112,7 +1117,7 @@ components:
             error: missing or invalid bearer token
 
     NotFound:
-      description: No object is stored under that id.
+      description: No object is stored under that slug.
       content:
         application/json:
           schema:
@@ -1141,17 +1146,23 @@ components:
             error: consumer already exists
 
   schemas:
-    ObjectId:
+    ObjectSlug:
       type: string
       pattern: "^[a-z0-9][a-z0-9_-]*$"
       examples: [mattermost_deploy_webhook]
+      description: |
+        A caller-chosen, unique identifier for an object - what every
+        documented request path (URL, CLI, API) addresses it by. The
+        object's internal id is a separate, opaque value never exposed to
+        or accepted from a caller (specs/secret-objects/spec.md's
+        "Internal id decoupled from user-facing slug" requirement).
 
     CreateObjectRequest:
       type: object
-      required: [id, value]
+      required: [slug, value]
       properties:
-        id:
-          $ref: "#/components/schemas/ObjectId"
+        slug:
+          $ref: "#/components/schemas/ObjectSlug"
         value:
           type: string
           format: byte
@@ -1180,10 +1191,10 @@ components:
 
     ObjectMetadata:
       type: object
-      required: [id]
+      required: [slug]
       properties:
-        id:
-          $ref: "#/components/schemas/ObjectId"
+        slug:
+          $ref: "#/components/schemas/ObjectSlug"
         used_by:
           $ref: "#/components/schemas/UsedByList"
         description:
@@ -1193,7 +1204,7 @@ components:
       type: string
       description: |
         A free-text label set at creation, for a reader who only knows the
-        id. Fixed at creation - there is no way to change it later.
+        slug. Fixed at creation - there is no way to change it later.
       examples: ["prod deploy webhook for homelab/vps-docker"]
 
     UsedByList:
@@ -1305,7 +1316,7 @@ components:
             This entry's own id - stable and strictly increasing, so it
             doubles as the cursor for the `after` query parameter.
         object_id:
-          $ref: "#/components/schemas/ObjectId"
+          $ref: "#/components/schemas/ObjectSlug"
         action:
           type: string
           enum: [create, read, update, delete]
@@ -1358,7 +1369,7 @@ components:
         object_ids:
           type: array
           items:
-            $ref: "#/components/schemas/ObjectId"
+            $ref: "#/components/schemas/ObjectSlug"
           description: Every distinct object id currently recorded in the audit log.
         actors:
           type: array

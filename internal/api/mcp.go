@@ -15,12 +15,12 @@ import (
 // each is a tool-level error a caller sees verbatim, so the message is
 // also the whole point of the value.
 var (
-	errMCPInternal            = errors.New("internal error")
-	errMCPIDAndValueRequired  = errors.New("id and value are required")
-	errMCPValueRequired       = errors.New("value is required")
-	errMCPValueNotBase64      = errors.New("value must be base64-encoded")
-	errMCPObjectAlreadyExists = errors.New("object already exists")
-	errMCPUnknownObject       = errors.New("unknown object")
+	errMCPInternal             = errors.New("internal error")
+	errMCPSlugAndValueRequired = errors.New("slug and value are required")
+	errMCPValueRequired        = errors.New("value is required")
+	errMCPValueNotBase64       = errors.New("value must be base64-encoded")
+	errMCPObjectAlreadyExists  = errors.New("object already exists")
+	errMCPUnknownObject        = errors.New("unknown object")
 )
 
 // mcpInjectInput is the "inject" tool's input - CreateObjectRequest's
@@ -36,16 +36,16 @@ var (
 // them - a real base64 argument fails that validation outright. A plain
 // string field, decoded by hand, sidesteps the mismatch.
 type mcpInjectInput struct {
-	ID          string   `json:"id" jsonschema:"the object's new id"`
+	Slug        string   `json:"slug" jsonschema:"the object's new caller-facing slug"`
 	Value       string   `json:"value" jsonschema:"the sealed (age) ciphertext, base64-encoded"`
 	UsedBy      []string `json:"used_by,omitempty" jsonschema:"consumers to record against the object"`
 	Description string   `json:"description,omitempty" jsonschema:"a human-readable note about the object"`
 }
 
-// mcpGetInput is the "get" tool's input - just the object id, the same
+// mcpGetInput is the "get" tool's input - just the object's slug, the same
 // single value api/openapi.yaml's getObject documents.
 type mcpGetInput struct {
-	ID string `json:"id" jsonschema:"the object's id"`
+	Slug string `json:"slug" jsonschema:"the object's slug"`
 }
 
 // mcpGetOutput is the "get" tool's output - the sealed ciphertext exactly
@@ -56,17 +56,17 @@ type mcpGetOutput struct {
 }
 
 // mcpUpdateInput is the "update" tool's input - UpdateObjectRequest's
-// fields plus the id (the HTTP PUT takes it from the URL path instead),
+// fields plus the slug (the HTTP PUT takes it from the URL path instead),
 // Value base64-encoded for the same reason mcpInjectInput's is.
 type mcpUpdateInput struct {
-	ID     string    `json:"id" jsonschema:"the object's id"`
+	Slug   string    `json:"slug" jsonschema:"the object's slug"`
 	Value  string    `json:"value" jsonschema:"the new sealed ciphertext, base64-encoded"`
 	UsedBy *[]string `json:"used_by,omitempty" jsonschema:"replaces the object's recorded consumers; omit to leave them unchanged"`
 }
 
-// mcpDeleteInput is the "delete" tool's input - just the object id.
+// mcpDeleteInput is the "delete" tool's input - just the object's slug.
 type mcpDeleteInput struct {
-	ID string `json:"id" jsonschema:"the object's id"`
+	Slug string `json:"slug" jsonschema:"the object's slug"`
 }
 
 // mcpDeleteOutput confirms a delete happened, since the HTTP DELETE's 204
@@ -125,7 +125,7 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "inject",
-		Description: "Store a new sealed secret object under an id. value must already be sealed (age) ciphertext - this server never decrypts it.",
+		Description: "Store a new sealed secret object under a slug. value must already be sealed (age) ciphertext - this server never decrypts it.",
 	}, mcpInject(s, caller, sourceIP, actorType, actorID))
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -135,17 +135,17 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "update",
-		Description: "Replace an object's sealed value. id and description stay fixed; used_by is left unchanged unless given.",
+		Description: "Replace an object's sealed value. slug and description stay fixed; used_by is left unchanged unless given.",
 	}, mcpUpdate(s, caller, sourceIP, actorType, actorID))
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "delete",
-		Description: "Permanently remove an object. A subsequent get for the same id fails.",
+		Description: "Permanently remove an object. A subsequent get for the same slug fails.",
 	}, mcpDelete(s, caller, sourceIP, actorType, actorID))
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list",
-		Description: "List every stored object's metadata (id, used_by, description) - never the sealed value.",
+		Description: "List every stored object's metadata (slug, used_by, description) - never the sealed value.",
 	}, mcpList(s))
 
 	return srv
@@ -164,8 +164,8 @@ func mcpInternalError(ctx context.Context, tool string, err error) error {
 // handleCreateObject (create.go) performs over HTTP.
 func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpInjectInput, ObjectMetadata] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpInjectInput) (*mcp.CallToolResult, ObjectMetadata, error) {
-		if in.ID == "" || in.Value == "" {
-			return nil, ObjectMetadata{}, errMCPIDAndValueRequired
+		if in.Slug == "" || in.Value == "" {
+			return nil, ObjectMetadata{}, errMCPSlugAndValueRequired
 		}
 
 		value, err := base64.StdEncoding.DecodeString(in.Value)
@@ -173,7 +173,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
 		}
 
-		err = s.CreateObject(ctx, in.ID, value, in.UsedBy, in.Description)
+		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrAlreadyExists):
@@ -182,11 +182,11 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.ID, store.AuditActionCreate, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionCreate, caller, sourceIP, actorType, actorID); err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
-		return nil, ObjectMetadata{ID: in.ID, UsedBy: in.UsedBy, Description: in.Description}, nil
+		return nil, ObjectMetadata{Slug: in.Slug, UsedBy: in.UsedBy, Description: in.Description}, nil
 	}
 }
 
@@ -197,7 +197,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 // HTTP GET records.
 func mcpGet(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpGetInput, mcpGetOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpGetInput) (*mcp.CallToolResult, mcpGetOutput, error) {
-		obj, err := s.GetObject(ctx, in.ID)
+		obj, err := s.GetObject(ctx, in.Slug)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -206,7 +206,7 @@ func mcpGet(s objectStore, caller, sourceIP, actorType, actorID string) mcp.Tool
 			return nil, mcpGetOutput{}, mcpInternalError(ctx, "get", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.ID, store.AuditActionRead, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionRead, caller, sourceIP, actorType, actorID); err != nil {
 			return nil, mcpGetOutput{}, mcpInternalError(ctx, "get", err)
 		}
 
@@ -227,7 +227,7 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
 		}
 
-		err = s.UpdateObject(ctx, in.ID, value, in.UsedBy)
+		err = s.UpdateObject(ctx, in.Slug, value, in.UsedBy)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -236,16 +236,16 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
 		}
 
-		obj, err := s.GetObject(ctx, in.ID)
+		obj, err := s.GetObject(ctx, in.Slug)
 		if err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.ID, store.AuditActionUpdate, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionUpdate, caller, sourceIP, actorType, actorID); err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
 		}
 
-		return nil, ObjectMetadata{ID: obj.ID, UsedBy: obj.UsedBy, Description: obj.Description}, nil
+		return nil, ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description}, nil
 	}
 }
 
@@ -253,7 +253,7 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 // handleDeleteObject (delete.go) performs over HTTP.
 func mcpDelete(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpDeleteInput, mcpDeleteOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpDeleteInput) (*mcp.CallToolResult, mcpDeleteOutput, error) {
-		err := s.DeleteObject(ctx, in.ID)
+		err := s.DeleteObject(ctx, in.Slug)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -262,7 +262,7 @@ func mcpDelete(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, mcpDeleteOutput{}, mcpInternalError(ctx, "delete", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.ID, store.AuditActionDelete, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionDelete, caller, sourceIP, actorType, actorID); err != nil {
 			return nil, mcpDeleteOutput{}, mcpInternalError(ctx, "delete", err)
 		}
 
@@ -283,7 +283,7 @@ func mcpList(s objectStore) mcp.ToolHandlerFor[mcpListInput, []ObjectMetadata] {
 
 		metadata := make([]ObjectMetadata, len(objs))
 		for i, obj := range objs {
-			metadata[i] = ObjectMetadata{ID: obj.ID, UsedBy: obj.UsedBy, Description: obj.Description}
+			metadata[i] = ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description}
 		}
 
 		return nil, metadata, nil
