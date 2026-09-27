@@ -11,6 +11,7 @@ RUN bun install --frozen-lockfile
 
 COPY cmd/hush-hush/web/ ./
 COPY CHANGELOG.md /src/CHANGELOG.md
+COPY LICENSE /src/LICENSE
 RUN bun run build
 
 # Multi-stage: compile in a full toolchain image, copy only the binary into
