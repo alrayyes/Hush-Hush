@@ -110,24 +110,24 @@ it starts once this proposal's PR merges.
 
 ## 7. New ADR or ADRs recording the model
 
-- [ ] 7.1 Write an ADR recording the escrowed-identity/PRF-wrapping model
+- [x] 7.1 Write an ADR recording the escrowed-identity/PRF-wrapping model
       as an extension of `docs/adr/0001-per-object-age-encryption.md`;
       verify it's added to `docs/adr/` following the existing numbering
       and template
-- [ ] 7.2 Write an ADR (or a section of the same one) recording the
+- [x] 7.2 Write an ADR (or a section of the same one) recording the
       `objects.id`/`slug` split and its rationale; verify it also
       references the migration in group 6
 
 ## 8. `ARCHITECTURE.md`/`README.md` updates
 
-- [ ] 8.1 Update `ARCHITECTURE.md`'s encryption/identity model section to
+- [x] 8.1 Update `ARCHITECTURE.md`'s encryption/identity model section to
       describe `users`, escrowed identities, and consumer public keys as
       shipped; verify by re-reading it against the final implementation
-- [ ] 8.2 Update `README.md` wherever it describes the old "plain text"/
+- [x] 8.2 Update `README.md` wherever it describes the old "plain text"/
       "paste ciphertext" create modes or the implicit single-admin model;
       verify by re-reading it before opening that pull request, per this
       account's own README convention
-- [ ] 8.3 Close `alrayyes/Hush-Hush#383`, referencing whichever pull
+- [x] 8.3 Close `alrayyes/Hush-Hush#383`, referencing whichever pull
       request or requests closed each of its acceptance criteria; verify
       all the issue's acceptance criteria are individually satisfied
       first
