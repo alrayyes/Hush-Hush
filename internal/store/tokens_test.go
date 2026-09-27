@@ -254,6 +254,138 @@ func TestUpdateWriteTokenUsageUnknownIDIsErrTokenNotFound(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrTokenNotFound)
 }
 
+func TestRotateWriteTokenInvalidatesTheOldSecret(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, oldToken, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+
+	_, _, err = s.RotateWriteToken(t.Context(), wt.ID, time.Hour)
+	require.NoError(t, err)
+
+	valid, err := s.ValidateWriteToken(t.Context(), oldToken)
+	require.NoError(t, err)
+	require.False(t, valid)
+}
+
+func TestRotateWriteTokenIssuesANewWorkingSecret(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+
+	_, newToken, err := s.RotateWriteToken(t.Context(), wt.ID, time.Hour)
+	require.NoError(t, err)
+
+	valid, err := s.ValidateWriteToken(t.Context(), newToken)
+	require.NoError(t, err)
+	require.True(t, valid)
+}
+
+func TestRotateWriteTokenKeepsIDDescriptionAndOwner(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "homelab/vps-docker deploy", time.Hour, "admin")
+	require.NoError(t, err)
+
+	rotated, _, err := s.RotateWriteToken(t.Context(), wt.ID, time.Hour)
+	require.NoError(t, err)
+
+	require.Equal(t, wt.ID, rotated.ID)
+	require.Equal(t, "homelab/vps-docker deploy", rotated.Description)
+	require.Equal(t, "admin", rotated.Owner)
+}
+
+func TestRotateWriteTokenSetsExpiryFromTheGivenTTL(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+
+	before := time.Now().UTC()
+	rotated, _, err := s.RotateWriteToken(t.Context(), wt.ID, 48*time.Hour)
+	require.NoError(t, err)
+
+	expiresAt, err := time.Parse(time.RFC3339, rotated.ExpiresAt)
+	require.NoError(t, err)
+	require.WithinDuration(t, before.Add(48*time.Hour), expiresAt, time.Minute)
+}
+
+func TestRotateWriteTokenClearsLastUsedAt(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.NoError(t, s.UpdateWriteTokenUsage(t.Context(), wt.ID, time.Now().UTC().Format(time.RFC3339)))
+
+	rotated, _, err := s.RotateWriteToken(t.Context(), wt.ID, time.Hour)
+	require.NoError(t, err)
+
+	require.Empty(t, rotated.LastUsedAt)
+}
+
+func TestRotateWriteTokenUnknownIDIsErrTokenNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	_, _, err := s.RotateWriteToken(t.Context(), "nope", time.Hour)
+	require.ErrorIs(t, err, store.ErrTokenNotFound)
+}
+
+func TestRotateWriteTokenRevokedIsErrTokenNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeWriteToken(t.Context(), wt.ID))
+
+	_, _, err = s.RotateWriteToken(t.Context(), wt.ID, time.Hour)
+	require.ErrorIs(t, err, store.ErrTokenNotFound)
+}
+
+func TestRotateWriteTokenExpiredIsErrTokenNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "already expired", -time.Hour, "")
+	require.NoError(t, err)
+
+	_, _, err = s.RotateWriteToken(t.Context(), wt.ID, time.Hour)
+	require.ErrorIs(t, err, store.ErrTokenNotFound)
+}
+
+func TestRotatingOneTokenLeavesOthersValid(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	rotated, _, err := s.CreateWriteToken(t.Context(), "rotated", time.Hour, "")
+	require.NoError(t, err)
+	_, survivingToken, err := s.CreateWriteToken(t.Context(), "surviving", time.Hour, "")
+	require.NoError(t, err)
+
+	_, _, err = s.RotateWriteToken(t.Context(), rotated.ID, time.Hour)
+	require.NoError(t, err)
+
+	valid, err := s.ValidateWriteToken(t.Context(), survivingToken)
+	require.NoError(t, err)
+	require.True(t, valid)
+}
+
 func TestRevokingOneTokenLeavesOthersValid(t *testing.T) {
 	t.Parallel()
 

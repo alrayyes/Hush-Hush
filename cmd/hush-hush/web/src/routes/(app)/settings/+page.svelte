@@ -6,6 +6,7 @@ import {
 	deleteCredential,
 	renameCredential,
 	revokeToken,
+	rotateToken,
 	type TokenWithValue,
 } from '$lib/api';
 import { registerPasskey } from '$lib/auth';
@@ -156,6 +157,40 @@ async function confirmRevoke() {
 	} catch (err) {
 		revokeError = apiErrorMessage(err, 'Failed to revoke the token.');
 	}
+}
+
+let rotateOpen = $state(false);
+let rotateId = $state('');
+let rotateTTLDays = $state(90);
+let rotateError = $state('');
+let rotatedToken: TokenWithValue | null = $state(null);
+
+function openRotate(id: string) {
+	rotateId = id;
+	rotateTTLDays = 90;
+	rotateError = '';
+	rotatedToken = null;
+	rotateOpen = true;
+}
+
+async function submitRotate(event: SubmitEvent) {
+	event.preventDefault();
+	rotateError = '';
+
+	try {
+		rotatedToken = await rotateToken(rotateId, rotateTTLDays * 24 * 60 * 60);
+		await invalidate('app:settings');
+	} catch (err) {
+		rotateError = apiErrorMessage(err, 'Failed to rotate the token.');
+	}
+}
+
+function closeRotate() {
+	rotateOpen = false;
+	rotateId = '';
+	rotateTTLDays = 90;
+	rotateError = '';
+	rotatedToken = null;
 }
 </script>
 
@@ -327,6 +362,9 @@ async function confirmRevoke() {
 						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
 						<td data-label="Actions" class="row-actions gap-2">
 							{#if !token.revoked}
+								<Button variant="outline" size="sm" onclick={() => openRotate(token.id)}>
+									Rotate
+								</Button>
 								<Button variant="destructive" size="sm" onclick={() => openRevoke(token.id)}>
 									Revoke
 								</Button>
@@ -399,3 +437,57 @@ async function confirmRevoke() {
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<Dialog.Root
+	bind:open={rotateOpen}
+	onOpenChange={(open) => {
+		if (!open) closeRotate();
+	}}
+>
+	<Dialog.Content>
+		{#if rotatedToken}
+			<Dialog.Header>
+				<Dialog.Title>Token rotated</Dialog.Title>
+			</Dialog.Header>
+			<p role="alert" class="font-bold text-warning">
+				This value is shown once. It will not be shown again - store it now.
+			</p>
+			<Textarea
+				readonly
+				rows={3}
+				value={rotatedToken.value}
+				aria-label="Token value"
+				class="w-full"
+			/>
+			<Dialog.Footer>
+				<Button onclick={closeRotate}>Done</Button>
+			</Dialog.Footer>
+		{:else}
+			<Dialog.Header>
+				<Dialog.Title>Rotate this token?</Dialog.Title>
+			</Dialog.Header>
+			<form onsubmit={submitRotate}>
+				<Label for="rotate-ttl">Valid for (days)</Label>
+				<Input
+					id="rotate-ttl"
+					class="mt-1 w-full"
+					type="number"
+					min="1"
+					bind:value={rotateTTLDays}
+					required
+				/>
+
+				{#if rotateError}
+					<p role="alert" class="mt-3 text-error">{rotateError}</p>
+				{/if}
+
+				<Dialog.Footer>
+					<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+						Cancel
+					</Dialog.Close>
+					<Button type="submit">Rotate</Button>
+				</Dialog.Footer>
+			</form>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>

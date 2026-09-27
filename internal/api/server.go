@@ -38,6 +38,7 @@ type objectStore interface {
 	CreateWriteToken(ctx context.Context, description string, ttl time.Duration, owner string) (store.WriteToken, string, error)
 	ListWriteTokens(ctx context.Context) ([]store.WriteToken, error)
 	RevokeWriteToken(ctx context.Context, id string) error
+	RotateWriteToken(ctx context.Context, id string, ttl time.Duration) (store.WriteToken, string, error)
 	UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) error
 
 	CreateCredential(ctx context.Context, c store.Credential) error
@@ -131,6 +132,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("POST /tokens", requireSession(s, requireCSRF(handleCreateToken(s))))
 	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
 	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
+	mux.HandleFunc("POST /tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateToken(s))))
 
 	mux.Handle("/", staticHandler)
 

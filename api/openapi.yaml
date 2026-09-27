@@ -1017,6 +1017,50 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /tokens/{id}/rotate:
+    post:
+      operationId: rotateToken
+      summary: Rotate a write bearer token
+      description: |
+        Replaces the secret and expiry of the token issued under id,
+        keeping its id, description, and owner unchanged - so an audit
+        log entry, or anything else that already refers to the token by
+        id, keeps resolving through the rotation. The old secret stops
+        authenticating immediately. The new raw token value is returned
+        here only, the same as `createToken`.
+
+        Unlike `revokeToken`, an id that's unknown, already revoked, or
+        already expired is an error: a rotate response promises the
+        caller a working new secret, and there's no valid token to hand
+        one to.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tokenId"
+        - $ref: "#/components/parameters/csrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateTokenRequest"
+            example:
+              ttl_seconds: 7776000
+      responses:
+        "200":
+          description: The token was rotated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenWithValue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1637,6 +1681,17 @@ components:
           type: string
           format: date-time
           description: Absent if this token has never authenticated a request.
+
+    RotateTokenRequest:
+      type: object
+      required: [ttl_seconds]
+      properties:
+        ttl_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: How long the rotated token stays valid for, starting now.
+          examples: [7776000]
 
     TokenWithValue:
       allOf:
