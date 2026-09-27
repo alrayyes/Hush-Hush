@@ -350,9 +350,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByLabel('Filter by name').blur();
 	await page.getByRole('link', { name: 'homelab' }).click();
 	await page.waitForURL('/?used_by=homelab');
-	await expect(page.getByText('Filtered to consumer homelab')).toBeVisible();
+	await expect(page.getByText('consumer: homelab')).toBeVisible();
 	await expect(page.getByText('mattermost_deploy_webhook')).toBeVisible();
-	await page.getByRole('link', { name: 'Clear filter' }).click();
+	await page.getByRole('link', { name: 'Clear consumer filter' }).click();
 	await page.waitForURL('/');
 
 	// #282: rename and delete are bulk used_by rewrites across every

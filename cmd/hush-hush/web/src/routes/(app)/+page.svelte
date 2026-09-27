@@ -16,6 +16,7 @@ import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
+import { consumersHref } from '$lib/consumers';
 import { formatTimestamp } from '$lib/datetime';
 import { resolveRecipients, sealValue } from '$lib/sealing';
 import type { PageData } from './$types';
@@ -290,10 +291,20 @@ async function confirmDelete() {
 	</header>
 
 	{#if data.usedByFilter}
-		<p class="flex flex-wrap items-center gap-2">
-			Filtered to consumer <strong>{data.usedByFilter}</strong>
-			<a href="/">Clear filter</a>
-		</p>
+		<ul class="mb-4 flex list-none flex-wrap gap-2 p-0">
+			<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
+				consumer: {data.usedByFilter}
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					class="ml-1 h-auto w-auto p-0"
+					href="/"
+					aria-label="Clear consumer filter"
+				>
+					&times;
+				</Button>
+			</li>
+		</ul>
 	{/if}
 
 	{#if data.objects.length === 0}
@@ -374,7 +385,7 @@ async function confirmDelete() {
 				{#if viewUsedBy.length > 0}
 					<ul class="m-0 space-y-1 pl-5">
 						{#each viewUsedBy as consumer (consumer)}
-							<li>{consumer}</li>
+							<li><a href={consumersHref(1, consumer)}>{consumer}</a></li>
 						{/each}
 					</ul>
 				{:else}
