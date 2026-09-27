@@ -16,6 +16,7 @@ import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
+import { formatTimestamp } from '$lib/datetime';
 import { resolveRecipients, sealValue } from '$lib/sealing';
 import type { PageData } from './$types';
 
@@ -320,12 +321,18 @@ async function confirmDelete() {
 						</td>
 						<td data-label="Created">
 							{#if attribution}
-								{attribution.createdBy} &middot; {attribution.createdAt}
+								{attribution.createdBy} &middot;
+								<time datetime={attribution.createdAt} title={attribution.createdAt}>
+									{formatTimestamp(attribution.createdAt)}
+								</time>
 							{/if}
 						</td>
 						<td data-label="Updated">
 							{#if attribution}
-								{attribution.updatedBy} &middot; {attribution.updatedAt}
+								{attribution.updatedBy} &middot;
+								<time datetime={attribution.updatedAt} title={attribution.updatedAt}>
+									{formatTimestamp(attribution.updatedAt)}
+								</time>
 							{/if}
 						</td>
 						<td data-label="Actions" class="row-actions gap-3">

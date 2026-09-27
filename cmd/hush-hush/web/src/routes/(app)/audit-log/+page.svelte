@@ -9,6 +9,7 @@ import { auditActorLabel, toCSV, toJSON } from '$lib/audit-export';
 import { Button } from '$lib/components/ui/button/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import * as Select from '$lib/components/ui/select/index.js';
+import { formatTimestamp } from '$lib/datetime';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -321,7 +322,11 @@ function exportCSV() {
 					<td data-label="Action">{entry.action}</td>
 					<td data-label="Actor">{auditActorLabel(entry)}</td>
 					<td data-label="Caller">{entry.caller ?? ''}</td>
-					<td data-label="Timestamp">{entry.timestamp}</td>
+					<td data-label="Timestamp">
+						<time datetime={entry.timestamp} title={entry.timestamp}>
+							{formatTimestamp(entry.timestamp)}
+						</time>
+					</td>
 				</tr>
 			{/each}
 		</tbody>
