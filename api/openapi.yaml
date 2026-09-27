@@ -1429,6 +1429,33 @@ components:
           type: string
           description: A human-readable label for this credential, shown in the credentials list.
           examples: [YubiKey 5C]
+        wrapped_identity:
+          type: string
+          description: |
+            This credential's own copy of the user's escrowed writer
+            identity private key, wrapped client-side with a key derived
+            from this credential's WebAuthn PRF extension output and
+            base64-encoded. Omitted when the browser's registration
+            reported no PRF support for this credential - the server
+            never generates, verifies, or unwraps this value, only stores
+            it.
+        public_key:
+          type: string
+          description: |
+            The escrowed writer identity's age recipient string, sent
+            only on the account's first-ever registration - a repeat
+            registration resending this is a no-op against the identity
+            already recorded, never an overwrite.
+          examples:
+            [age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq]
+        recovery_wrapped_identity:
+          type: string
+          description: |
+            The escrowed writer identity's private key, wrapped
+            client-side with a key derived from the one-time break-glass
+            recovery phrase, sent only on the account's first-ever
+            registration. The server never sees the phrase itself, only
+            this already-wrapped copy.
 
     LoginOptions:
       type: object
@@ -1468,6 +1495,16 @@ components:
           type: string
           format: date-time
           description: Absent if this credential has never been used to log in.
+        wrapped_identity:
+          type: string
+          description: |
+            This credential's own copy of the user's escrowed writer
+            identity private key, wrapped with a key derived from this
+            credential's WebAuthn PRF extension output and
+            base64-encoded. Absent for a credential that doesn't support
+            PRF. Safe to return to the authenticated owner: it's already
+            wrapped, and only unwrappable with that same credential's own
+            PRF secret or the break-glass recovery phrase.
 
     CredentialRenameRequest:
       type: object

@@ -155,7 +155,42 @@ func migrateColumns(db *sql.DB) error {
 	// pre-existing row; SetConsumerPublicKey (objects.go) is what sets it,
 	// upserting a consumers row for a name that previously only existed
 	// via used_by.
-	return addColumnIfMissing(db, "consumers", "public_key", "TEXT")
+	if err := addColumnIfMissing(db, "consumers", "public_key", "TEXT"); err != nil {
+		return err
+	}
+
+	// users.public_key/recovery_wrapped_identity: the user's escrowed
+	// writer identity (specs/users/spec.md's "Escrowed writer identity"
+	// and "Break-glass recovery phrase" requirements) - a real age
+	// keypair generated client-side once, whose private key never
+	// reaches this server unwrapped. public_key is the age recipient
+	// string, safe to store in the clear; recovery_wrapped_identity is
+	// the private key wrapped by a key derived from the one-time
+	// break-glass recovery phrase - never the phrase itself, which this
+	// server never sees at all. Both nullable until a first registration
+	// establishes them (tasks.md group 3's job, not this migration's) -
+	// there's nothing to backfill for a pre-existing user, since there
+	// was no client-side identity to generate before this change
+	// shipped.
+	if err := addColumnIfMissing(db, "users", "public_key", "TEXT"); err != nil {
+		return err
+	}
+
+	if err := addColumnIfMissing(db, "users", "recovery_wrapped_identity", "TEXT"); err != nil {
+		return err
+	}
+
+	// wrapped_identity: this credential's own copy of the user's escrowed
+	// writer identity private key, wrapped with a key derived from the
+	// credential's WebAuthn PRF extension output, base64-encoded
+	// (specs/users/spec.md's "Per-credential wrapping of the escrowed
+	// identity" requirement). NULL for a credential that doesn't support
+	// the PRF extension, or one registered before this change shipped.
+	// Deleting a credential just deletes its own copy here - every other
+	// credential's copy already stands on its own, which is what makes
+	// losing one passkey non-stranding (design.md's "Multi-copy wrapping
+	// over a single shared wrap" decision).
+	return addColumnIfMissing(db, "webauthn_credentials", "wrapped_identity", "TEXT")
 }
 
 // addColumnIfMissing adds column to table if it isn't already there. The

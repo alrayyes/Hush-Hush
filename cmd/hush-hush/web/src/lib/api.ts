@@ -90,13 +90,25 @@ export async function beginRegistration(): Promise<Record<string, unknown>> {
 	return res.json();
 }
 
+// RegistrationEscrow carries the escrowed writer identity fields
+// identity.ts's registerPasskey flow adds on top of the raw WebAuthn
+// attestation - wrapped_identity for any PRF-capable credential,
+// public_key/recovery_wrapped_identity only on the account's first-ever
+// registration (api/openapi.yaml's RegistrationFinishRequest schema).
+export interface RegistrationEscrow {
+	wrapped_identity?: string;
+	public_key?: string;
+	recovery_wrapped_identity?: string;
+}
+
 export async function finishRegistration(
 	credential: unknown,
 	nickname?: string,
+	escrow?: RegistrationEscrow,
 ): Promise<void> {
 	await request('/auth/register/finish', {
 		method: 'POST',
-		body: JSON.stringify({ credential, nickname }),
+		body: JSON.stringify({ credential, nickname, ...escrow }),
 	});
 }
 
@@ -385,6 +397,12 @@ export interface Credential {
 	nickname?: string;
 	created_at: string;
 	last_used_at?: string;
+	// wrapped_identity is this credential's own copy of the escrowed
+	// writer identity's private key, wrapped against this credential's
+	// PRF secret - absent for a credential that doesn't support PRF
+	// (openspec/changes/client-side-encryption/specs/users/spec.md's
+	// "Per-credential wrapping of the escrowed identity" requirement).
+	wrapped_identity?: string;
 }
 
 export async function listCredentials(): Promise<Credential[]> {
