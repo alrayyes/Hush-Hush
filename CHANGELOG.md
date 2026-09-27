@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.38.1](https://github.com/alrayyes/Hush-Hush/compare/v2.38.0...v2.38.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **web-ui:** table density, header alignment, description truncation, dialog spacing ([#428](https://github.com/alrayyes/Hush-Hush/issues/428)) ([b875ac3](https://github.com/alrayyes/Hush-Hush/commit/b875ac33af0d76496df214eac52a8a2254d67ea6))
+
 ## [2.38.0](https://github.com/alrayyes/Hush-Hush/compare/v2.37.1...v2.38.0) (2026-09-27)
 
 
