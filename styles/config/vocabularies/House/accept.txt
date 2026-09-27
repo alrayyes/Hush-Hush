@@ -142,3 +142,5 @@ nowrap
 bits-ui
 bits-ui's
 [Ee]scrow(?:s|ed|ing)?
+webServer
+playwright-lighthouse

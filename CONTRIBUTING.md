@@ -70,11 +70,23 @@ above:
 ```sh
 cd cmd/hush-hush/web
 bun install
-bun run check    # svelte-check — types, unused exports, Svelte-aware lint
-bun run test     # vitest
-bun run lint     # biome check
-bun run build    # writes build/, which cmd/hush-hush/embed.go embeds
+bun run check      # svelte-check — types, unused exports, Svelte-aware lint
+bun run test       # vitest
+bun run lint       # biome check
+bun run build      # writes build/, which cmd/hush-hush/embed.go embeds
+bun run test:e2e   # Playwright journeys + axe-core WCAG 2.1 AA scans, blocking
+bun run lighthouse # Lighthouse performance/best-practices, warns only
 ```
+
+`test:e2e` and `lighthouse` both need `bunx playwright install --with-deps
+chromium` once, and a native Go toolchain on `PATH` — their own webServer
+(`e2e/server.sh`) builds and runs the real `hush-hush` binary rather than
+`vite preview`, which returns a 500 for every route. See
+[`cmd/hush-hush/web/README.md`](cmd/hush-hush/web/README.md)'s own section
+on each. CI's `e2e` job (required, blocks merge on an axe-core violation)
+and `lighthouse` job (never required — a score below threshold warns, per
+`rules/browser-compat.md`) both run these; neither is in `lefthook.yml`'s
+`pre-push` — see that file's `web-check` comment for the timed decision.
 
 ## How it fits together
 
