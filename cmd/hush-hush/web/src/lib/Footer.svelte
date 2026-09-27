@@ -11,5 +11,5 @@ let { version }: { version: string } = $props();
 	<span aria-hidden="true">&middot;</span>
 	<a href="/privacy" class="text-inherit">Privacy</a>
 	<span aria-hidden="true">&middot;</span>
-	<span>GPL-3.0</span>
+	<a href="/license" class="text-inherit">GPL-3.0</a>
 </footer>

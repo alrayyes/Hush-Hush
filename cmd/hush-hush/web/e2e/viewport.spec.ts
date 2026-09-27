@@ -7,7 +7,13 @@ import { expect, test } from '@playwright/test';
 // pages reachable with no session; the authenticated (app) pages get the
 // same coverage from the login-and-navigate journey test
 // (web-ui-design-system/tasks.md #2.2), once that exists.
-const PUBLIC_PAGES = ['/login', '/changelog', '/disclaimer', '/privacy'];
+const PUBLIC_PAGES = [
+	'/login',
+	'/changelog',
+	'/disclaimer',
+	'/privacy',
+	'/license',
+];
 
 for (const path of PUBLIC_PAGES) {
 	test(`${path} has no horizontal scroll at 320px`, async ({ page }) => {
