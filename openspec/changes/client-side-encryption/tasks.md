@@ -7,17 +7,17 @@ it starts once this proposal's PR merges.
 
 ## 1. `users`/`credentials.user_id`/`objects.owner_id` schema migration
 
-- [ ] 1.1 Add a `users` table (UUID primary key) and backfill one row for
+- [x] 1.1 Add a `users` table (UUID primary key) and backfill one row for
       the existing admin account; verify with a migration test asserting
       exactly one user row exists post-migration
-- [ ] 1.2 Add `credentials.user_id` (foreign key to `users`), backfilled
+- [x] 1.2 Add `credentials.user_id` (foreign key to `users`), backfilled
       to the single existing user; verify existing credential-listing and
       login tests still pass unchanged
-- [ ] 1.3 Add `objects.owner_id` (foreign key to `users`, nullable during
+- [x] 1.3 Add `objects.owner_id` (foreign key to `users`, nullable during
       backfill, backfilled to the single existing user); verify a test
       asserting every pre-existing object has a non-null `owner_id` after
       migration
-- [ ] 1.4 Document the new tables/columns in `internal/store`'s existing
+- [x] 1.4 Document the new tables/columns in `internal/store`'s existing
       schema documentation; verify by re-reading it against the actual
       migration file
 
