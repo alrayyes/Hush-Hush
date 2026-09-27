@@ -58,9 +58,9 @@ it starts once this proposal's PR merges.
       test exercising requirement `users`'s "Deleting one of several
       passkeys does not strand the identity" scenario)
 
-## 4. Client-side age sealing in the web UI, replacing the two old create modes
+## 4. Client-side age sealing, replacing the web UI's two old create modes
 
-- [ ] 4.1 Add a client-side age sealing library (`age-encryption`/typage
+- [ ] 4.1 Add a client-side age sealing library (`age-encryption`/`typage`
       or `agewasm`) to `cmd/hush-hush/web`'s dependencies, pinned exact
       per this account's dependency-pinning convention; verify
       `bun install` succeeds and the lock file is committed
@@ -75,7 +75,7 @@ it starts once this proposal's PR merges.
       decrypt with the matching consumer private key
 - [ ] 4.4 Update `ARCHITECTURE.md`'s write-path description to reflect
       real client-side sealing; verify by re-reading it against the
-      shipped behavior
+      shipped behaviour
 
 ## 5. Opt-in owner-recipient checkbox
 
@@ -114,7 +114,7 @@ it starts once this proposal's PR merges.
       verify it's added to `docs/adr/` following the existing numbering
       and template
 - [ ] 7.2 Write an ADR (or a section of the same one) recording the
-      `objects.id`/`slug` split and its rationale; verify it cross-
+      `objects.id`/`slug` split and its rationale; verify it also
       references the migration in group 6
 
 ## 8. `ARCHITECTURE.md`/`README.md` updates
@@ -128,5 +128,5 @@ it starts once this proposal's PR merges.
       account's own README convention
 - [ ] 8.3 Close `alrayyes/Hush-Hush#383`, referencing whichever pull
       request or requests closed each of its acceptance criteria; verify
-      all of the issue's acceptance criteria are individually satisfied
+      all the issue's acceptance criteria are individually satisfied
       first

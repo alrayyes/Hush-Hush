@@ -6,13 +6,13 @@ See proposal.md's "Why" for motivation. The current state this design
 starts from:
 
 - The web UI's "New secret" dialog offers two create modes: base64
-  "plain text" (explicitly labeled "not encrypted") and paste-in
+  "plain text" (explicitly labelled "not encrypted") and paste-in
   ciphertext sealed by hand outside the browser. Neither is real
   client-side encryption; both are removed by this change.
 - The consumer directory's `used_by` is a free-text bookkeeping label
   (`consumer-directory`, `consumer-combobox`) with no cryptographic
   meaning - the server holds zero public keys today.
-- There is one admin account, modeled implicitly rather than as a table
+- There is one admin account, modelled implicitly rather than as a table
   row, authenticating via WebAuthn passkeys (`docs/adr/0011-webauthn-
 library-choice.md`, `0012-public-url-required-for-webauthn.md`,
   `0013-cookie-session-not-jwt.md`). `/credentials` already supports
@@ -125,8 +125,8 @@ secret deliberately wants a readable copy back.
 Recording who created a secret is useful for audit and, later, for a
 delete-guard - but it must not silently grant that owner decrypt access.
 Keeping who owns a secret and who can decrypt it as two independent facts
-(one row, one opt-in flag) avoids the ambiguity of "does owning something
-let you read it" leaking into the encryption model.
+(one row, one opt-in flag) avoids the ambiguity of "ownership implies
+read access" leaking into the encryption model.
 
 ### `objects.id` (UUID) vs `slug`
 

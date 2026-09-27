@@ -3,7 +3,7 @@
 ## Why
 
 The web UI's "New secret" dialog only offers a base64-encoded plaintext
-mode (labeled "not encrypted") or a paste-in-ciphertext mode requiring age
+mode (labelled "not encrypted") or a paste-in-ciphertext mode requiring age
 sealing done by hand outside the browser - there is no real client-side
 encryption path today, and the consumer directory (`used_by`) is a free-text
 bookkeeping label with no cryptographic meaning, so the UI can't resolve a
@@ -46,11 +46,11 @@ does nothing to help with or enforce.
 
 ### Modified Capabilities
 
-- `secret-objects`: `id` is decoupled from the user-facing slug; an
-  `owner_id` is recorded per secret; the owner's key is an opt-in decrypt
-  recipient rather than implicit; the create/update request shape moves
-  from an already-sealed value to plaintext sealed client-side against
-  resolved recipients.
+- `secret-objects`: `id` is decoupled from the user-facing slug; each
+  secret records its owner via `owner_id`; the owner's key is an opt-in
+  decrypt recipient rather than implicit; the create/update request
+  shape moves from an already-sealed value to plaintext sealed
+  client-side against resolved recipients.
 - `consumers`: each consumer gains a registered public key field, resolved
   into a real age recipient instead of remaining a bookkeeping label only.
 - `auth`: WebAuthn credentials are attributed to a user and, on

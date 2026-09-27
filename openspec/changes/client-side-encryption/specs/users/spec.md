@@ -73,8 +73,8 @@ NOT retain any copy of the recovery phrase itself after that display.
 #### Scenario: No PRF-capable passkey remains
 
 - **WHEN** a user's registered passkeys have never supported the PRF
-  extension, or every PRF-capable passkey is lost outside the credential-
-  delete flow
+  extension, or every PRF-capable passkey is lost outside the app's own
+  flow for deleting a credential
 - **THEN** the escrowed writer identity is still recoverable using the
   break-glass recovery phrase
 
