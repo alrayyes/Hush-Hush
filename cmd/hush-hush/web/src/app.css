@@ -255,8 +255,16 @@
 		border-collapse: collapse;
 	}
 
+	/* text-align has to be explicit - the UA default centers th text
+	   while td is left-aligned below (>=40rem), which otherwise reads as
+	   header/body columns not lining up (alrayyes/hush-hush#426). Padding
+	   stays a per-th utility class in markup (px-4 py-3, matching
+	   .responsive-table td's own padding below) rather than living here -
+	   unlike td's padding, th has no responsive-card behavior forcing it
+	   into hand-written CSS. */
 	th {
 		font-weight: 600;
+		text-align: left;
 	}
 }
 
@@ -320,7 +328,7 @@
 		gap: var(--spacing-4);
 		justify-content: space-between;
 		align-items: center;
-		padding: var(--spacing-2) 0;
+		padding: var(--spacing-3) 0;
 		border-bottom: 1px solid var(--color-border-subtle);
 		text-align: right;
 	}
@@ -363,7 +371,7 @@
 			display: table-cell;
 			border-bottom: 1px solid var(--color-border);
 			text-align: left;
-			padding: var(--spacing-2);
+			padding: var(--spacing-3) var(--spacing-4);
 		}
 
 		.responsive-table td[data-label]::before {

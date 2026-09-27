@@ -215,59 +215,65 @@ async function confirmDelete() {
 					<Dialog.Title>Create a secret</Dialog.Title>
 				</Dialog.Header>
 				<form onsubmit={submitCreate}>
-					<Label for="create-id">Id</Label>
-					<Input id="create-id" class="mt-1 mb-3 w-full" bind:value={createSlug} required />
-
-					<Label for="create-value">Value</Label>
-					<Textarea
-						id="create-value"
-						class="mt-1 mb-3 w-full"
-						bind:value={createValue}
-						required
-						rows={4}
-					/>
-
-					<Label for="create-description">Description</Label>
-					<Input
-						id="create-description"
-						class="mt-1 mb-3 w-full"
-						bind:value={createDescription}
-					/>
-
-					<Label for="create-used-by">Used by</Label>
-					<ConsumerCombobox
-						id="create-used-by"
-						bind:value={createUsedBy}
-						bind:entries={createEntries}
-					/>
-					<p class="mt-1 mb-3 text-sm">
-						Sealed in your browser with age, to the registered public keys of
-						the consumers selected above - never sent in the clear.
-					</p>
-
-					{#if data.ownerPublicKey}
-						<div class="mb-3 flex items-center gap-2">
-							<Checkbox
-								id="create-keep-readable-copy"
-								bind:checked={createKeepReadableCopy}
-							/>
-							<Label for="create-keep-readable-copy">
-								Keep a readable copy for yourself
-							</Label>
+					<div class="space-y-4">
+						<div class="space-y-1">
+							<Label for="create-id">Id</Label>
+							<Input id="create-id" class="w-full" bind:value={createSlug} required />
 						</div>
-					{/if}
 
-					{#if createEffectiveRecipients.length === 0}
-						<p role="alert" class="mb-3 font-bold text-warning">
-							Add at least one consumer with a registered public key, or keep
-							a readable copy for yourself - a secret sealed to nobody could
-							never be decrypted.
-						</p>
-					{/if}
+						<div class="space-y-1">
+							<Label for="create-value">Value</Label>
+							<Textarea
+								id="create-value"
+								class="w-full"
+								bind:value={createValue}
+								required
+								rows={4}
+							/>
+						</div>
 
-					{#if createError}
-						<p role="alert" class="text-error">{createError}</p>
-					{/if}
+						<div class="space-y-1">
+							<Label for="create-description">Description</Label>
+							<Input id="create-description" class="w-full" bind:value={createDescription} />
+						</div>
+
+						<div class="space-y-1">
+							<Label for="create-used-by">Used by</Label>
+							<ConsumerCombobox
+								id="create-used-by"
+								bind:value={createUsedBy}
+								bind:entries={createEntries}
+							/>
+							<p class="text-sm text-text-muted">
+								Sealed in your browser with age, to the registered public keys
+								of the consumers selected above - never sent in the clear.
+							</p>
+						</div>
+
+						{#if data.ownerPublicKey}
+							<div class="flex items-center gap-2">
+								<Checkbox
+									id="create-keep-readable-copy"
+									bind:checked={createKeepReadableCopy}
+								/>
+								<Label for="create-keep-readable-copy">
+									Keep a readable copy for yourself
+								</Label>
+							</div>
+						{/if}
+
+						{#if createEffectiveRecipients.length === 0}
+							<p role="alert" class="font-bold text-warning">
+								Add at least one consumer with a registered public key, or keep
+								a readable copy for yourself - a secret sealed to nobody could
+								never be decrypted.
+							</p>
+						{/if}
+
+						{#if createError}
+							<p role="alert" class="text-error">{createError}</p>
+						{/if}
+					</div>
 
 					<Dialog.Footer>
 						<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
@@ -295,11 +301,11 @@ async function confirmDelete() {
 		<table class="responsive-table">
 			<thead>
 				<tr>
-					<th scope="col">Id</th>
-					<th scope="col">Description</th>
-					<th scope="col">Created</th>
-					<th scope="col">Updated</th>
-					<th scope="col">Actions</th>
+					<th scope="col" class="px-4 py-3">Id</th>
+					<th scope="col" class="px-4 py-3">Description</th>
+					<th scope="col" class="px-4 py-3">Created</th>
+					<th scope="col" class="px-4 py-3">Updated</th>
+					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -307,7 +313,11 @@ async function confirmDelete() {
 					{@const attribution = data.attribution.get(object.slug)}
 					<tr>
 						<td data-label="Id">{object.slug}</td>
-						<td data-label="Description">{object.description ?? ''}</td>
+						<td data-label="Description">
+							<span class="block max-w-xs truncate" title={object.description ?? ''}>
+								{object.description ?? ''}
+							</span>
+						</td>
 						<td data-label="Created">
 							{#if attribution}
 								{attribution.createdBy} &middot; {attribution.createdAt}
@@ -318,7 +328,7 @@ async function confirmDelete() {
 								{attribution.updatedBy} &middot; {attribution.updatedAt}
 							{/if}
 						</td>
-						<td data-label="Actions" class="row-actions gap-2">
+						<td data-label="Actions" class="row-actions gap-3">
 							<Button variant="outline" size="sm" onclick={() => openView(object.slug)}>
 								View
 							</Button>
@@ -346,21 +356,25 @@ async function confirmDelete() {
 			<Dialog.Title>{viewSlug}</Dialog.Title>
 			<Dialog.Description>Sealed ciphertext, base64-encoded.</Dialog.Description>
 		</Dialog.Header>
-		{#if viewError}
-			<p role="alert" class="text-error">{viewError}</p>
-		{:else}
-			<Textarea readonly rows={6} value={viewValue} aria-label="Ciphertext (base64)" />
-		{/if}
-		<p class="mt-3 font-bold">Used by</p>
-		{#if viewUsedBy.length > 0}
-			<ul class="m-0 pl-5">
-				{#each viewUsedBy as consumer (consumer)}
-					<li>{consumer}</li>
-				{/each}
-			</ul>
-		{:else}
-			<p>No recorded consumers.</p>
-		{/if}
+		<div class="space-y-4">
+			{#if viewError}
+				<p role="alert" class="text-error">{viewError}</p>
+			{:else}
+				<Textarea readonly rows={6} value={viewValue} aria-label="Ciphertext (base64)" />
+			{/if}
+			<div class="space-y-1">
+				<p class="font-bold">Used by</p>
+				{#if viewUsedBy.length > 0}
+					<ul class="m-0 space-y-1 pl-5">
+						{#each viewUsedBy as consumer (consumer)}
+							<li>{consumer}</li>
+						{/each}
+					</ul>
+				{:else}
+					<p>No recorded consumers.</p>
+				{/if}
+			</div>
+		</div>
 	</Dialog.Content>
 </Dialog.Root>
 
@@ -370,46 +384,46 @@ async function confirmDelete() {
 			<Dialog.Title>Edit {editSlug}</Dialog.Title>
 		</Dialog.Header>
 		<form onsubmit={submitEdit}>
-			<Label for="edit-value">New value</Label>
-			<Textarea
-				id="edit-value"
-				class="mt-1 mb-3 w-full"
-				bind:value={editValue}
-				required
-				rows={6}
-			/>
-
-			<Label for="edit-used-by">Used by</Label>
-			<ConsumerCombobox
-				id="edit-used-by"
-				bind:value={editUsedBy}
-				bind:entries={editEntries}
-			/>
-			<p class="mt-1 mb-3 text-sm">
-				Sealed in your browser with age, to the registered public keys of
-				the consumers selected above - never sent in the clear.
-			</p>
-
-			{#if data.ownerPublicKey}
-				<div class="mb-3 flex items-center gap-2">
-					<Checkbox id="edit-keep-readable-copy" bind:checked={editKeepReadableCopy} />
-					<Label for="edit-keep-readable-copy">
-						Keep a readable copy for yourself
-					</Label>
+			<div class="space-y-4">
+				<div class="space-y-1">
+					<Label for="edit-value">New value</Label>
+					<Textarea id="edit-value" class="w-full" bind:value={editValue} required rows={6} />
 				</div>
-			{/if}
 
-			{#if editEffectiveRecipients.length === 0}
-				<p role="alert" class="mb-3 font-bold text-warning">
-					Add at least one consumer with a registered public key, or keep a
-					readable copy for yourself - a secret sealed to nobody could never
-					be decrypted.
-				</p>
-			{/if}
+				<div class="space-y-1">
+					<Label for="edit-used-by">Used by</Label>
+					<ConsumerCombobox
+						id="edit-used-by"
+						bind:value={editUsedBy}
+						bind:entries={editEntries}
+					/>
+					<p class="text-sm text-text-muted">
+						Sealed in your browser with age, to the registered public keys of
+						the consumers selected above - never sent in the clear.
+					</p>
+				</div>
 
-			{#if editError}
-				<p role="alert" class="text-error">{editError}</p>
-			{/if}
+				{#if data.ownerPublicKey}
+					<div class="flex items-center gap-2">
+						<Checkbox id="edit-keep-readable-copy" bind:checked={editKeepReadableCopy} />
+						<Label for="edit-keep-readable-copy">
+							Keep a readable copy for yourself
+						</Label>
+					</div>
+				{/if}
+
+				{#if editEffectiveRecipients.length === 0}
+					<p role="alert" class="font-bold text-warning">
+						Add at least one consumer with a registered public key, or keep a
+						readable copy for yourself - a secret sealed to nobody could never
+						be decrypted.
+					</p>
+				{/if}
+
+				{#if editError}
+					<p role="alert" class="text-error">{editError}</p>
+				{/if}
+			</div>
 
 			<Dialog.Footer>
 				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>

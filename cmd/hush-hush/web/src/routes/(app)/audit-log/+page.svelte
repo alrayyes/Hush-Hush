@@ -307,11 +307,11 @@ function exportCSV() {
 	<table class="responsive-table" aria-busy={loading}>
 		<thead>
 			<tr>
-				<th scope="col">Object</th>
-				<th scope="col">Action</th>
-				<th scope="col">Actor</th>
-				<th scope="col">Caller</th>
-				<th scope="col">Timestamp</th>
+				<th scope="col" class="px-4 py-3">Object</th>
+				<th scope="col" class="px-4 py-3">Action</th>
+				<th scope="col" class="px-4 py-3">Actor</th>
+				<th scope="col" class="px-4 py-3">Caller</th>
+				<th scope="col" class="px-4 py-3">Timestamp</th>
 			</tr>
 		</thead>
 		<tbody>
