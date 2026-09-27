@@ -95,6 +95,44 @@ func TestTokenRevokeInvalidatesTheToken(t *testing.T) {
 	require.False(t, valid)
 }
 
+func TestTokenRotateInvalidatesTheOldTokenAndPrintsANewOne(t *testing.T) {
+	path := dbPath(t)
+
+	s, err := store.Open(path)
+	require.NoError(t, err)
+	wt, oldToken, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.NoError(t, s.Close())
+
+	viper.Reset()
+	t.Setenv("DB_PATH", path)
+	root := newRootCmd()
+	root.SetArgs([]string{"token", "rotate", wt.ID, "--ttl", "2h"})
+	var out bytes.Buffer
+	root.SetOut(&out)
+	require.NoError(t, root.Execute())
+	require.Contains(t, out.String(), "token:")
+
+	s, err = store.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	oldValid, err := s.ValidateWriteToken(t.Context(), oldToken)
+	require.NoError(t, err)
+	require.False(t, oldValid)
+}
+
+func TestTokenRotateUnknownIDFails(t *testing.T) {
+	dbPath(t)
+
+	root := newRootCmd()
+	root.SetArgs([]string{"token", "rotate", "nope", "--ttl", "1h"})
+	root.SetOut(new(bytes.Buffer))
+	root.SetErr(new(bytes.Buffer))
+
+	require.Error(t, root.Execute())
+}
+
 func TestTokenRevokeUnknownIDFails(t *testing.T) {
 	dbPath(t)
 

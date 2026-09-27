@@ -46,6 +46,12 @@ type TokenWithValue struct {
 	Value string `json:"value"`
 }
 
+// RotateTokenRequest is the POST /tokens/{id}/rotate body. Matches
+// components.schemas.RotateTokenRequest in api/openapi.yaml.
+type RotateTokenRequest struct {
+	TTLSeconds int64 `json:"ttl_seconds"`
+}
+
 func tokenMetadataFromStore(t store.WriteToken) TokenMetadata {
 	return TokenMetadata{
 		ID:          t.ID,
@@ -104,6 +110,44 @@ func handleListTokens(s objectStore) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, out)
+	}
+}
+
+// handleRotateToken replaces the secret and expiry of the token issued
+// under id, returning its new raw value exactly once. Unlike
+// handleRevokeToken, an id that's unknown, already revoked, or already
+// expired is an error - a rotate response promises the caller a working
+// new secret, and there's no valid token to hand one to.
+func handleRotateToken(s objectStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		var req RotateTokenRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, r, http.StatusBadRequest, "malformed request body")
+
+			return
+		}
+
+		if req.TTLSeconds <= 0 {
+			writeError(w, r, http.StatusBadRequest, errNonPositiveTTL.Error())
+
+			return
+		}
+
+		wt, value, err := s.RotateWriteToken(r.Context(), id, time.Duration(req.TTLSeconds)*time.Second)
+		if errors.Is(err, store.ErrTokenNotFound) {
+			writeError(w, r, http.StatusNotFound, "unknown token")
+
+			return
+		}
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		writeJSON(w, http.StatusOK, TokenWithValue{TokenMetadata: tokenMetadataFromStore(wt), Value: value})
 	}
 }
 

@@ -168,6 +168,58 @@ func (s *Store) RevokeWriteToken(ctx context.Context, id string) error {
 	return nil
 }
 
+// RotateWriteToken issues a new secret and a new expiry for the token
+// under id, keeping its id, description and owner unchanged - so an audit
+// log entry, or anything else that already refers to the token by id,
+// keeps resolving through the rotation the same way ADR 0017's
+// revoke-by-flag keeps id references resolvable across a revoke. The old
+// secret stops authenticating immediately, since only the new secret's
+// hash is stored afterward. It returns ErrTokenNotFound if no currently
+// valid (unrevoked, unexpired) token exists under id - a revoked or
+// already-expired token isn't rotated back to life; issue a new one
+// instead.
+func (s *Store) RotateWriteToken(ctx context.Context, id string, ttl time.Duration) (WriteToken, string, error) {
+	token, err := randomHex(32)
+	if err != nil {
+		return WriteToken{}, "", fmt.Errorf("generate token: %w", err)
+	}
+
+	now := time.Now().UTC()
+	expiresAt := now.Add(ttl).Format(time.RFC3339)
+
+	result, err := s.db.ExecContext(ctx,
+		`UPDATE write_tokens SET token_hash = ?, expires_at = ?, last_used_at = NULL
+		 WHERE id = ? AND revoked_at IS NULL AND expires_at > ?`,
+		hashToken(token), expiresAt, id, now.Format(time.RFC3339),
+	)
+	if err != nil {
+		return WriteToken{}, "", fmt.Errorf("rotate write token: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return WriteToken{}, "", fmt.Errorf("rotate write token: %w", err)
+	}
+
+	if n == 0 {
+		return WriteToken{}, "", ErrTokenNotFound
+	}
+
+	var (
+		wt    WriteToken
+		owner sql.NullString
+	)
+
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT id, description, owner, created_at, expires_at FROM write_tokens WHERE id = ?`, id,
+	).Scan(&wt.ID, &wt.Description, &owner, &wt.CreatedAt, &wt.ExpiresAt); err != nil {
+		return WriteToken{}, "", fmt.Errorf("rotate write token: %w", err)
+	}
+	wt.Owner = owner.String
+
+	return wt, token, nil
+}
+
 // UpdateWriteTokenUsage records a successful authentication's timestamp -
 // the same way UpdateCredentialUsage does for a passkey, so an admin can
 // tell a token nobody's used from one in daily use when deciding whether

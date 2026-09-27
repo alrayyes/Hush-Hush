@@ -66,11 +66,16 @@ running the same binary again, directly against that database file:
 
 Any number of tokens can be valid at once, each with its own description
 and expiry (`--ttl`, default 90 days) - `hush-hush token list` shows what's
-issued, and `hush-hush token revoke <id>` invalidates one without touching
-the others. There's no HTTP endpoint for any of this: minting the
+issued, `hush-hush token revoke <id>` invalidates one without touching the
+others, and `hush-hush token rotate <id> --ttl <duration>` replaces a
+token's secret and expiry in place, keeping its id and description - the
+old secret stops working immediately, and the new one is shown once, the
+same as `token issue`. Issuing a token has no HTTP endpoint: minting the
 credential that authenticates the write path can't itself need a token to
-call over the network, so it's direct store access instead, same as the
-server's own `DB_PATH`.
+call over the network, so `token issue` is direct store access instead,
+same as the server's own `DB_PATH`. Listing, revoking, and rotating a
+token, by contrast, are also available over HTTP once a session is logged
+in - the web UI's settings page uses these.
 
 ### Use the client
 

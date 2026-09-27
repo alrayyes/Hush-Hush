@@ -488,6 +488,18 @@ export async function revokeToken(id: string): Promise<void> {
 	await request(`/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
+export async function rotateToken(
+	id: string,
+	ttlSeconds: number,
+): Promise<TokenWithValue> {
+	const res = await request(`/tokens/${encodeURIComponent(id)}/rotate`, {
+		method: 'POST',
+		body: JSON.stringify({ ttl_seconds: ttlSeconds }),
+	});
+
+	return res.json();
+}
+
 export interface Health {
 	status: string;
 	version: string;

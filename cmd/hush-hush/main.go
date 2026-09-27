@@ -241,12 +241,13 @@ func serve() error {
 func newTokenCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "token",
-		Short: "Issue, list, and revoke write-path tokens",
+		Short: "Issue, list, rotate, and revoke write-path tokens",
 	}
 
 	cmd.AddCommand(newTokenIssueCmd())
 	cmd.AddCommand(newTokenListCmd())
 	cmd.AddCommand(newTokenRevokeCmd())
+	cmd.AddCommand(newTokenRotateCmd())
 
 	return cmd
 }
@@ -329,6 +330,41 @@ func newTokenListCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newTokenRotateCmd() *cobra.Command {
+	var ttl time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "rotate <id>",
+		Short: "Replace a token's secret and expiry, keeping its id and description",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			s, err := openStoreForTokenCmd()
+			if err != nil {
+				return err
+			}
+			defer func() { _ = s.Close() }()
+
+			wt, token, err := s.RotateWriteToken(cmd.Context(), args[0], ttl)
+			if err != nil {
+				return fmt.Errorf("rotate token: %w", err)
+			}
+
+			if _, err := fmt.Fprintf(cmd.OutOrStdout(),
+				"id:    %s\ntoken: %s\n\nThe token is shown once - store it now, it can't be recovered later.\n",
+				wt.ID, token,
+			); err != nil {
+				return fmt.Errorf("write rotated token: %w", err)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().DurationVar(&ttl, "ttl", 90*24*time.Hour, "how long the rotated token stays valid")
+
+	return cmd
 }
 
 func newTokenRevokeCmd() *cobra.Command {
