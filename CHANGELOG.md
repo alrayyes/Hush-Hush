@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.33.0](https://github.com/alrayyes/Hush-Hush/compare/v2.32.0...v2.33.0) (2026-09-27)
+
+
+### Features
+
+* **store:** add users table, backfill credential/object ownership ([#388](https://github.com/alrayyes/Hush-Hush/issues/388)) ([9a213f6](https://github.com/alrayyes/Hush-Hush/commit/9a213f69616a66cb7dab8c0d6cd41d95d09de482))
+
 ## [2.32.0](https://github.com/alrayyes/Hush-Hush/compare/v2.31.1...v2.32.0) (2026-09-26)
 
 
