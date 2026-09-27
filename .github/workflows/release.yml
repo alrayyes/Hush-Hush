@@ -47,17 +47,6 @@ jobs:
       release_created: ${{ fromJSON(steps.release.outputs.outputs).release_created }}
       tag_name: ${{ fromJSON(steps.release.outputs.outputs).tag_name }}
     steps:
-      # A GitHub App installation token gets its own rate-limit budget,
-      # independent of any personal account's — the fix for release-please
-      # failing with "API rate limit already exceeded" whenever concurrent
-      # personal gh/GraphQL usage exhausts the shared per-user budget a PAT
-      # would otherwise draw from (alrayyes/forge-dashboard#618).
-      - name: Generate a GitHub App installation token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
       # Retries the whole action 3x on a transient GitHub API failure
       # (rate limit, secondary abuse-detection response) rather than
       # treating it as a finding to chase down by hand each time -
@@ -65,12 +54,19 @@ jobs:
       # transient rate limit". release-please-action is a `uses:` step,
       # so it needs wretry.action's `action:`/`with:` wrapping rather
       # than nick-fields/retry, which only ever runs a shell command.
+      #
+      # RELEASE_TOKEN (a personal-account PAT), not a GitHub App
+      # installation token: #410 tried the latter for its own,
+      # independent rate-limit budget, but hit an unresolved
+      # App-installation/permissions gap that left release-please
+      # silently doing nothing - reverted back to the token that's
+      # known to work.
       - uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: release
         with:
           action: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
           with: |
-            token: ${{ steps.app-token.outputs.token }}
+            token: ${{ secrets.RELEASE_TOKEN }}
           attempt_limit: 3
           attempt_delay: 10000
 
@@ -96,13 +92,6 @@ jobs:
       # RELEASE_TOKEN, not the default GITHUB_TOKEN: a repository_dispatch
       # needs write access to the *target* repo, which GITHUB_TOKEN never
       # has outside the repo the workflow runs in.
-      #
-      # Deliberately still a PAT, not the GitHub App token release.yml's
-      # other jobs now use: this dispatches to hush-hush-go/-python/-node/
-      # -php, and #618's App installation only covers forge-dashboard and
-      # Hush-Hush themselves. Swapping this one too needs the App installed
-      # on those four repos first, or every dispatch here starts failing
-      # with 404/403 the day this lands.
       - name: Dispatch spec-updated to ${{ matrix.repo }}
         run: |
           gh api "repos/alrayyes/${{ matrix.repo }}/dispatches" \
@@ -162,15 +151,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # A GitHub App installation token gets its own rate-limit budget,
-      # independent of any personal account's (alrayyes/forge-dashboard#618).
-      - name: Generate a GitHub App installation token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-
       # goreleaser-action fetches a prebuilt, checksum-verified binary
       # instead of `go install`-ing the whole tool from source on every run.
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
@@ -182,13 +162,13 @@ jobs:
           # override block - unlike the gitea_urls/force_token this repo
           # needed when it lived on Forgejo.
           #
-          # The minted GitHub App installation token, not the default
-          # GITHUB_TOKEN: the same anti-recursion rule notify-sdks' own
-          # comment describes for a push also suppresses the
-          # `release: published` event a GITHUB_TOKEN-authored release
-          # would otherwise fire, and screenshots.yml needs that event to
-          # actually reach it (alrayyes/hush-hush#266).
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          # RELEASE_TOKEN, not the default GITHUB_TOKEN: the same
+          # anti-recursion rule notify-sdks' own comment describes for a
+          # push also suppresses the `release: published` event a
+          # GITHUB_TOKEN-authored release would otherwise fire, and
+          # screenshots.yml needs that event to actually reach it
+          # (alrayyes/hush-hush#266).
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       # Free SLSA Build L2 provenance tying these binaries to this workflow
       # run - releases.md: adopt unconditionally, no cosign/SBOM needed yet.
