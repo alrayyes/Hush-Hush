@@ -13,7 +13,7 @@ let { data }: { data: PageData } = $props();
 <main class="mx-auto my-8 max-w-240 px-4">
 	<h1>Changelog</h1>
 	{#if data.changelog}
-		<Card>
+		<Card class="text-base">
 			<CardContent>
 				<div class="changelog-content break-words">
 					{@html renderChangelog(data.changelog)}
