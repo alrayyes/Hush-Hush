@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.35.0](https://github.com/alrayyes/Hush-Hush/compare/v2.34.0...v2.35.0) (2026-09-27)
+
+
+### Features
+
+* **web-ui:** seal secrets client-side, remove insecure create modes ([#395](https://github.com/alrayyes/Hush-Hush/issues/395)) ([4831dca](https://github.com/alrayyes/Hush-Hush/commit/4831dca10fb31a059375b3652d53638678abb51a))
+
 ## [2.34.0](https://github.com/alrayyes/Hush-Hush/compare/v2.33.0...v2.34.0) (2026-09-27)
 
 
