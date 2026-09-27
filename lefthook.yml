@@ -193,9 +193,23 @@ pre-push:
     # rather than the repo root, where those scripts don't exist. Scoped
     # with `glob` to that directory the same way `redocly` above is scoped
     # to `api/`, so a push touching nothing under `cmd/hush-hush/web` skips
-    # both. `bun run test:e2e` stays CI-only - it spins up the real Go
-    # binary as a Playwright webServer, a different order of runtime than
-    # these two.
+    # both.
+    #
+    # `bun run test:e2e` (Playwright/axe-core, alrayyes/hush-hush#384)
+    # stays CI-only, decided by timing a real run rather than guessing:
+    # a fresh `bun run test:e2e` - full suite, no reused server - took
+    # about 8-9 seconds wall clock, comfortably inside what a pre-push
+    # hook can carry. Speed isn't why it's excluded. `e2e/server.sh`, its
+    # own Playwright webServer, runs `go build` directly on the host to
+    # start the real Go binary - unlike every Go command above, which is
+    # Docker-wrapped specifically so a host without Go installed still
+    # gets a working hook (CONTRIBUTING.md's "Go 1.27 or newer... Not
+    # required for the hooks themselves"). Adding it here would quietly
+    # make a native Go toolchain a new prerequisite for pushing at all,
+    # which costs more than paying for the check again in CI.
+    # `bun run lighthouse` (Lighthouse, same issue) has the identical
+    # native-Go dependency and stays CI-only for the same reason - moot
+    # either way, since it only ever warns rather than blocks.
     - name: web-check
       root: "cmd/hush-hush/web/"
       glob: "cmd/hush-hush/web/**/*"

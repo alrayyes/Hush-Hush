@@ -376,6 +376,18 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		0,
 	);
 
+	// Settings: passkey and bearer-token management, and the only
+	// authenticated page area rules/a11y.md's "every page a journey test
+	// covers gets its own scan" didn't already reach above - the viewport
+	// loop below visits it too, but only for the horizontal-scroll check,
+	// never for axe.
+	await nav.getByRole('link', { name: 'Settings' }).click();
+	await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+	const settingsResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(settingsResults.violations).toEqual([]);
+
 	await page.setViewportSize({ width: 320, height: 720 });
 
 	// #294: the topbar's nav links, theme toggle, and Log out button used

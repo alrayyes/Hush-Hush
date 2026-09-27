@@ -95,6 +95,7 @@
       "dialogs",
       "filesystem",
       "httpOnly",
+      "webServer",
       "goreleaser-stamped",
       "biome",
       "Biome",
