@@ -14,7 +14,7 @@ let { data }: { data: PageData } = $props();
 	{#if data.license}
 		<Card>
 			<CardContent>
-				<pre class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{data.license}</pre>
+				<pre class="font-sans text-base leading-relaxed whitespace-pre-wrap">{data.license}</pre>
 			</CardContent>
 		</Card>
 	{:else}
