@@ -173,7 +173,12 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
 		}
 
-		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description)
+		ownerID, err := s.CurrentUserID(ctx)
+		if err != nil {
+			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
+		}
+
+		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description, ownerID)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrAlreadyExists):

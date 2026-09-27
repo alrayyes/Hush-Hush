@@ -93,6 +93,17 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "create object opted into keeping a readable copy",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				return createRequest(t, hushhush.CreateObjectRequest{
+					Slug: "contract_create_owner_opt_in", Value: []byte("sealed-ciphertext"),
+					KeepReadableCopy: true,
+				}, issueToken(t, s))
+			},
+		},
+		{
 			name: "create object without a bearer token",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()
@@ -422,6 +433,25 @@ func contractCases() []contractCase {
 				t.Helper()
 
 				return httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+			},
+		},
+		{
+			name: "get owner identity without a session",
+			request: func(t *testing.T, _ *store.Store) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest(http.MethodGet, "/auth/identity", nil)
+			},
+		},
+		{
+			name: "get owner identity",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				req := httptest.NewRequest(http.MethodGet, "/auth/identity", nil)
+				req.AddCookie(seedSessionCookie(t, s))
+
+				return req
 			},
 		},
 		{

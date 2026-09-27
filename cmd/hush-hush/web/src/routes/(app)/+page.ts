@@ -1,4 +1,4 @@
-import { listObjects, queryAuditLog } from '$lib/api';
+import { getOwnerIdentity, listObjects, queryAuditLog } from '$lib/api';
 import { attributionByObject } from '$lib/attribution';
 import type { PageLoad } from './$types';
 
@@ -13,14 +13,19 @@ export const load: PageLoad = async ({ depends, url }) => {
 	// restriction" default otherwise.
 	const usedByFilter = url.searchParams.get('used_by') ?? undefined;
 
-	const [objects, auditLog] = await Promise.all([
+	const [objects, auditLog, ownerPublicKey] = await Promise.all([
 		listObjects(usedByFilter),
 		queryAuditLog(),
+		getOwnerIdentity(),
 	]);
 
 	return {
 		objects,
 		attribution: attributionByObject(auditLog),
 		usedByFilter,
+		// Undefined until the account has completed a first registration -
+		// the create/edit dialog's owner-recipient checkbox only renders
+		// once this is set (tasks.md's 5.2).
+		ownerPublicKey,
 	};
 };

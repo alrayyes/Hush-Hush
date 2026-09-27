@@ -11,6 +11,7 @@ import {
 import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
 import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
@@ -31,6 +32,9 @@ let createValue = $state('');
 let createDescription = $state('');
 let createUsedBy: string[] = $state([]);
 let createEntries: ConsumerEntry[] = $state([]);
+// Opt-in, never sticky across opens - specs/secret-objects/spec.md's
+// "Owner recipient is not the default" scenario (tasks.md's 5.2).
+let createKeepReadableCopy = $state(false);
 
 // Recomputed on every keystroke/selection so the "Create" button and its
 // zero-recipient warning below track the current form state, not just
@@ -38,12 +42,24 @@ let createEntries: ConsumerEntry[] = $state([]);
 const createRecipients = $derived(
 	resolveRecipients(createUsedBy, createEntries),
 );
+// The recipients Value actually gets sealed to: every resolved consumer,
+// plus the owner's own public key when the checkbox is checked - the
+// checkbox alone can satisfy "at least one recipient" below, so a secret
+// meant only for the owner never needs a placeholder consumer
+// (specs/secret-objects/spec.md's "Opt-in owner-recipient inclusion at
+// create time" requirement).
+const createEffectiveRecipients = $derived(
+	createKeepReadableCopy && data.ownerPublicKey
+		? [...createRecipients.recipients, data.ownerPublicKey]
+		: createRecipients.recipients,
+);
 
 function resetCreateForm() {
 	createSlug = '';
 	createValue = '';
 	createDescription = '';
 	createUsedBy = [];
+	createKeepReadableCopy = false;
 	createError = '';
 }
 
@@ -56,19 +72,20 @@ async function submitCreate(event: SubmitEvent) {
 	// something a consumer's own tooling could read; this guards against
 	// silently shipping something strictly worse
 	// (openspec/changes/client-side-encryption/tasks.md's 4.3).
-	if (createRecipients.recipients.length === 0) {
+	if (createEffectiveRecipients.length === 0) {
 		createError =
-			'Add at least one consumer with a registered public key before creating this secret.';
+			'Add at least one consumer with a registered public key, or keep a readable copy for yourself, before creating this secret.';
 		return;
 	}
 
 	try {
-		const value = await sealValue(createValue, createRecipients.recipients);
+		const value = await sealValue(createValue, createEffectiveRecipients);
 		await createObject({
 			slug: createSlug,
 			value,
 			description: createDescription || undefined,
 			used_by: createUsedBy.length > 0 ? createUsedBy : undefined,
+			keep_readable_copy: createKeepReadableCopy || undefined,
 		});
 		createOpen = false;
 		resetCreateForm();
@@ -87,8 +104,18 @@ let editValue = $state('');
 let editUsedBy: string[] = $state([]);
 let editEntries: ConsumerEntry[] = $state([]);
 let editError = $state('');
+// Independent of whatever a previous create or update on this same
+// object requested - an update reseals the whole value from scratch, and
+// the server never persists this flag to read it back from
+// (api/openapi.yaml's KeepReadableCopy schema).
+let editKeepReadableCopy = $state(false);
 
 const editRecipients = $derived(resolveRecipients(editUsedBy, editEntries));
+const editEffectiveRecipients = $derived(
+	editKeepReadableCopy && data.ownerPublicKey
+		? [...editRecipients.recipients, data.ownerPublicKey]
+		: editRecipients.recipients,
+);
 
 function openEdit(slug: string) {
 	editSlug = slug;
@@ -98,6 +125,7 @@ function openEdit(slug: string) {
 	// and canceling shouldn't leave that mutation sitting on data the
 	// server never actually received.
 	editUsedBy = [...(data.objects.find((o) => o.slug === slug)?.used_by ?? [])];
+	editKeepReadableCopy = false;
 	editError = '';
 	editOpen = true;
 }
@@ -106,15 +134,15 @@ async function submitEdit(event: SubmitEvent) {
 	event.preventDefault();
 	editError = '';
 
-	if (editRecipients.recipients.length === 0) {
+	if (editEffectiveRecipients.length === 0) {
 		editError =
-			'Add at least one consumer with a registered public key before saving this secret.';
+			'Add at least one consumer with a registered public key, or keep a readable copy for yourself, before saving this secret.';
 		return;
 	}
 
 	try {
-		const value = await sealValue(editValue, editRecipients.recipients);
-		await updateObject(editSlug, value, editUsedBy);
+		const value = await sealValue(editValue, editEffectiveRecipients);
+		await updateObject(editSlug, value, editUsedBy, editKeepReadableCopy);
 		editOpen = false;
 		await invalidate('app:objects');
 		// An edit can introduce a consumer the directory page hasn't seen
@@ -217,10 +245,23 @@ async function confirmDelete() {
 						the consumers selected above - never sent in the clear.
 					</p>
 
-					{#if createRecipients.recipients.length === 0}
+					{#if data.ownerPublicKey}
+						<div class="mb-3 flex items-center gap-2">
+							<Checkbox
+								id="create-keep-readable-copy"
+								bind:checked={createKeepReadableCopy}
+							/>
+							<Label for="create-keep-readable-copy">
+								Keep a readable copy for yourself
+							</Label>
+						</div>
+					{/if}
+
+					{#if createEffectiveRecipients.length === 0}
 						<p role="alert" class="mb-3 font-bold text-warning">
-							Add at least one consumer with a registered public key - a
-							secret sealed to nobody could never be decrypted.
+							Add at least one consumer with a registered public key, or keep
+							a readable copy for yourself - a secret sealed to nobody could
+							never be decrypted.
 						</p>
 					{/if}
 
@@ -232,7 +273,7 @@ async function confirmDelete() {
 						<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
 							Cancel
 						</Dialog.Close>
-						<Button type="submit" disabled={createRecipients.recipients.length === 0}>
+						<Button type="submit" disabled={createEffectiveRecipients.length === 0}>
 							Create
 						</Button>
 					</Dialog.Footer>
@@ -349,10 +390,20 @@ async function confirmDelete() {
 				the consumers selected above - never sent in the clear.
 			</p>
 
-			{#if editRecipients.recipients.length === 0}
+			{#if data.ownerPublicKey}
+				<div class="mb-3 flex items-center gap-2">
+					<Checkbox id="edit-keep-readable-copy" bind:checked={editKeepReadableCopy} />
+					<Label for="edit-keep-readable-copy">
+						Keep a readable copy for yourself
+					</Label>
+				</div>
+			{/if}
+
+			{#if editEffectiveRecipients.length === 0}
 				<p role="alert" class="mb-3 font-bold text-warning">
-					Add at least one consumer with a registered public key - a secret
-					sealed to nobody could never be decrypted.
+					Add at least one consumer with a registered public key, or keep a
+					readable copy for yourself - a secret sealed to nobody could never
+					be decrypted.
 				</p>
 			{/if}
 
@@ -364,7 +415,7 @@ async function confirmDelete() {
 				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
 					Cancel
 				</Dialog.Close>
-				<Button type="submit" disabled={editRecipients.recipients.length === 0}>
+				<Button type="submit" disabled={editEffectiveRecipients.length === 0}>
 					Save
 				</Button>
 			</Dialog.Footer>

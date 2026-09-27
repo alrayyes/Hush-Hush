@@ -25,7 +25,7 @@ func TestCreateObjectRoundTripsUnchanged(t *testing.T) {
 	ctx := context.Background()
 
 	value := []byte("sealed-ciphertext")
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", value, []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", value, []string{"homelab/vps-docker"}, "", ""))
 
 	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestCreateObjectWithoutUsedBy(t *testing.T) {
 	s := openTestStore(t)
 	ctx := context.Background()
 
-	require.NoError(t, s.CreateObject(ctx, "no_consumers_yet", []byte("v"), nil, ""))
+	require.NoError(t, s.CreateObject(ctx, "no_consumers_yet", []byte("v"), nil, "", ""))
 
 	obj, err := s.GetObject(ctx, "no_consumers_yet")
 	require.NoError(t, err)
@@ -52,9 +52,9 @@ func TestCreateObjectRejectsDuplicateID(t *testing.T) {
 	s := openTestStore(t)
 	ctx := context.Background()
 
-	require.NoError(t, s.CreateObject(ctx, "dup", []byte("first"), nil, ""))
+	require.NoError(t, s.CreateObject(ctx, "dup", []byte("first"), nil, "", ""))
 
-	err := s.CreateObject(ctx, "dup", []byte("second"), nil, "")
+	err := s.CreateObject(ctx, "dup", []byte("second"), nil, "", "")
 	require.ErrorIs(t, err, store.ErrAlreadyExists)
 
 	// The original value must survive the rejected create.
@@ -69,7 +69,7 @@ func TestCreateObjectWithDescriptionRoundTrips(t *testing.T) {
 	s := openTestStore(t)
 	ctx := context.Background()
 
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("v"), nil, "prod deploy webhook"))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("v"), nil, "prod deploy webhook", ""))
 
 	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
 	require.NoError(t, err)
@@ -82,11 +82,31 @@ func TestCreateObjectWithoutDescription(t *testing.T) {
 	s := openTestStore(t)
 	ctx := context.Background()
 
-	require.NoError(t, s.CreateObject(ctx, "no_description_yet", []byte("v"), nil, ""))
+	require.NoError(t, s.CreateObject(ctx, "no_description_yet", []byte("v"), nil, "", ""))
 
 	obj, err := s.GetObject(ctx, "no_description_yet")
 	require.NoError(t, err)
 	require.Empty(t, obj.Description)
+}
+
+// TestCreateObjectRecordsOwner covers specs/secret-objects/spec.md's
+// "Owner recorded from the creating session" scenario at the store layer:
+// CreateObject's ownerID parameter lands in the stored row, readable back
+// via GetObject.
+func TestCreateObjectRecordsOwner(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	userID, err := s.CurrentUserID(ctx)
+	require.NoError(t, err)
+
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("v"), nil, "", userID))
+
+	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
+	require.NoError(t, err)
+	require.Equal(t, userID, obj.OwnerID)
 }
 
 func TestGetObjectUnknownID(t *testing.T) {
@@ -103,7 +123,7 @@ func TestUpdateObjectPreservesUsedByWhenNotSpecified(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, "", ""))
 
 	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), nil))
 
@@ -118,7 +138,7 @@ func TestUpdateObjectReplacesUsedByWhenSpecified(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, "", ""))
 
 	usedBy := []string{"ci", "homelab/nas"}
 	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), &usedBy))
@@ -133,7 +153,7 @@ func TestUpdateObjectClearsUsedByWithEmptySlice(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, "", ""))
 
 	empty := []string{}
 	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), &empty))
@@ -148,7 +168,7 @@ func TestUpdateObjectPreservesDescription(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "prod deploy webhook"))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "prod deploy webhook", ""))
 
 	require.NoError(t, s.UpdateObject(ctx, "mattermost_deploy_webhook", []byte("new"), nil))
 
@@ -171,7 +191,7 @@ func TestDeleteObjectRemovesIt(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("v"), nil, ""))
+	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("v"), nil, "", ""))
 
 	require.NoError(t, s.DeleteObject(ctx, "mattermost_deploy_webhook"))
 
@@ -193,8 +213,8 @@ func TestListObjectsReturnsEveryObjectSortedBySlug(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "zeta", []byte("v"), nil, ""))
-	require.NoError(t, s.CreateObject(ctx, "alpha", []byte("v"), []string{"homelab/vps-docker"}, "prod deploy webhook"))
+	require.NoError(t, s.CreateObject(ctx, "zeta", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "alpha", []byte("v"), []string{"homelab/vps-docker"}, "prod deploy webhook", ""))
 
 	objs, err := s.ListObjects(ctx, store.ObjectFilter{})
 	require.NoError(t, err)
@@ -220,8 +240,8 @@ func TestListObjectsFiltersByUsedBy(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "shared_by_two", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "unrelated", []byte("v"), []string{"homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "shared_by_two", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "unrelated", []byte("v"), []string{"homelab/mattermost"}, "", ""))
 
 	objs, err := s.ListObjects(ctx, store.ObjectFilter{UsedBy: "homelab/vps-docker"})
 	require.NoError(t, err)
@@ -244,8 +264,8 @@ func TestListConsumersReturnsEachDistinctNameOnce(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/mattermost"}, "", ""))
 
 	consumers, err := s.ListConsumers(ctx)
 	require.NoError(t, err)
@@ -260,10 +280,10 @@ func seedConsumerFixture(t *testing.T, s *store.Store) {
 	t.Helper()
 
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/mattermost", "homelab/vps-docker"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"homelab/mattermost", "homelab/nas"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "d", []byte("v"), []string{"work/ci-runner"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/mattermost", "homelab/vps-docker"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"homelab/mattermost", "homelab/nas"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "d", []byte("v"), []string{"work/ci-runner"}, "", ""))
 }
 
 func TestListConsumersPageFiltersByNameSubstringCaseInsensitive(t *testing.T) {
@@ -333,8 +353,8 @@ func TestListConsumersPageEscapesLikeWildcardsInTheFilter(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab_prod"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelabXprod"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab_prod"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelabXprod"}, "", ""))
 
 	page, err := s.ListConsumersPage(ctx, store.ConsumerFilter{Name: "homelab_prod", Page: 1, PageSize: 10})
 	require.NoError(t, err)
@@ -346,9 +366,9 @@ func TestRenameConsumerUpdatesEveryObject(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/vps-docker"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"other"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"other"}, "", ""))
 
 	entry, err := s.RenameConsumer(ctx, "homelab/vps-docker", "homelab/vps-docker-2")
 	require.NoError(t, err)
@@ -379,9 +399,9 @@ func TestRenameConsumerMergesIntoAnExistingTarget(t *testing.T) {
 	// "b" already records both names - the rename must merge to one
 	// entry rather than violating used_by's (object_id, consumer)
 	// primary key.
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"old"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"old", "new"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"new"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"old"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"old", "new"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"new"}, "", ""))
 
 	entry, err := s.RenameConsumer(ctx, "old", "new")
 	require.NoError(t, err)
@@ -397,7 +417,7 @@ func TestRenameConsumerToItselfIsANoOp(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
 
 	entry, err := s.RenameConsumer(ctx, "homelab/vps-docker", "homelab/vps-docker")
 	require.NoError(t, err)
@@ -422,8 +442,8 @@ func TestDeleteConsumerRemovesFromEveryObject(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker", "other"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker", "other"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
 
 	require.NoError(t, s.DeleteConsumer(ctx, "homelab/vps-docker"))
 
@@ -485,7 +505,7 @@ func TestAddConsumerRejectsNameAlreadyUsedByAnObject(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
 
 	err := s.AddConsumer(ctx, "homelab/vps-docker")
 	require.ErrorIs(t, err, store.ErrConsumerAlreadyExists)
@@ -531,7 +551,7 @@ func TestSetConsumerPublicKeyRoundTripsForAConsumerOnlyKnownViaUsedBy(t *testing
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
 
 	entry, err := s.SetConsumerPublicKey(ctx, "homelab/vps-docker", "age1exampleplaceholderpublickey")
 	require.NoError(t, err)
@@ -552,7 +572,7 @@ func TestListConsumersPageOmitsPublicKeyWhenNoneRegistered(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
 
 	page, err := s.ListConsumersPage(ctx, store.ConsumerFilter{Page: 1, PageSize: 10})
 	require.NoError(t, err)
@@ -594,7 +614,7 @@ func TestRenameConsumerCarriesOverTheOldNamesPublicKey(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
 	_, err := s.SetConsumerPublicKey(ctx, "homelab/vps-docker", "age1original")
 	require.NoError(t, err)
 
@@ -612,8 +632,8 @@ func TestRenameConsumerMergeKeepsTheTargetsOwnPublicKey(t *testing.T) {
 
 	s := openTestStore(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"old"}, ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"new"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"old"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"new"}, "", ""))
 	_, err := s.SetConsumerPublicKey(ctx, "old", "age1old")
 	require.NoError(t, err)
 	_, err = s.SetConsumerPublicKey(ctx, "new", "age1new")

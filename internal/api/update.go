@@ -16,6 +16,12 @@ import (
 type UpdateObjectRequest struct {
 	Value  []byte    `json:"value"`
 	UsedBy *[]string `json:"used_by,omitempty"`
+	// KeepReadableCopy is the same per-request owner-recipient opt-in
+	// CreateObjectRequest carries - see its own doc comment. An update
+	// reseals the whole value from scratch, so this is evaluated fresh
+	// each time, independent of whatever an earlier create or update on
+	// this same object requested.
+	KeepReadableCopy bool `json:"keep_readable_copy,omitempty"`
 }
 
 // handleUpdateObject replaces an object's sealed value, leaving its slug and
@@ -67,6 +73,9 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description})
+		writeJSON(w, http.StatusOK, ObjectMetadata{
+			Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description,
+			KeepReadableCopy: req.KeepReadableCopy,
+		})
 	}
 }

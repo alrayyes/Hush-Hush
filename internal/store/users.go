@@ -86,6 +86,24 @@ func (s *Store) CurrentUserID(ctx context.Context) (string, error) {
 	return id, nil
 }
 
+// CurrentUserPublicKey returns the sole existing user's escrowed writer
+// identity public key - the age recipient string the web UI offers as an
+// additional sealing recipient when the owner-recipient opt-in checkbox is
+// checked (openspec/changes/client-side-encryption/specs/secret-objects/
+// spec.md's "Opt-in owner-recipient inclusion at create time" requirement).
+// Empty if the sole user hasn't completed a first registration yet (no
+// escrowed identity generated - SetUserEscrow never called), never an
+// error for that case: there's nothing wrong, just nothing to offer yet.
+func (s *Store) CurrentUserPublicKey(ctx context.Context) (string, error) {
+	var publicKey sql.NullString
+
+	if err := s.db.QueryRowContext(ctx, `SELECT public_key FROM users LIMIT 1`).Scan(&publicKey); err != nil {
+		return "", fmt.Errorf("select current user public key: %w", err)
+	}
+
+	return publicKey.String, nil
+}
+
 // SetUserEscrow records the escrowed writer identity's public key and its
 // recovery-phrase-wrapped private key copy against id, once
 // (openspec/changes/client-side-encryption/specs/users/spec.md's

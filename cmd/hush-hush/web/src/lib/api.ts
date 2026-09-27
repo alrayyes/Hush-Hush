@@ -128,6 +128,19 @@ export async function getAuthStatus(): Promise<boolean> {
 	return body.bootstrapped;
 }
 
+// getOwnerIdentity returns the calling session's own escrowed identity
+// public key, or undefined if that account hasn't completed a first
+// registration yet - what the create/edit dialog's owner-recipient opt-in
+// checkbox offers as an additional sealing recipient when checked
+// (openspec/changes/client-side-encryption/specs/secret-objects/spec.md's
+// "Opt-in owner-recipient inclusion at create time" requirement).
+export async function getOwnerIdentity(): Promise<string | undefined> {
+	const res = await request('/auth/identity');
+	const body = (await res.json()) as { public_key?: string };
+
+	return body.public_key;
+}
+
 // checkSession reports whether the current visitor holds a valid session,
 // via a session-gated endpoint that carries no secret data of its own -
 // there's no dedicated "who am I" endpoint to call instead.
@@ -291,6 +304,13 @@ export interface CreateObjectRequest {
 	value: string;
 	description?: string;
 	used_by?: string[];
+	// keep_readable_copy requests that the owner's own escrowed identity
+	// public key be included as an additional sealing recipient -
+	// api/openapi.yaml's KeepReadableCopy schema. This is a request-shape
+	// field only: the server never adds the recipient itself, so the
+	// caller has to have already added the owner's public key
+	// (getOwnerIdentity) to value's own recipients before sealing it.
+	keep_readable_copy?: boolean;
 }
 
 export async function createObject(
@@ -308,6 +328,7 @@ export async function updateObject(
 	slug: string,
 	value: string,
 	usedBy?: string[],
+	keepReadableCopy?: boolean,
 ): Promise<ObjectMetadata> {
 	const res = await request(`/objects/${encodeURIComponent(slug)}`, {
 		method: 'PUT',
@@ -315,10 +336,14 @@ export async function updateObject(
 		// caller doesn't pass it - api/openapi.yaml's UpdateObjectRequest
 		// treats an absent used_by as "leave it as it is" and an empty
 		// array as "clear it", so those two have to stay distinguishable
-		// on the wire.
-		body: JSON.stringify(
-			usedBy === undefined ? { value } : { value, used_by: usedBy },
-		),
+		// on the wire. keep_readable_copy has no such distinction to make
+		// (CreateObjectRequest's own doc comment) - always sent as a plain
+		// boolean.
+		body: JSON.stringify({
+			value,
+			...(usedBy === undefined ? {} : { used_by: usedBy }),
+			keep_readable_copy: keepReadableCopy ?? false,
+		}),
 	});
 
 	return res.json();

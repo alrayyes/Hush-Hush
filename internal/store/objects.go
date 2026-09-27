@@ -43,16 +43,26 @@ type Object struct {
 	Value       []byte
 	UsedBy      []string
 	Description string
+	// OwnerID is the users row that created this object, captured once at
+	// creation (specs/secret-objects/spec.md's "Owner recorded from the
+	// creating session" scenario) - accountability and audit metadata
+	// only, per design.md's "owner_id is accountability metadata, not an
+	// access-control mechanism" decision: it never makes the owner a
+	// decrypt recipient by itself. Empty for a pre-existing row from
+	// before this field started being set, until store.go's
+	// backfillOwnership backfills it.
+	OwnerID string
 }
 
 // CreateObject stores a new object under a freshly generated internal id,
-// addressable afterward by slug. description is fixed at creation, the
-// same as usedBy - there is no way to change it later
-// (specs/secret-objects/spec.md). It returns ErrAlreadyExists if an object
-// already exists under that slug - existence is checked and the insert
-// performed in the same transaction, so this is race-safe against
-// concurrent creates under the same slug.
-func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description string) error {
+// addressable afterward by slug, recording ownerID as its owner.
+// description is fixed at creation, the same as usedBy and ownerID -
+// there is no way to change any of them later (specs/secret-objects/
+// spec.md). It returns ErrAlreadyExists if an object already exists under
+// that slug - existence is checked and the insert performed in the same
+// transaction, so this is race-safe against concurrent creates under the
+// same slug.
+func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -74,8 +84,8 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO objects (id, slug, value, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		id, slug, value, description, now, now,
+		`INSERT INTO objects (id, slug, value, description, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		id, slug, value, description, sql.NullString{String: ownerID, Valid: ownerID != ""}, now, now,
 	); err != nil {
 		return fmt.Errorf("insert object: %w", err)
 	}
@@ -100,13 +110,15 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 // It returns ErrNotFound if no object exists under that slug.
 func (s *Store) GetObject(ctx context.Context, slug string) (Object, error) {
 	obj := Object{Slug: slug}
+	var ownerID sql.NullString
 
-	switch err := s.db.QueryRowContext(ctx, `SELECT id, value, description FROM objects WHERE slug = ?`, slug).Scan(&obj.ID, &obj.Value, &obj.Description); {
+	switch err := s.db.QueryRowContext(ctx, `SELECT id, value, description, owner_id FROM objects WHERE slug = ?`, slug).Scan(&obj.ID, &obj.Value, &obj.Description, &ownerID); {
 	case errors.Is(err, sql.ErrNoRows):
 		return Object{}, ErrNotFound
 	case err != nil:
 		return Object{}, fmt.Errorf("select object: %w", err)
 	}
+	obj.OwnerID = ownerID.String
 
 	usedBy, err := s.usedByFor(ctx, obj.ID)
 	if err != nil {
