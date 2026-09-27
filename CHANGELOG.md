@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.39.0](https://github.com/alrayyes/Hush-Hush/compare/v2.38.1...v2.39.0) (2026-09-27)
+
+
+### Features
+
+* **web-ui:** human-readable timestamps everywhere ([#430](https://github.com/alrayyes/Hush-Hush/issues/430)) ([670e924](https://github.com/alrayyes/Hush-Hush/commit/670e924b595e92a0209a907144fd7329c9602dad))
+* **web-ui:** link secret consumers to the directory, chip the used-by filter ([#431](https://github.com/alrayyes/Hush-Hush/issues/431)) ([b04b5eb](https://github.com/alrayyes/Hush-Hush/commit/b04b5eb911bbc583ee4f6eee58e2c0b53ae7d3d9))
+* **web-ui:** render the license as a real content page ([#435](https://github.com/alrayyes/Hush-Hush/issues/435)) ([b9e1ff5](https://github.com/alrayyes/Hush-Hush/commit/b9e1ff58fac6b4a2d28478d7f4f301582cd7de56))
+
+
+### Bug Fixes
+
+* **web-ui:** disclaimer and privacy body text reads too small ([#436](https://github.com/alrayyes/Hush-Hush/issues/436)) ([9af762c](https://github.com/alrayyes/Hush-Hush/commit/9af762c586a65ea11abf9eabc5d5c2a423f1c985))
+
 ## [2.38.1](https://github.com/alrayyes/Hush-Hush/compare/v2.38.0...v2.38.1) (2026-09-27)
 
 
