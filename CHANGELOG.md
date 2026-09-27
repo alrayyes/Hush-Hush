@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.37.1](https://github.com/alrayyes/Hush-Hush/compare/v2.37.0...v2.37.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **web-ui:** dismiss the recovery-phrase dialog in the screenshots script ([#420](https://github.com/alrayyes/Hush-Hush/issues/420)) ([552baaa](https://github.com/alrayyes/Hush-Hush/commit/552baaa8f1deca3944cd3b5eda3d4f17097e2215)), closes [#419](https://github.com/alrayyes/Hush-Hush/issues/419)
+
 ## [2.37.0](https://github.com/alrayyes/Hush-Hush/compare/v2.36.1...v2.37.0) (2026-09-27)
 
 
