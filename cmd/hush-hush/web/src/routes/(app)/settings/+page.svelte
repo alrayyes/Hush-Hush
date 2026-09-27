@@ -16,6 +16,7 @@ import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
+import { formatTimestamp } from '$lib/datetime';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -250,8 +251,20 @@ function closeRotate() {
 				{#each data.credentials as credential (credential.id)}
 					<tr>
 						<td data-label="Nickname">{credential.nickname ?? ''}</td>
-						<td data-label="Added">{credential.created_at}</td>
-						<td data-label="Last used">{credential.last_used_at ?? 'never'}</td>
+						<td data-label="Added">
+							<time datetime={credential.created_at} title={credential.created_at}>
+								{formatTimestamp(credential.created_at)}
+							</time>
+						</td>
+						<td data-label="Last used">
+							{#if credential.last_used_at}
+								<time datetime={credential.last_used_at} title={credential.last_used_at}>
+									{formatTimestamp(credential.last_used_at)}
+								</time>
+							{:else}
+								never
+							{/if}
+						</td>
 						<td data-label="Actions" class="row-actions gap-3">
 							<Button
 								variant="outline"
@@ -368,9 +381,25 @@ function closeRotate() {
 					<tr>
 						<td data-label="Description">{token.description}</td>
 						<td data-label="Owner">{token.owner ?? 'cli'}</td>
-						<td data-label="Created">{token.created_at}</td>
-						<td data-label="Expires">{token.expires_at}</td>
-						<td data-label="Last used">{token.last_used_at ?? 'never'}</td>
+						<td data-label="Created">
+							<time datetime={token.created_at} title={token.created_at}>
+								{formatTimestamp(token.created_at)}
+							</time>
+						</td>
+						<td data-label="Expires">
+							<time datetime={token.expires_at} title={token.expires_at}>
+								{formatTimestamp(token.expires_at)}
+							</time>
+						</td>
+						<td data-label="Last used">
+							{#if token.last_used_at}
+								<time datetime={token.last_used_at} title={token.last_used_at}>
+									{formatTimestamp(token.last_used_at)}
+								</time>
+							{:else}
+								never
+							{/if}
+						</td>
 						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
 						<td data-label="Actions" class="row-actions gap-3">
 							{#if !token.revoked}
