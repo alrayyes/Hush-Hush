@@ -86,21 +86,50 @@ async function main() {
 			// login - a passkey has no username/password form Lighthouse's
 			// usual auth recipes assume, so an authenticated audit has to
 			// drive the actual WebAuthn ceremony rather than skip it.
-			const client = await context.newCDPSession(page);
-			await client.send('WebAuthn.enable');
-			await client.send('WebAuthn.addVirtualAuthenticator', {
-				options: {
-					protocol: 'ctap2',
-					transport: 'internal',
-					hasResidentKey: true,
-					hasUserVerification: true,
-					isUserVerified: true,
-				},
-			});
-			await page.getByRole('button', { name: 'Register passkey' }).click();
-			await page.waitForURL('/');
+			//
+			// This whole block is best-effort, not fatal like the rest of
+			// main(): playAudit opens its own CDP connection over the same
+			// remote-debugging port this browser was launched with, and
+			// that appears to sometimes leave a CDP-registered virtual
+			// authenticator non-functional on whatever page it touches
+			// next - the "Register passkey" click still fires but the
+			// ceremony it starts never completes, hanging until
+			// waitForURL's timeout (found live, reproducible, root cause
+			// not yet pinned down - reordering the CDP setup earlier and
+			// isolating the audited pages onto separate targets each
+			// failed to fix it locally, though the exact same registration
+			// flow passes reliably in journey.spec.ts's own Playwright
+			// suite). This check is documented as warn-only
+			// (rules/browser-compat.md) - a failure to even drive the
+			// authenticated half shouldn't hard-fail the build any more
+			// than a missed threshold does, so it's caught and reported
+			// the same way rather than propagating to main()'s own
+			// process.exit(1).
+			try {
+				const client = await context.newCDPSession(page);
+				await client.send('WebAuthn.enable');
+				await client.send('WebAuthn.addVirtualAuthenticator', {
+					options: {
+						protocol: 'ctap2',
+						transport: 'internal',
+						hasResidentKey: true,
+						hasUserVerification: true,
+						isUserVerified: true,
+					},
+				});
+				await page.getByRole('button', { name: 'Register passkey' }).click();
+				await page.waitForURL('/');
 
-			await auditPage(page, '/ (secrets overview)');
+				await auditPage(page, '/ (secrets overview)');
+			} catch (err) {
+				console.warn(
+					'\n[lighthouse] could not complete the authenticated audit ' +
+						'(/, secrets overview) - treating as a warning, not a ' +
+						'build failure:',
+					err,
+					'\n',
+				);
+			}
 		} finally {
 			await browser.close();
 		}
