@@ -41,19 +41,19 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      # wretry.action exposes a single `outputs` output - the wrapped
-      # action's own named outputs collected into one JSON map, parsed
-      # back out with fromJSON rather than addressed directly by name.
-      release_created: ${{ fromJSON(steps.release.outputs.outputs).release_created }}
-      tag_name: ${{ fromJSON(steps.release.outputs.outputs).tag_name }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      # Retries the whole action 3x on a transient GitHub API failure
-      # (rate limit, secondary abuse-detection response) rather than
-      # treating it as a finding to chase down by hand each time -
-      # rules/releases.md's "Retry a release job through GitHub's
-      # transient rate limit". release-please-action is a `uses:` step,
-      # so it needs wretry.action's `action:`/`with:` wrapping rather
-      # than nick-fields/retry, which only ever runs a shell command.
+      # Was Wandalen/wretry.action-wrapped for the transient-rate-limit
+      # retry rules/releases.md documents - dropped for now because that
+      # wrapper's nested-action composition doesn't actually invoke
+      # release-please-action at all under GitHub's forced Node 20->24
+      # runtime (2025-09-19 deprecation): the step reports success with
+      # zero output and no release ever gets cut. No fixed wretry.action
+      # release exists upstream (Wandalen/wretry.action#193, still open;
+      # the one PR attempting it, #194, closed unmerged) - same diagnosis
+      # as hush-hush-go#103 and its siblings. Re-add the wrapper once
+      # upstream ships a Node 24-compatible release.
       #
       # RELEASE_TOKEN (a personal-account PAT), not a GitHub App
       # installation token: #410 tried the latter for its own,
@@ -61,14 +61,10 @@ jobs:
       # App-installation/permissions gap that left release-please
       # silently doing nothing - reverted back to the token that's
       # known to work.
-      - uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          action: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-          with: |
-            token: ${{ secrets.RELEASE_TOKEN }}
-          attempt_limit: 3
-          attempt_delay: 10000
+          token: ${{ secrets.RELEASE_TOKEN }}
 
   # Each SDK repo's own codegen.yml already listens for this event
   # alongside its daily cron poll of the spec (alrayyes/hush-hush-go#65 and
