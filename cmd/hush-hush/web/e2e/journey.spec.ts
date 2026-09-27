@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import * as age from 'age-encryption';
+import { unwrapIdentityWithRecoveryPhrase } from '../src/lib/identity';
 
 // alrayyes/hush-hush#272: /audit-log is both a SvelteKit page route and a
 // real backend API endpoint, and Go's mux used to route a hard
@@ -103,6 +104,23 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		},
 	});
 
+	// Captured here so tasks.md's 5.2 e2e coverage below can recover the
+	// same escrowed identity registration just generated, entirely through
+	// its own public break-glass surface (the phrase this page displays,
+	// and the recovery-wrapped copy the client already sends the server as
+	// part of this exact request) - never by reaching into the page's own
+	// in-memory state, which the app never exposes past this request
+	// either.
+	let registerFinishBody: { recovery_wrapped_identity?: string } | null = null;
+	page.on('request', (request) => {
+		if (
+			request.method() === 'POST' &&
+			new URL(request.url()).pathname === '/auth/register/finish'
+		) {
+			registerFinishBody = request.postDataJSON();
+		}
+	});
+
 	await page.goto('/login');
 	await page.getByRole('button', { name: 'Register passkey' }).click();
 
@@ -110,6 +128,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// identity's break-glass recovery phrase exactly once, before the
 	// login page navigates onward - closeRecoveryPhrase (login/+page.svelte)
 	// is what actually navigates to "/", not the registration itself.
+	const recoveryPhraseField = page.getByLabel('Recovery phrase', {
+		exact: true,
+	});
+	await expect(recoveryPhraseField).not.toHaveValue('');
+	const recoveryPhrase = await recoveryPhraseField.inputValue();
+
 	await page
 		.getByRole('button', { name: "I've saved it" })
 		.click({ timeout: 10_000 });
@@ -451,6 +475,82 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page.getByText('object: mattermost_deploy_webhook')).toHaveCount(
 		0,
 	);
+
+	// tasks.md's 5.2: the owner-recipient opt-in checkbox. Recovering the
+	// escrowed identity generated at registration above, through its own
+	// public break-glass surface (the recovery phrase and the
+	// recovery-wrapped copy captured then) - never through anything the
+	// app exposes to a decrypt UI, since it has none yet.
+	if (!registerFinishBody?.recovery_wrapped_identity) {
+		throw new Error(
+			'registration never sent a recovery-wrapped identity to unwrap',
+		);
+	}
+	const ownerIdentity = await unwrapIdentityWithRecoveryPhrase(
+		registerFinishBody.recovery_wrapped_identity,
+		recoveryPhrase,
+	);
+
+	await nav.getByRole('link', { name: 'Secrets' }).click();
+	await expect(page.getByRole('button', { name: 'New secret' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'New secret' }).click();
+	await expect(page.getByLabel('Id')).toBeFocused();
+	const ownerOptInValue = 'grafana admin console password';
+	await page.locator('#create-id').fill('grafana_admin_password');
+	await page.locator('#create-value').fill(ownerOptInValue);
+	// No consumer picked - the checkbox alone is what makes this
+	// decryptable at all (specs/secret-objects/spec.md's "Opt-in
+	// owner-recipient inclusion at create time" requirement, tested here
+	// in isolation from any consumer recipient).
+	await page.getByLabel('Keep a readable copy for yourself').click();
+	await page.getByRole('button', { name: 'Create' }).click();
+	await page.getByRole('button', { name: 'New secret' }).waitFor();
+
+	const grafanaRow = page.getByRole('row', { name: /grafana_admin_password/ });
+	await grafanaRow.getByRole('button', { name: 'View' }).click();
+	const grafanaViewDialog = page.getByRole('dialog', {
+		name: 'grafana_admin_password',
+	});
+	const grafanaCiphertextField = grafanaViewDialog.getByLabel(
+		'Ciphertext (base64)',
+	);
+	await expect(grafanaCiphertextField).not.toHaveValue('');
+	const grafanaCiphertext = await grafanaCiphertextField.inputValue();
+	const grafanaSealedBytes = Uint8Array.from(atob(grafanaCiphertext), (c) =>
+		c.charCodeAt(0),
+	);
+
+	const ownerDecrypter = new age.Decrypter();
+	ownerDecrypter.addIdentity(ownerIdentity);
+	const grafanaDecrypted = await ownerDecrypter.decrypt(
+		grafanaSealedBytes,
+		'text',
+	);
+	expect(grafanaDecrypted).toBe(ownerOptInValue);
+	await grafanaViewDialog.getByRole('button', { name: 'Close' }).click();
+
+	// The owner never opted into mattermost_deploy_webhook - the same
+	// escrowed identity must not be able to decrypt it
+	// (specs/secret-objects/spec.md's "Owner recipient is not the
+	// default" scenario), fetched fresh rather than reusing the value
+	// captured before its own edits above.
+	const mattermostRow = page.getByRole('row', {
+		name: /mattermost_deploy_webhook/,
+	});
+	await mattermostRow.getByRole('button', { name: 'View' }).click();
+	await expect(ciphertextField).not.toHaveValue('');
+	const currentMattermostCiphertext = await ciphertextField.inputValue();
+	const currentMattermostBytes = Uint8Array.from(
+		atob(currentMattermostCiphertext),
+		(c) => c.charCodeAt(0),
+	);
+	const nonOptInDecrypter = new age.Decrypter();
+	nonOptInDecrypter.addIdentity(ownerIdentity);
+	await expect(
+		nonOptInDecrypter.decrypt(currentMattermostBytes, 'text'),
+	).rejects.toThrow();
+	await viewDialog.getByRole('button', { name: 'Close' }).click();
 
 	// Settings: passkey and bearer-token management, and the only
 	// authenticated page area rules/a11y.md's "every page a journey test

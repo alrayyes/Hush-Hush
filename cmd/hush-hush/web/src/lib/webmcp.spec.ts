@@ -48,7 +48,7 @@ describe('the list_objects tool', () => {
 		const registerTool = vi.fn().mockResolvedValue(undefined);
 		document.modelContext = { registerTool };
 		const objects: ObjectMetadata[] = [
-			{ id: 'a', used_by: ['homelab/vps-docker'] },
+			{ slug: 'a', used_by: ['homelab/vps-docker'] },
 		];
 		listObjects.mockResolvedValue(objects);
 
@@ -85,12 +85,15 @@ describe('the list_objects tool', () => {
 });
 
 describe('the get_object_metadata tool', () => {
-	it('resolves one object by id from the full list', async () => {
+	it('resolves one object by slug from the full list', async () => {
 		const registerTool = vi.fn().mockResolvedValue(undefined);
 		document.modelContext = { registerTool };
 		const objects: ObjectMetadata[] = [
-			{ id: 'mattermost_deploy_webhook', description: 'prod deploy webhook' },
-			{ id: 'other' },
+			{
+				slug: 'mattermost_deploy_webhook',
+				description: 'prod deploy webhook',
+			},
+			{ slug: 'other' },
 		];
 		listObjects.mockResolvedValue(objects);
 
@@ -100,13 +103,15 @@ describe('the get_object_metadata tool', () => {
 		const getTool = registerTool.mock.calls.find(
 			([tool]) => tool.name === 'get_object_metadata',
 		)?.[0];
-		const result = await getTool.execute({ id: 'mattermost_deploy_webhook' });
+		const result = await getTool.execute({
+			slug: 'mattermost_deploy_webhook',
+		});
 
 		expect(listObjects).toHaveBeenCalledWith();
 		expect(result).toEqual(objects[0]);
 	});
 
-	it('throws a clear error for an unknown id', async () => {
+	it('throws a clear error for an unknown slug', async () => {
 		const registerTool = vi.fn().mockResolvedValue(undefined);
 		document.modelContext = { registerTool };
 		listObjects.mockResolvedValue([]);
@@ -118,7 +123,7 @@ describe('the get_object_metadata tool', () => {
 			([tool]) => tool.name === 'get_object_metadata',
 		)?.[0];
 
-		await expect(getTool.execute({ id: 'does-not-exist' })).rejects.toThrow(
+		await expect(getTool.execute({ slug: 'does-not-exist' })).rejects.toThrow(
 			'get_object_metadata: unknown object: does-not-exist',
 		);
 	});

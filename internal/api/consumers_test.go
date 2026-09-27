@@ -17,8 +17,8 @@ func TestListConsumersReturnsEachDistinctNameOnce(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(context.Background(), "b", []byte("v"), []string{"homelab/mattermost"}, ""))
+	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "b", []byte("v"), []string{"homelab/mattermost"}, "", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/consumers", nil)
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -75,9 +75,9 @@ func TestListConsumersWithASessionSucceeds(t *testing.T) {
 func seedConsumersFixture(t *testing.T, s *store.Store) {
 	t.Helper()
 
-	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(context.Background(), "b", []byte("v"), []string{"homelab/mattermost"}, ""))
-	require.NoError(t, s.CreateObject(context.Background(), "c", []byte("v"), []string{"work/ci-runner"}, ""))
+	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), []string{"homelab/vps-docker", "homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "b", []byte("v"), []string{"homelab/mattermost"}, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "c", []byte("v"), []string{"work/ci-runner"}, "", ""))
 }
 
 func TestListConsumersWithQFilterReturnsAPaginatedResponse(t *testing.T) {

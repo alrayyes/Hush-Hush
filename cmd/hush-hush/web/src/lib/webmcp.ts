@@ -15,7 +15,7 @@ interface ListObjectsInput {
 }
 
 interface GetObjectMetadataInput {
-	id: string;
+	slug: string;
 }
 
 export async function registerWebMCPTools(): Promise<void> {
@@ -27,7 +27,7 @@ export async function registerWebMCPTools(): Promise<void> {
 	await modelContext.registerTool<ListObjectsInput, ObjectMetadata[]>({
 		name: 'list_objects',
 		description:
-			"List every stored object's metadata (id, description, used_by) - never the sealed value. Optionally restricted to objects whose recorded used_by lineage includes a given consumer.",
+			"List every stored object's metadata (slug, description, used_by) - never the sealed value. Optionally restricted to objects whose recorded used_by lineage includes a given consumer.",
 		inputSchema: {
 			type: 'object',
 			properties: {
@@ -45,20 +45,20 @@ export async function registerWebMCPTools(): Promise<void> {
 	await modelContext.registerTool<GetObjectMetadataInput, ObjectMetadata>({
 		name: 'get_object_metadata',
 		description:
-			"Look up one stored object's metadata (id, description, used_by) by id - never the sealed value.",
+			"Look up one stored object's metadata (slug, description, used_by) by slug - never the sealed value.",
 		inputSchema: {
 			type: 'object',
 			properties: {
-				id: { type: 'string', description: "The object's id." },
+				slug: { type: 'string', description: "The object's slug." },
 			},
-			required: ['id'],
+			required: ['slug'],
 		},
 		execute: (input) =>
 			withToolErrors('get_object_metadata', async () => {
 				const objects = await listObjects();
-				const found = objects.find((object) => object.id === input.id);
+				const found = objects.find((object) => object.slug === input.slug);
 				if (!found) {
-					throw new Error(`unknown object: ${input.id}`);
+					throw new Error(`unknown object: ${input.slug}`);
 				}
 
 				return found;

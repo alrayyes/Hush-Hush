@@ -246,11 +246,9 @@ export async function unwrapIdentityWithPrf(
 
 // wrapIdentityWithRecoveryPhrase wraps the escrowed identity's private
 // key against the one-time recovery phrase - specs/users/spec.md's
-// "Break-glass recovery phrase" requirement. There is no matching
-// "unwrapIdentityWithRecoveryPhrase" export used anywhere yet: actually
-// recovering via the phrase is a future, separate UI flow (not part of
-// tasks.md group 3), but the wrap has to exist from day one since the
-// phrase itself is shown exactly once and never stored.
+// "Break-glass recovery phrase" requirement. The phrase itself is shown
+// exactly once and never stored, so the wrap has to exist from day one
+// even before any UI flow calls unwrapIdentityWithRecoveryPhrase below.
 export async function wrapIdentityWithRecoveryPhrase(
 	identity: string,
 	phrase: string,
@@ -260,6 +258,28 @@ export async function wrapIdentityWithRecoveryPhrase(
 		RECOVERY_WRAP_INFO,
 		new TextEncoder().encode(identity),
 	);
+}
+
+// unwrapIdentityWithRecoveryPhrase recovers the escrowed identity from its
+// recovery-phrase-wrapped copy - the symmetric counterpart to
+// wrapIdentityWithRecoveryPhrase above. Not called from any UI flow yet
+// (a break-glass "recover with your phrase" page is future work, not part
+// of tasks.md group 3 or 5), but cmd/hush-hush/web/e2e/journey.spec.ts
+// already exercises it directly: it's what lets that test recover the
+// same escrowed identity registration generated, to prove the
+// owner-recipient opt-in checkbox (tasks.md's 5.2) really does add it as
+// a decrypt recipient, and only when checked.
+export async function unwrapIdentityWithRecoveryPhrase(
+	wrapped: string,
+	phrase: string,
+): Promise<string> {
+	const bytes = await unwrapWithSecret(
+		recoveryPhraseSecret(phrase),
+		RECOVERY_WRAP_INFO,
+		wrapped,
+	);
+
+	return new TextDecoder().decode(bytes);
 }
 
 // prfSupportProbeExtension is the bare "prf":{} extension input this

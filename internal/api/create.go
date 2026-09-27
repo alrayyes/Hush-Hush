@@ -18,11 +18,23 @@ import (
 // is never part of this request, and never returned as something
 // addressable either (specs/secret-objects/spec.md's "Internal id
 // decoupled from user-facing slug" requirement, alrayyes/Hush-Hush#383).
+//
+// KeepReadableCopy opts the creating session's own user into being an
+// additional decrypt recipient, alongside whatever consumer recipients
+// the client already resolved (specs/secret-objects/spec.md's "Opt-in
+// owner-recipient inclusion at create time" requirement). It carries no
+// server-side effect beyond being echoed back in the response below: the
+// server never decrypts and never adds a sealing recipient itself - the
+// client is the one that has to add the owner's public key to Value's
+// recipients before sealing it, the same as it already does for every
+// resolved consumer. Omitting it (the default) means the owner was not
+// added as a recipient.
 type CreateObjectRequest struct {
-	Slug        string   `json:"slug"`
-	Value       []byte   `json:"value"`
-	UsedBy      []string `json:"used_by,omitempty"`
-	Description string   `json:"description,omitempty"`
+	Slug             string   `json:"slug"`
+	Value            []byte   `json:"value"`
+	UsedBy           []string `json:"used_by,omitempty"`
+	Description      string   `json:"description,omitempty"`
+	KeepReadableCopy bool     `json:"keep_readable_copy,omitempty"`
 }
 
 // ObjectMetadata is what a successful create, update, or list call
@@ -31,10 +43,18 @@ type CreateObjectRequest struct {
 // internal id is never returned as something a caller could address it
 // by (specs/secret-objects/spec.md's "An object's internal id is never
 // returned as an addressable value" scenario).
+//
+// KeepReadableCopy on a create or update response is exactly what that
+// same request asked for, nothing derived from storage - the server
+// doesn't persist this fact (there's nothing to persist: the sealing
+// recipient list itself, which the server never sees the contents of, is
+// the only observable effect), so a later GET/List call never carries
+// this field at all, only the create/update call that set it.
 type ObjectMetadata struct {
-	Slug        string   `json:"slug"`
-	UsedBy      []string `json:"used_by,omitempty"`
-	Description string   `json:"description,omitempty"`
+	Slug             string   `json:"slug"`
+	UsedBy           []string `json:"used_by,omitempty"`
+	Description      string   `json:"description,omitempty"`
+	KeepReadableCopy bool     `json:"keep_readable_copy,omitempty"`
 }
 
 // Error is the body every documented error response carries. Matches
@@ -58,7 +78,14 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		err := s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description)
+		ownerID, err := s.CurrentUserID(r.Context())
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		err = s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description, ownerID)
 		switch {
 		case err == nil:
 			actorType, actorID := actorFrom(r)
@@ -68,7 +95,10 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 				return
 			}
 
-			writeJSON(w, http.StatusCreated, ObjectMetadata{Slug: req.Slug, UsedBy: req.UsedBy, Description: req.Description})
+			writeJSON(w, http.StatusCreated, ObjectMetadata{
+				Slug: req.Slug, UsedBy: req.UsedBy, Description: req.Description,
+				KeepReadableCopy: req.KeepReadableCopy,
+			})
 		case errors.Is(err, store.ErrAlreadyExists):
 			writeError(w, r, http.StatusConflict, "object already exists")
 		default:
