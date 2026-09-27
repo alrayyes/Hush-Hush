@@ -8,7 +8,7 @@ import { Card, CardContent } from '$lib/components/ui/card/index.js';
 
 <main class="mx-auto my-8 max-w-160 px-4">
 	<h1>Disclaimer</h1>
-	<Card>
+	<Card class="text-base">
 		<CardContent>
 			<p>
 				hush-hush is self-hosted software: whoever runs this instance operates
