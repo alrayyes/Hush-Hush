@@ -141,3 +141,5 @@ topbar
 nowrap
 bits-ui
 bits-ui's
+webServer
+playwright-lighthouse

@@ -59,6 +59,51 @@ bun run lint:tailwind # oxlint + @shadcn/lint: Tailwind class usage
 bun run test          # vitest: unit tests for src/lib's pure logic
 ```
 
+### End-to-end and accessibility (Playwright + axe-core)
+
+```sh
+bun run build                        # e2e/server.sh runs the built output, not vite dev
+bunx playwright install --with-deps chromium  # once, or after a Playwright version bump
+bun run test:e2e
+```
+
+`e2e/journey.spec.ts` and `e2e/viewport.spec.ts` drive real Playwright
+journeys through the login page and every authenticated page area
+(secrets overview, consumers, audit log, settings) against
+`e2e/server.sh`'s real Go binary - `vite preview` alone returns a 500 for
+every route, since the app has no SSR and every page's own `+layout.ts` fetches
+`GET /healthz` at load. Login uses a Chromium CDP virtual authenticator to
+register a real passkey rather than a stubbed session, the same WebAuthn
+ceremony a real browser performs (`rules/a11y.md`). Each page a journey
+test reaches also gets an accessibility scan (`@axe-core/playwright`)
+against WCAG 2.1 AA (`wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa`) - any
+violation fails the run, same as CI's `e2e` job.
+
+### Performance and best-practices (Lighthouse)
+
+```sh
+bun run build
+bunx playwright install --with-deps chromium
+bun run lighthouse
+```
+
+`e2e/lighthouse.ts` runs a real Lighthouse audit (via
+`playwright-lighthouse`, reusing the same CDP virtual-authenticator login
+as the Playwright journey above) against `/login` and the secrets
+overview, checking only the `performance` and `best-practices` categories
+
+- SEO and PWA are skipped outright, not meaningful for a self-hosted
+  secrets UI with no public search presence or installable-app ambitions.
+  Unlike the axe-core scan above, a score under threshold only warns in the
+  terminal and in CI (`rules/browser-compat.md`'s "warn, don't fail the
+  build" default for a judgment-call check) - it never fails the command or
+  the pipeline.
+
+Both commands need a native Go toolchain on `PATH` (`e2e/server.sh` runs
+`go build` directly, not through Docker) - that's also why neither is
+part of the `pre-push` git hook, which otherwise never assumes one; see
+`lefthook.yml`'s `web-check` comment for the timed decision.
+
 ## WebMCP tools
 
 Once logged in, the page declares two [WebMCP](https://webmachinelearning.github.io/webmcp/)
