@@ -308,9 +308,10 @@ paths:
         call site depends on this shape staying unchanged. Given any of
         the three, it instead returns a `ConsumersPage`: one page of
         consumers whose name contains `q` (case-insensitive) when given,
-        each with a count of the secret objects that reference it, plus
-        the total matching count so a caller can render page-number
-        navigation.
+        each with a count of the secret objects that reference it and its
+        registered age public key when one has been set (absent
+        otherwise), plus the total matching count so a caller can render
+        page-number navigation.
       tags: [consumers]
       security:
         - bearerAuth: []
@@ -345,7 +346,8 @@ paths:
           description: |
             Every distinct consumer name (no parameters given), or one
             page of consumers matching the filter, each with its secret
-            count, plus the total matching count (any parameter given).
+            count and registered public key (if any), plus the total
+            matching count (any parameter given).
           content:
             application/json:
               schema:
@@ -366,6 +368,7 @@ paths:
                         secret_count: 2
                       - name: homelab/vps-docker
                         secret_count: 1
+                        public_key: age1exampleplaceholderpublickey
                     total: 2
         "400":
           $ref: "#/components/responses/BadRequest"
@@ -416,19 +419,29 @@ paths:
 
   /consumers/{name}:
     patch:
-      operationId: renameConsumer
-      summary: Rename a consumer across every object that references it
+      operationId: updateConsumer
+      summary: Rename a consumer and/or register its public key
       description: |
         Consumers aren't a stored resource of their own (`alrayyes/hush-hush#282`,
-        following ADR 0002's deferred consumer-identity decision) - this
-        replaces `name` with the request body's `name` in every stored
-        object's `used_by` list that currently records it. An object
-        already recording the target name keeps a single entry, not a
-        duplicate. If the target name already has its own recorded
-        objects, they merge under it: the response's `secret_count`
-        reflects every object now recording the new name, old and
-        already-there combined. A session-authenticated call needs its
-        CSRF token too; a bearer-token-authenticated one doesn't.
+        following ADR 0002's deferred consumer-identity decision) - a
+        `name` in the request body replaces `name` in every stored
+        object's `used_by` list that currently records it, the same as
+        before this endpoint also took `public_key`. An object already
+        recording the target name keeps a single entry, not a duplicate.
+        If the target name already has its own recorded objects, they
+        merge under it: the response's `secret_count` reflects every
+        object now recording the new name, old and already-there
+        combined. Renaming an unknown name is rejected with a 404.
+
+        A `public_key` in the request body registers or replaces that age
+        public key on the (possibly just-renamed) consumer, upserting a
+        directory entry for it even if it had none before - unlike a bare
+        rename, this never 404s on an unrecognized name. Sending both
+        fields in the same call renames first, then sets the key on the
+        resulting name.
+
+        A session-authenticated call needs its CSRF token too; a
+        bearer-token-authenticated one doesn't.
       tags: [consumers]
       security:
         - bearerAuth: []
@@ -441,12 +454,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RenameConsumerRequest"
-            example:
-              name: homelab/vps-docker-2
+              $ref: "#/components/schemas/UpdateConsumerRequest"
+            examples:
+              rename:
+                summary: Rename only
+                value:
+                  name: homelab/vps-docker-2
+              registerPublicKey:
+                summary: Register a public key only
+                value:
+                  public_key: age1exampleplaceholderpublickey
       responses:
         "200":
-          description: The consumer was renamed; the resulting entry under its new name.
+          description: The consumer was updated; the resulting entry under its (possibly new) name.
           content:
             application/json:
               schema:
@@ -454,6 +474,7 @@ paths:
               example:
                 name: homelab/vps-docker-2
                 secret_count: 3
+                public_key: age1exampleplaceholderpublickey
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1205,6 +1226,14 @@ components:
           type: integer
           format: int32
           description: How many stored secret objects' used_by list includes this consumer.
+        public_key:
+          type: string
+          description: |
+            The consumer's registered age public key, safe to store and
+            return server-side since it's public - a private key is never
+            sent to or stored by this API. Absent entirely when no key has
+            been registered for this consumer, rather than present as an
+            error or `null`.
       example:
         name: homelab/vps-docker
         secret_count: 1
@@ -1234,17 +1263,36 @@ components:
           description: The consumer's name. Rejected if it already appears in the directory.
           examples: [homelab/new-device]
 
-    RenameConsumerRequest:
+    UpdateConsumerRequest:
       type: object
-      required: [name]
+      minProperties: 1
+      description: |
+        At least one of `name` or `public_key` is required (enforced by
+        `minProperties` above); a field left out leaves that aspect of the
+        consumer unchanged. There is no way to clear a registered public
+        key through this request, only to set or replace one.
       properties:
         name:
           type: string
           description: |
             The consumer's new name. If it already matches another
             recorded consumer, the two merge - every object recording
-            either ends up recording just the new name, no duplicates.
+            either ends up recording just the new name, no duplicates. A
+            registered public key survives the merge: the target name's
+            own key wins if it already had one, otherwise the renamed
+            consumer's key carries over.
           examples: [homelab/vps-docker-2]
+        public_key:
+          type: string
+          description: |
+            Registers or replaces the consumer's age public key, safe to
+            store server-side since it's public. A consumer's private key
+            SHALL NOT be sent here or anywhere else in this API - this
+            field only ever accepts a public key. Registering a key
+            doesn't require the consumer to already be recorded anywhere;
+            a name never referenced by any object's `used_by` list yet is
+            accepted the same as an existing one.
+          examples: [age1exampleplaceholderpublickey]
 
     AuditLogEntry:
       type: object

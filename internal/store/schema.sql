@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS used_by (
 -- Additive to used_by's own distinct consumer names, not a replacement:
 -- ListConsumers/ListConsumersPage union both (openspec/changes/
 -- web-ui-shadcn/design.md's "New consumers table" decision).
+--
+-- public_key (added via migrateColumns in store.go, not here) is a
+-- consumer's registered age public key - safe to store server-side since
+-- it's public (openspec/changes/client-side-encryption/design.md's
+-- "Consumer public key: a plain stored field, not a directory service"
+-- decision). Nullable: most consumers still have none. A consumer that
+-- exists only via used_by has no row here at all until a key is
+-- registered for it, at which point SetConsumerPublicKey upserts one.
 CREATE TABLE IF NOT EXISTS consumers (
     name TEXT PRIMARY KEY,
     created_at TEXT NOT NULL

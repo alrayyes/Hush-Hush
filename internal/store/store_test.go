@@ -264,6 +264,40 @@ func TestOpenBackfillsObjectOwnerID(t *testing.T) {
 	require.Equal(t, 2, count)
 }
 
+// TestOpenMigratesExistingConsumersWithPublicKeyColumn proves
+// addColumnIfMissing reaches a pre-existing consumers table that predates
+// public_key, the same way TestOpenMigratesExistingTokensAndAuditLogWithNewColumns
+// does for write_tokens/audit_log.
+func TestOpenMigratesExistingConsumersWithPublicKeyColumn(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := dir + "/hush-hush.db"
+
+	legacy, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+
+	_, err = legacy.Exec(`
+		CREATE TABLE consumers (
+			name TEXT PRIMARY KEY,
+			created_at TEXT NOT NULL
+		);
+		INSERT INTO consumers (name, created_at) VALUES ('legacy-consumer', '2026-01-01T00:00:00Z');
+	`)
+	require.NoError(t, err)
+	require.NoError(t, legacy.Close())
+
+	s, err := store.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	var publicKey sql.NullString
+	require.NoError(t, s.DB().QueryRow(
+		`SELECT public_key FROM consumers WHERE name = 'legacy-consumer'`,
+	).Scan(&publicKey))
+	require.False(t, publicKey.Valid)
+}
+
 func tableNames(t *testing.T, s *store.Store) []string {
 	t.Helper()
 

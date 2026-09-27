@@ -471,3 +471,142 @@ func TestSessionAddsConsumerWithoutCSRFTokenIsRejected(t *testing.T) {
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func updateConsumerRequest(t *testing.T, name, body, token string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPatch, "/consumers/"+name, bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	return req
+}
+
+// TestRegisterConsumerPublicKeyReturnsItAlongsideNameAndCount covers
+// specs/consumers/spec.md's "Registering a consumer's public key"
+// scenario: registering a key for a consumer already recorded via
+// used_by (the common case - AddConsumer itself would reject that name
+// as already existing), then a subsequent GET /consumers returns it
+// alongside name and count.
+func TestRegisterConsumerPublicKeyReturnsItAlongsideNameAndCount(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	token := issueToken(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1exampleplaceholderpublickey"}`, token))
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var body hushhush.ConsumerEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1exampleplaceholderpublickey"}, body)
+
+	req := httptest.NewRequest(http.MethodGet, "/consumers?q=homelab/vps-docker", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	listRec := httptest.NewRecorder()
+	mux.ServeHTTP(listRec, req)
+
+	require.Equal(t, http.StatusOK, listRec.Code, listRec.Body.String())
+
+	var page hushhush.ConsumersPage
+	require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &page))
+	require.Equal(t, []hushhush.ConsumerEntry{
+		{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1exampleplaceholderpublickey"},
+	}, page.Consumers)
+}
+
+// TestRegisterConsumerPublicKeyForANameNeverSeenBefore proves registering
+// a key doesn't require the consumer to already exist in either the
+// consumers table or any object's used_by list - specs/consumers/spec.md
+// doesn't restrict registration that way, and a name only ever gains a
+// consumers row this way otherwise.
+func TestRegisterConsumerPublicKeyForANameNeverSeenBefore(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/pre-registered", `{"public_key":"age1preregistered"}`, token))
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var body hushhush.ConsumerEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/pre-registered", SecretCount: 0, PublicKey: "age1preregistered"}, body)
+}
+
+// TestConsumerWithNoRegisteredPublicKeyOmitsTheField covers
+// specs/consumers/spec.md's "Consumer with no registered public key"
+// scenario: the field is absent from the response entirely, not present
+// with an error or a null.
+func TestConsumerWithNoRegisteredPublicKeyOmitsTheField(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+
+	req := httptest.NewRequest(http.MethodGet, "/consumers?q=homelab/vps-docker", nil)
+	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.NotContains(t, rec.Body.String(), "public_key")
+}
+
+func TestUpdateConsumerRenameAndPublicKeyTogether(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	token := issueToken(t, s)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker",
+		`{"name":"homelab/vps-docker-2","public_key":"age1renamedandkeyed"}`, token))
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var body hushhush.ConsumerEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker-2", SecretCount: 1, PublicKey: "age1renamedandkeyed"}, body)
+}
+
+func TestSessionRegistersConsumerPublicKeyWithItsCSRFToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	req := updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1session"}`, "")
+	req.AddCookie(sessionCookie)
+	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+func TestSessionRegistersConsumerPublicKeyWithoutCSRFTokenIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedConsumersFixture(t, s)
+	sessionCookie := seedSession(t, s)
+
+	req := updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1session"}`, "")
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}

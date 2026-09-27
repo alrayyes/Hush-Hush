@@ -24,10 +24,14 @@ var (
 )
 
 // ConsumerEntry is one entry in a paginated listConsumers response.
-// Matches components.schemas.ConsumerEntry in api/openapi.yaml.
+// Matches components.schemas.ConsumerEntry in api/openapi.yaml. PublicKey
+// is omitted from the JSON body entirely when the consumer has no
+// registered key (specs/consumers/spec.md's "Consumer with no registered
+// public key" scenario: no field, not an error or a null).
 type ConsumerEntry struct {
 	Name        string `json:"name"`
 	SecretCount int    `json:"secret_count"`
+	PublicKey   string `json:"public_key,omitempty"`
 }
 
 // ConsumersPage is listConsumers's paginated response shape, returned
@@ -124,7 +128,7 @@ func consumerFilterFrom(q url.Values) (store.ConsumerFilter, error) {
 func consumersPageFrom(page store.ConsumerPage) ConsumersPage {
 	entries := make([]ConsumerEntry, len(page.Consumers))
 	for i, c := range page.Consumers {
-		entries[i] = ConsumerEntry{Name: c.Name, SecretCount: c.SecretCount}
+		entries[i] = ConsumerEntry{Name: c.Name, SecretCount: c.SecretCount, PublicKey: c.PublicKey}
 	}
 
 	return ConsumersPage{Consumers: entries, Total: page.Total}
@@ -170,47 +174,78 @@ func handleAddConsumer(s objectStore) http.HandlerFunc {
 	}
 }
 
-// RenameConsumerRequest is the PATCH /consumers/{name} body. Matches
-// components.schemas.RenameConsumerRequest in api/openapi.yaml.
-type RenameConsumerRequest struct {
-	Name string `json:"name"`
+// UpdateConsumerRequest is the PATCH /consumers/{name} body. Matches
+// components.schemas.UpdateConsumerRequest in api/openapi.yaml. At least
+// one of Name or PublicKey must be set; a field left empty (the zero
+// value, indistinguishable here from "omitted") leaves that aspect of the
+// consumer unchanged - there's no way to clear a registered public key
+// through this endpoint, only to set or replace one.
+type UpdateConsumerRequest struct {
+	Name      string `json:"name,omitempty"`
+	PublicKey string `json:"public_key,omitempty"`
 }
 
-// handleRenameConsumer replaces name with the request body's name in
-// every stored object's used_by list that currently records name -
-// consumers aren't a stored resource of their own (alrayyes/hush-hush#282,
-// ADR 0002), so this is a bulk used_by rewrite, not CRUD on a dedicated
-// resource. A rename target that collides with an existing consumer name
-// merges the two rather than erroring.
-func handleRenameConsumer(s objectStore) http.HandlerFunc {
+// handleUpdateConsumer renames a consumer, registers or updates its
+// public key, or both in the same call. Consumers aren't a stored
+// resource of their own (alrayyes/hush-hush#282, ADR 0002), so a rename
+// is a bulk used_by rewrite, not CRUD on a dedicated resource; a rename
+// target that collides with an existing consumer name merges the two
+// rather than erroring, carrying over whichever side's public key
+// survives the merge (store.RenameConsumer's own doc comment). Setting a
+// public key upserts a consumers row via store.SetConsumerPublicKey even
+// for a name that has never been added directly or referenced by any
+// object's used_by list yet - specs/consumers/spec.md's "Consumer public
+// key registration" requirement doesn't restrict registration to an
+// already-known consumer, and a name that only exists via used_by has
+// nowhere else to persist a key until one is registered.
+func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req RenameConsumerRequest
+		var req UpdateConsumerRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, r, http.StatusBadRequest, "malformed request body")
 
 			return
 		}
 
-		if req.Name == "" {
-			writeError(w, r, http.StatusBadRequest, "name is required")
+		if req.Name == "" && req.PublicKey == "" {
+			writeError(w, r, http.StatusBadRequest, "name or public_key is required")
 
 			return
 		}
 
-		entry, err := s.RenameConsumer(r.Context(), r.PathValue("name"), req.Name)
-		switch {
-		case err == nil:
-		case errors.Is(err, store.ErrUnknownConsumer):
-			writeError(w, r, http.StatusNotFound, "unknown consumer")
+		name := r.PathValue("name")
+		var entry store.ConsumerEntry
 
-			return
-		default:
-			writeInternalError(w, r, err)
+		if req.Name != "" {
+			renamed, err := s.RenameConsumer(r.Context(), name, req.Name)
+			switch {
+			case err == nil:
+			case errors.Is(err, store.ErrUnknownConsumer):
+				writeError(w, r, http.StatusNotFound, "unknown consumer")
 
-			return
+				return
+			default:
+				writeInternalError(w, r, err)
+
+				return
+			}
+
+			entry = renamed
+			name = req.Name
 		}
 
-		writeJSON(w, http.StatusOK, ConsumerEntry{Name: entry.Name, SecretCount: entry.SecretCount})
+		if req.PublicKey != "" {
+			keyed, err := s.SetConsumerPublicKey(r.Context(), name, req.PublicKey)
+			if err != nil {
+				writeInternalError(w, r, err)
+
+				return
+			}
+
+			entry = keyed
+		}
+
+		writeJSON(w, http.StatusOK, ConsumerEntry{Name: entry.Name, SecretCount: entry.SecretCount, PublicKey: entry.PublicKey})
 	}
 }
 

@@ -520,3 +520,106 @@ func TestDeleteConsumerAddedDirectlyWithZeroSecrets(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, consumers)
 }
+
+// TestSetConsumerPublicKeyRoundTripsForAConsumerOnlyKnownViaUsedBy is 2.1's
+// store-layer round-trip test: a consumer that only exists because some
+// object's used_by list records it, with no row of its own in consumers
+// yet, has nowhere to persist a key until SetConsumerPublicKey upserts
+// one.
+func TestSetConsumerPublicKeyRoundTripsForAConsumerOnlyKnownViaUsedBy(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+
+	entry, err := s.SetConsumerPublicKey(ctx, "homelab/vps-docker", "age1exampleplaceholderpublickey")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1exampleplaceholderpublickey"}, entry)
+
+	page, err := s.ListConsumersPage(ctx, store.ConsumerFilter{Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, []store.ConsumerEntry{
+		{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1exampleplaceholderpublickey"},
+	}, page.Consumers)
+}
+
+// TestListConsumersPageOmitsPublicKeyWhenNoneRegistered is 2.1's
+// round-trip counterpart for "without a key": a consumer with no
+// registered key returns the zero value, not some placeholder.
+func TestListConsumersPageOmitsPublicKeyWhenNoneRegistered(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+
+	page, err := s.ListConsumersPage(ctx, store.ConsumerFilter{Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, []store.ConsumerEntry{{Name: "homelab/vps-docker", SecretCount: 1}}, page.Consumers)
+}
+
+func TestSetConsumerPublicKeyUpdatesAnExistingKey(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.AddConsumer(ctx, "homelab/new-device"))
+
+	_, err := s.SetConsumerPublicKey(ctx, "homelab/new-device", "age1first")
+	require.NoError(t, err)
+
+	entry, err := s.SetConsumerPublicKey(ctx, "homelab/new-device", "age1second")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/new-device", SecretCount: 0, PublicKey: "age1second"}, entry)
+}
+
+func TestSetConsumerPublicKeyForANameNeverSeenBefore(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	entry, err := s.SetConsumerPublicKey(ctx, "homelab/pre-registered", "age1preregistered")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/pre-registered", SecretCount: 0, PublicKey: "age1preregistered"}, entry)
+
+	consumers, err := s.ListConsumers(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []string{"homelab/pre-registered"}, consumers)
+}
+
+func TestRenameConsumerCarriesOverTheOldNamesPublicKey(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"homelab/vps-docker"}, ""))
+	_, err := s.SetConsumerPublicKey(ctx, "homelab/vps-docker", "age1original")
+	require.NoError(t, err)
+
+	entry, err := s.RenameConsumer(ctx, "homelab/vps-docker", "homelab/vps-docker-2")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "homelab/vps-docker-2", SecretCount: 1, PublicKey: "age1original"}, entry)
+}
+
+// TestRenameConsumerMergeKeepsTheTargetsOwnPublicKey checks the documented
+// precedence when a merge's two sides each have a registered key: newName
+// survives the merge, so its own key wins rather than being silently
+// overwritten by oldName's.
+func TestRenameConsumerMergeKeepsTheTargetsOwnPublicKey(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"old"}, ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"new"}, ""))
+	_, err := s.SetConsumerPublicKey(ctx, "old", "age1old")
+	require.NoError(t, err)
+	_, err = s.SetConsumerPublicKey(ctx, "new", "age1new")
+	require.NoError(t, err)
+
+	entry, err := s.RenameConsumer(ctx, "old", "new")
+	require.NoError(t, err)
+	require.Equal(t, store.ConsumerEntry{Name: "new", SecretCount: 2, PublicKey: "age1new"}, entry)
+}

@@ -144,7 +144,18 @@ func migrateColumns(db *sql.DB) error {
 	// (users.go) fills it in for every pre-existing row; this migration
 	// doesn't start setting it on a new write, that's tasks.md group 5's
 	// job.
-	return addColumnIfMissing(db, "objects", "owner_id", "TEXT REFERENCES users(id)")
+	if err := addColumnIfMissing(db, "objects", "owner_id", "TEXT REFERENCES users(id)"); err != nil {
+		return err
+	}
+
+	// public_key: a consumer's registered age public key, safe to store
+	// server-side since it's public (design.md's "Consumer public key: a
+	// plain stored field, not a directory service" decision). Nullable -
+	// most consumers still have none, and nothing backfills one for a
+	// pre-existing row; SetConsumerPublicKey (objects.go) is what sets it,
+	// upserting a consumers row for a name that previously only existed
+	// via used_by.
+	return addColumnIfMissing(db, "consumers", "public_key", "TEXT")
 }
 
 // addColumnIfMissing adds column to table if it isn't already there. The
