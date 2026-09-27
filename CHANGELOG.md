@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.36.1](https://github.com/alrayyes/Hush-Hush/compare/v2.36.0...v2.36.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **web-ui:** regenerate bun.lock at the pinned lockfile version ([#399](https://github.com/alrayyes/Hush-Hush/issues/399)) ([c7d7e48](https://github.com/alrayyes/Hush-Hush/commit/c7d7e48e78ebf56c51f4402ba6009a6938361d16))
+
 ## [2.36.0](https://github.com/alrayyes/Hush-Hush/compare/v2.35.0...v2.36.0) (2026-09-27)
 
 
