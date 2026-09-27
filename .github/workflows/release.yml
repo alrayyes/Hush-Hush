@@ -9,25 +9,59 @@ name: release
 on:
   push:
     branches: [main]
+  # Recovery path: release-please's own job can create the release and then
+  # still fail (a later API call in the same step hitting a transient rate
+  # limit, say) - the job's overall failure skips goreleaser downstream even
+  # though the release genuinely exists, and a later re-run of release-please
+  # against that same already-tagged commit correctly finds nothing new to
+  # release, so it can never legitimately re-open that gate (confirmed live,
+  # alrayyes/Hush-Hush - v2.34.0 shipped with no Docker image because of
+  # exactly this). Manually dispatching goreleaser alone, against an
+  # already-existing tag, is the only way out that doesn't ask release-please
+  # to lie about having created something it didn't just create.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Existing release tag to (re)build and publish goreleaser artefacts
+          for, bypassing release-please - for recovering a release whose
+          goreleaser run never fired.
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
       pull-requests: write
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      # wretry.action exposes a single `outputs` output - the wrapped
+      # action's own named outputs collected into one JSON map, parsed
+      # back out with fromJSON rather than addressed directly by name.
+      release_created: ${{ fromJSON(steps.release.outputs.outputs).release_created }}
+      tag_name: ${{ fromJSON(steps.release.outputs.outputs).tag_name }}
     steps:
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+      # Retries the whole action 3x on a transient GitHub API failure
+      # (rate limit, secondary abuse-detection response) rather than
+      # treating it as a finding to chase down by hand each time -
+      # rules/releases.md's "Retry a release job through GitHub's
+      # transient rate limit". release-please-action is a `uses:` step,
+      # so it needs wretry.action's `action:`/`with:` wrapping rather
+      # than nick-fields/retry, which only ever runs a shell command.
+      - uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: release
         with:
-          token: ${{ secrets.RELEASE_TOKEN }}
+          action: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+          with: |
+            token: ${{ secrets.RELEASE_TOKEN }}
+          attempt_limit: 3
+          attempt_delay: 10000
 
   # Each SDK repo's own codegen.yml already listens for this event
   # alongside its daily cron poll of the spec (alrayyes/hush-hush-go#65 and
@@ -60,7 +94,16 @@ jobs:
 
   goreleaser:
     needs: release-please
-    if: needs.release-please.outputs.release_created
+    # `needs.release-please` being skipped (the workflow_dispatch path,
+    # where that job's own `if` is false) would otherwise skip this job
+    # too by default - always() plus an explicit check of *why* it isn't
+    # simply "succeeded" is what lets a manual dispatch through the same
+    # gate a real release_created still has to pass on the push path.
+    if: |
+      always() && !cancelled() && (
+        (github.event_name == 'push' && needs.release-please.result == 'success' && needs.release-please.outputs.release_created) ||
+        github.event_name == 'workflow_dispatch'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -72,7 +115,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
