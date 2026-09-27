@@ -52,6 +52,11 @@ await client.send('WebAuthn.addVirtualAuthenticator', {
 
 await page.goto(`${base}/login`);
 await page.getByRole('button', { name: 'Register passkey' }).click();
+
+// A first-ever registration shows the one-time recovery-phrase dialog
+// (client-side-encryption, #396) before the login page navigates onward -
+// closeRecoveryPhrase only fires once "I've saved it" is clicked.
+await page.getByRole('button', { name: "I've saved it" }).click();
 await page.waitForURL(`${base}/`);
 
 // A real age keypair, generated here rather than through the app -
