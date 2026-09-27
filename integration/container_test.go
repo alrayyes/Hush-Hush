@@ -128,7 +128,7 @@ func TestContainerCreateGetRoundTrip(t *testing.T) {
 	ctx := context.Background()
 
 	createReq, err := http.NewRequestWithContext(ctx, http.MethodPost, containerEndpoint+"/objects",
-		bytes.NewReader([]byte(`{"id":"container_smoke_test","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
+		bytes.NewReader([]byte(`{"slug":"container_smoke_test","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
 	require.NoError(t, err)
 
 	createReq.Header.Set("Content-Type", "application/json")

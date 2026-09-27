@@ -28,10 +28,10 @@ func TestListObjectsReturnsEveryObjectSortedByID(t *testing.T) {
 	var body []hushhush.ObjectMetadata
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Len(t, body, 2)
-	require.Equal(t, "alpha", body[0].ID)
+	require.Equal(t, "alpha", body[0].Slug)
 	require.Equal(t, []string{"homelab/vps-docker"}, body[0].UsedBy)
 	require.Equal(t, "prod deploy webhook", body[0].Description)
-	require.Equal(t, "zeta", body[1].ID)
+	require.Equal(t, "zeta", body[1].Slug)
 }
 
 func TestListObjectsReturnsEmptyArrayWhenNoneExist(t *testing.T) {
@@ -65,7 +65,7 @@ func TestListObjectsFiltersByUsedBy(t *testing.T) {
 	var body []hushhush.ObjectMetadata
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Len(t, body, 1)
-	require.Equal(t, "shared_by_two", body[0].ID)
+	require.Equal(t, "shared_by_two", body[0].Slug)
 }
 
 func TestListObjectsWithoutBearerTokenIsRejected(t *testing.T) {

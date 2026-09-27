@@ -87,7 +87,7 @@ func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
 	sealed := []byte("sealed-ciphertext")
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
-		ID:     "mattermost_deploy_webhook",
+		Slug:   "mattermost_deploy_webhook",
 		Value:  sealed,
 		UsedBy: []string{"homelab/vps-docker"},
 	}, issueToken(t, s))
@@ -99,7 +99,7 @@ func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
 
 	var meta hushhush.ObjectMetadata
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
-	require.Equal(t, "mattermost_deploy_webhook", meta.ID)
+	require.Equal(t, "mattermost_deploy_webhook", meta.Slug)
 	require.Equal(t, []string{"homelab/vps-docker"}, meta.UsedBy)
 
 	// Verified via the store directly, not an HTTP GET - the get endpoint
@@ -115,7 +115,7 @@ func TestCreateObjectWithDescriptionReturnsItInMetadata(t *testing.T) {
 	mux, s := newTestMux(t)
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
-		ID:          "mattermost_deploy_webhook",
+		Slug:        "mattermost_deploy_webhook",
 		Value:       []byte("sealed-ciphertext"),
 		Description: "prod deploy webhook",
 	}, issueToken(t, s))
@@ -135,7 +135,7 @@ func TestCreateObjectWithoutBearerTokenIsRejected(t *testing.T) {
 
 	mux, _ := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, "")
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, "")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
@@ -151,7 +151,7 @@ func TestCreateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 
 	mux, _ := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "x", Value: []byte("v")}, "wrong-token")
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, "wrong-token")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
@@ -164,10 +164,10 @@ func TestCreateObjectDuplicateIDConflicts(t *testing.T) {
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
 
-	first := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v1")}, token)
+	first := createRequest(t, hushhush.CreateObjectRequest{Slug: "dup", Value: []byte("v1")}, token)
 	mux.ServeHTTP(httptest.NewRecorder(), first)
 
-	second := createRequest(t, hushhush.CreateObjectRequest{ID: "dup", Value: []byte("v2")}, token)
+	second := createRequest(t, hushhush.CreateObjectRequest{Slug: "dup", Value: []byte("v2")}, token)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, second)
 
@@ -185,9 +185,9 @@ func TestCreateObjectValueIsBase64EncodedOverTheWire(t *testing.T) {
 
 	raw := []byte("sealed-ciphertext")
 	payload := struct {
-		ID    string `json:"id"`
+		Slug  string `json:"slug"`
 		Value string `json:"value"`
-	}{ID: "b64check", Value: base64.StdEncoding.EncodeToString(raw)}
+	}{Slug: "b64check", Value: base64.StdEncoding.EncodeToString(raw)}
 
 	b, err := json.Marshal(payload)
 	require.NoError(t, err)

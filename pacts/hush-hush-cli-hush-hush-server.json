@@ -9,7 +9,7 @@
       "request": {
         "body": {
           "content": {
-            "id": "new_secret",
+            "slug": "new_secret",
             "used_by": [
               "homelab/vps-docker"
             ],
@@ -32,7 +32,7 @@
       "response": {
         "body": {
           "content": {
-            "id": "new_secret",
+            "slug": "new_secret",
             "used_by": [
               "homelab/vps-docker"
             ]
@@ -131,7 +131,7 @@
       "response": {
         "body": {
           "content": {
-            "id": "mattermost_deploy_webhook"
+            "slug": "mattermost_deploy_webhook"
           },
           "contentType": "application/json",
           "encoded": false

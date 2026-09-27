@@ -29,7 +29,7 @@ func TestSessionCreateIsAttributedToTheAdminAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/objects",
-		bytes.NewReader([]byte(`{"id":"attributed_create","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
+		bytes.NewReader([]byte(`{"slug":"attributed_create","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Caller", "homelab/vps-docker")
 	req.AddCookie(sessionCookie)
@@ -109,7 +109,7 @@ func TestBearerTokenWriteIsAttributedToThatToken(t *testing.T) {
 	wt, token, err := s.CreateWriteToken(t.Context(), "ci token", time.Hour, "")
 	require.NoError(t, err)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{ID: "attributed_by_token", Value: []byte("sealed-ciphertext")}, token)
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "attributed_by_token", Value: []byte("sealed-ciphertext")}, token)
 	req.Header.Set("X-Caller", "ci-pipeline")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)

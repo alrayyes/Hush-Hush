@@ -12,17 +12,27 @@ import (
 // components.schemas.CreateObjectRequest in api/openapi.yaml - Value is
 // []byte rather than string because encoding/json already encodes a []byte
 // field as base64 on the wire, which is exactly the spec's format: byte.
+//
+// Slug (json:"slug") is what a caller chooses to address the created
+// object by afterward - the internal id the store generates underneath it
+// is never part of this request, and never returned as something
+// addressable either (specs/secret-objects/spec.md's "Internal id
+// decoupled from user-facing slug" requirement, alrayyes/Hush-Hush#383).
 type CreateObjectRequest struct {
-	ID          string   `json:"id"`
+	Slug        string   `json:"slug"`
 	Value       []byte   `json:"value"`
 	UsedBy      []string `json:"used_by,omitempty"`
 	Description string   `json:"description,omitempty"`
 }
 
-// ObjectMetadata is what a successful create or update returns. Matches
-// components.schemas.ObjectMetadata in api/openapi.yaml.
+// ObjectMetadata is what a successful create, update, or list call
+// returns. Matches components.schemas.ObjectMetadata in
+// api/openapi.yaml. Slug is the only identifier here - the object's
+// internal id is never returned as something a caller could address it
+// by (specs/secret-objects/spec.md's "An object's internal id is never
+// returned as an addressable value" scenario).
 type ObjectMetadata struct {
-	ID          string   `json:"id"`
+	Slug        string   `json:"slug"`
 	UsedBy      []string `json:"used_by,omitempty"`
 	Description string   `json:"description,omitempty"`
 }
@@ -42,23 +52,23 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		if req.ID == "" || len(req.Value) == 0 {
-			writeError(w, r, http.StatusBadRequest, "id and value are required")
+		if req.Slug == "" || len(req.Value) == 0 {
+			writeError(w, r, http.StatusBadRequest, "slug and value are required")
 
 			return
 		}
 
-		err := s.CreateObject(r.Context(), req.ID, req.Value, req.UsedBy, req.Description)
+		err := s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description)
 		switch {
 		case err == nil:
 			actorType, actorID := actorFrom(r)
-			if err := s.RecordAuditLog(r.Context(), req.ID, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
+			if err := s.RecordAuditLog(r.Context(), req.Slug, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
 				writeInternalError(w, r, err)
 
 				return
 			}
 
-			writeJSON(w, http.StatusCreated, ObjectMetadata{ID: req.ID, UsedBy: req.UsedBy, Description: req.Description})
+			writeJSON(w, http.StatusCreated, ObjectMetadata{Slug: req.Slug, UsedBy: req.UsedBy, Description: req.Description})
 		case errors.Is(err, store.ErrAlreadyExists):
 			writeError(w, r, http.StatusConflict, "object already exists")
 		default:

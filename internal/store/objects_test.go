@@ -188,7 +188,7 @@ func TestDeleteObjectUnknownID(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
-func TestListObjectsReturnsEveryObjectSortedByID(t *testing.T) {
+func TestListObjectsReturnsEveryObjectSortedBySlug(t *testing.T) {
 	t.Parallel()
 
 	s := openTestStore(t)
@@ -199,10 +199,10 @@ func TestListObjectsReturnsEveryObjectSortedByID(t *testing.T) {
 	objs, err := s.ListObjects(ctx, store.ObjectFilter{})
 	require.NoError(t, err)
 	require.Len(t, objs, 2)
-	require.Equal(t, "alpha", objs[0].ID)
+	require.Equal(t, "alpha", objs[0].Slug)
 	require.Equal(t, []string{"homelab/vps-docker"}, objs[0].UsedBy)
 	require.Equal(t, "prod deploy webhook", objs[0].Description)
-	require.Equal(t, "zeta", objs[1].ID)
+	require.Equal(t, "zeta", objs[1].Slug)
 }
 
 func TestListObjectsReturnsEmptyArrayWhenNoneExist(t *testing.T) {
@@ -226,7 +226,7 @@ func TestListObjectsFiltersByUsedBy(t *testing.T) {
 	objs, err := s.ListObjects(ctx, store.ObjectFilter{UsedBy: "homelab/vps-docker"})
 	require.NoError(t, err)
 	require.Len(t, objs, 1)
-	require.Equal(t, "shared_by_two", objs[0].ID)
+	require.Equal(t, "shared_by_two", objs[0].Slug)
 }
 
 func TestListConsumersOnFreshStoreIsEmpty(t *testing.T) {

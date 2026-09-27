@@ -47,7 +47,7 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 
 	var meta hushhush.ObjectMetadata
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
-	require.Equal(t, "mattermost_deploy_webhook", meta.ID)
+	require.Equal(t, "mattermost_deploy_webhook", meta.Slug)
 	require.Equal(t, []string{"homelab/vps-docker"}, meta.UsedBy)
 
 	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")

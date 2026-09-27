@@ -28,20 +28,31 @@ var ErrConsumerAlreadyExists = errors.New("consumer already exists")
 // Object is a stored secret object: its sealed value, its recorded used_by
 // lineage, and its description. The service never decrypts Value - it is
 // opaque ciphertext.
+//
+// ID and Slug are deliberately two different things
+// (specs/secret-objects/spec.md's "Internal id decoupled from user-facing
+// slug" requirement). Slug is what a caller addresses this object by - the
+// URL path segment, the CLI argument, the create request field - and every
+// store method below takes it as its own slug parameter. ID is the opaque
+// internal identifier used_by.object_id actually keys off underneath,
+// informational only: never something a caller supplies, and never
+// something the API layer should hand back as an address.
 type Object struct {
 	ID          string
+	Slug        string
 	Value       []byte
 	UsedBy      []string
 	Description string
 }
 
-// CreateObject stores a new object under id. description is fixed at
-// creation, the same as usedBy - there is no way to change it later
+// CreateObject stores a new object under a freshly generated internal id,
+// addressable afterward by slug. description is fixed at creation, the
+// same as usedBy - there is no way to change it later
 // (specs/secret-objects/spec.md). It returns ErrAlreadyExists if an object
-// already exists under that id - existence is checked and the insert
+// already exists under that slug - existence is checked and the insert
 // performed in the same transaction, so this is race-safe against
-// concurrent creates under the same id.
-func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedBy []string, description string) error {
+// concurrent creates under the same slug.
+func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -49,17 +60,22 @@ func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedB
 	defer func() { _ = tx.Rollback() }()
 
 	var exists int
-	switch err := tx.QueryRowContext(ctx, `SELECT 1 FROM objects WHERE id = ?`, id).Scan(&exists); {
+	switch err := tx.QueryRowContext(ctx, `SELECT 1 FROM objects WHERE slug = ?`, slug).Scan(&exists); {
 	case err == nil:
 		return ErrAlreadyExists
 	case !errors.Is(err, sql.ErrNoRows):
 		return fmt.Errorf("check existing object: %w", err)
 	}
 
+	id, err := randomHex(16)
+	if err != nil {
+		return fmt.Errorf("generate object id: %w", err)
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO objects (id, value, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
-		id, value, description, now, now,
+		`INSERT INTO objects (id, slug, value, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		id, slug, value, description, now, now,
 	); err != nil {
 		return fmt.Errorf("insert object: %w", err)
 	}
@@ -80,19 +96,19 @@ func (s *Store) CreateObject(ctx context.Context, id string, value []byte, usedB
 	return nil
 }
 
-// GetObject fetches an object's sealed value and used_by lineage. It
-// returns ErrNotFound if no object exists under id.
-func (s *Store) GetObject(ctx context.Context, id string) (Object, error) {
-	obj := Object{ID: id}
+// GetObject fetches an object's sealed value and used_by lineage by slug.
+// It returns ErrNotFound if no object exists under that slug.
+func (s *Store) GetObject(ctx context.Context, slug string) (Object, error) {
+	obj := Object{Slug: slug}
 
-	switch err := s.db.QueryRowContext(ctx, `SELECT value, description FROM objects WHERE id = ?`, id).Scan(&obj.Value, &obj.Description); {
+	switch err := s.db.QueryRowContext(ctx, `SELECT id, value, description FROM objects WHERE slug = ?`, slug).Scan(&obj.ID, &obj.Value, &obj.Description); {
 	case errors.Is(err, sql.ErrNoRows):
 		return Object{}, ErrNotFound
 	case err != nil:
 		return Object{}, fmt.Errorf("select object: %w", err)
 	}
 
-	usedBy, err := s.usedByFor(ctx, id)
+	usedBy, err := s.usedByFor(ctx, obj.ID)
 	if err != nil {
 		return Object{}, err
 	}
@@ -133,9 +149,10 @@ type ObjectFilter struct {
 	UsedBy string
 }
 
-// ListObjects returns every stored object's metadata (id, used_by,
-// description - never the sealed value), sorted by id. filter narrows the
-// result; its zero value returns everything.
+// ListObjects returns every stored object's metadata (slug, used_by,
+// description - never the sealed value, and never the internal id as
+// something addressable), sorted by slug. filter narrows the result; its
+// zero value returns everything.
 func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object, error) {
 	var (
 		rows *sql.Rows
@@ -144,13 +161,13 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 
 	if filter.UsedBy != "" {
 		rows, err = s.db.QueryContext(ctx, `
-			SELECT DISTINCT o.id, o.description
+			SELECT DISTINCT o.id, o.slug, o.description
 			FROM objects o
 			JOIN used_by u ON u.object_id = o.id
 			WHERE u.consumer = ?
-			ORDER BY o.id`, filter.UsedBy)
+			ORDER BY o.slug`, filter.UsedBy)
 	} else {
-		rows, err = s.db.QueryContext(ctx, `SELECT id, description FROM objects ORDER BY id`)
+		rows, err = s.db.QueryContext(ctx, `SELECT id, slug, description FROM objects ORDER BY slug`)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("select objects: %w", err)
@@ -160,7 +177,7 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 	var objs []Object
 	for rows.Next() {
 		var obj Object
-		if err := rows.Scan(&obj.ID, &obj.Description); err != nil {
+		if err := rows.Scan(&obj.ID, &obj.Slug, &obj.Description); err != nil {
 			return nil, fmt.Errorf("scan object: %w", err)
 		}
 		objs = append(objs, obj)
@@ -180,15 +197,16 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 	return objs, nil
 }
 
-// UpdateObject replaces the stored value for id, leaving description
-// untouched - there is no way to change it after creation
-// (specs/secret-objects/spec.md). usedBy is left untouched too when nil;
-// given non-nil (including an empty, non-nil slice), it fully replaces
-// id's recorded used_by lineage the same way CreateObject populates it -
-// the pointer is what tells "the caller didn't send used_by" apart from
-// "the caller sent an empty list to clear it" (alrayyes/hush-hush#299).
-// It returns ErrNotFound if no object exists under id.
-func (s *Store) UpdateObject(ctx context.Context, id string, value []byte, usedBy *[]string) error {
+// UpdateObject replaces the stored value for the object addressed by slug,
+// leaving description untouched - there is no way to change it after
+// creation (specs/secret-objects/spec.md). usedBy is left untouched too
+// when nil; given non-nil (including an empty, non-nil slice), it fully
+// replaces the object's recorded used_by lineage the same way CreateObject
+// populates it - the pointer is what tells "the caller didn't send
+// used_by" apart from "the caller sent an empty list to clear it"
+// (alrayyes/hush-hush#299). It returns ErrNotFound if no object exists
+// under that slug.
+func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -198,8 +216,8 @@ func (s *Store) UpdateObject(ctx context.Context, id string, value []byte, usedB
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	result, err := tx.ExecContext(ctx,
-		`UPDATE objects SET value = ?, updated_at = ? WHERE id = ?`,
-		value, now, id,
+		`UPDATE objects SET value = ?, updated_at = ? WHERE slug = ?`,
+		value, now, slug,
 	)
 	if err != nil {
 		return fmt.Errorf("update object: %w", err)
@@ -215,14 +233,21 @@ func (s *Store) UpdateObject(ctx context.Context, id string, value []byte, usedB
 	}
 
 	if usedBy != nil {
-		if _, err := tx.ExecContext(ctx, `DELETE FROM used_by WHERE object_id = ?`, id); err != nil {
+		// used_by.object_id keys off the internal id, not slug (schema.sql's
+		// own comment on why) - both statements below resolve it from slug
+		// via the same subquery rather than a separate round trip, since the
+		// UPDATE above already proved a matching row exists.
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM used_by WHERE object_id = (SELECT id FROM objects WHERE slug = ?)`,
+			slug,
+		); err != nil {
 			return fmt.Errorf("clear used_by: %w", err)
 		}
 
 		for _, consumer := range *usedBy {
 			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`,
-				id, consumer,
+				`INSERT INTO used_by (object_id, consumer) VALUES ((SELECT id FROM objects WHERE slug = ?), ?)`,
+				slug, consumer,
 			); err != nil {
 				return fmt.Errorf("insert used_by: %w", err)
 			}
@@ -619,11 +644,12 @@ func escapeLike(s string) string {
 	return replacer.Replace(s)
 }
 
-// DeleteObject permanently removes id, its used_by rows cascading with it
-// (schema.sql's ON DELETE CASCADE). It returns ErrNotFound if no object
-// exists under id.
-func (s *Store) DeleteObject(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM objects WHERE id = ?`, id)
+// DeleteObject permanently removes the object addressed by slug, its
+// used_by rows cascading with it (schema.sql's ON DELETE CASCADE, keyed
+// off the internal id regardless of how the row was located here). It
+// returns ErrNotFound if no object exists under that slug.
+func (s *Store) DeleteObject(ctx context.Context, slug string) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM objects WHERE slug = ?`, slug)
 	if err != nil {
 		return fmt.Errorf("delete object: %w", err)
 	}

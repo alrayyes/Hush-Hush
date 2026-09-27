@@ -12,9 +12,9 @@ import (
 // "who holds a matching private key" (api/openapi.yaml, design.md).
 func handleGetObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
+		slug := r.PathValue("slug")
 
-		obj, err := s.GetObject(r.Context(), id)
+		obj, err := s.GetObject(r.Context(), slug)
 		if errors.Is(err, store.ErrNotFound) {
 			writeError(w, r, http.StatusNotFound, "unknown object")
 
@@ -27,7 +27,7 @@ func handleGetObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionRead, callerFrom(r), sourceIPFrom(r), "", ""); err != nil {
+		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionRead, callerFrom(r), sourceIPFrom(r), "", ""); err != nil {
 			writeInternalError(w, r, err)
 
 			return

@@ -152,7 +152,7 @@ func TestMCPInjectCreatesAnObjectAndRecordsAnAuditEntry(t *testing.T) {
 	token := issueToken(t, s)
 
 	result := callTool(t, mux, token, "inject", map[string]any{
-		"id":      "mcp_inject_target",
+		"slug":    "mcp_inject_target",
 		"value":   []byte("sealed-ciphertext"),
 		"used_by": []string{"homelab/vps-docker"},
 	})
@@ -175,11 +175,11 @@ func TestMCPInjectDuplicateIDIsAToolError(t *testing.T) {
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
 
-	args := map[string]any{"id": "mcp_dup", "value": []byte("v1")}
+	args := map[string]any{"slug": "mcp_dup", "value": []byte("v1")}
 	first := callTool(t, mux, token, "inject", args)
 	require.False(t, first.IsError)
 
-	second := callTool(t, mux, token, "inject", map[string]any{"id": "mcp_dup", "value": []byte("v2")})
+	second := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_dup", "value": []byte("v2")})
 	require.True(t, second.IsError)
 }
 
@@ -190,7 +190,7 @@ func TestMCPGetReturnsTheSealedValueAndRecordsAnAuditEntry(t *testing.T) {
 	token := issueToken(t, s)
 	seedObject(t, s, "mcp_get_target")
 
-	result := callTool(t, mux, token, "get", map[string]any{"id": "mcp_get_target"})
+	result := callTool(t, mux, token, "get", map[string]any{"slug": "mcp_get_target"})
 	require.False(t, result.IsError, "content: %+v", result.Content)
 
 	var out struct {
@@ -213,7 +213,7 @@ func TestMCPGetUnknownObjectIsAToolError(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	result := callTool(t, mux, issueToken(t, s), "get", map[string]any{"id": "does-not-exist"})
+	result := callTool(t, mux, issueToken(t, s), "get", map[string]any{"slug": "does-not-exist"})
 	require.True(t, result.IsError)
 }
 
@@ -225,7 +225,7 @@ func TestMCPUpdateReplacesTheValue(t *testing.T) {
 	seedObject(t, s, "mcp_update_target")
 
 	result := callTool(t, mux, token, "update", map[string]any{
-		"id": "mcp_update_target", "value": []byte("new-sealed-value"),
+		"slug": "mcp_update_target", "value": []byte("new-sealed-value"),
 	})
 	require.False(t, result.IsError, "content: %+v", result.Content)
 
@@ -241,7 +241,7 @@ func TestMCPDeleteRemovesTheObject(t *testing.T) {
 	token := issueToken(t, s)
 	seedObject(t, s, "mcp_delete_target")
 
-	result := callTool(t, mux, token, "delete", map[string]any{"id": "mcp_delete_target"})
+	result := callTool(t, mux, token, "delete", map[string]any{"slug": "mcp_delete_target"})
 	require.False(t, result.IsError, "content: %+v", result.Content)
 
 	_, err := s.GetObject(context.Background(), "mcp_delete_target")
@@ -260,13 +260,13 @@ func TestMCPListReturnsEveryObjectsMetadata(t *testing.T) {
 	require.False(t, result.IsError, "content: %+v", result.Content)
 
 	var out []struct {
-		ID string `json:"id"`
+		Slug string `json:"slug"`
 	}
 	require.NoError(t, json.Unmarshal(result.StructuredContent, &out))
 
 	ids := make([]string, len(out))
 	for i, o := range out {
-		ids[i] = o.ID
+		ids[i] = o.Slug
 	}
 
 	require.Subset(t, ids, []string{"mcp_list_a", "mcp_list_b"})

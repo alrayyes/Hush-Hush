@@ -20,8 +20,8 @@ import (
 // a handler-level test can satisfy it with a fake instead of a real
 // database (go-test.md's "reach for a fake before a mock").
 type objectStore interface {
-	CreateObject(ctx context.Context, id string, value []byte, usedBy []string, description string) error
-	GetObject(ctx context.Context, id string) (store.Object, error)
+	CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description string) error
+	GetObject(ctx context.Context, slug string) (store.Object, error)
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	ListConsumers(ctx context.Context) ([]string, error)
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
@@ -29,8 +29,8 @@ type objectStore interface {
 	RenameConsumer(ctx context.Context, oldName, newName string) (store.ConsumerEntry, error)
 	SetConsumerPublicKey(ctx context.Context, name, publicKey string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
-	UpdateObject(ctx context.Context, id string, value []byte, usedBy *[]string) error
-	DeleteObject(ctx context.Context, id string) error
+	UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string) error
+	DeleteObject(ctx context.Context, slug string) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
 	QueryAuditLogFilterOptions(ctx context.Context) (store.AuditLogFilterOptions, error)
@@ -105,10 +105,10 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	// isn't reliably distinguishable from part of the name.
 	mux.HandleFunc("PATCH /consumers/{name...}", requireWriteAccess(s, true, handleUpdateConsumer(s)))
 	mux.HandleFunc("DELETE /consumers/{name...}", requireWriteAccess(s, true, handleDeleteConsumer(s)))
-	mux.HandleFunc("GET /objects/{id}", handleGetObject(s))
-	mux.HandleFunc("GET /objects/{id}/used-by", handleGetObjectUsedBy(s))
-	mux.HandleFunc("PUT /objects/{id}", requireWriteAccess(s, true, handleUpdateObject(s)))
-	mux.HandleFunc("DELETE /objects/{id}", requireWriteAccess(s, true, handleDeleteObject(s)))
+	mux.HandleFunc("GET /objects/{slug}", handleGetObject(s))
+	mux.HandleFunc("GET /objects/{slug}/used-by", handleGetObjectUsedBy(s))
+	mux.HandleFunc("PUT /objects/{slug}", requireWriteAccess(s, true, handleUpdateObject(s)))
+	mux.HandleFunc("DELETE /objects/{slug}", requireWriteAccess(s, true, handleDeleteObject(s)))
 
 	mux.HandleFunc("GET /audit-log", handleHardNavRoute(handleQueryAuditLog(s), staticHandler))
 	mux.HandleFunc("GET /audit-log/filter-options", handleQueryAuditLogFilterOptions(s))

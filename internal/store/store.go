@@ -52,6 +52,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	if err := migrateObjectSlugs(db); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	if err := backfillOwnership(db); err != nil {
 		_ = db.Close()
 
@@ -190,7 +196,136 @@ func migrateColumns(db *sql.DB) error {
 	// credential's copy already stands on its own, which is what makes
 	// losing one passkey non-stranding (design.md's "Multi-copy wrapping
 	// over a single shared wrap" decision).
-	return addColumnIfMissing(db, "webauthn_credentials", "wrapped_identity", "TEXT")
+	if err := addColumnIfMissing(db, "webauthn_credentials", "wrapped_identity", "TEXT"); err != nil {
+		return err
+	}
+
+	return addObjectsSlugColumn(db)
+}
+
+// addObjectsSlugColumn adds objects.slug (the caller-facing identifier
+// objects.id used to be, now split out so id can become an opaque internal
+// one - schema.sql's own comment on objects, tasks.md group 6,
+// specs/secret-objects/spec.md's "Internal id decoupled from user-facing
+// slug" requirement) and its unique index, broken out of migrateColumns to
+// keep that function's own cognitive complexity down.
+//
+// slug is added nullable, like every other column migrateColumns adds,
+// because ALTER TABLE ADD COLUMN can't backfill a NOT NULL value per row
+// on its own - migrateObjectSlugs is what actually backfills it (and
+// generates a fresh internal id) for every pre-existing row; every row
+// created after this shipped has it set at insert time (objects.go's
+// CreateObject), so in practice it's never NULL once a database has been
+// opened by a binary carrying this migration.
+//
+// A plain ALTER TABLE ADD COLUMN can't attach a UNIQUE constraint either
+// (SQLite rejects it outright against a table that already has rows), so
+// uniqueness is enforced by a separate index instead - functionally
+// equivalent, and safe to create before migrateObjectSlugs backfills any
+// values: SQLite's unique index treats every NULL as distinct from every
+// other, so a column that's still all-NULL at this point can't violate it.
+func addObjectsSlugColumn(db *sql.DB) error {
+	if err := addColumnIfMissing(db, "objects", "slug", "TEXT"); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_objects_slug ON objects (slug)`); err != nil {
+		return fmt.Errorf("create objects slug index: %w", err)
+	}
+
+	return nil
+}
+
+// migrateObjectSlugs backfills objects.slug (added, nullable, by
+// migrateColumns above) for every pre-existing row - slug IS NULL is
+// exactly the set of rows a database created before this shipped, since
+// CreateObject always sets it going forward, making this check its own
+// idempotency guard the same way backfillOwnership's WHERE owner_id IS
+// NULL is.
+//
+// This is more involved than migrateColumns' own ADD COLUMN pattern: a
+// pre-existing row's current id becomes its slug verbatim, but that frees
+// up id to become a freshly generated, opaque internal identifier
+// (randomHex, the same convention tokens.go/users.go already use) - and
+// used_by.object_id (schema.sql: ON DELETE CASCADE, not ON UPDATE
+// CASCADE) already stores that row's OLD id, so it has to be repointed at
+// the new one in the same transaction or it's left referencing a row that
+// no longer exists under that id. PRAGMA defer_foreign_keys defers the
+// foreign key check SQLite would otherwise run immediately after each
+// statement to COMMIT instead, which is what makes updating objects.id
+// and used_by.object_id in either order, within one transaction, safe.
+func migrateObjectSlugs(db *sql.DB) error {
+	oldIDs, err := objectIDsPendingSlugMigration(db)
+	if err != nil {
+		return err
+	}
+
+	if len(oldIDs) == 0 {
+		return nil
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Scoped to this transaction alone, and automatically switched back
+	// off at its end (SQLite's own documented behaviour for this pragma) -
+	// nothing outside this function runs with foreign key checks
+	// deferred.
+	if _, err := tx.Exec(`PRAGMA defer_foreign_keys = ON`); err != nil {
+		return fmt.Errorf("defer foreign keys: %w", err)
+	}
+
+	for _, oldID := range oldIDs {
+		newID, err := randomHex(16)
+		if err != nil {
+			return fmt.Errorf("generate object id: %w", err)
+		}
+
+		if _, err := tx.Exec(`UPDATE used_by SET object_id = ? WHERE object_id = ?`, newID, oldID); err != nil {
+			return fmt.Errorf("repoint used_by for slug migration: %w", err)
+		}
+
+		if _, err := tx.Exec(`UPDATE objects SET id = ?, slug = ? WHERE id = ?`, newID, oldID, oldID); err != nil {
+			return fmt.Errorf("split object id/slug: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// objectIDsPendingSlugMigration returns the internal id of every objects
+// row that still has no slug - broken out of migrateObjectSlugs to keep
+// that function's own cognitive complexity down, and so the query's rows
+// handle can be closed with a plain defer instead of a manual Close on
+// every early return.
+func objectIDsPendingSlugMigration(db *sql.DB) ([]string, error) {
+	rows, err := db.Query(`SELECT id FROM objects WHERE slug IS NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("find objects pending slug migration: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan object pending slug migration: %w", err)
+		}
+
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate objects pending slug migration: %w", err)
+	}
+
+	return ids, nil
 }
 
 // addColumnIfMissing adds column to table if it isn't already there. The

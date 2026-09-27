@@ -8,12 +8,12 @@ import (
 )
 
 // handleDeleteObject permanently removes an object. A subsequent get for
-// the same id returns 404.
+// the same slug returns 404.
 func handleDeleteObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
+		slug := r.PathValue("slug")
 
-		err := s.DeleteObject(r.Context(), id)
+		err := s.DeleteObject(r.Context(), slug)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -27,7 +27,7 @@ func handleDeleteObject(s objectStore) http.HandlerFunc {
 		}
 
 		actorType, actorID := actorFrom(r)
-		if err := s.RecordAuditLog(r.Context(), id, store.AuditActionDelete, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionDelete, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
 			writeInternalError(w, r, err)
 
 			return

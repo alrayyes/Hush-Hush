@@ -14,6 +14,21 @@
 -- accountability metadata, not an access-control mechanism" decision):
 -- this migration only backfills existing rows, nothing here yet sets it
 -- on a new write.
+--
+-- slug (added via migrateColumns in store.go, not here, with its own
+-- unique index since ALTER TABLE ADD COLUMN can't add a UNIQUE
+-- constraint against a table that already has rows) is what a caller
+-- addresses this object by - the URL path segment, the CLI argument, the
+-- create request field - now that `id` above is an opaque internal
+-- identifier a caller never sees or supplies
+-- (openspec/changes/client-side-encryption/specs/secret-objects/spec.md's
+-- "Internal id decoupled from user-facing slug" requirement). Splitting
+-- them means a future "rename a secret's slug" operation only has to
+-- update this column - used_by.object_id below keys off the stable
+-- internal id, so it never needs touching for a rename.
+-- store.go's migrateObjectSlugs backfills slug (and generates a fresh
+-- internal id) for every pre-existing row, whose current id becomes its
+-- slug verbatim.
 CREATE TABLE IF NOT EXISTS objects (
     id TEXT PRIMARY KEY,
     value BLOB NOT NULL,
