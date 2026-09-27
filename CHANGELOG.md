@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.36.0](https://github.com/alrayyes/Hush-Hush/compare/v2.35.0...v2.36.0) (2026-09-27)
+
+
+### Features
+
+* **auth:** wrap escrowed identity per PRF-capable credential ([#396](https://github.com/alrayyes/Hush-Hush/issues/396)) ([ed4c4e2](https://github.com/alrayyes/Hush-Hush/commit/ed4c4e2d3d90b421ef6c2d9197ee9ef5e0f1804e))
+
 ## [2.35.0](https://github.com/alrayyes/Hush-Hush/compare/v2.34.0...v2.35.0) (2026-09-27)
 
 
