@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.39.1](https://github.com/alrayyes/Hush-Hush/compare/v2.39.0...v2.39.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **lint:** nest dupl test-file exclusion under linters, gate vale on errors ([#445](https://github.com/alrayyes/Hush-Hush/issues/445)) ([f8e89e1](https://github.com/alrayyes/Hush-Hush/commit/f8e89e171ecd741126b29a92bdf76b0731e26f12))
+
 ## [2.39.0](https://github.com/alrayyes/Hush-Hush/compare/v2.38.1...v2.39.0) (2026-09-27)
 
 
