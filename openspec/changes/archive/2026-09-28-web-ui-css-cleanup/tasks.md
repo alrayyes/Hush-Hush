@@ -43,6 +43,6 @@
 
 ## 4. Verification
 
-- [ ] 4.1 `bun run lint:tailwind`, `bun run check`, `bun run test`, and
+- [x] 4.1 `bun run lint:tailwind`, `bun run check`, `bun run test`, and
       (after a fresh `bun run build`) `bun run test:e2e` all pass in
       `cmd/hush-hush/web`.
