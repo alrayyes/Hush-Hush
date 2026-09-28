@@ -190,11 +190,23 @@ paths:
       summary: Fetch an object's sealed ciphertext
       description: |
         Returns the stored ciphertext exactly as sealed, byte for byte -
-        the service never decrypts it. Needs no authorization beyond
-        knowing the slug: v1's confidentiality boundary is entirely "who
-        holds a matching private key," and every fetch is recorded to the
-        audit log regardless of who made it.
+        the service never decrypts it. Requires a write bearer token, an
+        admin session, or a consumer read token whose bound consumer
+        appears in this object's `used_by` list - the confidentiality
+        boundary is still "who holds a matching private key," this adds
+        an access-control layer on top of it
+        (openspec/changes/consumer-read-tokens/proposal.md). Every fetch
+        is recorded to the audit log regardless of which credential
+        authenticated it.
+
+        A consumer token presented for an object outside its scope gets
+        the same 404 an unknown slug would, not 403 - so it can't be used
+        to enumerate which other slugs exist.
       tags: [objects]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+        - consumerBearerAuth: []
       parameters:
         - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
@@ -206,6 +218,8 @@ paths:
               schema:
                 type: string
                 format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1061,6 +1075,125 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /consumer-tokens:
+    post:
+      operationId: createConsumerToken
+      summary: Create a consumer read token
+      description: |
+        Issues a new read token scoped to one consumer name. The raw
+        token value is returned here only - it is never recoverable
+        again once this response is read.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/csrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConsumerTokenRequest"
+            example:
+              consumer: homelab/vps-docker
+              description: deploy read token
+              ttl_seconds: 7776000
+      responses:
+        "201":
+          description: The consumer token was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerTokenWithValue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    get:
+      operationId: listConsumerTokens
+      summary: List consumer read tokens
+      description: |
+        Returns every issued consumer token's metadata - never a raw
+        value, which by design no longer exists anywhere to return once a
+        token is created.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Every issued consumer token's metadata.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConsumerTokenMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /consumer-tokens/{id}:
+    delete:
+      operationId: revokeConsumerToken
+      summary: Revoke a consumer read token
+      description: |
+        Invalidates the consumer token issued under id. Revoking an id
+        that's already expired or doesn't exist isn't an error - both
+        leave every other token's state unaffected either way.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/consumerTokenId"
+        - $ref: "#/components/parameters/csrfToken"
+      responses:
+        "204":
+          description: The consumer token was revoked, or already wasn't valid.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /consumer-tokens/{id}/rotate:
+    post:
+      operationId: rotateConsumerToken
+      summary: Rotate a consumer read token
+      description: |
+        Replaces the secret and expiry of the consumer token issued under
+        id, keeping its id, consumer, and description unchanged. The old
+        secret stops authenticating immediately. The new raw token value
+        is returned here only, the same as `createConsumerToken`.
+
+        Unlike `revokeConsumerToken`, an id that's unknown, already
+        revoked, or already expired is an error: a rotate response
+        promises the caller a working new secret, and there's no valid
+        token to hand one to.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/consumerTokenId"
+        - $ref: "#/components/parameters/csrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateConsumerTokenRequest"
+            example:
+              ttl_seconds: 7776000
+      responses:
+        "200":
+          description: The consumer token was rotated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerTokenWithValue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1081,10 +1214,21 @@ components:
       name: session
       description: |
         A browser session, issued by a successful `/auth/login/finish` or
-        `/auth/register/finish` call. Used only by the `/auth/*`
-        (post-login), `/credentials/*`, and `/tokens/*` endpoints - it
-        never authorizes a call to `/objects/*`, which stays gated by
-        `bearerAuth` regardless of any session presented alongside it.
+        `/auth/register/finish` call. Used by the `/auth/*` (post-login),
+        `/credentials/*`, and `/tokens/*` endpoints, and as an alternative
+        to `bearerAuth` on `/objects/*` - an admin session reads or
+        writes any object, the same access a write bearer token has.
+
+    consumerBearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        A consumer read token, scoped to exactly one consumer name at
+        creation. Authorizes `getObject` only for an object whose
+        `used_by` list includes that token's bound consumer - unlike
+        `bearerAuth`, which reads any object. Issued and managed through
+        `/consumer-tokens`, never authorizes any endpoint besides
+        `getObject`.
 
   parameters:
     slug:
@@ -1143,6 +1287,14 @@ components:
       description: The token's id.
       schema:
         $ref: "#/components/schemas/TokenId"
+
+    consumerTokenId:
+      name: id
+      in: path
+      required: true
+      description: The consumer token's id.
+      schema:
+        $ref: "#/components/schemas/ConsumerTokenId"
 
     csrfToken:
       name: X-CSRF-Token
@@ -1705,3 +1857,77 @@ components:
                 The raw bearer token. Shown here once, at creation, and
                 never again - the same as a token issued via the `token`
                 CLI command.
+
+    ConsumerTokenId:
+      type: string
+      pattern: "^[0-9a-f]{16}$"
+      examples: [b2c3d4e5f6a7b8c9]
+
+    CreateConsumerTokenRequest:
+      type: object
+      required: [consumer, description, ttl_seconds]
+      properties:
+        consumer:
+          type: string
+          description: |
+            The consumer this token is scoped to - it authorizes
+            `getObject` only for an object whose `used_by` list includes
+            this name. Free text, matching how a consumer name is stored
+            elsewhere (`used_by`, `/consumers`); the consumer doesn't have
+            to already exist.
+          examples: [homelab/vps-docker]
+        description:
+          type: string
+          examples: [deploy read token]
+        ttl_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: How long the token stays valid for, starting now.
+          examples: [7776000]
+
+    ConsumerTokenMetadata:
+      type: object
+      required: [id, consumer, description, created_at, expires_at, revoked]
+      properties:
+        id:
+          $ref: "#/components/schemas/ConsumerTokenId"
+        consumer:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        revoked:
+          type: boolean
+        last_used_at:
+          type: string
+          format: date-time
+          description: Absent if this token has never authenticated a request.
+
+    RotateConsumerTokenRequest:
+      type: object
+      required: [ttl_seconds]
+      properties:
+        ttl_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: How long the rotated token stays valid for, starting now.
+          examples: [7776000]
+
+    ConsumerTokenWithValue:
+      allOf:
+        - $ref: "#/components/schemas/ConsumerTokenMetadata"
+        - type: object
+          required: [value]
+          properties:
+            value:
+              type: string
+              description: |
+                The raw consumer token. Shown here once, at creation, and
+                never again.

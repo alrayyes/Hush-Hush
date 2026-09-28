@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted. Partially superseded in scope by [ADR
+24](0024-consumer-scoped-read-tokens.md), which requires a credential on
+`GET /objects/{slug}` and adds consumer-scoped read tokens - the
+confidentiality reasoning below still holds (an age private key, not a
+server-side check, is what makes ciphertext inert), this just closes the
+per-consumer-ACL gap this record explicitly left deferred.
 
 ## Context
 

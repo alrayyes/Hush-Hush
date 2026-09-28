@@ -90,6 +90,7 @@ func TestGetObjectRecordsAnAuditLogEntryWithNoCaller(t *testing.T) {
 	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, "", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects/x", nil)
+	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
 	entries := auditLogEntries(t, s)

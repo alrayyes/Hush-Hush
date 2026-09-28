@@ -140,7 +140,12 @@ func TestContainerCreateGetRoundTrip(t *testing.T) {
 	defer func() { require.NoError(t, createResp.Body.Close()) }()
 	require.Equal(t, http.StatusCreated, createResp.StatusCode)
 
-	getResp, err := http.Get(containerEndpoint + "/objects/container_smoke_test") //nolint:noctx // fixed test URL, no request-scoped context needed
+	getReq, err := http.NewRequestWithContext(ctx, http.MethodGet, containerEndpoint+"/objects/container_smoke_test", nil)
+	require.NoError(t, err)
+
+	getReq.Header.Set("Authorization", "Bearer "+containerWriterToken)
+
+	getResp, err := http.DefaultClient.Do(getReq)
 	require.NoError(t, err)
 
 	defer func() { require.NoError(t, getResp.Body.Close()) }()

@@ -24,8 +24,11 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   secret's owner is recorded as accountability metadata, not an implicit
   decrypt recipient - including the owner's own key as a recipient is an
   explicit, per-secret, opt-in choice.
-- **Read path**: unauthenticated - confidentiality comes from who holds a
-  matching age private key, not from a server-side check.
+- **Read path**: a write bearer token, a web-UI session, or a consumer
+  read token scoped to that object's recorded consumers - confidentiality
+  still comes from who holds a matching age private key, not from this
+  check, but a credential is now required to even request the
+  ciphertext.
 - **Addressing**: `objects.id` is an internal identifier; every
   caller-facing path (the API, the CLI, the audit log) addresses an
   object by its `slug` instead, decoupled so a slug can be renamed later
