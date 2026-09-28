@@ -16,7 +16,7 @@ needs.
 
 - A real `DELETE FROM write_tokens`/`consumer_tokens` for a token that's
   already dead.
-- Symmetric behavior across both token kinds - same restriction, same
+- Symmetric behaviour across both token kinds - same restriction, same
   status codes.
 
 **Non-Goals:**
@@ -35,7 +35,7 @@ existing `DELETE /tokens/{id}`.** A query parameter (`?hard=true`) would
 make an already-destructive DELETE request's meaning depend on an easy-to-
 miss parameter; a distinct path makes the two actions - revoke vs. purge -
 each unambiguous from the URL alone, and keeps `DELETE /tokens/{id}`'s
-existing contract (always a safe, idempotent-ish soft-delete) untouched.
+existing contract (always a safe, roughly idempotent soft-delete) untouched.
 
 **Store method returns a sentinel error for "still active," distinct from
 `ErrTokenNotFound`.** `PurgeWriteToken`/`PurgeConsumerToken` need to

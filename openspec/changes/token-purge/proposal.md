@@ -37,7 +37,7 @@ own change: `openspec list --specs` still reports nothing, so there's no
 canonical `tokens` spec to diff a delta against yet
 (`openspec/changes/consumer-read-tokens/proposal.md` has the fuller note on
 why - unarchived history across this whole repo, not specific to this
-change). This delta is `ADDED`, scoped to only the purge behavior this
+change). This delta is `ADDED`, scoped to only the purge behaviour this
 change introduces.
 
 ### New Capabilities

@@ -37,7 +37,7 @@ A separate `/purge` path was chosen over a query parameter on the
 existing `DELETE /tokens/{id}` (for example, `?hard=true`) - a query parameter
 would make an already-destructive request's real effect depend on an
 easy-to-miss parameter, where a distinct path keeps `DELETE
-/tokens/{id}`'s existing contract (always a safe, idempotent-ish
+/tokens/{id}`'s existing contract (always a safe, roughly idempotent
 soft-delete) completely unchanged and makes the two actions unambiguous
 from the URL alone.
 
