@@ -156,11 +156,16 @@ func registerTokenRoutes(mux *http.ServeMux, s objectStore) {
 	mux.HandleFunc("POST /tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateToken(s))))
 	mux.HandleFunc("DELETE /tokens/{id}/purge", requireSession(s, requireCSRF(handlePurgeToken(s))))
 
-	mux.HandleFunc("POST /consumer-tokens", requireSession(s, requireCSRF(handleCreateConsumerToken(s))))
-	mux.HandleFunc("GET /consumer-tokens", requireSession(s, handleListConsumerTokens(s)))
-	mux.HandleFunc("DELETE /consumer-tokens/{id}", requireSession(s, requireCSRF(handleRevokeConsumerToken(s))))
-	mux.HandleFunc("POST /consumer-tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateConsumerToken(s))))
-	mux.HandleFunc("DELETE /consumer-tokens/{id}/purge", requireSession(s, requireCSRF(handlePurgeConsumerToken(s))))
+	// A consumer token's own scope is narrower than a write token's, so
+	// letting a write-token holder mint or manage one is a narrowing
+	// delegation, not an escalation (ADR 24, alrayyes/hush-hush#467) -
+	// unlike /tokens above, which stays session-only since minting a
+	// *write* token from a write token would be the escalating case.
+	mux.HandleFunc("POST /consumer-tokens", requireWriteAccess(s, true, handleCreateConsumerToken(s)))
+	mux.HandleFunc("GET /consumer-tokens", requireWriteAccess(s, false, handleListConsumerTokens(s)))
+	mux.HandleFunc("DELETE /consumer-tokens/{id}", requireWriteAccess(s, true, handleRevokeConsumerToken(s)))
+	mux.HandleFunc("POST /consumer-tokens/{id}/rotate", requireWriteAccess(s, true, handleRotateConsumerToken(s)))
+	mux.HandleFunc("DELETE /consumer-tokens/{id}/purge", requireWriteAccess(s, true, handlePurgeConsumerToken(s)))
 }
 
 // requireWriteAccess rejects a request unless it carries a valid write
