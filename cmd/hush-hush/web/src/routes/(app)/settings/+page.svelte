@@ -2,14 +2,19 @@
 import { invalidate } from '$app/navigation';
 import {
 	ApiError,
+	type ConsumerTokenWithValue,
+	createConsumerToken,
 	createToken,
 	deleteCredential,
 	renameCredential,
+	revokeConsumerToken,
 	revokeToken,
+	rotateConsumerToken,
 	rotateToken,
 	type TokenWithValue,
 } from '$lib/api';
 import { registerPasskey } from '$lib/auth';
+import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
 import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -192,6 +197,109 @@ function closeRotate() {
 	rotateTTLDays = 90;
 	rotateError = '';
 	rotatedToken = null;
+}
+
+// Consumer tokens
+
+let createConsumerTokenOpen = $state(false);
+let consumerTokenConsumer: string[] = $state([]);
+let consumerTokenDescription = $state('');
+let consumerTokenTTLDays = $state(90);
+let consumerTokenError = $state('');
+let createdConsumerToken: ConsumerTokenWithValue | null = $state(null);
+
+function resetConsumerTokenForm() {
+	consumerTokenConsumer = [];
+	consumerTokenDescription = '';
+	consumerTokenTTLDays = 90;
+	consumerTokenError = '';
+	createdConsumerToken = null;
+}
+
+async function submitCreateConsumerToken(event: SubmitEvent) {
+	event.preventDefault();
+	consumerTokenError = '';
+
+	try {
+		createdConsumerToken = await createConsumerToken(
+			consumerTokenConsumer[0],
+			consumerTokenDescription,
+			consumerTokenTTLDays * 24 * 60 * 60,
+		);
+		await invalidate('app:settings');
+	} catch (err) {
+		consumerTokenError = apiErrorMessage(err, 'Failed to create the token.');
+	}
+}
+
+function closeCreateConsumerToken() {
+	createConsumerTokenOpen = false;
+	resetConsumerTokenForm();
+}
+
+let revokeConsumerTokenOpen = $state(false);
+let revokeConsumerTokenId = $state('');
+let revokeConsumerTokenError = $state('');
+
+function openRevokeConsumerToken(id: string) {
+	revokeConsumerTokenId = id;
+	revokeConsumerTokenError = '';
+	revokeConsumerTokenOpen = true;
+}
+
+async function confirmRevokeConsumerToken() {
+	revokeConsumerTokenError = '';
+
+	try {
+		await revokeConsumerToken(revokeConsumerTokenId);
+		revokeConsumerTokenOpen = false;
+		await invalidate('app:settings');
+	} catch (err) {
+		revokeConsumerTokenError = apiErrorMessage(
+			err,
+			'Failed to revoke the token.',
+		);
+	}
+}
+
+let rotateConsumerTokenOpen = $state(false);
+let rotateConsumerTokenId = $state('');
+let rotateConsumerTokenTTLDays = $state(90);
+let rotateConsumerTokenError = $state('');
+let rotatedConsumerToken: ConsumerTokenWithValue | null = $state(null);
+
+function openRotateConsumerToken(id: string) {
+	rotateConsumerTokenId = id;
+	rotateConsumerTokenTTLDays = 90;
+	rotateConsumerTokenError = '';
+	rotatedConsumerToken = null;
+	rotateConsumerTokenOpen = true;
+}
+
+async function submitRotateConsumerToken(event: SubmitEvent) {
+	event.preventDefault();
+	rotateConsumerTokenError = '';
+
+	try {
+		rotatedConsumerToken = await rotateConsumerToken(
+			rotateConsumerTokenId,
+			rotateConsumerTokenTTLDays * 24 * 60 * 60,
+		);
+		await invalidate('app:settings');
+	} catch (err) {
+		rotateConsumerTokenError = apiErrorMessage(
+			err,
+			'Failed to rotate the token.',
+		);
+	}
+}
+
+function closeRotateConsumerToken() {
+	rotateConsumerTokenOpen = false;
+	rotateConsumerTokenId = '';
+	rotateConsumerTokenTTLDays = 90;
+	rotateConsumerTokenError = '';
+	rotatedConsumerToken = null;
 }
 </script>
 
@@ -416,6 +524,156 @@ function closeRotate() {
 			</tbody>
 		</table>
 	</section>
+
+	<section class="mb-12">
+		<header class="flex flex-wrap items-center justify-between gap-2">
+			<h2>Consumer tokens</h2>
+			<Dialog.Root
+				bind:open={createConsumerTokenOpen}
+				onOpenChange={(open) => {
+					if (!open) resetConsumerTokenForm();
+				}}
+			>
+				<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
+					New consumer token
+				</Dialog.Trigger>
+				<Dialog.Content>
+					{#if createdConsumerToken}
+						<Dialog.Header>
+							<Dialog.Title>Token created</Dialog.Title>
+						</Dialog.Header>
+						<div class="space-y-4">
+							<p role="alert" class="font-bold text-warning">
+								This value is shown once. It will not be shown again - store it now.
+							</p>
+							<Textarea
+								readonly
+								rows={3}
+								value={createdConsumerToken.value}
+								aria-label="Token value"
+								class="w-full"
+							/>
+						</div>
+						<Dialog.Footer>
+							<Button onclick={closeCreateConsumerToken}>Done</Button>
+						</Dialog.Footer>
+					{:else}
+						<Dialog.Header>
+							<Dialog.Title>Create a consumer token</Dialog.Title>
+						</Dialog.Header>
+						<form onsubmit={submitCreateConsumerToken}>
+							<div class="space-y-4">
+								<div class="space-y-1">
+									<Label for="consumer-token-consumer">Consumer</Label>
+									<ConsumerCombobox
+										id="consumer-token-consumer"
+										bind:value={consumerTokenConsumer}
+										max={1}
+										showKeyStatus={false}
+									/>
+								</div>
+
+								<div class="space-y-1">
+									<Label for="consumer-token-description">Description</Label>
+									<Input
+										id="consumer-token-description"
+										class="w-full"
+										bind:value={consumerTokenDescription}
+										required
+									/>
+								</div>
+
+								<div class="space-y-1">
+									<Label for="consumer-token-ttl">Valid for (days)</Label>
+									<Input
+										id="consumer-token-ttl"
+										class="w-full"
+										type="number"
+										min="1"
+										bind:value={consumerTokenTTLDays}
+										required
+									/>
+								</div>
+
+								{#if consumerTokenError}
+									<p role="alert" class="text-error">{consumerTokenError}</p>
+								{/if}
+							</div>
+
+							<Dialog.Footer>
+								<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+									Cancel
+								</Dialog.Close>
+								<Button type="submit" disabled={consumerTokenConsumer.length === 0}>
+									Create
+								</Button>
+							</Dialog.Footer>
+						</form>
+					{/if}
+				</Dialog.Content>
+			</Dialog.Root>
+		</header>
+
+		<table class="responsive-table">
+			<thead>
+				<tr>
+					<th scope="col" class="px-4 py-3">Consumer</th>
+					<th scope="col" class="px-4 py-3">Description</th>
+					<th scope="col" class="px-4 py-3">Created</th>
+					<th scope="col" class="px-4 py-3">Expires</th>
+					<th scope="col" class="px-4 py-3">Last used</th>
+					<th scope="col" class="px-4 py-3">Status</th>
+					<th scope="col" class="px-4 py-3">Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each data.consumerTokens as token (token.id)}
+					<tr>
+						<td data-label="Consumer">{token.consumer}</td>
+						<td data-label="Description">{token.description}</td>
+						<td data-label="Created">
+							<time datetime={token.created_at} title={token.created_at}>
+								{formatTimestamp(token.created_at)}
+							</time>
+						</td>
+						<td data-label="Expires">
+							<time datetime={token.expires_at} title={token.expires_at}>
+								{formatTimestamp(token.expires_at)}
+							</time>
+						</td>
+						<td data-label="Last used">
+							{#if token.last_used_at}
+								<time datetime={token.last_used_at} title={token.last_used_at}>
+									{formatTimestamp(token.last_used_at)}
+								</time>
+							{:else}
+								never
+							{/if}
+						</td>
+						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
+						<td data-label="Actions" class="row-actions gap-3">
+							{#if !token.revoked}
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={() => openRotateConsumerToken(token.id)}
+								>
+									Rotate
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onclick={() => openRevokeConsumerToken(token.id)}
+								>
+									Revoke
+								</Button>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</section>
 </main>
 
 <Dialog.Root bind:open={renameOpen}>
@@ -529,6 +787,86 @@ function closeRotate() {
 
 					{#if rotateError}
 						<p role="alert" class="text-error">{rotateError}</p>
+					{/if}
+				</div>
+
+				<Dialog.Footer>
+					<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
+						Cancel
+					</Dialog.Close>
+					<Button type="submit">Rotate</Button>
+				</Dialog.Footer>
+			</form>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<AlertDialog.Root bind:open={revokeConsumerTokenOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Revoke this token?</AlertDialog.Title>
+			<AlertDialog.Description>
+				That consumer will immediately lose read access.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		{#if revokeConsumerTokenError}
+			<p role="alert" class="text-error">{revokeConsumerTokenError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={confirmRevokeConsumerToken}>
+				Revoke
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
+
+<Dialog.Root
+	bind:open={rotateConsumerTokenOpen}
+	onOpenChange={(open) => {
+		if (!open) closeRotateConsumerToken();
+	}}
+>
+	<Dialog.Content>
+		{#if rotatedConsumerToken}
+			<Dialog.Header>
+				<Dialog.Title>Token rotated</Dialog.Title>
+			</Dialog.Header>
+			<div class="space-y-4">
+				<p role="alert" class="font-bold text-warning">
+					This value is shown once. It will not be shown again - store it now.
+				</p>
+				<Textarea
+					readonly
+					rows={3}
+					value={rotatedConsumerToken.value}
+					aria-label="Token value"
+					class="w-full"
+				/>
+			</div>
+			<Dialog.Footer>
+				<Button onclick={closeRotateConsumerToken}>Done</Button>
+			</Dialog.Footer>
+		{:else}
+			<Dialog.Header>
+				<Dialog.Title>Rotate this token?</Dialog.Title>
+			</Dialog.Header>
+			<form onsubmit={submitRotateConsumerToken}>
+				<div class="space-y-4">
+					<div class="space-y-1">
+						<Label for="rotate-consumer-token-ttl">Valid for (days)</Label>
+						<Input
+							id="rotate-consumer-token-ttl"
+							class="w-full"
+							type="number"
+							min="1"
+							bind:value={rotateConsumerTokenTTLDays}
+							required
+						/>
+					</div>
+
+					{#if rotateConsumerTokenError}
+						<p role="alert" class="text-error">{rotateConsumerTokenError}</p>
 					{/if}
 				</div>
 

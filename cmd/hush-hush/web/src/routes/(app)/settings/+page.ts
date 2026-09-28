@@ -1,13 +1,14 @@
-import { listCredentials, listTokens } from '$lib/api';
+import { listConsumerTokens, listCredentials, listTokens } from '$lib/api';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ depends }) => {
 	depends('app:settings');
 
-	const [credentials, tokens] = await Promise.all([
+	const [credentials, tokens, consumerTokens] = await Promise.all([
 		listCredentials(),
 		listTokens(),
+		listConsumerTokens(),
 	]);
 
-	return { credentials, tokens };
+	return { credentials, tokens, consumerTokens };
 };
