@@ -210,3 +210,33 @@ func (s *Store) UpdateConsumerTokenUsage(ctx context.Context, id, usedAt string)
 
 	return nil
 }
+
+// PurgeConsumerToken permanently removes the consumer token issued under
+// id, same semantics as PurgeWriteToken: ErrTokenNotFound for an unknown
+// id, ErrTokenStillActive for one that's neither revoked nor expired,
+// otherwise the row is actually deleted.
+func (s *Store) PurgeConsumerToken(ctx context.Context, id string) error {
+	var (
+		revokedAt sql.NullString
+		expiresAt string
+	)
+
+	switch err := s.db.QueryRowContext(ctx,
+		`SELECT revoked_at, expires_at FROM consumer_tokens WHERE id = ?`, id,
+	).Scan(&revokedAt, &expiresAt); {
+	case errors.Is(err, sql.ErrNoRows):
+		return ErrTokenNotFound
+	case err != nil:
+		return fmt.Errorf("purge consumer token: %w", err)
+	}
+
+	if !isTokenDead(revokedAt, expiresAt) {
+		return ErrTokenStillActive
+	}
+
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM consumer_tokens WHERE id = ?`, id); err != nil {
+		return fmt.Errorf("purge consumer token: %w", err)
+	}
+
+	return nil
+}

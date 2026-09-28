@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+Accepted. Extended, not reversed, by [ADR
+25](0025-token-purge-hard-delete-for-dead-tokens.md), which adds a real
+`DELETE` for a token that's already dead (revoked or expired) - a live
+token's revocation is still always this soft-delete.
 
 ## Context
 

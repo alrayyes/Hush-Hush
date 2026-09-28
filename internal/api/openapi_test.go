@@ -583,6 +583,40 @@ func contractCases() []contractCase {
 			},
 		},
 		{
+			name: "purge unknown token",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodDelete, "/tokens/0000000000000000/purge", nil)
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
+		{
+			name: "purge active token is rejected",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+				wt, _, err := s.CreateWriteToken(t.Context(), "still active", time.Hour, "")
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodDelete, "/tokens/"+wt.ID+"/purge", nil)
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
+		{
 			name: "create consumer token",
 			request: func(t *testing.T, s *store.Store) *http.Request {
 				t.Helper()
@@ -634,6 +668,40 @@ func contractCases() []contractCase {
 				require.NoError(t, err)
 
 				req := httptest.NewRequest(http.MethodDelete, "/consumer-tokens/0000000000000000", nil)
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
+		{
+			name: "purge unknown consumer token",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodDelete, "/consumer-tokens/0000000000000000/purge", nil)
+				req.AddCookie(sess)
+				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
+
+				return req
+			},
+		},
+		{
+			name: "purge active consumer token is rejected",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				sess := seedSessionCookie(t, s)
+				sessRow, err := s.GetSession(t.Context(), sess.Value)
+				require.NoError(t, err)
+				ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "still active", time.Hour)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodDelete, "/consumer-tokens/"+ct.ID+"/purge", nil)
 				req.AddCookie(sess)
 				req.Header.Set("X-CSRF-Token", sessRow.CSRFToken)
 
