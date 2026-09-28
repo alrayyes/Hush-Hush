@@ -15,6 +15,8 @@
 // can resolve each selected consumer's registered public key into a real
 // age sealing recipient without a second, duplicate fetch of its own
 // (openspec/changes/client-side-encryption, task group 4).
+import { Button } from '$lib/components/ui/button/index.js';
+import { Input } from '$lib/components/ui/input/index.js';
 import { type ConsumerEntry, listConsumerDirectory } from './api';
 
 let {
@@ -26,7 +28,7 @@ let {
 let query = $state('');
 let open = $state(false);
 let activeIndex = $state(-1);
-let input: HTMLInputElement | undefined = $state();
+let input: HTMLInputElement | null = $state(null);
 
 listConsumerDirectory()
 	.then((result) => {
@@ -120,22 +122,23 @@ function onKeydown(event: KeyboardEvent) {
 							(no key)
 						</span>
 					{/if}
-					<button
-						type="button"
-						class="border-0 bg-transparent p-0 text-sm font-normal leading-none"
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
 						onclick={() => removeConsumer(consumer)}
 						aria-label={`Remove ${consumer}`}
 					>
 						&times;
-					</button>
+					</Button>
 				</li>
 			{/each}
 		</ul>
 	{/if}
 
 	<div class="relative">
-		<input
-			bind:this={input}
+		<Input
+			bind:ref={input}
 			{id}
 			type="text"
 			class="w-full"

@@ -7,6 +7,7 @@ import {
 } from '$lib/api';
 import { auditActorLabel, toCSV, toJSON } from '$lib/audit-export';
 import { Button } from '$lib/components/ui/button/index.js';
+import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import * as Select from '$lib/components/ui/select/index.js';
 import { formatTimestamp } from '$lib/datetime';
@@ -200,7 +201,7 @@ function exportCSV() {
 
 		<div class="flex flex-col gap-1">
 			<label class="text-sm" for="filter-from">From</label>
-			<input
+			<Input
 				id="filter-from"
 				class="w-full"
 				type="datetime-local"
@@ -211,7 +212,7 @@ function exportCSV() {
 
 		<div class="flex flex-col gap-1">
 			<label class="text-sm" for="filter-to">To</label>
-			<input
+			<Input
 				id="filter-to"
 				class="w-full"
 				type="datetime-local"
