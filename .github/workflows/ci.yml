@@ -356,7 +356,10 @@ jobs:
   # require a status check gated behind paths" would leave every non-web
   # pull request permanently BLOCKED, since "never ran" isn't "passed" to
   # either forge. The job itself always runs and always reports; only the
-  # steps below skip when nothing under cmd/hush-hush/web changed.
+  # steps below skip when the diff touches neither the frontend source
+  # nor the backend HTTP contract it exercises (internal/api, the OpenAPI
+  # spec) - a backend-only auth change silently passing an e2e assertion
+  # it actually broke is exactly the gap alrayyes/hush-hush#452 closes.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -372,6 +375,8 @@ jobs:
           filters: |
             web:
               - 'cmd/hush-hush/web/**'
+              - 'internal/api/**'
+              - 'api/openapi.yaml'
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         if: steps.web-changes.outputs.web == 'true'
         with:
@@ -416,6 +421,8 @@ jobs:
           filters: |
             web:
               - 'cmd/hush-hush/web/**'
+              - 'internal/api/**'
+              - 'api/openapi.yaml'
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         if: steps.web-changes.outputs.web == 'true'
         with:
