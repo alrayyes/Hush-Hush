@@ -66,7 +66,7 @@
 - [x] 5.1 `bun run lint:tailwind`, `bun run check`, `bun run lint`,
       `bun run test`, and (after a fresh `bun run build`)
       `bun run test:e2e` all pass in `cmd/hush-hush/web`.
-- [ ] 5.2 Manually verified against the running binary: the full
+- [x] 5.2 Manually verified against the running binary: the full
       create/rotate/revoke flow for a consumer token, and that the
       existing secret create/edit dialogs' multi-consumer picking still
       works unchanged.
