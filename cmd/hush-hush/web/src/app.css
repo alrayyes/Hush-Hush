@@ -294,6 +294,18 @@
 		.responsive-table tr td:last-child {
 			border-bottom: 1px solid var(--color-border);
 		}
+
+		/* .row-actions' own justify-content/flex-wrap (above) do nothing
+		   once this breakpoint resets every td to display: table-cell -
+		   a table-cell ignores `gap` entirely, which is why the action
+		   buttons had no space between them and wrapped flush against
+		   each other instead (alrayyes/hush-hush#457). Re-asserting flex
+		   here wins on specificity (.responsive-table td.row-actions vs
+		   .responsive-table td) regardless of source order. */
+		.responsive-table td.row-actions {
+			display: flex;
+			align-items: center;
+		}
 	}
 
 	/* CHANGELOG.md's own rendered markdown (changelog/+page.svelte) - h1,
