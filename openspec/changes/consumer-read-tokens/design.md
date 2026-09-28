@@ -45,7 +45,7 @@ not in generic route middleware.
   as they are today - unauthenticated and write-token-gated respectively.
   Only the object-body read changes here.
 - Hard-delete/purge of tokens - separate change (alrayyes/hush-hush#439).
-- Any web-ui, CLI, Action, or SDK work - separate tracked issues (see
+- Any web UI, CLI, Action, or SDK work - separate tracked issues (see
   proposal.md's Impact section).
 - Changing anything about how objects are sealed or unsealed.
 
@@ -98,7 +98,7 @@ Alternative considered: a `kind` field on the existing `/tokens`
 endpoints. Rejected - it would make every existing write-token response
 carry a field that's now conditionally meaningful, and callers of the existing
 endpoints (the CLI, the web UI) would all need to start filtering by kind
-for behavior that hasn't changed for them.
+for behaviour that hasn't changed for them.
 
 **`GET /objects/{slug}` authorizes inside the handler, not via a
 boolean-flag middleware like `requireWriteAccess`.** A new
@@ -136,14 +136,14 @@ reads were unauthenticated).
   never-collide-in-practice hash-lookup property `write_tokens` already
   has.
 - [`GET /objects/{slug}` now runs an extra `slices.Contains` per request
-  for consumer-token reads] → O(len(used_by)) on data already fetched in
+  for consumer-token reads] → O(`len(used_by)`) on data already fetched in
   the same query; not a new round trip, not worth optimizing further at
   this scale.
 - [Existing anonymous integrations relying on today's open read path
   break the moment this ships] → **BREAKING**, called out in proposal.md.
   CLI/Action/SDK follow-up issues exist precisely because of this; there
   is no deprecation window designed here since Ryan asked for the closed
-  behavior directly, not a transition period.
+  behaviour directly, not a transition period.
 
 ## Migration Plan
 

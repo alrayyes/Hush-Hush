@@ -118,7 +118,8 @@
       "denormalized",
       "substring",
       "Sec-Fetch-Dest",
-      "Stoplight"
+      "Stoplight",
+      "unarchived"
     ]
   },
   "ltex.disabledRules": {

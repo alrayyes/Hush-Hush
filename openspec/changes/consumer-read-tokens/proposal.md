@@ -35,7 +35,7 @@ every object in the store
 
 Out of scope for this change (tracked separately, per
 [alrayyes/hush-hush#438](https://github.com/alrayyes/hush-hush/issues/438)'s
-sibling issues): hard-delete/purge of dead tokens (#439), the web-ui token
+sibling issues): hard-delete/purge of dead tokens (#439), the web UI token
 management UI (#440, #441), the CLI (hush-hush-cli#133), the GitHub Action
 (hush-hush-action#31), and the client SDKs (4 follow-up issues).
 
@@ -50,7 +50,7 @@ established (`tokens` in `tokens-last-used-at/specs/tokens/` and
 `web-ui/specs/tokens/`; `secret-objects` in
 `secrets-object-store/specs/secret-objects/`), but since neither has a
 canonical spec yet, this change's deltas are necessarily `ADDED`, scoped to
-only the behavior this change actually introduces - not a backfill of every
+only the behaviour this change actually introduces - not a backfill of every
 requirement those capabilities already have in shipped code. Backfilling
 the full unarchived history into a canonical spec is separate, pre-existing
 scope this change doesn't take on.

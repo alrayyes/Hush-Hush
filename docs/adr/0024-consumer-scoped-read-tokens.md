@@ -23,7 +23,7 @@ valid admin session, or a valid consumer read token whose bound consumer
 appears in that object's `used_by` list.
 
 Consumer read tokens are a new, separate credential (`consumer_tokens`
-table), modeled on the existing write bearer tokens - hashed at rest, a
+table), modelled on the existing write bearer tokens - hashed at rest, a
 random-hex id split from its secret, TTL, rotate-in-place, soft-delete
 revoke, `last_used_at` - but bound to exactly one consumer name at
 creation, unlike a write token which authorizes any object. Full HTTP
@@ -44,13 +44,13 @@ Scoping the token to the consumer itself (rather than, say, per-object)
 was chosen because `used_by` already models "which consumers can use
 this object," and a consumer already has its own identity in the system
 (a `consumers` row, an optional registered public key) - reusing that
-existing identity needed no new modeling.
+existing identity needed no new modelling.
 
 ## Consequences
 
 - **BREAKING**: a caller relying on the previously open read path stops
   working the moment this ships. There's no deprecation window - Ryan
-  asked for the closed behavior directly, not a transition period. The
+  asked for the closed behaviour directly, not a transition period. The
   CLI, the GitHub Action, and every client SDK need a follow-up to start
   sending a credential (alrayyes/hush-hush-cli#133, hush-hush-action#31,
   and one issue per SDK).
