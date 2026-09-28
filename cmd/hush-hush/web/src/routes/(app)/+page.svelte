@@ -315,7 +315,9 @@ async function confirmDelete() {
 				<tr>
 					<th scope="col" class="px-4 py-3">Id</th>
 					<th scope="col" class="px-4 py-3">Description</th>
+					<th scope="col" class="px-4 py-3">Created by</th>
 					<th scope="col" class="px-4 py-3">Created</th>
+					<th scope="col" class="px-4 py-3">Updated by</th>
 					<th scope="col" class="px-4 py-3">Updated</th>
 					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
@@ -330,17 +332,17 @@ async function confirmDelete() {
 								{object.description ?? ''}
 							</span>
 						</td>
+						<td data-label="Created by">{attribution?.createdBy ?? ''}</td>
 						<td data-label="Created">
 							{#if attribution}
-								{attribution.createdBy} &middot;
 								<time datetime={attribution.createdAt} title={attribution.createdAt}>
 									{formatTimestamp(attribution.createdAt)}
 								</time>
 							{/if}
 						</td>
+						<td data-label="Updated by">{attribution?.updatedBy ?? ''}</td>
 						<td data-label="Updated">
 							{#if attribution}
-								{attribution.updatedBy} &middot;
 								<time datetime={attribution.updatedAt} title={attribution.updatedAt}>
 									{formatTimestamp(attribution.updatedAt)}
 								</time>
