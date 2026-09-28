@@ -31,7 +31,7 @@ _None._
 ### Modified Capabilities
 
 _None. This is a pure refactor - markup and CSS only, with no change to
-any externally observable behavior (`skip_specs: true` set in
+any externally observable behaviour (`skip_specs: true` set in
 `.openspec.yaml`)._
 
 ## Impact

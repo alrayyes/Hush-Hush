@@ -42,7 +42,7 @@ Tailwind CSS v4 - utility classes on the markup, not hand-rolled CSS.
 `text`, `text-muted`, `border`, `border-subtle`, `accent`, `error`,
 `warning`, `accent-contrast`, `danger`, `danger-contrast` - each usable as
 a `bg-*`/`text-*`/`border-*` utility) plus the two patterns that stay
-hand-written because no Tailwind utility covers them: the responsive-table
+handwritten because no Tailwind utility covers them: the responsive-table
 reflow pattern (`.responsive-table`) and the changelog's rendered-Markdown
 heading treatment (`.changelog-content`, applied to runtime-rendered HTML
 with no opportunity to attach a class in the template), both under

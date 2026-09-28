@@ -37,7 +37,7 @@
 - [x] 3.1 Update `cmd/hush-hush/web/README.md`'s "Styling" section and
       `cmd/hush-hush/web/AGENTS.md`'s "Styling convention" note to drop
       the `.overlay`/`.dialog` mention, listing only `.responsive-table`
-      and `.changelog-content` as the remaining hand-written CSS
+      and `.changelog-content` as the remaining handwritten CSS
       (each already carries its own "no Tailwind utility covers this"
       rationale - leave those as-is).
 
