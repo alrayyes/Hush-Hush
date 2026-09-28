@@ -38,7 +38,7 @@ error` to `internal/store/tokens.go`: `ErrTokenNotFound` for an
 - [x] 3.2 Record a new ADR in `docs/adr/` documenting purge as an
       addition alongside ADR 17's soft-delete, not a reversal of it.
       Verify it reads consistently with the shipped behaviour.
-- [ ] 3.3 Run `go build ./... && go vet ./... && go test ./...` and
+- [x] 3.3 Run `go build ./... && go vet ./... && go test ./...` and
       `golangci-lint run` clean, then open the pull request referencing
       alrayyes/hush-hush#439, and comment on alrayyes/hush-hush#441 that
       the purge API has landed.
