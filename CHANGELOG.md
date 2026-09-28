@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.42.0](https://github.com/alrayyes/Hush-Hush/compare/v2.41.1...v2.42.0) (2026-09-28)
+
+
+### Features
+
+* **web-ui:** consumer read token management in settings ([#463](https://github.com/alrayyes/Hush-Hush/issues/463)) ([f47acd7](https://github.com/alrayyes/Hush-Hush/commit/f47acd7c2aa0d16f19f8d6f16339985f50828884))
+
 ## [2.41.1](https://github.com/alrayyes/Hush-Hush/compare/v2.41.0...v2.41.1) (2026-09-28)
 
 
