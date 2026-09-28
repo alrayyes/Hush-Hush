@@ -500,6 +500,60 @@ export async function rotateToken(
 	return res.json();
 }
 
+export interface ConsumerTokenMetadata {
+	id: string;
+	consumer: string;
+	description: string;
+	created_at: string;
+	expires_at: string;
+	revoked: boolean;
+	last_used_at?: string;
+}
+
+export interface ConsumerTokenWithValue extends ConsumerTokenMetadata {
+	value: string;
+}
+
+export async function listConsumerTokens(): Promise<ConsumerTokenMetadata[]> {
+	const res = await request('/consumer-tokens');
+
+	return res.json();
+}
+
+export async function createConsumerToken(
+	consumer: string,
+	description: string,
+	ttlSeconds: number,
+): Promise<ConsumerTokenWithValue> {
+	const res = await request('/consumer-tokens', {
+		method: 'POST',
+		body: JSON.stringify({ consumer, description, ttl_seconds: ttlSeconds }),
+	});
+
+	return res.json();
+}
+
+export async function revokeConsumerToken(id: string): Promise<void> {
+	await request(`/consumer-tokens/${encodeURIComponent(id)}`, {
+		method: 'DELETE',
+	});
+}
+
+export async function rotateConsumerToken(
+	id: string,
+	ttlSeconds: number,
+): Promise<ConsumerTokenWithValue> {
+	const res = await request(
+		`/consumer-tokens/${encodeURIComponent(id)}/rotate`,
+		{
+			method: 'POST',
+			body: JSON.stringify({ ttl_seconds: ttlSeconds }),
+		},
+	);
+
+	return res.json();
+}
+
 export interface Health {
 	status: string;
 	version: string;

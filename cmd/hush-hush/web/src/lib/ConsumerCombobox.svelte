@@ -9,7 +9,10 @@
 //
 // Each selection appends to `value` (a list) rather than replacing it -
 // used_by is multi-valued, so this is a tag picker built on the
-// combobox pattern, not a single-value one.
+// combobox pattern, not a single-value one, unless `max` caps it (the
+// consumer-token create form's single-consumer picker -
+// openspec/changes/consumer-read-tokens-web-ui/design.md's "extend
+// ConsumerCombobox with `max` rather than a second component" decision).
 //
 // entries is bindable so the parent form (the secret create/edit dialog)
 // can resolve each selected consumer's registered public key into a real
@@ -23,7 +26,19 @@ let {
 	value = $bindable([]),
 	entries = $bindable([]),
 	id,
-}: { value: string[]; entries?: ConsumerEntry[]; id: string } = $props();
+	max,
+	showKeyStatus = true,
+}: {
+	value: string[];
+	entries?: ConsumerEntry[];
+	id: string;
+	max?: number;
+	// The "(no key)" hint is about age-recipient status for sealing a
+	// secret - meaningless where a consumer is picked for something
+	// unrelated to encryption (the consumer-token create form, which
+	// only needs a consumer *name*, not its public key).
+	showKeyStatus?: boolean;
+} = $props();
 
 let query = $state('');
 let open = $state(false);
@@ -65,7 +80,9 @@ const options = $derived(offersAdd ? [...filtered, trimmedQuery] : filtered);
 const listboxId = $derived(`${id}-listbox`);
 
 function addConsumer(name: string) {
-	if (!value.includes(name)) {
+	if (max !== undefined && value.length >= max) {
+		value = [name];
+	} else if (!value.includes(name)) {
 		value = [...value, name];
 	}
 
@@ -114,7 +131,7 @@ function onKeydown(event: KeyboardEvent) {
 			{#each value as consumer (consumer)}
 				<li class="flex items-center gap-1 rounded-2xl bg-border-subtle px-2 py-1 text-sm">
 					{consumer}
-					{#if !keyByName.get(consumer)}
+					{#if showKeyStatus && !keyByName.get(consumer)}
 						<span
 							class="font-bold text-warning"
 							title={`${consumer} has no registered public key - this secret won't be sealed to them`}
@@ -136,6 +153,7 @@ function onKeydown(event: KeyboardEvent) {
 		</ul>
 	{/if}
 
+	{#if max === undefined || value.length < max}
 	<div class="relative">
 		<Input
 			bind:ref={input}
@@ -184,4 +202,5 @@ function onKeydown(event: KeyboardEvent) {
 			</ul>
 		{/if}
 	</div>
+	{/if}
 </div>

@@ -573,6 +573,83 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(settingsResults.violations).toEqual([]);
 
+	// Consumer tokens: create/rotate/revoke, and the single-select
+	// consumer picker (max=1, showKeyStatus=false -
+	// openspec/changes/consumer-read-tokens-web-ui/design.md). "ci-runner"
+	// is deliberately a consumer with no registered public key - proving
+	// showKeyStatus=false actually suppresses the "(no key)" hint
+	// ConsumerCombobox's used_by callers still show.
+	await page.getByRole('button', { name: 'New consumer token' }).click();
+	const createConsumerTokenDialog = page.getByRole('dialog', {
+		name: 'Create a consumer token',
+	});
+	await page.locator('#consumer-token-consumer').fill('ci-runner');
+	await page.getByRole('listbox').waitFor();
+	await expect(createConsumerTokenDialog.getByText('(no key)')).toHaveCount(0);
+	await page.getByRole('option', { name: 'Add "ci-runner"' }).click();
+	await expect(createConsumerTokenDialog.getByLabel('Consumer')).toHaveCount(0);
+	await page
+		.locator('#consumer-token-description')
+		.fill('deploy read token for ci-runner');
+	await page.locator('#consumer-token-ttl').fill('30');
+	// The Create button's disabled state clears (consumer is picked) but
+	// Tailwind's disabled:opacity-50 briefly outlives the DOM's own
+	// `disabled` property by a tick after the field fills above - a real
+	// user's own typing pace never lands inside that window, but a
+	// synchronous axe snapshot right after `.fill()` can, and reports a
+	// false color-contrast violation against the fading-out low-opacity
+	// state. Confirmed by direct getComputedStyle() polling: opacity
+	// reads 0.5 immediately after fill, 1 within 1s, with `disabled`
+	// already `false` at both points.
+	await expect(
+		createConsumerTokenDialog.getByRole('button', { name: 'Create' }),
+	).toHaveCSS('opacity', '1');
+	const createConsumerTokenResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(createConsumerTokenResults.violations).toEqual([]);
+	await createConsumerTokenDialog
+		.getByRole('button', { name: 'Create' })
+		.click();
+	const consumerTokenValueField = page.getByLabel('Token value');
+	await expect(consumerTokenValueField).not.toHaveValue('');
+	const firstConsumerTokenValue = await consumerTokenValueField.inputValue();
+	await page
+		.getByRole('dialog', { name: 'Token created' })
+		.getByRole('button', { name: 'Done' })
+		.click();
+
+	const consumerTokenRow = page.getByRole('row', { name: /ci-runner/ });
+	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Active');
+
+	await consumerTokenRow.getByRole('button', { name: 'Rotate' }).click();
+	const rotateConsumerTokenDialog = page.getByRole('dialog', {
+		name: 'Rotate this token?',
+	});
+	await rotateConsumerTokenDialog
+		.getByRole('button', { name: 'Rotate', exact: true })
+		.click();
+	await expect(consumerTokenValueField).not.toHaveValue('');
+	const rotatedConsumerTokenValue = await consumerTokenValueField.inputValue();
+	expect(rotatedConsumerTokenValue).not.toBe(firstConsumerTokenValue);
+	await page
+		.getByRole('dialog', { name: 'Token rotated' })
+		.getByRole('button', { name: 'Done' })
+		.click();
+
+	await consumerTokenRow.getByRole('button', { name: 'Revoke' }).click();
+	await page
+		.getByRole('alertdialog', { name: 'Revoke this token?' })
+		.getByRole('button', { name: 'Revoke', exact: true })
+		.click();
+	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Revoked');
+	await expect(
+		consumerTokenRow.getByRole('button', { name: 'Rotate' }),
+	).toHaveCount(0);
+	await expect(
+		consumerTokenRow.getByRole('button', { name: 'Revoke' }),
+	).toHaveCount(0);
+
 	await page.setViewportSize({ width: 320, height: 720 });
 
 	// #294: the topbar's nav links, theme toggle, and Log out button used
