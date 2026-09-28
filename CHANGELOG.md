@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.43.0](https://github.com/alrayyes/Hush-Hush/compare/v2.42.0...v2.43.0) (2026-09-28)
+
+
+### Features
+
+* **web-ui:** purge action for revoked/expired tokens ([#468](https://github.com/alrayyes/Hush-Hush/issues/468)) ([32c9d19](https://github.com/alrayyes/Hush-Hush/commit/32c9d19b6244eee2a993fc6211c600f53732acc2))
+
 ## [2.42.0](https://github.com/alrayyes/Hush-Hush/compare/v2.41.1...v2.42.0) (2026-09-28)
 
 
