@@ -15,6 +15,13 @@ import (
 // id.
 var ErrTokenNotFound = errors.New("write token not found")
 
+// ErrTokenStillActive is returned by PurgeWriteToken/PurgeConsumerToken
+// when the token under the given id is neither revoked nor expired - a
+// purge is only allowed once a token is already dead, so nothing still
+// authenticating anything can be removed out from under an in-flight
+// audit review.
+var ErrTokenStillActive = errors.New("token is still active")
+
 // WriteToken is one issued write-path token, without its plaintext - the
 // plaintext is returned once, by CreateWriteToken, and never stored.
 // Owner is the admin account that created it over HTTP, empty for one
@@ -242,6 +249,56 @@ func (s *Store) UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) er
 	}
 
 	return nil
+}
+
+// PurgeWriteToken permanently removes the write token issued under id -
+// unlike RevokeWriteToken's soft-delete, the row is actually gone
+// afterward, so any audit-log entry attributed to it stops resolving to
+// a description or owner (the accepted tradeoff for a token id that's
+// been deliberately purged, not treated as a bug). It returns
+// ErrTokenNotFound if no token exists under id, or ErrTokenStillActive if
+// the token is neither revoked nor past its expiry - a purge is only
+// allowed once a token is already dead.
+func (s *Store) PurgeWriteToken(ctx context.Context, id string) error {
+	var (
+		revokedAt sql.NullString
+		expiresAt string
+	)
+
+	switch err := s.db.QueryRowContext(ctx,
+		`SELECT revoked_at, expires_at FROM write_tokens WHERE id = ?`, id,
+	).Scan(&revokedAt, &expiresAt); {
+	case errors.Is(err, sql.ErrNoRows):
+		return ErrTokenNotFound
+	case err != nil:
+		return fmt.Errorf("purge write token: %w", err)
+	}
+
+	if !isTokenDead(revokedAt, expiresAt) {
+		return ErrTokenStillActive
+	}
+
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM write_tokens WHERE id = ?`, id); err != nil {
+		return fmt.Errorf("purge write token: %w", err)
+	}
+
+	return nil
+}
+
+// isTokenDead reports whether a token is revoked or past its expiry,
+// given its raw revoked_at/expires_at column values - shared by
+// PurgeWriteToken and PurgeConsumerToken's identical eligibility check.
+func isTokenDead(revokedAt sql.NullString, expiresAt string) bool {
+	if revokedAt.Valid {
+		return true
+	}
+
+	expiry, err := time.Parse(time.RFC3339, expiresAt)
+	if err != nil {
+		return false
+	}
+
+	return !time.Now().UTC().Before(expiry)
 }
 
 func hashToken(token string) string {

@@ -252,3 +252,71 @@ func TestRotateConsumerTokenWithoutASessionIsUnauthorized(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func TestPurgeConsumerTokenRemovesARevokedToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "to purge", 3600e9)
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeConsumerToken(t.Context(), ct.ID))
+
+	req := tokenRequest(t, http.MethodDelete, "/consumer-tokens/"+ct.ID+"/purge", nil, sessionCookie, sess.CSRFToken, true)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+
+	tokens, err := s.ListConsumerTokens(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, tokens)
+}
+
+func TestPurgeConsumerTokenRejectsAnActiveToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "still active", 3600e9)
+	require.NoError(t, err)
+
+	req := tokenRequest(t, http.MethodDelete, "/consumer-tokens/"+ct.ID+"/purge", nil, sessionCookie, sess.CSRFToken, true)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusConflict, rec.Code)
+
+	tokens, err := s.ListConsumerTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+}
+
+func TestPurgeUnknownConsumerTokenIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	req := tokenRequest(t, http.MethodDelete, "/consumer-tokens/does-not-exist/purge", nil, sessionCookie, sess.CSRFToken, true)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestPurgeConsumerTokenWithoutASessionIsUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/consumer-tokens/does-not-exist/purge", bytes.NewReader(nil))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}

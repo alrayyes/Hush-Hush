@@ -37,6 +37,7 @@ type objectStore interface {
 	AuthenticateWriteToken(ctx context.Context, token string) (id string, valid bool, err error)
 	CreateWriteToken(ctx context.Context, description string, ttl time.Duration, owner string) (store.WriteToken, string, error)
 	ListWriteTokens(ctx context.Context) ([]store.WriteToken, error)
+	PurgeWriteToken(ctx context.Context, id string) error
 	RevokeWriteToken(ctx context.Context, id string) error
 	RotateWriteToken(ctx context.Context, id string, ttl time.Duration) (store.WriteToken, string, error)
 	UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) error
@@ -44,6 +45,7 @@ type objectStore interface {
 	AuthenticateConsumerToken(ctx context.Context, token string) (id, consumer string, valid bool, err error)
 	CreateConsumerToken(ctx context.Context, consumer, description string, ttl time.Duration) (store.ConsumerToken, string, error)
 	ListConsumerTokens(ctx context.Context) ([]store.ConsumerToken, error)
+	PurgeConsumerToken(ctx context.Context, id string) error
 	RevokeConsumerToken(ctx context.Context, id string) error
 	RotateConsumerToken(ctx context.Context, id string, ttl time.Duration) (store.ConsumerToken, string, error)
 	UpdateConsumerTokenUsage(ctx context.Context, id, usedAt string) error
@@ -136,19 +138,29 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("PATCH /credentials/{id}", requireSession(s, requireCSRF(handleRenameCredential(s))))
 	mux.HandleFunc("DELETE /credentials/{id}", requireSession(s, requireCSRF(handleDeleteCredential(s))))
 
+	registerTokenRoutes(mux, s)
+
+	mux.Handle("/", staticHandler)
+
+	return mux
+}
+
+// registerTokenRoutes wires up both write bearer token and consumer read
+// token management endpoints - split out of NewMux to keep it under
+// golangci-lint's funlen limit, not because these routes are handled any
+// differently from the rest of it.
+func registerTokenRoutes(mux *http.ServeMux, s objectStore) {
 	mux.HandleFunc("POST /tokens", requireSession(s, requireCSRF(handleCreateToken(s))))
 	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
 	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
 	mux.HandleFunc("POST /tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateToken(s))))
+	mux.HandleFunc("DELETE /tokens/{id}/purge", requireSession(s, requireCSRF(handlePurgeToken(s))))
 
 	mux.HandleFunc("POST /consumer-tokens", requireSession(s, requireCSRF(handleCreateConsumerToken(s))))
 	mux.HandleFunc("GET /consumer-tokens", requireSession(s, handleListConsumerTokens(s)))
 	mux.HandleFunc("DELETE /consumer-tokens/{id}", requireSession(s, requireCSRF(handleRevokeConsumerToken(s))))
 	mux.HandleFunc("POST /consumer-tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateConsumerToken(s))))
-
-	mux.Handle("/", staticHandler)
-
-	return mux
+	mux.HandleFunc("DELETE /consumer-tokens/{id}/purge", requireSession(s, requireCSRF(handlePurgeConsumerToken(s))))
 }
 
 // requireWriteAccess rejects a request unless it carries a valid write

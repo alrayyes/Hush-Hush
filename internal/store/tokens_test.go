@@ -402,3 +402,59 @@ func TestRevokingOneTokenLeavesOthersValid(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, valid)
 }
+
+func TestPurgeWriteTokenRemovesARevokedToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeWriteToken(t.Context(), wt.ID))
+
+	require.NoError(t, s.PurgeWriteToken(t.Context(), wt.ID))
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, tokens)
+}
+
+func TestPurgeWriteTokenRemovesAnExpiredNeverRevokedToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "already expired", -time.Hour, "")
+	require.NoError(t, err)
+
+	require.NoError(t, s.PurgeWriteToken(t.Context(), wt.ID))
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, tokens)
+}
+
+func TestPurgeWriteTokenRejectsAnActiveToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+
+	err = s.PurgeWriteToken(t.Context(), wt.ID)
+	require.ErrorIs(t, err, store.ErrTokenStillActive)
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+}
+
+func TestPurgeWriteTokenUnknownIDIsErrTokenNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.PurgeWriteToken(t.Context(), "nope")
+	require.ErrorIs(t, err, store.ErrTokenNotFound)
+}

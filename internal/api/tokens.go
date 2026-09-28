@@ -309,3 +309,43 @@ func handleRevokeConsumerToken(s objectStore) http.HandlerFunc {
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
+// handlePurge is handlePurgeToken and handlePurgeConsumerToken's shared
+// shape: an unknown id is 404, a still-active token is 409 (a purge is
+// only ever allowed once a token is already dead - alrayyes/hush-hush#439),
+// otherwise the row is gone and the response is 204.
+func handlePurge(purge func(ctx context.Context, id string) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		switch err := purge(r.Context(), id); {
+		case err == nil:
+		case errors.Is(err, store.ErrTokenNotFound):
+			writeError(w, r, http.StatusNotFound, "unknown token")
+
+			return
+		case errors.Is(err, store.ErrTokenStillActive):
+			writeError(w, r, http.StatusConflict, "token must be revoked or expired before it can be purged")
+
+			return
+		default:
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// handlePurgeToken permanently removes the write token issued under id,
+// once it's already revoked or expired.
+func handlePurgeToken(s objectStore) http.HandlerFunc {
+	return handlePurge(s.PurgeWriteToken)
+}
+
+// handlePurgeConsumerToken permanently removes the consumer token issued
+// under id, once it's already revoked or expired.
+func handlePurgeConsumerToken(s objectStore) http.HandlerFunc {
+	return handlePurge(s.PurgeConsumerToken)
+}

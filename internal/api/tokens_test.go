@@ -312,3 +312,71 @@ func TestListTokensWithoutASessionIsUnauthorized(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func TestPurgeTokenRemovesARevokedToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "to purge", 3600e9, "admin")
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeWriteToken(t.Context(), wt.ID))
+
+	req := tokenRequest(t, http.MethodDelete, "/tokens/"+wt.ID+"/purge", nil, sessionCookie, sess.CSRFToken, true)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, tokens)
+}
+
+func TestPurgeTokenRejectsAnActiveToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	wt, _, err := s.CreateWriteToken(t.Context(), "still active", 3600e9, "admin")
+	require.NoError(t, err)
+
+	req := tokenRequest(t, http.MethodDelete, "/tokens/"+wt.ID+"/purge", nil, sessionCookie, sess.CSRFToken, true)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusConflict, rec.Code)
+
+	tokens, err := s.ListWriteTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+}
+
+func TestPurgeUnknownTokenIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	sessionCookie := seedSession(t, s)
+	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
+	require.NoError(t, err)
+
+	req := tokenRequest(t, http.MethodDelete, "/tokens/does-not-exist/purge", nil, sessionCookie, sess.CSRFToken, true)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestPurgeTokenWithoutASessionIsUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/tokens/does-not-exist/purge", bytes.NewReader(nil))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
