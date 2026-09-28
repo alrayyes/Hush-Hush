@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.40.1](https://github.com/alrayyes/Hush-Hush/compare/v2.40.0...v2.40.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **ci:** trigger e2e/lighthouse on backend HTTP-contract changes too ([#454](https://github.com/alrayyes/Hush-Hush/issues/454)) ([b01ef0a](https://github.com/alrayyes/Hush-Hush/commit/b01ef0affffaa8fa5afefb7cc2e422b4d440b184)), closes [#452](https://github.com/alrayyes/Hush-Hush/issues/452)
+* **web-ui:** update actor-filter e2e test for consumer-read-tokens ([#453](https://github.com/alrayyes/Hush-Hush/issues/453)) ([fc66f65](https://github.com/alrayyes/Hush-Hush/commit/fc66f65b9841e73d1175df496dea2e0c185dca14))
+
 ## [2.40.0](https://github.com/alrayyes/Hush-Hush/compare/v2.39.1...v2.40.0) (2026-09-28)
 
 
