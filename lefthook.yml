@@ -76,7 +76,16 @@ pre-commit:
         - "cmd/hush-hush/web/AGENTS.md"
         - "cmd/hush-hush/web/.claude/**"
         - "cmd/hush-hush/web/build/CHANGELOG.md"
-      run: vale {staged_files}
+      # --minAlertLevel=error overrides .vale.ini's MinAlertLevel=warning
+      # for this hook specifically - markdown.md's "let Vale mostly warn,
+      # fail the build only on the rules worth failing on" was never
+      # actually true here: a bare `vale {staged_files}` exits nonzero on
+      # any warning too (Google's own word-choice/heading-casing advice
+      # included), which every spec.md's established `### Requirement:
+      # Capitalized text` heading convention already trips. `bun run
+      # lint:prose` (pre-push, CI) still reports warnings for visibility;
+      # this only changes what blocks a commit.
+      run: vale --minAlertLevel=error {staged_files}
 
     # Reads only, so it changes nothing to restage. Invoked bare rather than
     # on {staged_files}: what gets linted is the `apis` list in redocly.yaml,

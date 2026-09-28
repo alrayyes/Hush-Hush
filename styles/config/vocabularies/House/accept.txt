@@ -75,7 +75,8 @@ Vite
 dialogs?
 namespaced
 nullable
-backfilled
+[Bb]ackfill(?:ed|ing)
+unarchived
 exfiltration
 hardcod(?:ed|ing)
 misconfig(?:ured|uration)
