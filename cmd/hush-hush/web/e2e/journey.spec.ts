@@ -650,6 +650,64 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		consumerTokenRow.getByRole('button', { name: 'Revoke' }),
 	).toHaveCount(0);
 
+	// Purge (alrayyes/hush-hush#441): a dead token (revoked or expired)
+	// offers "Delete permanently" instead of Rotate/Revoke, and confirming
+	// removes it immediately. consumerTokenRow ("ci-runner") is already
+	// revoked from the block above - reused here rather than creating a
+	// fourth token just to purge it.
+	await expect(
+		consumerTokenRow.getByRole('button', { name: 'Delete permanently' }),
+	).toBeVisible();
+	await consumerTokenRow
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+	const purgeConsumerTokenDialog = page.getByRole('alertdialog', {
+		name: 'Delete this token permanently?',
+	});
+	await expect(purgeConsumerTokenDialog).toContainText(
+		'Audit-log entries referencing it will show as unresolvable',
+	);
+	const purgeResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(purgeResults.violations).toEqual([]);
+	await purgeConsumerTokenDialog
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+	await expect(consumerTokenRow).toHaveCount(0);
+
+	// The bearer-token side of the same gating, exercising the "Expired"
+	// path specifically (unrevoked, past its own expiry) - the case the
+	// old two-state `revoked ? 'Revoked' : 'Active'` Status column got
+	// wrong (design.md's own "latent bug" note). The create dialog's own
+	// TTL field is day-granularity (tokenTTLDays), so a 1-second-TTL
+	// token is seeded directly through the API instead, the same way
+	// this test already seeds a consumer's public key above.
+	await page.request.post('/tokens', {
+		headers: { 'X-CSRF-Token': csrfToken },
+		data: { description: 'short-lived token', ttl_seconds: 1 },
+	});
+	await page.waitForTimeout(1_500);
+	await page.reload();
+	await page.getByRole('heading', { name: 'Settings' }).waitFor();
+
+	const shortLivedRow = page.getByRole('row', { name: /short-lived token/ });
+	await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired');
+	await expect(
+		shortLivedRow.getByRole('button', { name: 'Rotate' }),
+	).toHaveCount(0);
+	await expect(
+		shortLivedRow.getByRole('button', { name: 'Revoke' }),
+	).toHaveCount(0);
+	await shortLivedRow
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+	await page
+		.getByRole('alertdialog', { name: 'Delete this token permanently?' })
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+	await expect(shortLivedRow).toHaveCount(0);
+
 	await page.setViewportSize({ width: 320, height: 720 });
 
 	// #294: the topbar's nav links, theme toggle, and Log out button used

@@ -500,6 +500,12 @@ export async function rotateToken(
 	return res.json();
 }
 
+export async function purgeToken(id: string): Promise<void> {
+	await request(`/tokens/${encodeURIComponent(id)}/purge`, {
+		method: 'DELETE',
+	});
+}
+
 export interface ConsumerTokenMetadata {
 	id: string;
 	consumer: string;
@@ -552,6 +558,12 @@ export async function rotateConsumerToken(
 	);
 
 	return res.json();
+}
+
+export async function purgeConsumerToken(id: string): Promise<void> {
+	await request(`/consumer-tokens/${encodeURIComponent(id)}/purge`, {
+		method: 'DELETE',
+	});
 }
 
 export interface Health {

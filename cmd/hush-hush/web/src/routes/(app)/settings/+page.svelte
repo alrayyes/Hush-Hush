@@ -6,6 +6,8 @@ import {
 	createConsumerToken,
 	createToken,
 	deleteCredential,
+	purgeConsumerToken,
+	purgeToken,
 	renameCredential,
 	revokeConsumerToken,
 	revokeToken,
@@ -21,7 +23,7 @@ import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { formatTimestamp } from '$lib/datetime';
+import { formatTimestamp, isTokenDead } from '$lib/datetime';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -301,6 +303,56 @@ function closeRotateConsumerToken() {
 	rotateConsumerTokenError = '';
 	rotatedConsumerToken = null;
 }
+
+// Purge (alrayyes/hush-hush#441) - a hard-delete restricted to a token
+// that's already dead (revoked or past its expiry, per isTokenDead).
+
+let purgeOpen = $state(false);
+let purgeId = $state('');
+let purgeError = $state('');
+
+function openPurge(id: string) {
+	purgeId = id;
+	purgeError = '';
+	purgeOpen = true;
+}
+
+async function confirmPurge() {
+	purgeError = '';
+
+	try {
+		await purgeToken(purgeId);
+		purgeOpen = false;
+		await invalidate('app:settings');
+	} catch (err) {
+		purgeError = apiErrorMessage(err, 'Failed to delete the token.');
+	}
+}
+
+let purgeConsumerTokenOpen = $state(false);
+let purgeConsumerTokenId = $state('');
+let purgeConsumerTokenError = $state('');
+
+function openPurgeConsumerToken(id: string) {
+	purgeConsumerTokenId = id;
+	purgeConsumerTokenError = '';
+	purgeConsumerTokenOpen = true;
+}
+
+async function confirmPurgeConsumerToken() {
+	purgeConsumerTokenError = '';
+
+	try {
+		await purgeConsumerToken(purgeConsumerTokenId);
+		purgeConsumerTokenOpen = false;
+		await invalidate('app:settings');
+	} catch (err) {
+		purgeConsumerTokenError = apiErrorMessage(
+			err,
+			'Failed to delete the token.',
+		);
+	}
+}
 </script>
 
 <svelte:head>
@@ -508,9 +560,15 @@ function closeRotateConsumerToken() {
 								never
 							{/if}
 						</td>
-						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
+						<td data-label="Status">
+							{token.revoked ? 'Revoked' : isTokenDead(token) ? 'Expired' : 'Active'}
+						</td>
 						<td data-label="Actions" class="row-actions gap-3">
-							{#if !token.revoked}
+							{#if isTokenDead(token)}
+								<Button variant="destructive" size="sm" onclick={() => openPurge(token.id)}>
+									Delete permanently
+								</Button>
+							{:else}
 								<Button variant="outline" size="sm" onclick={() => openRotate(token.id)}>
 									Rotate
 								</Button>
@@ -650,9 +708,19 @@ function closeRotateConsumerToken() {
 								never
 							{/if}
 						</td>
-						<td data-label="Status">{token.revoked ? 'Revoked' : 'Active'}</td>
+						<td data-label="Status">
+							{token.revoked ? 'Revoked' : isTokenDead(token) ? 'Expired' : 'Active'}
+						</td>
 						<td data-label="Actions" class="row-actions gap-3">
-							{#if !token.revoked}
+							{#if isTokenDead(token)}
+								<Button
+									variant="destructive"
+									size="sm"
+									onclick={() => openPurgeConsumerToken(token.id)}
+								>
+									Delete permanently
+								</Button>
+							{:else}
 								<Button
 									variant="outline"
 									size="sm"
@@ -880,3 +948,48 @@ function closeRotateConsumerToken() {
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root bind:open={purgeOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Delete this token permanently?</AlertDialog.Title>
+			<AlertDialog.Description>
+				This can't be undone. Audit-log entries referencing it will show as
+				unresolvable afterward.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		{#if purgeError}
+			<p role="alert" class="text-error">{purgeError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={confirmPurge}>
+				Delete permanently
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
+
+<AlertDialog.Root bind:open={purgeConsumerTokenOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Delete this token permanently?</AlertDialog.Title>
+			<AlertDialog.Description>
+				This can't be undone. Audit-log entries referencing it will show as
+				unresolvable afterward.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		{#if purgeConsumerTokenError}
+			<p role="alert" class="text-error">{purgeConsumerTokenError}</p>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action
+				variant="destructive"
+				onclick={confirmPurgeConsumerToken}
+			>
+				Delete permanently
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

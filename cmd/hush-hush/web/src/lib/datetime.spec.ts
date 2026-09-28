@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatTimestamp } from './datetime';
+import { formatTimestamp, isTokenDead } from './datetime';
 
 describe('formatTimestamp', () => {
 	it('formats an ISO instant as a medium date + short time', () => {
@@ -18,5 +18,26 @@ describe('formatTimestamp', () => {
 				timeZone: 'UTC',
 			}),
 		).toBe('Jan 1, 2026, 12:00 AM');
+	});
+});
+
+describe('isTokenDead', () => {
+	const future = new Date(Date.now() + 1_000_000).toISOString();
+	const past = new Date(Date.now() - 1_000_000).toISOString();
+
+	it('is alive when not revoked and not yet expired', () => {
+		expect(isTokenDead({ revoked: false, expires_at: future })).toBe(false);
+	});
+
+	it('is dead when expired, even if never revoked', () => {
+		expect(isTokenDead({ revoked: false, expires_at: past })).toBe(true);
+	});
+
+	it('is dead when revoked, even if not yet expired', () => {
+		expect(isTokenDead({ revoked: true, expires_at: future })).toBe(true);
+	});
+
+	it('is dead when both revoked and expired', () => {
+		expect(isTokenDead({ revoked: true, expires_at: past })).toBe(true);
 	});
 });

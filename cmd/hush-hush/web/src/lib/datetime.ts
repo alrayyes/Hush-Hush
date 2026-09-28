@@ -22,3 +22,17 @@ export function formatTimestamp(
 		timeZone: options?.timeZone,
 	}).format(new Date(iso));
 }
+
+// A write bearer token and a consumer read token both carry `revoked` and
+// `expires_at` but no server-computed "is this dead" field - the server
+// never needed one before the purge action (#439/#441) needed to gate on
+// it too. Revoked wins over expired when both are true - "Revoked" names
+// an admin action, "Expired" is just time passing, and the former is the
+// more informative label of the two (openspec/changes/token-purge-web-ui/
+// design.md).
+export function isTokenDead(token: {
+	revoked: boolean;
+	expires_at: string;
+}): boolean {
+	return token.revoked || new Date(token.expires_at).getTime() <= Date.now();
+}
