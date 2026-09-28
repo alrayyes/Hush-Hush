@@ -69,7 +69,7 @@
       partially superseding ADR 2 (mirroring how ADR 14 is recorded
       against ADR 3), and update `ARCHITECTURE.md`'s "Read path" bullet
       to match. Verify both read consistently with the shipped behaviour.
-- [ ] 4.3 Run `go build ./... && go vet ./... && go test ./...` and
+- [x] 4.3 Run `go build ./... && go vet ./... && go test ./...` and
       `golangci-lint run` clean, then open the pull request referencing
       alrayyes/hush-hush#438, and comment on alrayyes/hush-hush#440,
       #441, hush-hush-cli#133, and hush-hush-action#31 that the API has
