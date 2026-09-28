@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.40.0](https://github.com/alrayyes/Hush-Hush/compare/v2.39.1...v2.40.0) (2026-09-28)
+
+
+### Features
+
+* **api:** consumer-scoped read tokens gating GET /objects/{slug} ([#446](https://github.com/alrayyes/Hush-Hush/issues/446)) ([0288709](https://github.com/alrayyes/Hush-Hush/commit/0288709cff290e0b0f20f0c62779bb2137c6c85b))
+
 ## [2.39.1](https://github.com/alrayyes/Hush-Hush/compare/v2.39.0...v2.39.1) (2026-09-28)
 
 
