@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.41.0](https://github.com/alrayyes/Hush-Hush/compare/v2.40.1...v2.41.0) (2026-09-28)
+
+
+### Features
+
+* **api:** hard-delete (purge) for revoked or expired tokens ([#459](https://github.com/alrayyes/Hush-Hush/issues/459)) ([8ead564](https://github.com/alrayyes/Hush-Hush/commit/8ead5647f03dd4e98921acad5487a2c1be83640a))
+
 ## [2.40.1](https://github.com/alrayyes/Hush-Hush/compare/v2.40.0...v2.40.1) (2026-09-28)
 
 
