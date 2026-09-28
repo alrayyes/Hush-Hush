@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.41.1](https://github.com/alrayyes/Hush-Hush/compare/v2.41.0...v2.41.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **web-ui:** table action-button spacing, split Created/Updated columns ([#458](https://github.com/alrayyes/Hush-Hush/issues/458)) ([2270492](https://github.com/alrayyes/Hush-Hush/commit/227049261121d22b8993a387a142210bb82094dc)), closes [#457](https://github.com/alrayyes/Hush-Hush/issues/457)
+
 ## [2.41.0](https://github.com/alrayyes/Hush-Hush/compare/v2.40.1...v2.41.0) (2026-09-28)
 
 
