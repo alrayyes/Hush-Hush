@@ -1075,6 +1075,33 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /tokens/{id}/purge:
+    delete:
+      operationId: purgeToken
+      summary: Permanently delete a dead write bearer token
+      description: |
+        Permanently removes the token issued under id, once it's already
+        revoked or past its expiry - `revokeToken`'s soft-delete stays the
+        only way to invalidate a still-active token. Unlike `revokeToken`,
+        an audit-log entry attributed to a purged token's id no longer
+        resolves to a description or owner afterward - the accepted
+        tradeoff for actually removing it.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tokenId"
+        - $ref: "#/components/parameters/csrfToken"
+      responses:
+        "204":
+          description: The token was purged.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/TokenStillActive"
+
   /consumer-tokens:
     post:
       operationId: createConsumerToken
@@ -1193,6 +1220,33 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /consumer-tokens/{id}/purge:
+    delete:
+      operationId: purgeConsumerToken
+      summary: Permanently delete a dead consumer read token
+      description: |
+        Permanently removes the consumer token issued under id, once it's
+        already revoked or past its expiry - `revokeConsumerToken`'s
+        soft-delete stays the only way to invalidate a still-active token.
+        Unlike `revokeConsumerToken`, an audit-log entry attributed to a
+        purged token's id no longer resolves to a description or owner
+        afterward - the accepted tradeoff for actually removing it.
+      tags: [tokens]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/consumerTokenId"
+        - $ref: "#/components/parameters/csrfToken"
+      responses:
+        "204":
+          description: The consumer token was purged.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/TokenStillActive"
 
 components:
   securitySchemes:
@@ -1369,6 +1423,18 @@ components:
             $ref: "#/components/schemas/Error"
           example:
             error: consumer already exists
+
+    TokenStillActive:
+      description: |
+        This token is neither revoked nor expired - purge is only allowed
+        once a token is already dead; revoke it first, or wait for it to
+        expire.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: token must be revoked or expired before it can be purged
 
   schemas:
     ObjectSlug:

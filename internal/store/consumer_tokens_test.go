@@ -314,3 +314,59 @@ func TestConsumerTokenAndWriteTokenHashesDoNotCollideAcrossKinds(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, valid)
 }
+
+func TestPurgeConsumerTokenRemovesARevokedToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "a", time.Hour)
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeConsumerToken(t.Context(), ct.ID))
+
+	require.NoError(t, s.PurgeConsumerToken(t.Context(), ct.ID))
+
+	tokens, err := s.ListConsumerTokens(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, tokens)
+}
+
+func TestPurgeConsumerTokenRemovesAnExpiredNeverRevokedToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "already expired", -time.Hour)
+	require.NoError(t, err)
+
+	require.NoError(t, s.PurgeConsumerToken(t.Context(), ct.ID))
+
+	tokens, err := s.ListConsumerTokens(t.Context())
+	require.NoError(t, err)
+	require.Empty(t, tokens)
+}
+
+func TestPurgeConsumerTokenRejectsAnActiveToken(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "a", time.Hour)
+	require.NoError(t, err)
+
+	err = s.PurgeConsumerToken(t.Context(), ct.ID)
+	require.ErrorIs(t, err, store.ErrTokenStillActive)
+
+	tokens, err := s.ListConsumerTokens(t.Context())
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+}
+
+func TestPurgeConsumerTokenUnknownIDIsErrTokenNotFound(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	err := s.PurgeConsumerToken(t.Context(), "nope")
+	require.ErrorIs(t, err, store.ErrTokenNotFound)
+}

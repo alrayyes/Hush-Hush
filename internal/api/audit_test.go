@@ -124,3 +124,24 @@ func TestDeleteObjectRecordsAnAuditLogEntry(t *testing.T) {
 	require.Len(t, entries, 1)
 	require.Equal(t, "delete", entries[0].Action)
 }
+
+func TestAuditLogSurvivesPurgingTheTokenItAttributesTo(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	wt, token, err := s.CreateWriteToken(t.Context(), "to purge", 3600e9, "admin")
+	require.NoError(t, err)
+
+	mux.ServeHTTP(httptest.NewRecorder(), createRequest(t, hushhush.CreateObjectRequest{
+		Slug: "attributed", Value: []byte("v"),
+	}, token))
+
+	require.NoError(t, s.RevokeWriteToken(t.Context(), wt.ID))
+	require.NoError(t, s.PurgeWriteToken(t.Context(), wt.ID))
+
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{})
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, "token", entries[0].ActorType)
+	require.Equal(t, wt.ID, entries[0].ActorID)
+}
