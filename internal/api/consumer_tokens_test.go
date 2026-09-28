@@ -98,6 +98,103 @@ func TestCreateConsumerTokenWithoutCSRFTokenIsRejected(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
+// A write bearer token holder can mint and manage consumer read tokens
+// over HTTP without a cookie session - alrayyes/hush-hush#467. A write
+// token already reads/writes any object; authorizing it to also issue a
+// consumer token, itself scoped to reading a single consumer's objects,
+// is a narrowing delegation, not an escalation.
+
+func TestCreateConsumerTokenWithBearerTokenAndNoSessionSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	body, err := json.Marshal(hushhush.CreateConsumerTokenRequest{Consumer: "homelab", Description: "minted by bearer", TTLSeconds: 3600})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/consumer-tokens", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	var created hushhush.ConsumerTokenWithValue
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
+	require.NotEmpty(t, created.Value)
+	require.Equal(t, "homelab", created.Consumer)
+}
+
+func TestListConsumerTokensWithBearerTokenAndNoSessionSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	_, _, err := s.CreateConsumerToken(t.Context(), "homelab", "listed by bearer", 3600e9)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/consumer-tokens", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var tokens []hushhush.ConsumerTokenMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &tokens))
+	require.Len(t, tokens, 1)
+}
+
+func TestRevokeConsumerTokenWithBearerTokenAndNoSessionSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "revoked by bearer", 3600e9)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodDelete, "/consumer-tokens/"+ct.ID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+}
+
+func TestRotateConsumerTokenWithBearerTokenAndNoSessionSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "rotated by bearer", 3600e9)
+	require.NoError(t, err)
+
+	body, err := json.Marshal(hushhush.RotateConsumerTokenRequest{TTLSeconds: 7200})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/consumer-tokens/"+ct.ID+"/rotate", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+func TestPurgeConsumerTokenWithBearerTokenAndNoSessionSucceeds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	ct, _, err := s.CreateConsumerToken(t.Context(), "homelab", "purged by bearer", 3600e9)
+	require.NoError(t, err)
+	require.NoError(t, s.RevokeConsumerToken(t.Context(), ct.ID))
+
+	req := httptest.NewRequest(http.MethodDelete, "/consumer-tokens/"+ct.ID+"/purge", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+}
+
 func TestListConsumerTokensWithoutASessionIsUnauthorized(t *testing.T) {
 	t.Parallel()
 

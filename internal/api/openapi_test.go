@@ -635,8 +635,27 @@ func contractCases() []contractCase {
 			},
 		},
 		{
-			name:                   "create consumer token without a session",
-			requestIsSchemaInvalid: true,
+			name: "create consumer token with a bearer token",
+			request: func(t *testing.T, s *store.Store) *http.Request {
+				t.Helper()
+
+				b := []byte(`{"consumer":"homelab","description":"contract test token","ttl_seconds":3600}`)
+				req := httptest.NewRequest(http.MethodPost, "/consumer-tokens", bytes.NewReader(b))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+
+				return req
+			},
+		},
+		{
+			// The CSRF header is optional in the spec now (it may be a
+			// bearer-token-authenticated request instead,
+			// alrayyes/hush-hush#467) - so unlike before, omitting it no
+			// longer makes the request itself schema-invalid. This case
+			// exercises the handler's own 401 for neither credential
+			// present, already documented as createConsumerToken's 401
+			// response.
+			name: "create consumer token without any credential",
 			request: func(t *testing.T, _ *store.Store) *http.Request {
 				t.Helper()
 

@@ -1109,12 +1109,19 @@ paths:
       description: |
         Issues a new read token scoped to one consumer name. The raw
         token value is returned here only - it is never recoverable
-        again once this response is read.
+        again once this response is read. A write bearer token may mint
+        one too, not only an admin session - a narrowing delegation,
+        since the resulting token can only ever read as far as its one
+        bound consumer, never as far as the write token that issued it
+        (alrayyes/hush-hush#467). A session-authenticated call needs its
+        CSRF token too; a bearer-token-authenticated one doesn't, since
+        there's no session to have one.
       tags: [tokens]
       security:
+        - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: "#/components/parameters/csrfToken"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       requestBody:
         required: true
         content:
@@ -1146,6 +1153,7 @@ paths:
         token is created.
       tags: [tokens]
       security:
+        - bearerAuth: []
         - cookieAuth: []
       responses:
         "200":
@@ -1166,13 +1174,16 @@ paths:
       description: |
         Invalidates the consumer token issued under id. Revoking an id
         that's already expired or doesn't exist isn't an error - both
-        leave every other token's state unaffected either way.
+        leave every other token's state unaffected either way. A write
+        bearer token may revoke one too, the same as it may create one
+        (alrayyes/hush-hush#467).
       tags: [tokens]
       security:
+        - bearerAuth: []
         - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/consumerTokenId"
-        - $ref: "#/components/parameters/csrfToken"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       responses:
         "204":
           description: The consumer token was revoked, or already wasn't valid.
@@ -1192,13 +1203,15 @@ paths:
         Unlike `revokeConsumerToken`, an id that's unknown, already
         revoked, or already expired is an error: a rotate response
         promises the caller a working new secret, and there's no valid
-        token to hand one to.
+        token to hand one to. A write bearer token may rotate one too,
+        the same as it may create one (alrayyes/hush-hush#467).
       tags: [tokens]
       security:
+        - bearerAuth: []
         - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/consumerTokenId"
-        - $ref: "#/components/parameters/csrfToken"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       requestBody:
         required: true
         content:
@@ -1231,13 +1244,16 @@ paths:
         soft-delete stays the only way to invalidate a still-active token.
         Unlike `revokeConsumerToken`, an audit-log entry attributed to a
         purged token's id no longer resolves to a description or owner
-        afterward - the accepted tradeoff for actually removing it.
+        afterward - the accepted tradeoff for actually removing it. A
+        write bearer token may purge one too, the same as it may create
+        one (alrayyes/hush-hush#467).
       tags: [tokens]
       security:
+        - bearerAuth: []
         - cookieAuth: []
       parameters:
         - $ref: "#/components/parameters/consumerTokenId"
-        - $ref: "#/components/parameters/csrfToken"
+        - $ref: "#/components/parameters/csrfTokenOptional"
       responses:
         "204":
           description: The consumer token was purged.
@@ -1257,10 +1273,18 @@ components:
         A write token, checked on every create, update, and delete call.
         Each token carries its own description and expiry, issued and
         revoked through the server's own `token` CLI command (direct
-        store access, not an HTTP endpoint - issuing a token over HTTP
-        would need its own token to call it with). Any number of tokens
-        may be valid at once; revoking or expiring one never affects the
-        others.
+        store access, not an HTTP endpoint - issuing a *write* token over
+        HTTP would need its own write token to call it with). Any number
+        of tokens may be valid at once; revoking or expiring one never
+        affects the others.
+
+        Also accepted, as an alternative to `cookieAuth`, on every
+        `/consumer-tokens` operation: a write token already reads or
+        writes any object, so authorizing it to mint or manage a
+        consumer token - itself scoped to reading a single consumer's
+        objects - is a narrowing delegation, not the bootstrap problem
+        minting a *write* token over HTTP would be
+        (alrayyes/hush-hush#467).
 
     cookieAuth:
       type: apiKey
