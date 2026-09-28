@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.43.1](https://github.com/alrayyes/Hush-Hush/compare/v2.43.0...v2.43.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **web-ui:** stop committing real build output as the go:embed placeholder ([#472](https://github.com/alrayyes/Hush-Hush/issues/472)) ([cb97670](https://github.com/alrayyes/Hush-Hush/commit/cb9767063371bc801bf67521004b0c3b950ac2bb))
+
 ## [2.43.0](https://github.com/alrayyes/Hush-Hush/compare/v2.42.0...v2.43.0) (2026-09-28)
 
 
