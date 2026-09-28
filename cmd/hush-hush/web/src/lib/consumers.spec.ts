@@ -3,6 +3,7 @@ import {
 	consumersHref,
 	parseConsumersQuery,
 	secretsOverviewHref,
+	tokensHref,
 	totalPages,
 } from './consumers';
 
@@ -68,6 +69,14 @@ describe('secretsOverviewHref', () => {
 	it('encodes the consumer name into the used_by query parameter', () => {
 		expect(secretsOverviewHref('homelab/vps-docker')).toBe(
 			'/?used_by=homelab%2Fvps-docker',
+		);
+	});
+});
+
+describe('tokensHref', () => {
+	it('encodes the consumer name into the settings consumer query parameter', () => {
+		expect(tokensHref('homelab/vps-docker')).toBe(
+			'/settings?consumer=homelab%2Fvps-docker',
 		);
 	});
 });

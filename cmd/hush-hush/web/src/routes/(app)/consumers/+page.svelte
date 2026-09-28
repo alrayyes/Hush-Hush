@@ -16,6 +16,7 @@ import {
 	CONSUMERS_PAGE_SIZE,
 	consumersHref,
 	secretsOverviewHref,
+	tokensHref,
 	totalPages,
 } from '$lib/consumers';
 import type { PageData } from './$types';
@@ -189,16 +190,25 @@ async function confirmDelete() {
 				<tr>
 					<th scope="col" class="px-4 py-3">Consumer</th>
 					<th scope="col" class="px-4 py-3">Secrets</th>
+					<th scope="col" class="px-4 py-3">Tokens</th>
 					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each data.consumers as consumer (consumer.name)}
+					{@const tokenCount = data.tokenCounts.get(consumer.name) ?? 0}
 					<tr>
 						<td data-label="Consumer">
 							<a href={secretsOverviewHref(consumer.name)}>{consumer.name}</a>
 						</td>
 						<td data-label="Secrets">{consumer.secret_count}</td>
+						<td data-label="Tokens">
+							{#if tokenCount > 0}
+								<a href={tokensHref(consumer.name)}>{tokenCount}</a>
+							{:else}
+								{tokenCount}
+							{/if}
+						</td>
 						<td data-label="Actions" class="row-actions gap-3">
 							<Button variant="outline" size="sm" onclick={() => openRename(consumer)}>
 								Rename

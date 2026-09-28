@@ -412,6 +412,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.filter({ has: page.getByRole('link', { name: 'homelab-new' }) });
 	await expect(addedRow).toBeVisible();
 	await expect(addedRow.getByRole('cell').nth(1)).toHaveText('0');
+	// #476: a consumer with no consumer tokens shows a plain "0", not a link.
+	const addedTokensCell = addedRow.getByRole('cell').nth(2);
+	await expect(addedTokensCell).toHaveText('0');
+	await expect(addedTokensCell.getByRole('link')).toHaveCount(0);
 
 	await page.getByRole('button', { name: 'Add consumer' }).click();
 	await addDialog.getByLabel('Name', { exact: true }).fill('homelab-new');
@@ -649,6 +653,58 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		consumerTokenRow.getByRole('button', { name: 'Revoke' }),
 	).toHaveCount(0);
+
+	// Consumers directory: Tokens count column, linking to a filtered
+	// Settings view (alrayyes/hush-hush#476). "homelab-new" (added above at
+	// #324, still in the directory with 0 secrets) is used here rather
+	// than "ci-runner" - #476's Tokens column only has a count to show for
+	// a consumer that already has a directory row, and issuing a token
+	// doesn't create one on its own (design.md's Risks/Trade-offs note).
+	// "ci-runner"'s own now-revoked token stays in place through this
+	// block, so the filtered view below has a real second row to exclude.
+	await page.getByRole('button', { name: 'New consumer token' }).click();
+	const homelabTokenDialog = page.getByRole('dialog', {
+		name: 'Create a consumer token',
+	});
+	await page.locator('#consumer-token-consumer').fill('homelab-new');
+	await page.getByRole('listbox').waitFor();
+	await page.getByRole('option', { name: 'homelab-new', exact: true }).click();
+	await homelabTokenDialog
+		.locator('#consumer-token-description')
+		.fill('directory link check');
+	await homelabTokenDialog.locator('#consumer-token-ttl').fill('30');
+	await homelabTokenDialog.getByRole('button', { name: 'Create' }).click();
+	await page
+		.getByRole('dialog', { name: 'Token created' })
+		.getByRole('button', { name: 'Done' })
+		.click();
+
+	await nav.getByRole('link', { name: 'Consumers' }).click();
+	await expect(page.getByRole('heading', { name: 'Consumers' })).toBeVisible();
+	const homelabNewRow = page
+		.getByRole('row')
+		.filter({ has: page.getByRole('link', { name: 'homelab-new' }) });
+	const homelabNewTokensCell = homelabNewRow.getByRole('cell').nth(2);
+	await expect(homelabNewTokensCell.getByRole('link')).toHaveText('1');
+	const consumersTokensColumnResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(consumersTokensColumnResults.violations).toEqual([]);
+
+	await homelabNewTokensCell.getByRole('link').click();
+	await page.waitForURL('/settings?consumer=homelab-new');
+	await expect(page.getByText('consumer: homelab-new')).toBeVisible();
+	await expect(page.getByRole('row', { name: /homelab-new/ })).toBeVisible();
+	await expect(page.getByRole('row', { name: /ci-runner/ })).toHaveCount(0);
+	const filteredSettingsResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(filteredSettingsResults.violations).toEqual([]);
+
+	await page.getByRole('button', { name: 'Remove consumer filter' }).click();
+	await page.waitForURL('/settings');
+	await expect(page.getByText('consumer: homelab-new')).toHaveCount(0);
+	await expect(page.getByRole('row', { name: /ci-runner/ })).toBeVisible();
 
 	// Purge (alrayyes/hush-hush#441): a dead token (revoked or expired)
 	// offers "Delete permanently" instead of Rotate/Revoke, and confirming

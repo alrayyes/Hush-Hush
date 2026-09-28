@@ -121,7 +121,9 @@
       "Stoplight",
       "unarchived",
       "ConsumerCombobox",
-      "web-ui"
+      "web-ui",
+      "href",
+      "hrefs"
     ]
   },
   "ltex.disabledRules": {

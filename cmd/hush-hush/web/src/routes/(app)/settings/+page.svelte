@@ -1,5 +1,6 @@
 <script lang="ts">
-import { invalidate } from '$app/navigation';
+import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/state';
 import {
 	ApiError,
 	type ConsumerTokenWithValue,
@@ -202,6 +203,30 @@ function closeRotate() {
 }
 
 // Consumer tokens
+
+// The Consumers directory links here with ?consumer=<name> (design.md's
+// "Filtering lives in settings/+page.svelte" decision - GET
+// /consumer-tokens has no server-side per-consumer filter, so +page.ts
+// still fetches every token and this derives the filtered view instead).
+const consumerFilter = $derived(page.url.searchParams.get('consumer') ?? '');
+
+const filteredConsumerTokens = $derived(
+	consumerFilter
+		? data.consumerTokens.filter((token) => token.consumer === consumerFilter)
+		: data.consumerTokens,
+);
+
+function clearConsumerFilter() {
+	const url = new URL(page.url);
+	url.searchParams.delete('consumer');
+	void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+}
+
+$effect(() => {
+	if (consumerFilter) {
+		document.getElementById('consumer-tokens')?.scrollIntoView();
+	}
+});
 
 let createConsumerTokenOpen = $state(false);
 let consumerTokenConsumer: string[] = $state([]);
@@ -585,7 +610,7 @@ async function confirmPurgeConsumerToken() {
 
 	<section class="mb-12">
 		<header class="flex flex-wrap items-center justify-between gap-2">
-			<h2>Consumer tokens</h2>
+			<h2 id="consumer-tokens">Consumer tokens</h2>
 			<Dialog.Root
 				bind:open={createConsumerTokenOpen}
 				onOpenChange={(open) => {
@@ -672,6 +697,23 @@ async function confirmPurgeConsumerToken() {
 			</Dialog.Root>
 		</header>
 
+		{#if consumerFilter}
+			<ul class="mb-4 flex list-none flex-wrap gap-2 p-0">
+				<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
+					consumer: {consumerFilter}
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						class="ml-1 h-auto w-auto p-0"
+						onclick={clearConsumerFilter}
+						aria-label="Remove consumer filter"
+					>
+						&times;
+					</Button>
+				</li>
+			</ul>
+		{/if}
+
 		<table class="responsive-table">
 			<thead>
 				<tr>
@@ -685,7 +727,7 @@ async function confirmPurgeConsumerToken() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.consumerTokens as token (token.id)}
+				{#each filteredConsumerTokens as token (token.id)}
 					<tr>
 						<td data-label="Consumer">{token.consumer}</td>
 						<td data-label="Description">{token.description}</td>
