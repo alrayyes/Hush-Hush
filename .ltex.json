@@ -120,7 +120,8 @@
       "Sec-Fetch-Dest",
       "Stoplight",
       "unarchived",
-      "ConsumerCombobox"
+      "ConsumerCombobox",
+      "web-ui"
     ]
   },
   "ltex.disabledRules": {

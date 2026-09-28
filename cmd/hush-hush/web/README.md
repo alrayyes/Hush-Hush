@@ -30,10 +30,12 @@ bun run build
 ```
 
 Writes the static site to `build/` (adapter-static, SPA fallback mode),
-which `cmd/hush-hush/embed.go` embeds into the Go binary. Run this before
-building/testing the Go module if you've changed anything under `src/` -
-see this directory's own `.gitignore` for why `build/` stays committed
-for now.
+which `cmd/hush-hush/embed.go` embeds into the Go binary. Needed before
+running the real binary (`e2e/server.sh`, Docker, goreleaser) so it
+serves the actual app rather than the committed `build/index.html`
+placeholder - not needed for `go build`/`go test ./...` on their own,
+which never read the real content either way. See this directory's own
+`.gitignore` for why only that one placeholder file is tracked.
 
 ## Styling
 

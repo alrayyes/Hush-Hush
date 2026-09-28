@@ -7,13 +7,17 @@ node_modules
 .wrangler
 /.svelte-kit
 
-# /build is NOT ignored, unlike a normal SvelteKit project: go:embed
-# needs it present at compile time, and nothing yet rebuilds it as part
-# of `go build`/`go test` or CI (alrayyes/hush-hush#208 wires a real
-# frontend build stage into Dockerfile; the plain `go test`/lint CI job
-# still has no such step). Until then this stays committed, same as the
-# placeholder it replaces - run `bun run build` before committing a
-# frontend change so it doesn't go stale relative to src/.
+# /build IS ignored, same as a normal SvelteKit project - the root
+# .gitignore's own `/cmd/hush-hush/web/build/*` handles it. The one
+# exception is `build/index.html`, kept as a static placeholder so a
+# bare `go build`/`go test ./...`, with no frontend build step first,
+# still compiles (`go:embed all:web/build` needs at least one matching
+# file present) - see the root .gitignore's own comment and
+# `cmd/hush-hush/embed.go` for the full reasoning. Never regenerate that
+# placeholder by running `bun run build` and committing the result:
+# Docker, goreleaser, and CI's own `e2e` job all build the real SPA
+# fresh before anything actually serves it, so the placeholder's content
+# is never read by any of them (alrayyes/hush-hush#470).
 
 # The changelog and license pages' own source: copied fresh from the
 # repo root by `bun run dev`/`build` (the "copy-changelog"/"copy-license"
