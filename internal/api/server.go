@@ -41,6 +41,13 @@ type objectStore interface {
 	RotateWriteToken(ctx context.Context, id string, ttl time.Duration) (store.WriteToken, string, error)
 	UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) error
 
+	AuthenticateConsumerToken(ctx context.Context, token string) (id, consumer string, valid bool, err error)
+	CreateConsumerToken(ctx context.Context, consumer, description string, ttl time.Duration) (store.ConsumerToken, string, error)
+	ListConsumerTokens(ctx context.Context) ([]store.ConsumerToken, error)
+	RevokeConsumerToken(ctx context.Context, id string) error
+	RotateConsumerToken(ctx context.Context, id string, ttl time.Duration) (store.ConsumerToken, string, error)
+	UpdateConsumerTokenUsage(ctx context.Context, id, usedAt string) error
+
 	CreateCredential(ctx context.Context, c store.Credential) error
 	ListCredentials(ctx context.Context) ([]store.Credential, error)
 	UpdateCredentialUsage(ctx context.Context, id string, signCount uint32, lastUsedAt string) error
@@ -107,7 +114,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	// isn't reliably distinguishable from part of the name.
 	mux.HandleFunc("PATCH /consumers/{name...}", requireWriteAccess(s, true, handleUpdateConsumer(s)))
 	mux.HandleFunc("DELETE /consumers/{name...}", requireWriteAccess(s, true, handleDeleteConsumer(s)))
-	mux.HandleFunc("GET /objects/{slug}", handleGetObject(s))
+	mux.HandleFunc("GET /objects/{slug}", requireReadAccess(s, handleGetObject(s)))
 	mux.HandleFunc("GET /objects/{slug}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{slug}", requireWriteAccess(s, true, handleUpdateObject(s)))
 	mux.HandleFunc("DELETE /objects/{slug}", requireWriteAccess(s, true, handleDeleteObject(s)))
@@ -133,6 +140,11 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
 	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
 	mux.HandleFunc("POST /tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateToken(s))))
+
+	mux.HandleFunc("POST /consumer-tokens", requireSession(s, requireCSRF(handleCreateConsumerToken(s))))
+	mux.HandleFunc("GET /consumer-tokens", requireSession(s, handleListConsumerTokens(s)))
+	mux.HandleFunc("DELETE /consumer-tokens/{id}", requireSession(s, requireCSRF(handleRevokeConsumerToken(s))))
+	mux.HandleFunc("POST /consumer-tokens/{id}/rotate", requireSession(s, requireCSRF(handleRotateConsumerToken(s))))
 
 	mux.Handle("/", staticHandler)
 
@@ -191,6 +203,101 @@ func requireWriteAccess(s objectStore, requireCSRFForSession bool, next http.Han
 	}
 }
 
+// consumerTokenContextKey is the context key requireReadAccess stores a
+// consumer-token-authenticated request's (id, consumer) under, mirroring
+// tokenContextKey/sessionContextKey for the other two read credentials.
+type consumerTokenContextKey struct{}
+
+// consumerTokenAuth is what requireReadAccess stores under
+// consumerTokenContextKey - handleGetObject needs consumer to check the
+// requested object's used_by list, and id to attribute the audit log
+// entry and record usage.
+type consumerTokenAuth struct {
+	id       string
+	consumer string
+}
+
+// requireReadAccess authenticates GET /objects/{slug} against a write
+// bearer token, an admin session, or a consumer read token, in that
+// order (openspec/changes/consumer-read-tokens/design.md's "authorizes
+// inside the handler, not via a boolean-flag middleware like
+// requireWriteAccess" decision). Unlike requireWriteAccess, it doesn't
+// decide per-object authorization itself - a consumer token's scope
+// check depends on the specific object being requested, so it happens in
+// next, once that object's used_by list is known. A write token or
+// session, once validated here, is trusted for any object, same as
+// today.
+func requireReadAccess(s objectStore, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenID, validToken, err := bearerTokenID(r, s)
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		if validToken {
+			if err := s.UpdateWriteTokenUsage(r.Context(), tokenID, time.Now().UTC().Format(time.RFC3339)); err != nil {
+				writeInternalError(w, r, err)
+
+				return
+			}
+
+			next(w, r.WithContext(context.WithValue(r.Context(), tokenContextKey{}, tokenID)))
+
+			return
+		}
+
+		if sess, ok := validSession(r, s); ok {
+			next(w, r.WithContext(context.WithValue(r.Context(), sessionContextKey{}, sess)))
+
+			return
+		}
+
+		ctx, ok, err := consumerTokenReadContext(r, s)
+		if err != nil {
+			writeInternalError(w, r, err)
+
+			return
+		}
+
+		if ok {
+			next(w, r.WithContext(ctx))
+
+			return
+		}
+
+		writeError(w, r, http.StatusUnauthorized, "missing or invalid bearer token or session")
+	}
+}
+
+// consumerTokenReadContext checks r's Authorization header for a
+// currently valid consumer token and, if found, returns r's context
+// extended with the authenticated (id, consumer) pair under
+// consumerTokenContextKey - split out of requireReadAccess to keep that
+// function's own branching flat.
+func consumerTokenReadContext(r *http.Request, s objectStore) (context.Context, bool, error) {
+	got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || got == "" {
+		return nil, false, nil
+	}
+
+	id, consumer, valid, err := s.AuthenticateConsumerToken(r.Context(), got)
+	if err != nil {
+		return nil, false, fmt.Errorf("authenticate consumer token: %w", err)
+	}
+
+	if !valid {
+		return nil, false, nil
+	}
+
+	if err := s.UpdateConsumerTokenUsage(r.Context(), id, time.Now().UTC().Format(time.RFC3339)); err != nil {
+		return nil, false, fmt.Errorf("update consumer token usage: %w", err)
+	}
+
+	return context.WithValue(r.Context(), consumerTokenContextKey{}, consumerTokenAuth{id: id, consumer: consumer}), true, nil
+}
+
 // bearerTokenID reports r's bearer token's id if it carries a currently
 // valid one - false (with no error) for a missing or unknown one, an
 // error only for a genuine lookup failure. The id is what lets a
@@ -241,6 +348,10 @@ func actorFrom(r *http.Request) (actorType, actorID string) {
 
 	if id, ok := r.Context().Value(tokenContextKey{}).(string); ok {
 		return "token", id
+	}
+
+	if auth, ok := r.Context().Value(consumerTokenContextKey{}).(consumerTokenAuth); ok {
+		return "consumer_token", auth.id
 	}
 
 	return "", ""

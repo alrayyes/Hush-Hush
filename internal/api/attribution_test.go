@@ -171,21 +171,44 @@ func TestBearerTokenDeleteIsAttributedToThatToken(t *testing.T) {
 	require.Equal(t, wt.ID, last.ActorID)
 }
 
-func TestUnauthenticatedReadHasNoActor(t *testing.T) {
+func TestBearerTokenReadIsAttributedToThatToken(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	seedObject(t, s, "read_no_actor")
+	seedObject(t, s, "read_by_token")
+	wt, token, err := s.CreateWriteToken(t.Context(), "ci token", time.Hour, "")
+	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/objects/read_no_actor", nil)
+	req := httptest.NewRequest(http.MethodGet, "/objects/read_by_token", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "read_no_actor"})
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "read_by_token"})
 	require.NoError(t, err)
 	last := entries[len(entries)-1]
 	require.Equal(t, store.AuditActionRead, last.Action)
-	require.Empty(t, last.ActorType)
-	require.Empty(t, last.ActorID)
+	require.Equal(t, "token", last.ActorType)
+	require.Equal(t, wt.ID, last.ActorID)
+}
+
+func TestSessionReadIsAttributedToTheAdminAccount(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedObject(t, s, "read_by_session")
+	sessionCookie := seedSession(t, s)
+
+	req := httptest.NewRequest(http.MethodGet, "/objects/read_by_session", nil)
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "read_by_session"})
+	require.NoError(t, err)
+	last := entries[len(entries)-1]
+	require.Equal(t, store.AuditActionRead, last.Action)
+	require.Equal(t, "session", last.ActorType)
 }
