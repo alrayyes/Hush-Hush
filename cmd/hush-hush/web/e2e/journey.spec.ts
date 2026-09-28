@@ -250,7 +250,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// matching consumer private key, not a lookalike or the plaintext just
 	// typed above - reads the same base64 this View dialog already fetched
 	// and displays, rather than a second request of its own (which would
-	// double-count as an extra unverified-actor read below). The fetch
+	// double-count as an extra admin-attributed read below). The fetch
 	// behind it (openView's own getObjectValue call) is async, so this
 	// waits for the textarea to actually hold it rather than the still-
 	// empty value from the instant the dialog opened.
@@ -439,20 +439,29 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	});
 
 	await actorTrigger.click();
-	await page.getByRole('option', { name: 'none', exact: true }).click();
-	await expect(page.getByText('actor: none')).toBeVisible();
-	// Exactly the two "View" clicks above recorded a read with no
-	// verified actor - waiting on the row count itself (not just the
-	// chip, which updates synchronously before the refetch resolves)
-	// avoids asserting against the table's still-unfiltered content.
-	await expect(rows).toHaveCount(2);
+	// #438/#446: GET /objects/{slug} now requires a credential, so a
+	// logged-in "View" authenticates as the session's own admin account
+	// instead of recording no verified actor - the dropdown no longer
+	// offers a "none" option at all (this used to be the "unverified
+	// actor" case this test covered, alrayyes/hush-hush#451).
+	await expect(
+		page.getByRole('option', { name: 'none', exact: true }),
+	).toHaveCount(0);
+	await page.getByRole('option', { name: 'admin', exact: true }).click();
+	await expect(page.getByText('actor: admin')).toBeVisible();
+	// Every row so far (the create, both "View" reads, both edits) is
+	// now attributed to admin - waiting on the row count itself (not
+	// just the chip, which updates synchronously before the refetch
+	// resolves) avoids asserting against the table's still-unfiltered
+	// content.
+	await expect(rows).toHaveCount(5);
 	for (const row of await rows.all()) {
-		await expect(row.getByRole('cell').nth(2)).toHaveText('none');
+		await expect(row.getByRole('cell').nth(2)).toHaveText('admin');
 	}
 
 	await actorTrigger.click();
 	await page.getByRole('option', { name: 'Any actor' }).click();
-	await expect(page.getByText('actor: none')).toHaveCount(0);
+	await expect(page.getByText('actor: admin')).toHaveCount(0);
 	await expect(rows).toHaveCount(5);
 
 	await objectTrigger.click();
