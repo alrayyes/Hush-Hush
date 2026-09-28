@@ -17,8 +17,8 @@
       replaces `value` with `[name]` once `value.length >= max`, and the
       input/listbox render only while `!max || value.length < max`.
       No Svelte component-test harness exists in this repo (confirmed
-      absent for every prior component change - web-ui-design-system's
-      own tasks.md notes this too), so `max={1}` replacing rather than
+      absent for every prior component change - the design-system
+      change's own tasks.md notes this too), so `max={1}` replacing rather than
       appending, and the input hiding once one is chosen, are verified
       through the real e2e create-consumer-token flow in task group 4
       instead, the same substitution every earlier component change in

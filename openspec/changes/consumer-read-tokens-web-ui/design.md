@@ -2,8 +2,8 @@
 
 ## Context
 
-`ConsumerCombobox.svelte` is a hand-written ARIA combobox (tag picker) used
-today by the secret create/edit dialogs to build a multi-valued `used_by`
+`ConsumerCombobox.svelte` is a handwritten ARIA combobox (tag picker) used
+today by the secret create/edit dialogs to build a multivalued `used_by`
 list - `value: string[]`, each pick appends a chip, `Backspace` on an
 empty query pops the last one. The consumer-token create form needs the
 same autocomplete-and-suggest interaction (issue #440: "selected the same
@@ -31,7 +31,7 @@ See `proposal.md` for why this change exists.
 ## Decisions
 
 **Add an optional `max?: number` prop to `ConsumerCombobox`, defaulting to
-unlimited (today's behavior), rather than building a separate
+unlimited (today's behaviour), rather than building a separate
 single-value picker component.**
 
 - `addConsumer` replaces `value` with `[name]` instead of appending once
@@ -49,7 +49,7 @@ single-value picker component.**
   need to land in two places.
 
 **Also adds a `showKeyStatus?: boolean` prop, defaulting to `true`
-(today's behavior).** The existing "(no key)" hint next to a chip is
+(today's behaviour).** The existing "(no key)" hint next to a chip is
 about age-recipient status for sealing a secret - meaningless for the
 consumer-token form, which only needs a consumer _name_, and would read
 as a misleading warning if left on. The token-create form passes
@@ -61,7 +61,7 @@ single-element array (`[]` or `[name]`) and reads `value[0]` for the
 actual `consumer` field sent to `createConsumerToken`**, rather than
 `ConsumerCombobox` itself exposing a scalar prop - keeps the component's
 public contract (`value: string[]`) identical for every caller,
-`max` is purely a behavioral constraint on top of it.
+`max` is purely a behavioural constraint on top of it.
 
 ## Risks / Trade-offs
 

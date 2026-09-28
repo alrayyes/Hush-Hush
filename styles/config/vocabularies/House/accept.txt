@@ -145,3 +145,5 @@ bits-ui's
 [Ee]scrow(?:s|ed|ing)?
 webServer
 playwright-lighthouse
+[Mm]ultivalued
+ConsumerCombobox

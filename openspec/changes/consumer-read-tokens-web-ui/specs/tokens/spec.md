@@ -9,7 +9,7 @@ directly.
 
 ## ADDED Requirements
 
-### Requirement: Consumer tokens are listed in the web UI
+### Requirement: Consumer tokens are listed on the settings page
 
 The settings page SHALL show every issued consumer token's consumer name,
 description, created-at, expires-at, revoked status, and last-used-at, in

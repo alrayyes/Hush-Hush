@@ -119,7 +119,8 @@
       "substring",
       "Sec-Fetch-Dest",
       "Stoplight",
-      "unarchived"
+      "unarchived",
+      "ConsumerCombobox"
     ]
   },
   "ltex.disabledRules": {
