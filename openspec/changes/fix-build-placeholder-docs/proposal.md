@@ -14,9 +14,9 @@ build output as if it were required.
 
 ## What Changes
 
-- Rewrite `cmd/hush-hush/web/.gitignore`'s comment to match the already-
-  correct explanation elsewhere, dropping the false claims, the stale
-  reference, and the wrong instruction.
+- Rewrite `cmd/hush-hush/web/.gitignore`'s comment to match the correct
+  explanation already given elsewhere, dropping the false claims, the
+  stale reference, and the wrong instruction.
 - Fix `cmd/hush-hush/web/README.md`'s pointer to it.
 - Replace the currently committed `build/index.html` (real build output
   from #468) with a genuinely static, minimal placeholder.
@@ -29,7 +29,7 @@ _None._
 
 ### Modified Capabilities
 
-_None. Docs and a static placeholder asset only - no behavior change
+_None. Docs and a static placeholder asset only - no behaviour change
 (`skip_specs: true`)._
 
 ## Impact
