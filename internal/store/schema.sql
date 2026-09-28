@@ -98,6 +98,26 @@ CREATE TABLE IF NOT EXISTS write_tokens (
     revoked_at TEXT
 );
 
+-- Scopes a read to one consumer: GET /objects/{slug} accepts this
+-- alongside a write token or session, but only for an object whose
+-- used_by includes `consumer` (openspec/changes/consumer-read-tokens/
+-- design.md's "New consumer_tokens table, not a consumer column bolted
+-- onto write_tokens" decision). No foreign key from consumer to
+-- consumers.name, matching used_by.consumer's own lack of one - a
+-- consumer token is issuable before any object references that consumer
+-- yet. Same shape as write_tokens otherwise: hashed, soft-deleted on
+-- revoke, rotated in place.
+CREATE TABLE IF NOT EXISTS consumer_tokens (
+    id TEXT PRIMARY KEY,
+    consumer TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT,
+    last_used_at TEXT
+);
+
 -- Each account is a real row here now, keyed by an id generated the same
 -- way this package's other ids are (tokens.go's randomHex) rather than a
 -- separate UUID dependency - openspec/changes/client-side-encryption/

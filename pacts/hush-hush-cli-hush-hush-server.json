@@ -82,6 +82,11 @@
         }
       ],
       "request": {
+        "headers": {
+          "Authorization": [
+            "Bearer test-token"
+          ]
+        },
         "method": "GET",
         "path": "/objects/mattermost_deploy_webhook"
       },
