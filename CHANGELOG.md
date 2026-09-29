@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.44.0](https://github.com/alrayyes/Hush-Hush/compare/v2.43.1...v2.44.0) (2026-09-29)
+
+
+### Features
+
+* **web-ui:** show a per-consumer token count on the Consumers page ([#477](https://github.com/alrayyes/Hush-Hush/issues/477)) ([bc456a2](https://github.com/alrayyes/Hush-Hush/commit/bc456a2aeb7be360a050f0bcfb7a752e40e35076))
+
 ## [2.43.1](https://github.com/alrayyes/Hush-Hush/compare/v2.43.0...v2.43.1) (2026-09-28)
 
 
