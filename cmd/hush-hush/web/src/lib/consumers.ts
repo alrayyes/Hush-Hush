@@ -54,3 +54,12 @@ export function totalPages(total: number, pageSize: number): number {
 export function secretsOverviewHref(consumer: string): string {
 	return `/?used_by=${encodeURIComponent(consumer)}`;
 }
+
+// tokensHref is where a consumer's token count links to - the Settings
+// page's own Consumer tokens table, filtered client-side to this consumer
+// (design.md's "Filtering lives in settings/+page.svelte" decision, since
+// GET /consumer-tokens has no server-side per-consumer filter to link a
+// query parameter straight into).
+export function tokensHref(consumer: string): string {
+	return `/settings?consumer=${encodeURIComponent(consumer)}`;
+}
