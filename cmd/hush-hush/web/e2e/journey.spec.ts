@@ -623,6 +623,56 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	expect(auditLogResults.violations).toEqual([]);
 
 	const rows = page.locator('tbody tr');
+
+	// alrayyes/hush-hush#483: below md the log becomes one card per event,
+	// with the action as a text-labelled pill, 44px export buttons and a
+	// copyable curl command. Same events as the table, same order.
+	const tableRowCount = await rows.count();
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(page.getByRole('table')).toBeHidden();
+
+	const eventList = page.getByRole('list', { name: 'Audit events' });
+	const eventCards = eventList.getByRole('listitem');
+	await expect(eventCards).toHaveCount(tableRowCount);
+	await expect(eventCards.first()).toContainText('mattermost_deploy_webhook');
+	await expect(eventCards.first()).toContainText('admin');
+	await expect(eventCards.first().locator('time')).toBeVisible();
+
+	// Colour is never the only signal: every action carries its own word.
+	const actionPills = eventList.getByTestId('action-pill');
+	for (const action of await actionPills.allTextContents()) {
+		expect(action).toMatch(/^(create|read|update|delete)$/i);
+	}
+	await expect(actionPills.filter({ hasText: /create/i })).not.toHaveCount(0);
+	await expect(actionPills.filter({ hasText: /read/i })).not.toHaveCount(0);
+	await expect(actionPills.filter({ hasText: /update/i })).not.toHaveCount(0);
+
+	for (const control of [
+		page.getByRole('button', { name: 'Export CSV' }),
+		page.getByRole('button', { name: 'Export JSON' }),
+		page.getByRole('button', { name: 'Copy command' }),
+	]) {
+		const box = await control.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+
+	const curlSnippet = page.getByRole('group', { name: 'Query with curl' });
+	await expect(curlSnippet).toContainText('curl');
+	await expect(curlSnippet).toContainText('/audit-log');
+	await page.getByRole('button', { name: 'Copy command' }).click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+		'/audit-log',
+	);
+
+	const auditCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(auditCardResults.violations).toEqual([]);
+
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await expect(page.getByRole('table')).toBeVisible();
+	await expect(eventList).toBeHidden();
 	const actorTrigger = page.getByRole('button', { name: 'Actor', exact: true });
 	const objectTrigger = page.getByRole('button', {
 		name: 'Object id',
