@@ -424,7 +424,62 @@ async function confirmPurgeConsumerToken() {
 			</Dialog.Root>
 		</header>
 
-		<table class="responsive-table">
+		<aside
+			aria-label="Recovery phrase"
+			class="my-4 space-y-2 rounded-lg border border-border p-4 text-sm"
+		>
+			<p class="m-0">
+				A recovery phrase was shown once, when you first registered. The server keeps no copy of it.
+			</p>
+			<p class="m-0 text-text-muted">
+				If you lose every passkey and never saved the phrase, your account's writer identity can't
+				be recovered. Store the phrase offline.
+			</p>
+		</aside>
+
+		<ul aria-label="Passkey list" class="m-0 list-none space-y-3 p-0 md:hidden">
+			{#each data.credentials as credential (credential.id)}
+				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
+					<span class="block min-w-0 break-words font-semibold">{credential.nickname ?? ''}</span>
+					<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+						<dt class="text-text-muted">Added</dt>
+						<dd class="m-0">
+							<time datetime={credential.created_at} title={credential.created_at}>
+								{formatTimestamp(credential.created_at)}
+							</time>
+						</dd>
+						<dt class="text-text-muted">Last used</dt>
+						<dd class="m-0">
+							{#if credential.last_used_at}
+								<time datetime={credential.last_used_at} title={credential.last_used_at}>
+									{formatTimestamp(credential.last_used_at)}
+								</time>
+							{:else}
+								never
+							{/if}
+						</dd>
+					</dl>
+					<div class="flex flex-wrap gap-3">
+						<Button
+							variant="outline"
+							class="min-h-11 min-w-11"
+							onclick={() => openRename(credential.id, credential.nickname)}
+						>
+							Rename
+						</Button>
+						<Button
+							variant="destructive"
+							class="min-h-11 min-w-11"
+							onclick={() => openDeleteCredential(credential.id)}
+						>
+							Delete
+						</Button>
+					</div>
+				</li>
+			{/each}
+		</ul>
+
+		<table class="responsive-table hidden md:table">
 			<thead>
 				<tr>
 					<th scope="col" class="px-4 py-3">Nickname</th>
