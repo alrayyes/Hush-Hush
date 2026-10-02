@@ -16,6 +16,9 @@ import (
 type UpdateObjectRequest struct {
 	Value  []byte    `json:"value"`
 	UsedBy *[]string `json:"used_by,omitempty"`
+	// Tags follows UsedBy's rule: absent leaves them alone, an empty array
+	// clears them (alrayyes/hush-hush#500).
+	Tags *[]string `json:"tags,omitempty"`
 	// KeepReadableCopy is the same per-request owner-recipient opt-in
 	// CreateObjectRequest carries - see its own doc comment. An update
 	// reseals the whole value from scratch, so this is evaluated fresh
@@ -44,9 +47,16 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
+		opts, err := updateTagOptions(req.Tags)
+		if err != nil {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+
+			return
+		}
+
 		slug := r.PathValue("slug")
 
-		err := s.UpdateObject(r.Context(), slug, req.Value, req.UsedBy)
+		err = s.UpdateObject(r.Context(), slug, req.Value, req.UsedBy, opts...)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -74,7 +84,7 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, ObjectMetadata{
-			Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description,
+			Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description,
 			KeepReadableCopy: req.KeepReadableCopy,
 		})
 	}
