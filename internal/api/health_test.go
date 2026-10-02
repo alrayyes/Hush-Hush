@@ -56,3 +56,34 @@ func TestHealthOmitsTheEnvironmentKeyWhenNoLabelIsSet(t *testing.T) {
 	body := healthBody(t, mux)
 	require.NotContains(t, body, "environment")
 }
+
+func TestReadyzReportsOKWhenTheStoreIsUsable(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"status":"ok"}`, rec.Body.String())
+}
+
+func TestReadyzReports503WhenTheStoreIsBrokenButHealthzStaysGreen(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	require.NoError(t, s.Close())
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	require.JSONEq(t, `{"status":"unavailable"}`, rec.Body.String())
+
+	health := httptest.NewRecorder()
+	mux.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	require.Equal(t, http.StatusOK, health.Code)
+}
