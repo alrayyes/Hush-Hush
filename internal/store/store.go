@@ -4,8 +4,10 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 
 	// Registers the "sqlite" driver with database/sql; nothing here calls
@@ -371,6 +373,23 @@ func addColumnIfMissing(db *sql.DB, table, column, definition string) error {
 // DB returns the underlying database handle.
 func (s *Store) DB() *sql.DB {
 	return s.db
+}
+
+// Ready reports whether the database can actually serve a request: the
+// connection answers a ping and a trivial read succeeds. It reads rather
+// than writes, so a probe every few seconds never contends with real
+// traffic.
+func (s *Store) Ready(ctx context.Context) error {
+	if err := s.db.PingContext(ctx); err != nil {
+		return fmt.Errorf("ping database: %w", err)
+	}
+
+	var one int
+	if err := s.db.QueryRowContext(ctx, `SELECT 1 FROM objects LIMIT 1`).Scan(&one); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("read database: %w", err)
+	}
+
+	return nil
 }
 
 // Close closes the underlying database.

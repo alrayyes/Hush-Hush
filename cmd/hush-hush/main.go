@@ -166,9 +166,11 @@ func newRootCmd() *cobra.Command {
 // serving on and asks its own /healthz over loopback - a nonzero exit is
 // Docker's signal to mark the container unhealthy.
 func newHealthcheckCmd() *cobra.Command {
-	return &cobra.Command{
+	var ready bool
+
+	cmd := &cobra.Command{
 		Use:    "healthcheck",
-		Short:  "Check that this server answers its own /healthz",
+		Short:  "Check that this server answers its own /healthz, or /readyz with --ready",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := loadConfig()
@@ -181,27 +183,36 @@ func newHealthcheckCmd() *cobra.Command {
 				return fmt.Errorf("parse addr %q: %w", cfg.Addr, err)
 			}
 
+			path := "/healthz"
+			if ready {
+				path = "/readyz"
+			}
+
 			ctx, cancel := context.WithTimeout(cmd.Context(), 2*time.Second)
 			defer cancel()
 
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+port+"/healthz", nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+port+path, nil)
 			if err != nil {
 				return fmt.Errorf("build request: %w", err)
 			}
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				return fmt.Errorf("request /healthz: %w", err)
+				return fmt.Errorf("request %s: %w", path, err)
 			}
 			defer func() { _ = resp.Body.Close() }()
 
 			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("%w: /healthz returned %d", errHealthzStatus, resp.StatusCode)
+				return fmt.Errorf("%w: %s returned %d", errHealthzStatus, path, resp.StatusCode)
 			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&ready, "ready", false, "probe /readyz (can the database serve requests) instead of /healthz (is the process up)")
+
+	return cmd
 }
 
 func serve() error {
