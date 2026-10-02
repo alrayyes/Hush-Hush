@@ -164,11 +164,12 @@ The server (`hush-hush`) takes its settings from the environment alone -
 it's a deployed service with no interactive user to persist a preference
 for, so it has no `init` command and no config file:
 
-| Variable     | Default        | Meaning                                           |
-| ------------ | -------------- | ------------------------------------------------- |
-| `ADDR`       | `:8080`        | Listen address.                                   |
-| `DB_PATH`    | `hush-hush.db` | SQLite database file.                             |
-| `PUBLIC_URL` | unset          | Enables the web UI - see [Web UI](#web-ui) below. |
+| Variable         | Default        | Meaning                                                                                                                      |
+| ---------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ADDR`           | `:8080`        | Listen address.                                                                                                              |
+| `DB_PATH`        | `hush-hush.db` | SQLite database file.                                                                                                        |
+| `PUBLIC_URL`     | unset          | Enables the web UI - see [Web UI](#web-ui) below.                                                                            |
+| `INSTANCE_LABEL` | unset          | A label for this instance (at most 40 characters), shown in the web UI's top bar. Public: `GET /healthz` is unauthenticated. |
 
 `hush-hush token issue`/`list`/`revoke` read the same `DB_PATH`, so they
 have to be run against the file (or, in a container, inside the container)
