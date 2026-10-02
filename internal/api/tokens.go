@@ -37,6 +37,11 @@ type TokenMetadata struct {
 	ExpiresAt   string `json:"expires_at"`
 	Revoked     bool   `json:"revoked"`
 	LastUsedAt  string `json:"last_used_at,omitempty"`
+	// Status and AllowedActions are computed by the server from its own
+	// clock, so a client never decides what a token is or may do from its
+	// own. Always sent by this server.
+	Status         string   `json:"status,omitempty"`
+	AllowedActions []string `json:"allowed_actions,omitempty"`
 }
 
 // TokenWithValue is the POST /tokens response - the only response that
@@ -54,6 +59,8 @@ type RotateTokenRequest struct {
 }
 
 func tokenMetadataFromStore(t store.WriteToken) TokenMetadata {
+	status := store.StatusOfToken(t.Revoked, t.ExpiresAt, time.Now().UTC())
+
 	return TokenMetadata{
 		ID:          t.ID,
 		Description: t.Description,
@@ -62,6 +69,9 @@ func tokenMetadataFromStore(t store.WriteToken) TokenMetadata {
 		ExpiresAt:   t.ExpiresAt,
 		Revoked:     t.Revoked,
 		LastUsedAt:  t.LastUsedAt,
+
+		Status:         string(status),
+		AllowedActions: status.AllowedActions(),
 	}
 }
 
@@ -201,6 +211,9 @@ type ConsumerTokenMetadata struct {
 	ExpiresAt   string `json:"expires_at"`
 	Revoked     bool   `json:"revoked"`
 	LastUsedAt  string `json:"last_used_at,omitempty"`
+	// Status and AllowedActions: see TokenMetadata.
+	Status         string   `json:"status,omitempty"`
+	AllowedActions []string `json:"allowed_actions,omitempty"`
 }
 
 // ConsumerTokenWithValue is the POST /tokens/consumer response - the only
@@ -218,6 +231,8 @@ type RotateConsumerTokenRequest struct {
 }
 
 func consumerTokenMetadataFromStore(t store.ConsumerToken) ConsumerTokenMetadata {
+	status := store.StatusOfToken(t.Revoked, t.ExpiresAt, time.Now().UTC())
+
 	return ConsumerTokenMetadata{
 		ID:          t.ID,
 		Consumer:    t.Consumer,
@@ -226,6 +241,9 @@ func consumerTokenMetadataFromStore(t store.ConsumerToken) ConsumerTokenMetadata
 		ExpiresAt:   t.ExpiresAt,
 		Revoked:     t.Revoked,
 		LastUsedAt:  t.LastUsedAt,
+
+		Status:         string(status),
+		AllowedActions: status.AllowedActions(),
 	}
 }
 
