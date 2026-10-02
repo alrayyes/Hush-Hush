@@ -14,5 +14,7 @@ go build -C "$repo_root" -o "$bin_dir/hush-hush-e2e" ./cmd/hush-hush
 export PUBLIC_URL="http://localhost:4173"
 export ADDR="127.0.0.1:4173"
 export DB_PATH="$(mktemp -u).db"
+# The top bar shows this label (#481/#512); e2e needs one to assert it.
+export INSTANCE_LABEL="e2e / local"
 
 exec "$bin_dir/hush-hush-e2e"
