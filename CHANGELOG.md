@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.53.0](https://github.com/alrayyes/Hush-Hush/compare/v2.52.0...v2.53.0) (2026-10-02)
+
+
+### Features
+
+* **web-ui:** show a token's status and actions from the API, not the browser clock ([#550](https://github.com/alrayyes/Hush-Hush/issues/550)) ([4c60094](https://github.com/alrayyes/Hush-Hush/commit/4c60094d9704786769e37a4efb491bd11dc929fa))
+
 ## [2.52.0](https://github.com/alrayyes/Hush-Hush/compare/v2.51.0...v2.52.0) (2026-10-02)
 
 
