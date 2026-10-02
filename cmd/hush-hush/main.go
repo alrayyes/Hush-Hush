@@ -14,8 +14,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -30,9 +33,11 @@ var version = "dev"
 
 // Validate's own sentinels - fixed conditions, not per-call detail.
 var (
-	errAddrRequired   = errors.New("addr: required")
-	errDBPathRequired = errors.New("db_path: required")
-	errHealthzStatus  = errors.New("healthz check failed")
+	errInstanceLabelTooLong = fmt.Errorf("instance_label: INSTANCE_LABEL must be at most %d characters", maxInstanceLabelLength)
+	errInstanceLabelControl = errors.New("instance_label: INSTANCE_LABEL must not contain control characters")
+	errAddrRequired         = errors.New("addr: required")
+	errDBPathRequired       = errors.New("db_path: required")
+	errHealthzStatus        = errors.New("healthz check failed")
 )
 
 // config is this binary's runtime configuration, shared by serving and the
@@ -50,7 +55,15 @@ type config struct {
 	// own configuration error) but everything else runs unchanged
 	// (openspec/changes/web-ui/design.md's Migration Plan).
 	PublicURL string `mapstructure:"public_url"`
+	// InstanceLabel is an optional short name for this deployment (for
+	// example "prod / homelab"), shown in the web UI's top bar via
+	// GET /healthz's `environment`. Unauthenticated there, so never
+	// secret.
+	InstanceLabel string `mapstructure:"instance_label"`
 }
+
+// maxInstanceLabelLength keeps the label short enough for a top-bar badge.
+const maxInstanceLabelLength = 40
 
 // Validate catches a bad value at startup rather than wherever it's first
 // read - an empty Addr surfaces as a cryptic net/http bind failure and an
@@ -65,6 +78,18 @@ func (c config) Validate() error {
 		return errDBPathRequired
 	}
 
+	return c.validateInstanceLabel()
+}
+
+func (c config) validateInstanceLabel() error {
+	if utf8.RuneCountInString(c.InstanceLabel) > maxInstanceLabelLength {
+		return errInstanceLabelTooLong
+	}
+
+	if strings.ContainsFunc(c.InstanceLabel, unicode.IsControl) {
+		return errInstanceLabelControl
+	}
+
 	return nil
 }
 
@@ -74,9 +99,10 @@ func loadConfig() (config, error) {
 	v.SetDefault("db_path", "hush-hush.db")
 
 	for key, env := range map[string]string{
-		"addr":       "ADDR",
-		"db_path":    "DB_PATH",
-		"public_url": "PUBLIC_URL",
+		"addr":           "ADDR",
+		"db_path":        "DB_PATH",
+		"public_url":     "PUBLIC_URL",
+		"instance_label": "INSTANCE_LABEL",
 	} {
 		if err := v.BindEnv(key, env); err != nil {
 			return config{}, fmt.Errorf("bind %s: %w", env, err)
@@ -207,7 +233,7 @@ func serve() error {
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.NewMux(s, cfg.PublicURL, build, version),
+		Handler:           hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel)),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

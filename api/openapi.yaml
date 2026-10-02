@@ -1794,6 +1794,17 @@ components:
             to the changelog page rather than hardcoding a version that
             would drift from what's actually running.
           examples: ["2.6.0", "dev"]
+        environment:
+          type: string
+          maxLength: 40
+          description: |
+            The operator's own short label for this instance, from the
+            `INSTANCE_LABEL` setting - for example `prod / homelab`. The
+            web UI's top bar shows it so an operator can tell instances
+            apart. Omitted when no label is set. This endpoint is
+            unauthenticated, so the label is public: never put anything
+            sensitive in it.
+          examples: ["prod / homelab"]
 
     Error:
       type: object
