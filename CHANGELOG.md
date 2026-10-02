@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.44.1](https://github.com/alrayyes/Hush-Hush/compare/v2.44.0...v2.44.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **deps:** bump fast-uri to 3.1.8 for GHSA-hrr3-gc8f-f4qj ([#488](https://github.com/alrayyes/Hush-Hush/issues/488)) ([19aa947](https://github.com/alrayyes/Hush-Hush/commit/19aa947c7a5a20eb378228bd8791c10d3a83fc91)), closes [#487](https://github.com/alrayyes/Hush-Hush/issues/487)
+
 ## [2.44.0](https://github.com/alrayyes/Hush-Hush/compare/v2.43.1...v2.44.0) (2026-09-29)
 
 
