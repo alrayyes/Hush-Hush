@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.50.0](https://github.com/alrayyes/Hush-Hush/compare/v2.49.0...v2.50.0) (2026-10-02)
+
+
+### Features
+
+* **objects:** report who created and last updated each object ([#545](https://github.com/alrayyes/Hush-Hush/issues/545)) ([63c08fa](https://github.com/alrayyes/Hush-Hush/commit/63c08fa6672320f64469d90ea1ff2ed23fb3f3d8)), closes [#535](https://github.com/alrayyes/Hush-Hush/issues/535)
+
 ## [2.49.0](https://github.com/alrayyes/Hush-Hush/compare/v2.48.0...v2.49.0) (2026-10-02)
 
 
