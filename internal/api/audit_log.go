@@ -14,6 +14,7 @@ var (
 	errFromMustBeRFC3339  = errors.New("from must be RFC 3339")
 	errToMustBeRFC3339    = errors.New("to must be RFC 3339")
 	errAfterMustBeInteger = errors.New("after must be an integer")
+	errInvalidOrder       = errors.New("order must be asc or desc")
 	errInvalidLimit       = errors.New("limit must be an integer between 1 and 500")
 )
 
@@ -98,6 +99,14 @@ func auditLogFilterFrom(r *http.Request) (store.AuditLogFilter, error) {
 		}
 
 		filter.After = id
+	}
+
+	switch q.Get("order") {
+	case "", "asc":
+	case "desc":
+		filter.Desc = true
+	default:
+		return store.AuditLogFilter{}, errInvalidOrder
 	}
 
 	if limit := q.Get("limit"); limit != "" {

@@ -135,6 +135,23 @@ func TestQueryAuditLogAfterCursorReturnsOnlyLaterEntries(t *testing.T) {
 	require.Equal(t, "c", rest[1].ObjectID)
 }
 
+func TestQueryAuditLogDescReturnsNewestFirstAndLimitKeepsTheNewest(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	for _, id := range []string{"a", "b", "c", "d"} {
+		require.NoError(t, s.RecordAuditLog(ctx, id, store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	}
+
+	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Desc: true, Limit: 3})
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	require.Equal(t, "d", entries[0].ObjectID)
+	require.Equal(t, "c", entries[1].ObjectID)
+	require.Equal(t, "b", entries[2].ObjectID)
+}
+
 func TestQueryAuditLogLimitCapsResultCount(t *testing.T) {
 	t.Parallel()
 
