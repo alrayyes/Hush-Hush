@@ -99,9 +99,12 @@ type AuditLogFilter struct {
 	To    time.Time
 	After int64
 	Limit int
+	// Desc returns newest first, so Limit keeps the newest rows rather
+	// than the oldest.
+	Desc bool
 }
 
-// QueryAuditLog returns matching entries, oldest first.
+// QueryAuditLog returns matching entries, oldest first unless filter.Desc.
 func (s *Store) QueryAuditLog(ctx context.Context, filter AuditLogFilter) ([]AuditLogEntry, error) {
 	query, args := buildAuditLogQuery(filter)
 
@@ -166,6 +169,9 @@ func buildAuditLogQuery(filter AuditLogFilter) (string, []any) {
 	}
 
 	query += " ORDER BY id"
+	if filter.Desc {
+		query += " DESC"
+	}
 
 	if filter.Limit > 0 {
 		query += " LIMIT ?"

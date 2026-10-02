@@ -107,6 +107,58 @@ func TestQueryAuditLogAfterAdvancesThePage(t *testing.T) {
 	require.Equal(t, "b", secondPage[0].ObjectID)
 }
 
+func TestQueryAuditLogOrderDescReturnsTheNewestEntriesFirst(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	for range 4 {
+		require.NoError(t, s.RecordAuditLog(ctx, "x", "read", "", "203.0.113.1", "", ""))
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?object_id=x&order=desc&limit=3", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var entries []hushhush.AuditLogEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &entries))
+	require.Len(t, entries, 3)
+	require.Greater(t, entries[0].ID, entries[1].ID)
+	require.Greater(t, entries[1].ID, entries[2].ID)
+	require.EqualValues(t, 4, entries[0].ID)
+}
+
+func TestQueryAuditLogOrderAscIsTheDefaultSpelledOut(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", "create", "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", "create", "", "203.0.113.2", "", ""))
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?order=asc", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	var entries []hushhush.AuditLogEntry
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &entries))
+	require.Equal(t, "a", entries[0].ObjectID)
+}
+
+func TestQueryAuditLogInvalidOrderIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/audit-log?order=sideways", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
 func TestQueryAuditLogMalformedAfterIsRejected(t *testing.T) {
 	t.Parallel()
 

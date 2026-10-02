@@ -585,6 +585,18 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: order
+          in: query
+          required: false
+          description: |
+            Sort direction by entry id. `asc` (the default) is oldest
+            first; `desc` is newest first, so combined with limit it
+            returns the newest entries - `?object_id=x&order=desc&limit=3`
+            is an object's three latest events.
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
         - name: limit
           in: query
           required: false
@@ -597,7 +609,7 @@ paths:
             default: 50
       responses:
         "200":
-          description: Matching audit log entries, oldest first, one page.
+          description: Matching audit log entries, one page - oldest first unless `order=desc`.
           content:
             application/json:
               schema:
