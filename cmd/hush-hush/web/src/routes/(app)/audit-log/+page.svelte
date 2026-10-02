@@ -1,4 +1,8 @@
 <script lang="ts">
+import CheckIcon from '@lucide/svelte/icons/check';
+import CopyIcon from '@lucide/svelte/icons/copy';
+import { onDestroy } from 'svelte';
+import { page } from '$app/state';
 import {
 	ApiError,
 	type AuditLogEntry,
@@ -108,6 +112,48 @@ function actorLabel(value: string): string {
 		data.filterOptions.actors.find((a) => a.value === value)?.label ?? value
 	);
 }
+
+// The same query the table shows, as a copyable curl command. Built from
+// the applied filters only (undefined values dropped). GET /audit-log is
+// unauthenticated (api/openapi.yaml declares no security for it, inheriting
+// the document's `security: []`), so the command carries no auth header.
+const curlCommand = $derived.by(() => {
+	const params = new URLSearchParams();
+	for (const [key, value] of Object.entries(currentQuery(currentAfter))) {
+		if (value !== undefined) params.set(key, String(value));
+	}
+	const qs = params.toString();
+	return `curl -s "${page.url.origin}/audit-log${qs ? `?${qs}` : ''}" | jq`;
+});
+
+// Whether the curl copy button is showing its "Copied" state, and the
+// timer that reverts it; a newer copy replaces an older timer.
+let copied = $state(false);
+let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+async function copyCommand() {
+	try {
+		await navigator.clipboard.writeText(curlCommand);
+	} catch {
+		// Clipboard blocked or unavailable: don't claim a copy that
+		// didn't happen.
+		return;
+	}
+	clearTimeout(copiedTimer);
+	copied = true;
+	copiedTimer = setTimeout(() => {
+		copied = false;
+	}, 1500);
+}
+
+onDestroy(() => clearTimeout(copiedTimer));
+
+const actionPillClass: Record<string, string> = {
+	create: 'border-accent text-accent',
+	read: 'border-border text-text-muted',
+	update: 'border-warning text-warning',
+	delete: 'border-error text-error',
+};
 
 function downloadBlob(content: string, mimeType: string, filename: string) {
 	const blob = new Blob([content], { type: mimeType });
@@ -298,15 +344,51 @@ function exportCSV() {
 	{/if}
 
 	<div class="mb-4 flex gap-2">
-		<Button variant="outline" onclick={exportCSV}>Export CSV</Button>
-		<Button variant="outline" onclick={exportJSON}>Export JSON</Button>
+		<Button variant="outline" class="min-h-11 min-w-11" onclick={exportCSV}>
+			Export CSV
+		</Button>
+		<Button variant="outline" class="min-h-11 min-w-11" onclick={exportJSON}>
+			Export JSON
+		</Button>
 	</div>
 
 	{#if loadError}
 		<p role="alert" class="text-error">{loadError}</p>
 	{/if}
 
-	<table class="responsive-table" aria-busy={loading}>
+	<ul aria-label="Audit events" class="m-0 list-none space-y-3 p-0 md:hidden">
+		{#each entries as entry (entry.id)}
+			<li class="space-y-2 rounded-lg border border-border bg-background p-4">
+				<div class="flex items-start justify-between gap-2">
+					<span class="min-w-0 font-mono font-semibold break-words">{entry.object_id}</span>
+					<span
+						data-testid="action-pill"
+						class="rounded-full border px-2 py-0.5 text-xs font-semibold uppercase {actionPillClass[
+							entry.action
+						] ?? 'border-border text-text-muted'}"
+					>{entry.action}</span>
+				</div>
+				<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+					<dt class="text-text-muted">Actor</dt>
+					<dd class="m-0 break-words">{auditActorLabel(entry)}</dd>
+					{#if entry.caller}
+						<dt class="text-text-muted">Caller</dt>
+						<dd class="m-0 break-words">{entry.caller}</dd>
+					{/if}
+					<dt class="text-text-muted">IP</dt>
+					<dd class="m-0 break-words">{entry.ip}</dd>
+					<dt class="text-text-muted">Time</dt>
+					<dd class="m-0">
+						<time datetime={entry.timestamp} title={entry.timestamp}>
+							{formatTimestamp(entry.timestamp)}
+						</time>
+					</dd>
+				</dl>
+			</li>
+		{/each}
+	</ul>
+
+	<table class="responsive-table hidden md:table" aria-busy={loading}>
 		<thead>
 			<tr>
 				<th scope="col" class="px-4 py-3">Object</th>
@@ -332,6 +414,18 @@ function exportCSV() {
 			{/each}
 		</tbody>
 	</table>
+
+	<div role="group" aria-label="Query with curl" class="mt-4 space-y-2">
+		<pre class="m-0 font-mono text-xs break-words whitespace-pre-wrap">{curlCommand}</pre>
+		<Button variant="outline" class="min-h-11" onclick={copyCommand}>
+			{#if copied}
+				<CheckIcon aria-hidden="true" />
+			{:else}
+				<CopyIcon aria-hidden="true" />
+			{/if}
+			{copied ? 'Copied' : 'Copy command'}
+		</Button>
+	</div>
 
 	<div class="mt-4 flex gap-2">
 		<Button
