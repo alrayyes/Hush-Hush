@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.46.0](https://github.com/alrayyes/Hush-Hush/compare/v2.45.0...v2.46.0) (2026-10-02)
+
+
+### Features
+
+* **audit-log:** add order=desc to GET /audit-log ([#495](https://github.com/alrayyes/Hush-Hush/issues/495)) ([f77c836](https://github.com/alrayyes/Hush-Hush/commit/f77c836ded874ccb8c2f5e06936c8ad4d50c4f50)), closes [#493](https://github.com/alrayyes/Hush-Hush/issues/493)
+* **web-ui:** secrets as cards with search and copy-slug below md ([#490](https://github.com/alrayyes/Hush-Hush/issues/490)) ([fe123bf](https://github.com/alrayyes/Hush-Hush/commit/fe123bfd101da61631ff948056853c6a02ffe29d)), closes [#480](https://github.com/alrayyes/Hush-Hush/issues/480)
+
 ## [2.45.0](https://github.com/alrayyes/Hush-Hush/compare/v2.44.1...v2.45.0) (2026-10-02)
 
 
