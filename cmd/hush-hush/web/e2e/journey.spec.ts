@@ -878,6 +878,38 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(settingsResults.violations).toEqual([]);
 
+	// alrayyes/hush-hush#484: the offline recovery notice (ADR 21) shows at
+	// every width, and below md each passkey is a card with Rename and
+	// Delete as 44px targets.
+	const recoveryNotice = page.getByRole('complementary', {
+		name: 'Recovery phrase',
+	});
+	await expect(recoveryNotice).toContainText('shown once');
+	await expect(recoveryNotice).toContainText('keeps no copy');
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(recoveryNotice).toBeVisible();
+	const passkeyCard = page
+		.getByRole('list', { name: 'Passkey list' })
+		.getByRole('listitem')
+		.first();
+	await expect(passkeyCard).toBeVisible();
+	await expect(passkeyCard).toContainText('Added');
+	await expect(passkeyCard).toContainText('Last used');
+	for (const control of [
+		passkeyCard.getByRole('button', { name: 'Rename' }),
+		passkeyCard.getByRole('button', { name: 'Delete' }),
+	]) {
+		const box = await control.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+	const passkeyCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(passkeyCardResults.violations).toEqual([]);
+	await page.setViewportSize({ width: 1280, height: 720 });
+
 	// Consumer tokens: create/rotate/revoke, and the single-select
 	// consumer picker (max=1, showKeyStatus=false -
 	// openspec/changes/consumer-read-tokens-web-ui/design.md). "ci-runner"
@@ -926,6 +958,43 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	const consumerTokenRow = page.getByRole('row', { name: /ci-runner/ });
 	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Active');
+
+	// alrayyes/hush-hush#484: below md each token is a card with a
+	// time-left badge and Rotate / Revoke as separate 44px targets. The
+	// consumer token above was created with a 30-day TTL.
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(consumerTokenRow).toHaveCount(0);
+	const consumerTokenCard = page
+		.getByRole('list', { name: 'Consumer token list' })
+		.getByRole('listitem')
+		.filter({ hasText: 'ci-runner' });
+	await expect(consumerTokenCard).toBeVisible();
+	await expect(consumerTokenCard).toContainText('Active');
+	await expect(consumerTokenCard.getByTestId('ttl-badge')).toHaveText(
+		/^(29|30)d left$/,
+	);
+	const rotateBox = await consumerTokenCard
+		.getByRole('button', { name: 'Rotate' })
+		.boundingBox();
+	const revokeBox = await consumerTokenCard
+		.getByRole('button', { name: 'Revoke' })
+		.boundingBox();
+	for (const box of [rotateBox, revokeBox]) {
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+	// Isolated: a clear gap between the safe and the destructive action, so
+	// a thumb aimed at one can't land on the other.
+	const horizontalGap =
+		(revokeBox?.x ?? 0) - ((rotateBox?.x ?? 0) + (rotateBox?.width ?? 0));
+	const verticalGap =
+		(revokeBox?.y ?? 0) - ((rotateBox?.y ?? 0) + (rotateBox?.height ?? 0));
+	expect(Math.max(horizontalGap, verticalGap)).toBeGreaterThanOrEqual(8);
+	const settingsCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(settingsCardResults.violations).toEqual([]);
+	await page.setViewportSize({ width: 1280, height: 720 });
 
 	await consumerTokenRow.getByRole('button', { name: 'Rotate' }).click();
 	const rotateConsumerTokenDialog = page.getByRole('dialog', {
@@ -1050,6 +1119,28 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	const shortLivedRow = page.getByRole('row', { name: /short-lived token/ });
 	await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired');
+
+	// #484: an expired token's card says so, and offers only the permanent
+	// delete, not Rotate or Revoke.
+	await page.setViewportSize({ width: 390, height: 844 });
+	const shortLivedCard = page
+		.getByRole('list', { name: 'Bearer token list' })
+		.getByRole('listitem')
+		.filter({ hasText: 'short-lived token' });
+	await expect(shortLivedCard.getByTestId('ttl-badge')).toHaveText('expired');
+	await expect(shortLivedCard).toContainText('Expired');
+	await expect(
+		shortLivedCard.getByRole('button', { name: 'Rotate' }),
+	).toHaveCount(0);
+	await expect(
+		shortLivedCard.getByRole('button', { name: 'Revoke' }),
+	).toHaveCount(0);
+	const purgeBox = await shortLivedCard
+		.getByRole('button', { name: 'Delete permanently' })
+		.boundingBox();
+	expect(purgeBox?.width).toBeGreaterThanOrEqual(44);
+	expect(purgeBox?.height).toBeGreaterThanOrEqual(44);
+	await page.setViewportSize({ width: 1280, height: 720 });
 	await expect(
 		shortLivedRow.getByRole('button', { name: 'Rotate' }),
 	).toHaveCount(0);
