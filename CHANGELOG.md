@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.48.0](https://github.com/alrayyes/Hush-Hush/compare/v2.47.0...v2.48.0) (2026-10-02)
+
+
+### Features
+
+* **container:** make the image health check a readiness check ([#521](https://github.com/alrayyes/Hush-Hush/issues/521)) ([60c16ca](https://github.com/alrayyes/Hush-Hush/commit/60c16caa834105cd20146b316f01e526f6f1646c)), closes [#520](https://github.com/alrayyes/Hush-Hush/issues/520)
+* **health:** report an optional instance label as environment ([#513](https://github.com/alrayyes/Hush-Hush/issues/513)) ([4fdb0b1](https://github.com/alrayyes/Hush-Hush/commit/4fdb0b1c2f58f47cb310a95f2660ba0e8ac5b1b9)), closes [#512](https://github.com/alrayyes/Hush-Hush/issues/512)
+* **objects:** add tags and a tag filter ([#509](https://github.com/alrayyes/Hush-Hush/issues/509)) ([a29ed38](https://github.com/alrayyes/Hush-Hush/commit/a29ed3829e7e32530d9069ab0880c07f8946cc26)), closes [#500](https://github.com/alrayyes/Hush-Hush/issues/500)
+* **web-ui:** bearer and consumer tokens as cards below md ([#502](https://github.com/alrayyes/Hush-Hush/issues/502)) ([bf33ccc](https://github.com/alrayyes/Hush-Hush/commit/bf33ccc7787ab81a5fda22c1f237256f6924be60))
+* **web-ui:** branded top bar with the instance label, status and account menu ([#527](https://github.com/alrayyes/Hush-Hush/issues/527)) ([e71dcb8](https://github.com/alrayyes/Hush-Hush/commit/e71dcb8705efd7a2a437eccead075a7c90e1be3d))
+* **web-ui:** consumers as cards below md ([#503](https://github.com/alrayyes/Hush-Hush/issues/503)) ([f13cda1](https://github.com/alrayyes/Hush-Hush/commit/f13cda1aef163dc3dc8b77a044d1fe685290a64c))
+
+
+### Bug Fixes
+
+* bump busybox from `dc2d74b` to `fd7dc98` ([#510](https://github.com/alrayyes/Hush-Hush/issues/510)) ([a337c74](https://github.com/alrayyes/Hush-Hush/commit/a337c74cf32f96d81b66af070bc9655587abf094))
+
 ## [2.47.0](https://github.com/alrayyes/Hush-Hush/compare/v2.46.0...v2.47.0) (2026-10-02)
 
 
