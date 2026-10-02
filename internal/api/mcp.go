@@ -40,6 +40,7 @@ type mcpInjectInput struct {
 	Value       string   `json:"value" jsonschema:"the sealed (age) ciphertext, base64-encoded"`
 	UsedBy      []string `json:"used_by,omitempty" jsonschema:"consumers to record against the object"`
 	Description string   `json:"description,omitempty" jsonschema:"a human-readable note about the object"`
+	Tags        []string `json:"tags,omitempty" jsonschema:"labels for grouping, lowercase a-z 0-9 . _ / -, at most 10"`
 }
 
 // mcpGetInput is the "get" tool's input - just the object's slug, the same
@@ -62,6 +63,7 @@ type mcpUpdateInput struct {
 	Slug   string    `json:"slug" jsonschema:"the object's slug"`
 	Value  string    `json:"value" jsonschema:"the new sealed ciphertext, base64-encoded"`
 	UsedBy *[]string `json:"used_by,omitempty" jsonschema:"replaces the object's recorded consumers; omit to leave them unchanged"`
+	Tags   *[]string `json:"tags,omitempty" jsonschema:"replaces the object's tags; an empty list clears them; omit to leave them unchanged"`
 }
 
 // mcpDeleteInput is the "delete" tool's input - just the object's slug.
@@ -79,6 +81,7 @@ type mcpDeleteOutput struct {
 // used_by query parameter.
 type mcpListInput struct {
 	UsedBy string `json:"used_by,omitempty" jsonschema:"restrict to objects whose recorded used_by lineage includes this consumer"`
+	Tag    string `json:"tag,omitempty" jsonschema:"restrict to objects carrying this tag"`
 }
 
 // handleMCP serves the MCP endpoint (alrayyes/hush-hush#346) - inject/get/
@@ -173,12 +176,17 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
 		}
 
+		tags, err := createTags(in.Tags)
+		if err != nil {
+			return nil, ObjectMetadata{}, err
+		}
+
 		ownerID, err := s.CurrentUserID(ctx)
 		if err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
-		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description, ownerID)
+		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description, ownerID, store.WithTags(tags))
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrAlreadyExists):
@@ -191,7 +199,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
-		return nil, ObjectMetadata{Slug: in.Slug, UsedBy: in.UsedBy, Description: in.Description}, nil
+		return nil, ObjectMetadata{Slug: in.Slug, UsedBy: in.UsedBy, Tags: tags, Description: in.Description}, nil
 	}
 }
 
@@ -232,7 +240,12 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
 		}
 
-		err = s.UpdateObject(ctx, in.Slug, value, in.UsedBy)
+		opts, err := updateTagOptions(in.Tags)
+		if err != nil {
+			return nil, ObjectMetadata{}, err
+		}
+
+		err = s.UpdateObject(ctx, in.Slug, value, in.UsedBy, opts...)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
@@ -250,7 +263,7 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
 		}
 
-		return nil, ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description}, nil
+		return nil, ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}, nil
 	}
 }
 
@@ -281,14 +294,25 @@ func mcpDelete(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 // specific object are.
 func mcpList(s objectStore) mcp.ToolHandlerFor[mcpListInput, []ObjectMetadata] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpListInput) (*mcp.CallToolResult, []ObjectMetadata, error) {
-		objs, err := s.ListObjects(ctx, store.ObjectFilter{UsedBy: in.UsedBy})
+		filter := store.ObjectFilter{UsedBy: in.UsedBy}
+
+		if in.Tag != "" {
+			tag, err := normaliseTag(in.Tag)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			filter.Tags = []string{tag}
+		}
+
+		objs, err := s.ListObjects(ctx, filter)
 		if err != nil {
 			return nil, nil, mcpInternalError(ctx, "list", err)
 		}
 
 		metadata := make([]ObjectMetadata, len(objs))
 		for i, obj := range objs {
-			metadata[i] = ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Description: obj.Description}
+			metadata[i] = ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}
 		}
 
 		return nil, metadata, nil
