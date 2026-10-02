@@ -22,6 +22,7 @@ import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { consumersHref } from '$lib/consumers';
 import { formatTimestamp } from '$lib/datetime';
 import { resolveRecipients, sealValue } from '$lib/sealing';
+import { filterByTag, tagCounts } from '$lib/tags';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -31,7 +32,16 @@ function apiErrorMessage(err: unknown, fallback: string): string {
 }
 
 let query = $state('');
-const filteredObjects = $derived.by(() => {
+let selectedTag: string | null = $state(null);
+const tagPills = $derived(tagCounts(data.objects));
+// A delete or retag can remove the last object carrying the selected tag;
+// fall back to "All" rather than keep filtering on a pill that's gone.
+const activeTag = $derived(
+	selectedTag !== null && tagPills.some((p) => p.tag === selectedTag)
+		? selectedTag
+		: null,
+);
+const searchedObjects = $derived.by(() => {
 	const needle = query.trim().toLowerCase();
 	if (needle === '') return data.objects;
 	return data.objects.filter(
@@ -40,6 +50,7 @@ const filteredObjects = $derived.by(() => {
 			(o.description ?? '').toLowerCase().includes(needle),
 	);
 });
+const filteredObjects = $derived(filterByTag(searchedObjects, activeTag));
 
 // Which card's copy button is showing its "Copied" state, and the timer
 // that reverts it. One slot, so a newer copy replaces an older one.
@@ -354,6 +365,33 @@ async function confirmDelete() {
 				placeholder="Filter by id or description"
 				bind:value={query}
 			/>
+			{#if tagPills.length > 0}
+				<div role="group" aria-label="Filter by tag" class="mt-2 flex flex-wrap gap-2">
+					<Button
+						type="button"
+						size="sm"
+						class="min-h-11 rounded-full"
+						variant={activeTag === null ? 'default' : 'outline'}
+						aria-pressed={activeTag === null}
+						onclick={() => (selectedTag = null)}
+					>
+						All ({data.objects.length})
+					</Button>
+					{#each tagPills as pill (pill.tag)}
+						{@const pressed = activeTag === pill.tag}
+						<Button
+							type="button"
+							size="sm"
+							class="min-h-11 rounded-full"
+							variant={pressed ? 'default' : 'outline'}
+							aria-pressed={pressed}
+							onclick={() => (selectedTag = pill.tag)}
+						>
+							{pill.tag} ({pill.count})
+						</Button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
 		{#if filteredObjects.length === 0}
@@ -384,6 +422,17 @@ async function confirmDelete() {
 					</div>
 					{#if object.description}
 						<p class="m-0 text-sm">{object.description}</p>
+					{/if}
+					{#if object.tags.length > 0}
+						<div class="flex flex-wrap gap-1">
+							{#each object.tags as tag (tag)}
+								<span
+									data-testid="tag"
+									class="rounded-full border border-border px-2 py-0.5 text-xs text-text-muted"
+									>{tag}</span
+								>
+							{/each}
+						</div>
 					{/if}
 					<p class="m-0">
 						<span class="rounded-2xl bg-border-subtle px-2 py-1 text-xs">age-encrypted (X25519)</span>
@@ -425,6 +474,7 @@ async function confirmDelete() {
 				<tr>
 					<th scope="col" class="px-4 py-3">Id</th>
 					<th scope="col" class="px-4 py-3">Description</th>
+					<th scope="col" class="px-4 py-3">Tags</th>
 					<th scope="col" class="px-4 py-3">Created by</th>
 					<th scope="col" class="px-4 py-3">Created</th>
 					<th scope="col" class="px-4 py-3">Updated by</th>
@@ -441,6 +491,19 @@ async function confirmDelete() {
 							<span class="block max-w-xs truncate" title={object.description ?? ''}>
 								{object.description ?? ''}
 							</span>
+						</td>
+						<td data-label="Tags">
+							{#if object.tags.length > 0}
+								<div class="flex flex-wrap gap-1">
+									{#each object.tags as tag (tag)}
+										<span
+											data-testid="tag"
+											class="rounded-full border border-border px-2 py-0.5 text-xs text-text-muted"
+											>{tag}</span
+										>
+									{/each}
+								</div>
+							{/if}
 						</td>
 						<td data-label="Created by">{attribution?.createdBy ?? ''}</td>
 						<td data-label="Created">
