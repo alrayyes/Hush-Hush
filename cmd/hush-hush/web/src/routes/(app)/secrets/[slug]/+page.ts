@@ -5,7 +5,6 @@ import {
 	listObjects,
 	queryAuditLog,
 } from '$lib/api';
-import { recentEntriesForObject } from '$lib/audit-recent';
 import type { PageLoad } from './$types';
 
 // app:objects is invalidated by the secrets mutations, so this page
@@ -22,7 +21,11 @@ export const load: PageLoad = async ({ depends, params }) => {
 
 	// Awaited before the value is fetched so this page's own read isn't
 	// one of the entries it shows.
-	const events = await recentEntriesForObject(queryAuditLog, slug, 3);
+	const events = await queryAuditLog({
+		object_id: slug,
+		order: 'desc',
+		limit: 3,
+	});
 
 	let value: string;
 	try {
