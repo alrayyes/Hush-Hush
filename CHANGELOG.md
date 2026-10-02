@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.47.0](https://github.com/alrayyes/Hush-Hush/compare/v2.46.0...v2.47.0) (2026-10-02)
+
+
+### Features
+
+* **web-ui:** audit log as event cards below md ([#501](https://github.com/alrayyes/Hush-Hush/issues/501)) ([4ea85c1](https://github.com/alrayyes/Hush-Hush/commit/4ea85c12b3e3cf86b58616cdbcd8ec47b57300fa)), closes [#483](https://github.com/alrayyes/Hush-Hush/issues/483)
+* **web-ui:** secret detail page with ciphertext, CLI snippet and activity ([#499](https://github.com/alrayyes/Hush-Hush/issues/499)) ([875b82e](https://github.com/alrayyes/Hush-Hush/commit/875b82ee063520807262d6730677ed670732243a))
+
 ## [2.46.0](https://github.com/alrayyes/Hush-Hush/compare/v2.45.0...v2.46.0) (2026-10-02)
 
 
