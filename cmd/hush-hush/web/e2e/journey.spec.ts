@@ -381,6 +381,21 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		expect(box?.height).toBeGreaterThanOrEqual(44);
 	}
 
+	// Inspect is a link (to the detail page) styled as a button: it must not
+	// pick up the global anchor underline, or it reads differently from Edit
+	// and Delete beside it (#519).
+	await expect(secretCard.getByRole('link', { name: 'Inspect' })).toHaveCSS(
+		'text-decoration-line',
+		'none',
+	);
+	// ...nor the link colour: an outline button's text colour has to match
+	// whether it's an <a> or a <button>.
+	const textColor = (locator: import('@playwright/test').Locator) =>
+		locator.evaluate((el) => getComputedStyle(el).color);
+	expect(
+		await textColor(secretCard.getByRole('link', { name: 'Inspect' })),
+	).toBe(await textColor(secretCard.getByRole('button', { name: 'Edit' })));
+
 	await copySlug.click();
 	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
 		'mattermost_deploy_webhook',
