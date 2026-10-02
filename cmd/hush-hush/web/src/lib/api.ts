@@ -162,6 +162,9 @@ export interface ObjectMetadata {
 	slug: string;
 	description?: string;
 	used_by?: string[];
+	// Labels for grouping and filtering, always present and empty when the
+	// object has none (alrayyes/hush-hush#500).
+	tags: string[];
 }
 
 // listObjects returns every stored object's metadata, or only those whose
