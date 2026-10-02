@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditLogEntry } from './api';
-import { actorLabel, attributionByObject } from './attribution';
+import { actorLabel, actorName } from './attribution';
 
 function entry(overrides: Partial<AuditLogEntry>): AuditLogEntry {
 	return {
@@ -12,6 +12,22 @@ function entry(overrides: Partial<AuditLogEntry>): AuditLogEntry {
 		...overrides,
 	};
 }
+
+describe('actorName', () => {
+	it('labels a session actor as admin', () => {
+		expect(actorName({ type: 'session', id: 'abc' })).toBe('admin');
+	});
+
+	it('labels a write token by its id', () => {
+		expect(actorName({ type: 'token', id: 'tok-1' })).toBe('token:tok-1');
+	});
+
+	it('labels a consumer token by its id, apart from a write token', () => {
+		expect(actorName({ type: 'consumer_token', id: 'ct-9' })).toBe(
+			'consumer-token:ct-9',
+		);
+	});
+});
 
 describe('actorLabel', () => {
 	it('labels a session actor as admin', () => {
@@ -34,66 +50,5 @@ describe('actorLabel', () => {
 
 	it('falls back to unknown when there is neither an actor nor a caller', () => {
 		expect(actorLabel(entry({}))).toBe('unknown');
-	});
-});
-
-describe('attributionByObject', () => {
-	it('attributes a create entry as both created and updated', () => {
-		const result = attributionByObject([
-			entry({
-				action: 'create',
-				actor_type: 'session',
-				timestamp: '2026-01-01T00:00:00Z',
-			}),
-		]);
-
-		expect(result.get('a')).toEqual({
-			createdBy: 'admin',
-			createdAt: '2026-01-01T00:00:00Z',
-			updatedBy: 'admin',
-			updatedAt: '2026-01-01T00:00:00Z',
-		});
-	});
-
-	it('overwrites updated-by/at on a later update, leaving created-by/at alone', () => {
-		const result = attributionByObject([
-			entry({
-				action: 'create',
-				actor_type: 'session',
-				timestamp: '2026-01-01T00:00:00Z',
-			}),
-			entry({
-				action: 'update',
-				actor_type: 'token',
-				actor_id: 'a1b2c3d4',
-				timestamp: '2026-01-02T00:00:00Z',
-			}),
-		]);
-
-		expect(result.get('a')).toEqual({
-			createdBy: 'admin',
-			createdAt: '2026-01-01T00:00:00Z',
-			updatedBy: 'token:a1b2c3d4',
-			updatedAt: '2026-01-02T00:00:00Z',
-		});
-	});
-
-	it('ignores read and delete entries', () => {
-		const result = attributionByObject([
-			entry({ action: 'create', timestamp: '2026-01-01T00:00:00Z' }),
-			entry({ action: 'read', timestamp: '2026-01-02T00:00:00Z' }),
-			entry({ action: 'delete', timestamp: '2026-01-03T00:00:00Z' }),
-		]);
-
-		expect(result.get('a')?.updatedAt).toBe('2026-01-01T00:00:00Z');
-	});
-
-	it('keeps each object id separate', () => {
-		const result = attributionByObject([
-			entry({ object_id: 'a', action: 'create' }),
-			entry({ object_id: 'b', action: 'create' }),
-		]);
-
-		expect(result.size).toBe(2);
 	});
 });

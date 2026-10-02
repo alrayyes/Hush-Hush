@@ -165,6 +165,19 @@ export interface ObjectMetadata {
 	// Labels for grouping and filtering, always present and empty when the
 	// object has none (alrayyes/hush-hush#500).
 	tags: string[];
+	// Who created and last updated the object, and when - returned by
+	// GET /objects and left out of a create or update response; the actors
+	// are also left out for an object the audit log has no entry for
+	// (alrayyes/hush-hush#535).
+	created_at?: string;
+	updated_at?: string;
+	created_by?: Actor;
+	updated_by?: Actor;
+}
+
+export interface Actor {
+	type: 'session' | 'token' | 'consumer_token';
+	id: string;
 }
 
 // listObjects returns every stored object's metadata, or only those whose
