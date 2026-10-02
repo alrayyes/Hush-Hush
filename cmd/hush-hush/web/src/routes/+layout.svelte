@@ -5,10 +5,12 @@ import LockIcon from '@lucide/svelte/icons/lock';
 import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import SettingsIcon from '@lucide/svelte/icons/settings';
 import TerminalIcon from '@lucide/svelte/icons/terminal';
+import UserIcon from '@lucide/svelte/icons/user';
 import { goto, invalidate } from '$app/navigation';
 import { logout } from '$lib/api';
 import favicon from '$lib/assets/favicon.svg';
-import { Button } from '$lib/components/ui/button/index.js';
+import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+import * as Dialog from '$lib/components/ui/dialog/index.js';
 import Footer from '$lib/Footer.svelte';
 import ThemeToggle from '$lib/ThemeToggle.svelte';
 import type { LayoutData } from './$types';
@@ -17,6 +19,8 @@ let {
 	data,
 	children,
 }: { data: LayoutData; children: import('svelte').Snippet } = $props();
+
+let accountOpen = $state(false);
 
 async function handleLogout() {
 	await logout();
@@ -42,19 +46,35 @@ const navLinks = [
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<!-- Mobile-first: nav (links only) and topbar-actions (theme toggle + Log
-     out, a separate account-actions group, not navigation) each get their
-     own full-width row instead of every control fighting over one shared
-     line via flex-wrap and margin-left: auto (#294, alrayyes/hush-hush#294).
-     sm: restores the single-row desktop bar, nav's own flex-1 pushing
-     topbar-actions to the far end. -->
-<div
-	class="topbar flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
+<!-- #481: one banner at every width. Brand, optional instance label and
+     status pill sit on the left; below md the account actions (theme toggle,
+     Log out) collapse behind one account button so the bar stays on one or
+     two rows at 320px. md+ keeps the nav and the actions inline. -->
+<header
+	class="topbar flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3"
 >
+	<div class="flex items-center gap-2">
+		<span class="font-mono font-bold">HUSH-HUSH</span>
+		{#if data.environment !== undefined}
+			<span
+				class="rounded border border-border px-1.5 py-0.5 text-xs font-semibold uppercase text-text-muted"
+				>{data.environment}</span
+			>
+		{/if}
+	</div>
+	<span
+		class={[
+			'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold',
+			data.healthy ? 'border-accent text-accent' : 'border-error text-error',
+		]}
+	>
+		<span aria-hidden="true" class="size-2 rounded-full bg-current"></span>
+		{data.healthy ? 'ACTIVE' : 'OFFLINE'}
+	</span>
 	{#if data.authenticated}
 		<nav
 			aria-label="Primary"
-			class="hidden flex-wrap items-center gap-2 md:flex sm:flex-1 sm:gap-4"
+			class="hidden flex-1 flex-wrap items-center gap-2 md:flex md:gap-4"
 		>
 			{#each navLinks as link (link.href)}
 				<Button
@@ -70,13 +90,44 @@ const navLinks = [
 			{/each}
 		</nav>
 	{/if}
-	<div class="topbar-actions flex items-center gap-2">
+	<div class="topbar-actions ml-auto hidden items-center gap-2 md:flex">
 		<ThemeToggle />
 		{#if data.authenticated}
 			<Button variant="outline" onclick={handleLogout}>Log out</Button>
 		{/if}
 	</div>
-</div>
+	<div class="topbar-actions ml-auto flex items-center gap-2 md:hidden">
+		{#if data.authenticated}
+			<Dialog.Root bind:open={accountOpen}>
+				<Dialog.Trigger
+					aria-label="Account menu"
+					class={buttonVariants({ variant: 'ghost', size: 'icon' }) +
+						' min-h-11 min-w-11'}
+				>
+					<UserIcon aria-hidden="true" />
+				</Dialog.Trigger>
+				<Dialog.Content>
+					<Dialog.Header>
+						<Dialog.Title>Account</Dialog.Title>
+					</Dialog.Header>
+					<div class="flex items-center gap-2">
+						<ThemeToggle />
+						<Button
+							variant="outline"
+							class="min-h-11"
+							onclick={async () => {
+								accountOpen = false;
+								await handleLogout();
+							}}>Log out</Button
+						>
+					</div>
+				</Dialog.Content>
+			</Dialog.Root>
+		{:else}
+			<ThemeToggle />
+		{/if}
+	</div>
+</header>
 
 {@render children()}
 
