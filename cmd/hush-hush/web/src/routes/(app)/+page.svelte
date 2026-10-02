@@ -11,6 +11,7 @@ import {
 	getObjectValue,
 	updateObject,
 } from '$lib/api';
+import { actorName } from '$lib/attribution';
 import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
 import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
@@ -400,7 +401,6 @@ async function confirmDelete() {
 
 		<ul aria-label="Secrets" class="m-0 list-none space-y-3 p-0 md:hidden">
 			{#each filteredObjects as object (object.slug)}
-				{@const attribution = data.attribution.get(object.slug)}
 				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
 					<div class="flex items-start justify-between gap-2">
 						<span class="min-w-0 break-all font-mono text-sm font-semibold">{object.slug}</span>
@@ -437,13 +437,15 @@ async function confirmDelete() {
 					<p class="m-0">
 						<span class="rounded-2xl bg-border-subtle px-2 py-1 text-xs">age-encrypted (X25519)</span>
 					</p>
-					{#if attribution}
+					{#if object.updated_at}
 						<p class="m-0 text-sm text-text-muted">
 							Updated
-							<time datetime={attribution.updatedAt} title={attribution.updatedAt}>
-								{formatTimestamp(attribution.updatedAt)}
+							<time datetime={object.updated_at} title={object.updated_at}>
+								{formatTimestamp(object.updated_at)}
 							</time>
-							by {attribution.updatedBy}
+							{#if object.updated_by}
+								by {actorName(object.updated_by)}
+							{/if}
 						</p>
 					{/if}
 					<div class="flex flex-wrap gap-2">
@@ -484,7 +486,6 @@ async function confirmDelete() {
 			</thead>
 			<tbody>
 				{#each filteredObjects as object (object.slug)}
-					{@const attribution = data.attribution.get(object.slug)}
 					<tr>
 						<td data-label="Id">{object.slug}</td>
 						<td data-label="Description">
@@ -505,19 +506,19 @@ async function confirmDelete() {
 								</div>
 							{/if}
 						</td>
-						<td data-label="Created by">{attribution?.createdBy ?? ''}</td>
+						<td data-label="Created by">{object.created_by ? actorName(object.created_by) : ''}</td>
 						<td data-label="Created">
-							{#if attribution}
-								<time datetime={attribution.createdAt} title={attribution.createdAt}>
-									{formatTimestamp(attribution.createdAt)}
+							{#if object.created_at}
+								<time datetime={object.created_at} title={object.created_at}>
+									{formatTimestamp(object.created_at)}
 								</time>
 							{/if}
 						</td>
-						<td data-label="Updated by">{attribution?.updatedBy ?? ''}</td>
+						<td data-label="Updated by">{object.updated_by ? actorName(object.updated_by) : ''}</td>
 						<td data-label="Updated">
-							{#if attribution}
-								<time datetime={attribution.updatedAt} title={attribution.updatedAt}>
-									{formatTimestamp(attribution.updatedAt)}
+							{#if object.updated_at}
+								<time datetime={object.updated_at} title={object.updated_at}>
+									{formatTimestamp(object.updated_at)}
 								</time>
 							{/if}
 						</td>
