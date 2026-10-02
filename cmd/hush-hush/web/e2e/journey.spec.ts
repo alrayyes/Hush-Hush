@@ -318,7 +318,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	});
 	for (const control of [
 		copySlug,
-		secretCard.getByRole('button', { name: 'Inspect' }),
+		secretCard.getByRole('link', { name: 'Inspect' }),
 		secretCard.getByRole('button', { name: 'Edit' }),
 		secretCard.getByRole('button', { name: 'Delete' }),
 	]) {
@@ -359,6 +359,62 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(cardResults.violations).toEqual([]);
+
+	// alrayyes/hush-hush#480: Inspect opens a detail page for the secret,
+	// not the dialog the desktop table's View button still uses.
+	await secretCard.getByRole('link', { name: 'Inspect' }).click();
+	await page.waitForURL('/secrets/mattermost_deploy_webhook');
+	await expect(
+		page.getByRole('heading', { name: 'mattermost_deploy_webhook' }),
+	).toBeVisible();
+
+	// The sealed ciphertext, base64, with a working copy button.
+	const sealed = page.getByLabel('Sealed ciphertext (base64)');
+	await expect(sealed).not.toHaveValue('');
+	const sealedValue = await sealed.inputValue();
+	await page.getByRole('button', { name: 'Copy sealed ciphertext' }).click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		sealedValue,
+	);
+
+	// The CLI snippet uses the CLI's real flags and a placeholder key, never
+	// a real one (the design's `-i ~/.age/key.txt` doesn't exist).
+	const cliSnippet = page.getByRole('group', { name: 'Fetch with the CLI' });
+	await expect(cliSnippet).toContainText(
+		'hush-hush-cli get mattermost_deploy_webhook --identity "AGE-SECRET-KEY-1..."',
+	);
+	await expect(cliSnippet).not.toContainText('-i ~/.age');
+
+	// The consumer recorded at creation, with its registered public key
+	// truncated, not shown whole.
+	const consumersSection = page.getByRole('region', {
+		name: 'Authorized consumers',
+	});
+	await expect(consumersSection.getByRole('listitem')).toHaveCount(1);
+	await expect(consumersSection).toContainText('homelab');
+	await expect(consumersSection).toContainText(
+		`${homelabRecipient.slice(0, 10)}…${homelabRecipient.slice(-6)}`,
+	);
+	await expect(consumersSection).not.toContainText(homelabRecipient);
+
+	// At most three recent audit events, newest first. The secret has been
+	// created and nothing else yet, bar this page's own read.
+	const activity = page.getByRole('region', { name: 'Recent activity' });
+	const activityRows = activity.getByRole('listitem');
+	expect(await activityRows.count()).toBeGreaterThanOrEqual(1);
+	expect(await activityRows.count()).toBeLessThanOrEqual(3);
+	await expect(activityRows.last()).toContainText('create');
+
+	const detailResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(detailResults.violations).toEqual([]);
+
+	// A hard navigation works too (the SPA fallback), and an unknown slug
+	// says so instead of rendering an empty page.
+	await page.goto('/secrets/does_not_exist');
+	await expect(page.getByRole('alert')).toContainText(/not found/i);
+	await page.goto('/');
 
 	await page.setViewportSize({ width: 1280, height: 720 });
 	await expect(page.getByRole('table')).toBeVisible();
@@ -634,12 +690,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	).toHaveCount(0);
 	await page.getByRole('option', { name: 'admin', exact: true }).click();
 	await expect(page.getByText('actor: admin')).toBeVisible();
-	// Every row so far (the create, both "View" reads, both edits) is
+	// Every row so far (the create, both "View" reads, the detail page's
+	// own read of the ciphertext (#480), both edits) is
 	// now attributed to admin - waiting on the row count itself (not
 	// just the chip, which updates synchronously before the refetch
 	// resolves) avoids asserting against the table's still-unfiltered
 	// content.
-	await expect(rows).toHaveCount(5);
+	await expect(rows).toHaveCount(6);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').nth(2)).toHaveText('admin');
 	}
@@ -647,14 +704,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await actorTrigger.click();
 	await page.getByRole('option', { name: 'Any actor' }).click();
 	await expect(page.getByText('actor: admin')).toHaveCount(0);
-	await expect(rows).toHaveCount(5);
+	await expect(rows).toHaveCount(6);
 
 	await objectTrigger.click();
 	await page.getByRole('option', { name: 'mattermost_deploy_webhook' }).click();
 	await expect(
 		page.getByText('object: mattermost_deploy_webhook'),
 	).toBeVisible();
-	await expect(rows).toHaveCount(5);
+	await expect(rows).toHaveCount(6);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').first()).toHaveText(
 			'mattermost_deploy_webhook',

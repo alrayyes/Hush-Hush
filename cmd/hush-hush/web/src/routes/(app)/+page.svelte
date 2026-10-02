@@ -398,7 +398,11 @@ async function confirmDelete() {
 						</p>
 					{/if}
 					<div class="flex flex-wrap gap-2">
-						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openView(object.slug)}>
+						<Button
+							href={`/secrets/${encodeURIComponent(object.slug)}`}
+							variant="outline"
+							class="min-h-11 min-w-11"
+						>
 							Inspect
 						</Button>
 						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openEdit(object.slug)}>
