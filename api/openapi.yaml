@@ -126,6 +126,19 @@ paths:
           description: Restrict to objects whose recorded used_by lineage includes this consumer.
           schema:
             type: string
+        - name: tag
+          in: query
+          required: false
+          description: |
+            Restrict to objects carrying this tag. Repeat the parameter to
+            require several - an object must carry every one. Matched
+            case-insensitively.
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Tag"
+          style: form
+          explode: true
       responses:
         "200":
           description: Matching objects' metadata, sorted by slug.
@@ -135,6 +148,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ObjectMetadata"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -1496,6 +1511,8 @@ components:
           description: The sealed (encrypted) value, base64-encoded.
         used_by:
           $ref: "#/components/schemas/UsedByList"
+        tags:
+          $ref: "#/components/schemas/Tags"
         description:
           $ref: "#/components/schemas/ObjectDescription"
         keep_readable_copy:
@@ -1517,6 +1534,12 @@ components:
             CreateObjectRequest's used_by sets it initially - omit this
             field entirely to leave the existing list untouched. An
             empty array clears it.
+        tags:
+          allOf:
+            - $ref: "#/components/schemas/Tags"
+          description: |
+            Replaces the object's tags - omit this field entirely to leave
+            them untouched. An empty array clears them.
         keep_readable_copy:
           $ref: "#/components/schemas/KeepReadableCopy"
 
@@ -1542,16 +1565,37 @@ components:
 
     ObjectMetadata:
       type: object
-      required: [slug]
+      required: [slug, tags]
       properties:
         slug:
           $ref: "#/components/schemas/ObjectSlug"
         used_by:
           $ref: "#/components/schemas/UsedByList"
+        tags:
+          $ref: "#/components/schemas/Tags"
         description:
           $ref: "#/components/schemas/ObjectDescription"
         keep_readable_copy:
           $ref: "#/components/schemas/KeepReadableCopy"
+
+    Tag:
+      type: string
+      pattern: "^[a-z0-9._/-]{1,32}$"
+      examples: [prod]
+
+    Tags:
+      type: array
+      maxItems: 10
+      description: |
+        Labels for grouping and filtering objects (`GET /objects?tag=`).
+        Free-form, 1 to 32 characters from `a-z 0-9 . _ / -`, at most 10
+        per object. Uppercase is converted to lowercase and duplicates are dropped.
+        Metadata only - never part of the sealed value. A response always
+        carries the array, empty when the object has none.
+      items:
+        $ref: "#/components/schemas/Tag"
+      examples:
+        - [prod, homelab]
 
     ObjectDescription:
       type: string

@@ -43,6 +43,16 @@ CREATE TABLE IF NOT EXISTS used_by (
     PRIMARY KEY (object_id, consumer)
 );
 
+-- Free-form labels on an object (alrayyes/hush-hush#500), for grouping and
+-- filtering the overview. Metadata only - never part of the sealed value.
+CREATE TABLE IF NOT EXISTS tags (
+    object_id TEXT NOT NULL REFERENCES objects (id) ON DELETE CASCADE,
+    tag TEXT NOT NULL,
+    PRIMARY KEY (object_id, tag)
+);
+
+CREATE INDEX IF NOT EXISTS tags_by_tag ON tags (tag);
+
 -- A consumer added directly (alrayyes/hush-hush#324), before any object's
 -- used_by references it - used_by.object_id is a NOT NULL foreign key,
 -- so there's nowhere else to record a name with zero secrets yet.

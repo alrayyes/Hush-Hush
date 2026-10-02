@@ -42,6 +42,7 @@ type Object struct {
 	Slug        string
 	Value       []byte
 	UsedBy      []string
+	Tags        []string
 	Description string
 	// OwnerID is the users row that created this object, captured once at
 	// creation (specs/secret-objects/spec.md's "Owner recorded from the
@@ -54,6 +55,34 @@ type Object struct {
 	OwnerID string
 }
 
+// ObjectOption sets an optional field on CreateObject or UpdateObject, so
+// a new field doesn't ripple through every existing call site.
+type ObjectOption func(*objectOptions)
+
+type objectOptions struct {
+	tags *[]string
+}
+
+// WithTags sets the object's tags. On UpdateObject it replaces them, and
+// an empty, non-nil slice clears them; leaving the option off leaves them
+// unchanged (the same nil-versus-empty split usedBy has).
+func WithTags(tags []string) ObjectOption {
+	if tags == nil {
+		tags = []string{}
+	}
+
+	return func(o *objectOptions) { o.tags = &tags }
+}
+
+func applyObjectOptions(opts []ObjectOption) objectOptions {
+	var o objectOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	return o
+}
+
 // CreateObject stores a new object under a freshly generated internal id,
 // addressable afterward by slug, recording ownerID as its owner.
 // description is fixed at creation, the same as usedBy and ownerID -
@@ -62,7 +91,9 @@ type Object struct {
 // that slug - existence is checked and the insert performed in the same
 // transaction, so this is race-safe against concurrent creates under the
 // same slug.
-func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string) error {
+func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string, opts ...ObjectOption) error {
+	options := applyObjectOptions(opts)
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -99,6 +130,12 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 		}
 	}
 
+	if options.tags != nil {
+		if err := replaceTags(ctx, tx, id, *options.tags); err != nil {
+			return err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
 	}
@@ -126,7 +163,52 @@ func (s *Store) GetObject(ctx context.Context, slug string) (Object, error) {
 	}
 	obj.UsedBy = usedBy
 
+	tags, err := s.tagsFor(ctx, obj.ID)
+	if err != nil {
+		return Object{}, err
+	}
+	obj.Tags = tags
+
 	return obj, nil
+}
+
+// tagsFor returns id's tags, sorted.
+func (s *Store) tagsFor(ctx context.Context, id string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT tag FROM tags WHERE object_id = ? ORDER BY tag`, id)
+	if err != nil {
+		return nil, fmt.Errorf("select tags: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		tags = append(tags, tag)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
+
+	return tags, nil
+}
+
+// replaceTags makes tags the whole tag set of the object with this
+// internal id.
+func replaceTags(ctx context.Context, tx *sql.Tx, id string, tags []string) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM tags WHERE object_id = ?`, id); err != nil {
+		return fmt.Errorf("clear tags: %w", err)
+	}
+
+	for _, tag := range tags {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO tags (object_id, tag) VALUES (?, ?)`, id, tag); err != nil {
+			return fmt.Errorf("insert tag: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // usedByFor returns id's recorded used_by lineage, consumer names sorted -
@@ -159,6 +241,9 @@ type ObjectFilter struct {
 	// UsedBy restricts the result to objects whose recorded used_by
 	// lineage includes this consumer. Empty means no restriction.
 	UsedBy string
+	// Tags restricts the result to objects carrying every one of these
+	// tags. Empty means no restriction.
+	Tags []string
 }
 
 // ListObjects returns every stored object's metadata (slug, used_by,
@@ -166,21 +251,31 @@ type ObjectFilter struct {
 // something addressable), sorted by slug. filter narrows the result; its
 // zero value returns everything.
 func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object, error) {
+	query := `SELECT DISTINCT o.id, o.slug, o.description FROM objects o`
+
 	var (
-		rows *sql.Rows
-		err  error
+		conds []string
+		args  []any
 	)
 
 	if filter.UsedBy != "" {
-		rows, err = s.db.QueryContext(ctx, `
-			SELECT DISTINCT o.id, o.slug, o.description
-			FROM objects o
-			JOIN used_by u ON u.object_id = o.id
-			WHERE u.consumer = ?
-			ORDER BY o.slug`, filter.UsedBy)
-	} else {
-		rows, err = s.db.QueryContext(ctx, `SELECT id, slug, description FROM objects ORDER BY slug`)
+		query += ` JOIN used_by u ON u.object_id = o.id`
+
+		conds = append(conds, `u.consumer = ?`)
+		args = append(args, filter.UsedBy)
 	}
+
+	// One fixed-text EXISTS per tag - values only ever travel through args.
+	for _, tag := range filter.Tags {
+		conds = append(conds, `EXISTS (SELECT 1 FROM tags t WHERE t.object_id = o.id AND t.tag = ?)`)
+		args = append(args, tag)
+	}
+
+	if len(conds) > 0 {
+		query += ` WHERE ` + strings.Join(conds, ` AND `)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query+` ORDER BY o.slug`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("select objects: %w", err)
 	}
@@ -204,6 +299,12 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 			return nil, err
 		}
 		objs[i].UsedBy = usedBy
+
+		tags, err := s.tagsFor(ctx, objs[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		objs[i].Tags = tags
 	}
 
 	return objs, nil
@@ -218,7 +319,9 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 // used_by" apart from "the caller sent an empty list to clear it"
 // (alrayyes/hush-hush#299). It returns ErrNotFound if no object exists
 // under that slug.
-func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string) error {
+func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...ObjectOption) error {
+	options := applyObjectOptions(opts)
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -244,11 +347,26 @@ func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, use
 		return ErrNotFound
 	}
 
+	if err := replaceObjectRelations(ctx, tx, slug, usedBy, options.tags); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// replaceObjectRelations rewrites an updated object's used_by and tags
+// rows, each only when given - split out of UpdateObject to keep it
+// readable.
+func replaceObjectRelations(ctx context.Context, tx *sql.Tx, slug string, usedBy, tags *[]string) error {
 	if usedBy != nil {
 		// used_by.object_id keys off the internal id, not slug (schema.sql's
 		// own comment on why) - both statements below resolve it from slug
 		// via the same subquery rather than a separate round trip, since the
-		// UPDATE above already proved a matching row exists.
+		// caller's UPDATE already proved a matching row exists.
 		if _, err := tx.ExecContext(ctx,
 			`DELETE FROM used_by WHERE object_id = (SELECT id FROM objects WHERE slug = ?)`,
 			slug,
@@ -266,11 +384,16 @@ func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, use
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
+	if tags == nil {
+		return nil
 	}
 
-	return nil
+	var id string
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM objects WHERE slug = ?`, slug).Scan(&id); err != nil {
+		return fmt.Errorf("select object id: %w", err)
+	}
+
+	return replaceTags(ctx, tx, id, *tags)
 }
 
 // AddConsumer adds name to the directory with no secret referencing it yet
