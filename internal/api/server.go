@@ -14,6 +14,19 @@ import (
 	"github.com/alrayyes/hush-hush/internal/store"
 )
 
+// MuxOption sets an optional NewMux setting.
+type MuxOption func(*muxOptions)
+
+type muxOptions struct {
+	instanceLabel string
+}
+
+// WithInstanceLabel sets the operator's short label for this instance,
+// reported as `environment` on GET /healthz. Empty means none.
+func WithInstanceLabel(label string) MuxOption {
+	return func(o *muxOptions) { o.instanceLabel = label }
+}
+
 // objectStore is what this package needs from a store - defined here,
 // the consuming package, per go.md's "define interfaces in the consuming
 // package, not alongside the implementation". *store.Store satisfies it;
@@ -92,7 +105,12 @@ type objectStore interface {
 // version is the running binary's own version, echoed by /healthz for
 // the web UI's footer to link to the changelog page, and by /mcp's own
 // Implementation.Version for an MCP client that asks.
-func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *http.ServeMux {
+func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string, opts ...MuxOption) *http.ServeMux {
+	var o muxOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	wa, err := newWebAuthn(publicURL)
 	if err != nil {
 		wa = nil
@@ -101,7 +119,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string) *ht
 	staticHandler := handleStatic(webBuild)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", handleHealth(version))
+	mux.HandleFunc("GET /healthz", handleHealth(version, o.instanceLabel))
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /consumers", handleHardNavRoute(requireWriteAccess(s, false, handleListConsumers(s)), staticHandler))
