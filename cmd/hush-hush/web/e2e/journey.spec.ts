@@ -527,6 +527,57 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(consumersResults.violations).toEqual([]);
 
+	// alrayyes/hush-hush#482: below md the directory table becomes one
+	// card per consumer - name, secrets and tokens counts, the registered
+	// public key truncated with a copy button, and the real actions.
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(page.getByRole('table')).toBeHidden();
+
+	const consumerList = page.getByRole('list', { name: 'Consumers' });
+	const consumerCard = consumerList
+		.getByRole('listitem')
+		.filter({ hasText: 'homelab' });
+	await expect(consumerCard).toBeVisible();
+	await expect(
+		consumerCard.getByRole('link', { name: 'homelab' }),
+	).toBeVisible();
+	await expect(consumerCard).toContainText(/1 secret\b/);
+	await expect(consumerCard).toContainText(
+		`${homelabRecipient.slice(0, 10)}…${homelabRecipient.slice(-6)}`,
+	);
+	await expect(consumerCard).not.toContainText(homelabRecipient);
+
+	const copyKey = consumerCard.getByRole('button', {
+		name: 'Copy public key homelab',
+	});
+	for (const control of [
+		copyKey,
+		consumerCard.getByRole('button', { name: 'Rename' }),
+		consumerCard.getByRole('button', { name: 'Delete' }),
+	]) {
+		const box = await control.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+
+	// The whole key goes on the clipboard, not the truncated preview.
+	await copyKey.click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		homelabRecipient,
+	);
+	await expect(
+		consumerCard.getByRole('button', { name: 'Copied public key homelab' }),
+	).toBeVisible();
+
+	const consumerCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(consumerCardResults.violations).toEqual([]);
+
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await expect(page.getByRole('table')).toBeVisible();
+	await expect(consumerList).toBeHidden();
+
 	await page.getByLabel('Filter by name').fill('nomatch');
 	await page.getByLabel('Filter by name').blur();
 	await expect(page.getByText('No consumers match "nomatch".')).toBeVisible();
@@ -603,6 +654,18 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const addedTokensCell = addedRow.getByRole('cell').nth(2);
 	await expect(addedTokensCell).toHaveText('0');
 	await expect(addedTokensCell.getByRole('link')).toHaveCount(0);
+
+	// #482: on a phone its card says "not registered" instead of a key,
+	// with no copy button to offer.
+	await page.setViewportSize({ width: 390, height: 844 });
+	const addedCard = page
+		.getByRole('list', { name: 'Consumers' })
+		.getByRole('listitem')
+		.filter({ hasText: 'homelab-new' });
+	await expect(addedCard).toContainText('not registered');
+	await expect(addedCard).toContainText(/0 secrets\b/);
+	await expect(addedCard.getByRole('button', { name: /Copy/ })).toHaveCount(0);
+	await page.setViewportSize({ width: 1280, height: 720 });
 
 	await page.getByRole('button', { name: 'Add consumer' }).click();
 	await addDialog.getByLabel('Name', { exact: true }).fill('homelab-new');
