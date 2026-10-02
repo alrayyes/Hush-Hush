@@ -78,3 +78,62 @@ func TestHealthcheckFailsWhenNothingIsListening(t *testing.T) {
 	root.SetErr(new(bytes.Buffer))
 	require.Error(t, root.Execute())
 }
+
+// serveRecordingPath answers 200 and reports every request path it saw, so
+// a test can tell which endpoint healthcheck actually probed.
+func serveRecordingPath(t *testing.T, l net.Listener) <-chan string {
+	t.Helper()
+
+	paths := make(chan string, 4)
+	srv := &http.Server{ReadHeaderTimeout: time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	})}
+
+	go func() { _ = srv.Serve(l) }()
+	t.Cleanup(func() { _ = srv.Close() })
+
+	return paths
+}
+
+func TestHealthcheckReadyProbesReadyzInsteadOfHealthz(t *testing.T) {
+	paths := serveRecordingPath(t, listenOnFreePort(t))
+
+	root := newRootCmd()
+	root.SetArgs([]string{"healthcheck", "--ready"})
+	root.SetOut(new(bytes.Buffer))
+	require.NoError(t, root.Execute())
+	require.Equal(t, "/readyz", <-paths)
+}
+
+func TestHealthcheckWithoutReadyStillProbesHealthz(t *testing.T) {
+	paths := serveRecordingPath(t, listenOnFreePort(t))
+
+	root := newRootCmd()
+	root.SetArgs([]string{"healthcheck"})
+	root.SetOut(new(bytes.Buffer))
+	require.NoError(t, root.Execute())
+	require.Equal(t, "/healthz", <-paths)
+}
+
+func TestHealthcheckReadyFailsWhenReadyzAnswers503(t *testing.T) {
+	l := listenOnFreePort(t)
+
+	srv := &http.Server{ReadHeaderTimeout: time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/readyz" {
+			w.WriteHeader(http.StatusServiceUnavailable)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})}
+	go func() { _ = srv.Serve(l) }()
+	t.Cleanup(func() { _ = srv.Close() })
+
+	root := newRootCmd()
+	root.SetArgs([]string{"healthcheck", "--ready"})
+	root.SetOut(new(bytes.Buffer))
+	root.SetErr(new(bytes.Buffer))
+	require.Error(t, root.Execute())
+}

@@ -100,6 +100,36 @@ paths:
                 status: ok
                 version: "2.6.0"
 
+  /readyz:
+    get:
+      operationId: ready
+      summary: Readiness
+      description: |
+        Answers 200 when the database can serve a request and 503 when it
+        can't. The container image's own health check asks this, so a
+        container whose database has become unusable shows as unhealthy,
+        where `/healthz` would stay green because the process is still up.
+        Unauthenticated like `/healthz`, so a failure never says why - the
+        reason goes to the server's log.
+      tags: [health]
+      responses:
+        "200":
+          description: The database answered a ping and a read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ready"
+              example:
+                status: ok
+        "503":
+          description: The database could not serve a request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ready"
+              example:
+                status: unavailable
+
   /objects:
     get:
       operationId: listObjects
@@ -1778,6 +1808,14 @@ components:
           items:
             type: string
           description: Every distinct caller currently recorded in the audit log.
+
+    Ready:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
 
     Health:
       type: object

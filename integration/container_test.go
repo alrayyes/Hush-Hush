@@ -34,6 +34,7 @@ import (
 var (
 	containerEndpoint    string
 	containerWriterToken string
+	containerUnderTest   testcontainers.Container
 )
 
 func TestMain(m *testing.M) {
@@ -62,6 +63,8 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
+	containerUnderTest = container
 
 	containerEndpoint, err = container.Endpoint(ctx, "http")
 	if err != nil {
@@ -122,6 +125,22 @@ func TestContainerHealthz(t *testing.T) {
 
 	defer func() { require.NoError(t, resp.Body.Close()) }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestContainerReadyz(t *testing.T) {
+	resp, err := http.Get(containerEndpoint + "/readyz") //nolint:noctx // fixed test URL, no request-scoped context needed
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, resp.Body.Close()) }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestContainerBecomesHealthyThroughItsOwnReadinessCheck(t *testing.T) {
+	ctx := context.Background()
+
+	code, _, err := containerUnderTest.Exec(ctx, []string{"/hush-hush", "healthcheck", "--ready"})
+	require.NoError(t, err)
+	require.Zero(t, code)
 }
 
 func TestContainerCreateGetRoundTrip(t *testing.T) {
