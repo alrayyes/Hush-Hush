@@ -88,6 +88,19 @@ and `lighthouse` job (never required — a score below threshold warns, per
 `rules/browser-compat.md`) both run these; neither is in `lefthook.yml`'s
 `pre-push` — see that file's `web-check` comment for the timed decision.
 
+## Which CI jobs run
+
+A pull request only runs the CI jobs whose files it touched. The first job in
+`ci.yml`, `changes`, works out which kinds of file changed (Go, the web UI, the
+API spec, prose, Docker and so on), and every other job skips itself unless one
+of them did. A README fix runs the prose checks and the commit lint, not the Go
+build. Editing `ci.yml` itself runs everything. A skipped job reports success,
+so the required checks on `main` stay satisfied. The secret scan, the PR title
+and commit lint, and the release are never filtered.
+
+When you add a job, list the files it covers in the filters under `changes`
+and gate the job on that output. Otherwise it runs on every pull request.
+
 ## How it fits together
 
 `internal/api` holds the handler, and `cmd/hush-hush/main.go` is the
