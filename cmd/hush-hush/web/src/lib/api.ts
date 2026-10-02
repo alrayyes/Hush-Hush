@@ -372,6 +372,8 @@ export interface AuditLogQuery {
 	to?: string;
 	after?: number;
 	limit?: number;
+	// 'desc' is newest first, so with limit it returns the newest entries.
+	order?: 'asc' | 'desc';
 }
 
 // queryAuditLog fetches one page of the audit log - unfiltered and
