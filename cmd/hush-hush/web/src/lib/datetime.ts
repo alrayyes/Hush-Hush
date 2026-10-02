@@ -36,3 +36,22 @@ export function isTokenDead(token: {
 }): boolean {
 	return token.revoked || new Date(token.expires_at).getTime() <= Date.now();
 }
+
+// formatRemaining turns an expiry instant into a short "time left" label
+// for a token's badge: whole days, else whole hours, else whole minutes,
+// rounding down so it never promises more time than there is. `now` is a
+// parameter so a test can pin the clock; call sites pass `new Date()`.
+export function formatRemaining(expiresAt: string, now: Date): string {
+	const ms = new Date(expiresAt).getTime() - now.getTime();
+
+	if (ms <= 0) return 'expired';
+
+	const minutes = Math.floor(ms / 60_000);
+	if (minutes < 1) return '<1m left';
+	if (minutes < 60) return `${minutes}m left`;
+
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours}h left`;
+
+	return `${Math.floor(hours / 24)}d left`;
+}
