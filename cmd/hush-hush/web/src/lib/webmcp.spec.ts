@@ -48,7 +48,7 @@ describe('the list_objects tool', () => {
 		const registerTool = vi.fn().mockResolvedValue(undefined);
 		document.modelContext = { registerTool };
 		const objects: ObjectMetadata[] = [
-			{ slug: 'a', used_by: ['homelab/vps-docker'] },
+			{ slug: 'a', used_by: ['homelab/vps-docker'], tags: [] },
 		];
 		listObjects.mockResolvedValue(objects);
 
@@ -92,8 +92,9 @@ describe('the get_object_metadata tool', () => {
 			{
 				slug: 'mattermost_deploy_webhook',
 				description: 'prod deploy webhook',
+				tags: [],
 			},
-			{ slug: 'other' },
+			{ slug: 'other', tags: [] },
 		];
 		listObjects.mockResolvedValue(objects);
 
