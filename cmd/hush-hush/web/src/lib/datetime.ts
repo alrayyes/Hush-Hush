@@ -23,28 +23,21 @@ export function formatTimestamp(
 	}).format(new Date(iso));
 }
 
-// A write bearer token and a consumer read token both carry `revoked` and
-// `expires_at` but no server-computed "is this dead" field - the server
-// never needed one before the purge action (#439/#441) needed to gate on
-// it too. Revoked wins over expired when both are true - "Revoked" names
-// an admin action, "Expired" is just time passing, and the former is the
-// more informative label of the two (openspec/changes/token-purge-web-ui/
-// design.md).
-export function isTokenDead(token: {
-	revoked: boolean;
-	expires_at: string;
-}): boolean {
-	return token.revoked || new Date(token.expires_at).getTime() <= Date.now();
-}
-
 // formatRemaining turns an expiry instant into a short "time left" label
 // for a token's badge: whole days, else whole hours, else whole minutes,
 // rounding down so it never promises more time than there is. `now` is a
 // parameter so a test can pin the clock; call sites pass `new Date()`.
-export function formatRemaining(expiresAt: string, now: Date): string {
+//
+// It only ever describes time left on a token the server calls active. Whether
+// a token has expired is the server's answer (`status`, alrayyes/hush-hush
+// #536), never the browser clock's. If the browser's clock says the time is
+// already up while the server says it isn't, the clock is the one that's off,
+// so there is no honest duration to show: it returns null and the caller shows
+// the status word instead.
+export function formatRemaining(expiresAt: string, now: Date): string | null {
 	const ms = new Date(expiresAt).getTime() - now.getTime();
 
-	if (ms <= 0) return 'expired';
+	if (ms <= 0) return null;
 
 	const minutes = Math.floor(ms / 60_000);
 	if (minutes < 1) return '<1m left';

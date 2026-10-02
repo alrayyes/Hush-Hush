@@ -1028,6 +1028,25 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const consumerTokenRow = page.getByRole('row', { name: /ci-runner/ });
 	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Active');
 
+	// alrayyes/hush-hush#536: whether a token is active, and which buttons it
+	// gets, is the server's answer, not the browser clock's. A browser whose
+	// clock runs a year ahead must still see this live token as active, with
+	// Rotate and Revoke and no Delete permanently. Opened as a second page in
+	// the same context so it shares the session and the first page keeps real
+	// time.
+	const skewedPage = await context.newPage();
+	await skewedPage.clock.setFixedTime(
+		new Date(Date.now() + 400 * 24 * 60 * 60 * 1000),
+	);
+	await skewedPage.goto('/settings');
+	const skewedRow = skewedPage.getByRole('row', { name: /ci-runner/ });
+	await expect(skewedRow.getByRole('cell').nth(5)).toHaveText('Active');
+	await expect(skewedRow.getByRole('button', { name: 'Rotate' })).toBeVisible();
+	await expect(
+		skewedRow.getByRole('button', { name: 'Delete permanently' }),
+	).toHaveCount(0);
+	await skewedPage.close();
+
 	// alrayyes/hush-hush#484: below md each token is a card with a
 	// time-left badge and Rotate / Revoke as separate 44px targets. The
 	// consumer token above was created with a 30-day TTL.

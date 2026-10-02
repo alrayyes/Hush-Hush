@@ -457,6 +457,13 @@ export async function deleteCredential(id: string): Promise<void> {
 	await request(`/credentials/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
+// What a token is right now and what may be done to it, by the server's own
+// clock (alrayyes/hush-hush#536). Optional in the schema, always sent by this
+// server. Hiding a button is cosmetic: the endpoints still enforce the rule
+// and a purge of an active token is a 409.
+export type TokenStatus = 'active' | 'expired' | 'revoked';
+export type TokenAction = 'rotate' | 'revoke' | 'purge';
+
 export interface TokenMetadata {
 	id: string;
 	description: string;
@@ -464,6 +471,8 @@ export interface TokenMetadata {
 	created_at: string;
 	expires_at: string;
 	revoked: boolean;
+	status?: TokenStatus;
+	allowed_actions?: TokenAction[];
 	last_used_at?: string;
 }
 
@@ -518,6 +527,8 @@ export interface ConsumerTokenMetadata {
 	created_at: string;
 	expires_at: string;
 	revoked: boolean;
+	status?: TokenStatus;
+	allowed_actions?: TokenAction[];
 	last_used_at?: string;
 }
 

@@ -1,6 +1,8 @@
 <script lang="ts">
+import type { TokenAction, TokenStatus } from '$lib/api';
 import { Button } from '$lib/components/ui/button/index.js';
-import { formatRemaining, formatTimestamp, isTokenDead } from '$lib/datetime';
+import { formatRemaining, formatTimestamp } from '$lib/datetime';
+import { tokenStatusLabel } from '$lib/tokens';
 
 // One token as a card, for the below-md list on the Settings page
 // (alrayyes/hush-hush#484). Bearer and consumer tokens share the shape
@@ -18,6 +20,8 @@ let {
 		created_at: string;
 		expires_at: string;
 		revoked: boolean;
+		status?: TokenStatus;
+		allowed_actions?: TokenAction[];
 		last_used_at?: string;
 	};
 	subtitle: string;
@@ -26,15 +30,14 @@ let {
 	onpurge: () => void;
 } = $props();
 
-const dead = $derived(isTokenDead(token));
-const status = $derived(
-	token.revoked ? 'Revoked' : dead ? 'Expired' : 'Active',
-);
+const statusLabel = $derived(tokenStatusLabel(token.status));
 const remaining = $derived(
-	token.revoked ? 'revoked' : formatRemaining(token.expires_at, new Date()),
+	token.status === 'revoked' || token.status === 'expired'
+		? token.status
+		: (formatRemaining(token.expires_at, new Date()) ?? token.status ?? ''),
 );
 const badgeClass = $derived(
-	token.revoked || remaining === 'expired'
+	token.status === 'revoked' || token.status === 'expired'
 		? 'border-error text-error'
 		: remaining.endsWith('m left') || remaining.endsWith('h left')
 			? 'border-warning text-warning'
@@ -53,7 +56,7 @@ const badgeClass = $derived(
 		</span>
 	</div>
 	<p class="m-0 text-sm text-text-muted">{subtitle}</p>
-	<p class="m-0 text-sm">{status}</p>
+	<p class="m-0 text-sm">{statusLabel}</p>
 	<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
 		<dt class="text-text-muted">Created</dt>
 		<dd class="m-0">
@@ -79,13 +82,16 @@ const badgeClass = $derived(
 		</dd>
 	</dl>
 	<div class="flex flex-wrap gap-3">
-		{#if dead}
+		{#if token.allowed_actions?.includes('rotate')}
+			<Button variant="outline" class="min-h-11 min-w-11" onclick={onrotate}>Rotate</Button>
+		{/if}
+		{#if token.allowed_actions?.includes('revoke')}
+			<Button variant="destructive" class="min-h-11 min-w-11" onclick={onrevoke}>Revoke</Button>
+		{/if}
+		{#if token.allowed_actions?.includes('purge')}
 			<Button variant="destructive" class="min-h-11 min-w-11" onclick={onpurge}>
 				Delete permanently
 			</Button>
-		{:else}
-			<Button variant="outline" class="min-h-11 min-w-11" onclick={onrotate}>Rotate</Button>
-			<Button variant="destructive" class="min-h-11 min-w-11" onclick={onrevoke}>Revoke</Button>
 		{/if}
 	</div>
 </li>

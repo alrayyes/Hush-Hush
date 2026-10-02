@@ -24,8 +24,9 @@ import * as Dialog from '$lib/components/ui/dialog/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { formatTimestamp, isTokenDead } from '$lib/datetime';
+import { formatTimestamp } from '$lib/datetime';
 import TokenCard from '$lib/TokenCard.svelte';
+import { tokenStatusLabel } from '$lib/tokens';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -331,7 +332,7 @@ function closeRotateConsumerToken() {
 }
 
 // Purge (alrayyes/hush-hush#441) - a hard-delete restricted to a token
-// that's already dead (revoked or past its expiry, per isTokenDead).
+// that's already dead (revoked or expired, per the token's allowed_actions).
 
 let purgeOpen = $state(false);
 let purgeId = $state('');
@@ -654,19 +655,22 @@ async function confirmPurgeConsumerToken() {
 							{/if}
 						</td>
 						<td data-label="Status">
-							{token.revoked ? 'Revoked' : isTokenDead(token) ? 'Expired' : 'Active'}
+							{tokenStatusLabel(token.status)}
 						</td>
 						<td data-label="Actions" class="row-actions gap-3">
-							{#if isTokenDead(token)}
-								<Button variant="destructive" size="sm" onclick={() => openPurge(token.id)}>
-									Delete permanently
-								</Button>
-							{:else}
+							{#if token.allowed_actions?.includes('rotate')}
 								<Button variant="outline" size="sm" onclick={() => openRotate(token.id)}>
 									Rotate
 								</Button>
+							{/if}
+							{#if token.allowed_actions?.includes('revoke')}
 								<Button variant="destructive" size="sm" onclick={() => openRevoke(token.id)}>
 									Revoke
+								</Button>
+							{/if}
+							{#if token.allowed_actions?.includes('purge')}
+								<Button variant="destructive" size="sm" onclick={() => openPurge(token.id)}>
+									Delete permanently
 								</Button>
 							{/if}
 						</td>
@@ -831,18 +835,10 @@ async function confirmPurgeConsumerToken() {
 							{/if}
 						</td>
 						<td data-label="Status">
-							{token.revoked ? 'Revoked' : isTokenDead(token) ? 'Expired' : 'Active'}
+							{tokenStatusLabel(token.status)}
 						</td>
 						<td data-label="Actions" class="row-actions gap-3">
-							{#if isTokenDead(token)}
-								<Button
-									variant="destructive"
-									size="sm"
-									onclick={() => openPurgeConsumerToken(token.id)}
-								>
-									Delete permanently
-								</Button>
-							{:else}
+							{#if token.allowed_actions?.includes('rotate')}
 								<Button
 									variant="outline"
 									size="sm"
@@ -850,12 +846,23 @@ async function confirmPurgeConsumerToken() {
 								>
 									Rotate
 								</Button>
+							{/if}
+							{#if token.allowed_actions?.includes('revoke')}
 								<Button
 									variant="destructive"
 									size="sm"
 									onclick={() => openRevokeConsumerToken(token.id)}
 								>
 									Revoke
+								</Button>
+							{/if}
+							{#if token.allowed_actions?.includes('purge')}
+								<Button
+									variant="destructive"
+									size="sm"
+									onclick={() => openPurgeConsumerToken(token.id)}
+								>
+									Delete permanently
 								</Button>
 							{/if}
 						</td>
