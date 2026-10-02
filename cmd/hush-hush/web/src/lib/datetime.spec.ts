@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatTimestamp, isTokenDead } from './datetime';
+import { formatRemaining, formatTimestamp, isTokenDead } from './datetime';
 
 describe('formatTimestamp', () => {
 	it('formats an ISO instant as a medium date + short time', () => {
@@ -39,5 +39,39 @@ describe('isTokenDead', () => {
 
 	it('is dead when both revoked and expired', () => {
 		expect(isTokenDead({ revoked: true, expires_at: past })).toBe(true);
+	});
+});
+
+describe('formatRemaining', () => {
+	const now = new Date('2026-10-02T12:00:00Z');
+	const inMs = (ms: number) => new Date(now.getTime() + ms).toISOString();
+	const minute = 60_000;
+	const hour = 60 * minute;
+	const day = 24 * hour;
+
+	it('counts whole days once a day or more is left', () => {
+		expect(formatRemaining(inMs(3 * day + 5 * hour), now)).toBe('3d left');
+		expect(formatRemaining(inMs(day), now)).toBe('1d left');
+	});
+
+	it('counts whole hours under a day', () => {
+		expect(formatRemaining(inMs(23 * hour + 59 * minute), now)).toBe(
+			'23h left',
+		);
+		expect(formatRemaining(inMs(hour), now)).toBe('1h left');
+	});
+
+	it('counts whole minutes under an hour', () => {
+		expect(formatRemaining(inMs(59 * minute), now)).toBe('59m left');
+		expect(formatRemaining(inMs(minute), now)).toBe('1m left');
+	});
+
+	it('says under a minute rather than rounding to zero', () => {
+		expect(formatRemaining(inMs(30_000), now)).toBe('<1m left');
+	});
+
+	it('says expired at and after the expiry instant', () => {
+		expect(formatRemaining(inMs(0), now)).toBe('expired');
+		expect(formatRemaining(inMs(-day), now)).toBe('expired');
 	});
 });
