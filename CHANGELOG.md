@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.51.0](https://github.com/alrayyes/Hush-Hush/compare/v2.50.0...v2.51.0) (2026-10-02)
+
+
+### Features
+
+* **tokens:** report a status and allowed actions on every token ([#547](https://github.com/alrayyes/Hush-Hush/issues/547)) ([a9fcc8f](https://github.com/alrayyes/Hush-Hush/commit/a9fcc8f17c442fc7512367f17f34f85a69435108)), closes [#536](https://github.com/alrayyes/Hush-Hush/issues/536)
+
 ## [2.50.0](https://github.com/alrayyes/Hush-Hush/compare/v2.49.0...v2.50.0) (2026-10-02)
 
 
