@@ -1,6 +1,10 @@
 <script lang="ts">
 import { page } from '$app/state';
 import '../app.css';
+import LockIcon from '@lucide/svelte/icons/lock';
+import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
+import SettingsIcon from '@lucide/svelte/icons/settings';
+import TerminalIcon from '@lucide/svelte/icons/terminal';
 import { goto, invalidate } from '$app/navigation';
 import { logout } from '$lib/api';
 import favicon from '$lib/assets/favicon.svg';
@@ -27,10 +31,10 @@ async function handleLogout() {
 // page.url.pathname === '/consumers', but nothing here nests routes
 // under one another the way a prefix match would need to handle.
 const navLinks = [
-	{ href: '/', label: 'Secrets' },
-	{ href: '/consumers', label: 'Consumers' },
-	{ href: '/audit-log', label: 'Audit log' },
-	{ href: '/settings', label: 'Settings' },
+	{ href: '/', label: 'Secrets', icon: LockIcon },
+	{ href: '/consumers', label: 'Consumers', icon: TerminalIcon },
+	{ href: '/audit-log', label: 'Audit log', icon: ScrollTextIcon },
+	{ href: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 </script>
 
@@ -48,7 +52,10 @@ const navLinks = [
 	class="topbar flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
 >
 	{#if data.authenticated}
-		<nav class="flex flex-wrap items-center gap-2 sm:flex-1 sm:gap-4">
+		<nav
+			aria-label="Primary"
+			class="hidden flex-wrap items-center gap-2 md:flex sm:flex-1 sm:gap-4"
+		>
 			{#each navLinks as link (link.href)}
 				<Button
 					href={link.href}
@@ -73,4 +80,31 @@ const navLinks = [
 
 {@render children()}
 
-<Footer version={data.version} />
+{#if data.authenticated}
+	<!-- #480: below md the links move to a fixed bottom tab bar; the
+	     wrapper's bottom padding keeps it from covering the footer. -->
+	<div class="pb-20 md:pb-0">
+		<Footer version={data.version} />
+	</div>
+	<nav
+		aria-label="Primary (mobile)"
+		class="fixed bottom-0 left-0 right-0 z-50 flex justify-around border-t border-border bg-surface pb-2 md:hidden"
+	>
+		{#each navLinks as link (link.href)}
+			{@const active = page.url.pathname === link.href}
+			<a
+				href={link.href}
+				aria-current={active ? 'page' : undefined}
+				class={[
+					'flex min-h-11 min-w-14 flex-col items-center justify-center text-xs no-underline',
+					active ? 'font-bold text-accent' : 'text-text-muted',
+				]}
+			>
+				<link.icon aria-hidden="true" class="size-5" />
+				{link.label}
+			</a>
+		{/each}
+	</nav>
+{:else}
+	<Footer version={data.version} />
+{/if}

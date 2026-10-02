@@ -154,7 +154,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		data: { public_key: homelabRecipient },
 	});
 
-	const nav = page.locator('nav');
+	const nav = page.getByRole('navigation', { name: 'Primary', exact: true });
 	await expect(nav.getByRole('link', { name: 'Secrets' })).toBeVisible();
 
 	await page.goto('/changelog');
@@ -181,6 +181,64 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		nav.getByRole('link', { name: 'Consumers' }),
 	).not.toHaveAttribute('aria-current', 'page');
+
+	// alrayyes/hush-hush#480: below md the top nav row gives way to a fixed
+	// bottom tab bar. Both are real <nav> landmarks with their own
+	// aria-label, so role queries (which only match what's displayed) tell
+	// them apart. Folded into this journey, not its own spec - the server
+	// accepts one passkey registration per database, so a second test
+	// registering in parallel races this one.
+	const tabBar = page.getByRole('navigation', { name: 'Primary (mobile)' });
+	await expect(tabBar).toBeHidden();
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(tabBar).toBeVisible();
+	await expect(
+		page.getByRole('navigation', { name: 'Primary', exact: true }),
+	).toBeHidden();
+
+	for (const name of ['Secrets', 'Consumers', 'Audit log', 'Settings']) {
+		const link = tabBar.getByRole('link', { name });
+		await expect(link).toBeVisible();
+
+		// 44x44px is the minimum touch target.
+		const box = await link.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+
+	// Fixed to the bottom edge, and never covering the footer.
+	const barBox = await tabBar.boundingBox();
+	expect((barBox?.y ?? 0) + (barBox?.height ?? 0)).toBeCloseTo(844, 0);
+	await page.locator('footer').scrollIntoViewIfNeeded();
+	const footerBox = await page.locator('footer').boundingBox();
+	expect((footerBox?.y ?? 0) + (footerBox?.height ?? 0)).toBeLessThanOrEqual(
+		barBox?.y ?? 0,
+	);
+
+	// aria-current moves with navigation, same as the top nav above.
+	await expect(tabBar.getByRole('link', { name: 'Secrets' })).toHaveAttribute(
+		'aria-current',
+		'page',
+	);
+	await tabBar.getByRole('link', { name: 'Consumers' }).click();
+	await page.waitForURL('/consumers');
+	await expect(tabBar.getByRole('link', { name: 'Consumers' })).toHaveAttribute(
+		'aria-current',
+		'page',
+	);
+	await expect(
+		tabBar.getByRole('link', { name: 'Secrets' }),
+	).not.toHaveAttribute('aria-current', 'page');
+
+	const mobileResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(mobileResults.violations).toEqual([]);
+
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await page.goto('/');
+	await expect(tabBar).toBeHidden();
 
 	// A real secret with real width pressure - #271's own gap: the
 	// public-pages-only viewport test never caught the authenticated
@@ -772,9 +830,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// content was visible. Clustering every topbar control's own top
 	// offset (within a tolerance wider than the few px a link and a
 	// padded button can differ by even centered on the same line) catches
-	// that without pinning an exact pixel height to font metrics.
+	// that without pinning an exact pixel height to font metrics. The nav
+	// links themselves moved to the bottom tab bar below md (#480), so what's
+	// left in the topbar to cluster is the two account controls.
 	const topbarControls = [
-		...(await nav.getByRole('link').all()),
 		page.getByRole('button', { name: 'Log out' }),
 		page.getByRole('button', { name: /switch to (dark|light) mode/i }),
 	];
@@ -806,9 +865,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	// Client-side nav clicks, not page.goto() - a hard navigation to
 	// /audit-log is its own dedicated test below (#272), and this loop is
-	// about the mobile layout, not routing.
+	// about the mobile layout, not routing. Via the bottom tab bar: at 320px
+	// it's the only nav displayed.
 	for (const linkName of ['Secrets', 'Consumers', 'Audit log', 'Settings']) {
-		await nav.getByRole('link', { name: linkName }).click();
+		await tabBar.getByRole('link', { name: linkName }).click();
 		await expect(page.locator('main')).toBeVisible();
 
 		// Checks every scrollable element on the page, not just the
