@@ -2072,6 +2072,33 @@ components:
           type: string
           format: date-time
           description: Absent if this token has never authenticated a request.
+        status:
+          $ref: "#/components/schemas/TokenStatus"
+        allowed_actions:
+          $ref: "#/components/schemas/TokenAllowedActions"
+
+    TokenStatus:
+      type: string
+      enum: [active, expired, revoked]
+      description: |
+        What the token is right now, by the server's own clock: `revoked`
+        if it was revoked (even if it has also expired), `expired` if its
+        `expires_at` has passed, `active` otherwise. Always sent by this
+        server; optional in the schema so a client generated from it still
+        reads a response from an older one.
+
+    TokenAllowedActions:
+      type: array
+      description: |
+        What may be done to the token in its current state: `rotate` and
+        `revoke` while it is `active`, only `purge` once it is `expired` or
+        `revoked`. The endpoints enforce the same rule themselves - a purge
+        of an active token is still a 409 - so a client that acts on a stale
+        view gets the server's answer. Hiding a button is cosmetic; this is
+        what to show.
+      items:
+        type: string
+        enum: [rotate, revoke, purge]
 
     RotateTokenRequest:
       type: object
@@ -2147,6 +2174,10 @@ components:
           type: string
           format: date-time
           description: Absent if this token has never authenticated a request.
+        status:
+          $ref: "#/components/schemas/TokenStatus"
+        allowed_actions:
+          $ref: "#/components/schemas/TokenAllowedActions"
 
     RotateConsumerTokenRequest:
       type: object
