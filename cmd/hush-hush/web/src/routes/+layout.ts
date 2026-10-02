@@ -1,4 +1,5 @@
 import { checkSession, getHealth } from '$lib/api';
+import { healthSummary } from '$lib/health';
 import type { LayoutLoad } from './$types';
 
 // "own backend, static frontend, no SSR" - design.md's "Frontend:
@@ -29,9 +30,14 @@ export const load: LayoutLoad = async ({ depends }) => {
 	depends('app:auth');
 
 	const [health, authenticated] = await Promise.all([
-		getHealth(),
+		healthSummary(getHealth),
 		checkSession(),
 	]);
 
-	return { version: health.version, authenticated };
+	return {
+		version: health.version,
+		healthy: health.healthy,
+		environment: health.environment,
+		authenticated,
+	};
 };

@@ -574,6 +574,9 @@ export async function purgeConsumerToken(id: string): Promise<void> {
 export interface Health {
 	status: string;
 	version: string;
+	// The operator's own label for this instance (the INSTANCE_LABEL setting),
+	// absent when none is set - alrayyes/hush-hush#512.
+	environment?: string;
 }
 
 // getHealth is unauthenticated, same as every page's own footer that

@@ -238,6 +238,46 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		tabBar.getByRole('link', { name: 'Secrets' }),
 	).not.toHaveAttribute('aria-current', 'page');
 
+	// alrayyes/hush-hush#481: the phone top bar carries the brand, the
+	// instance label from /healthz, an ACTIVE pill, and an account menu that
+	// holds Log out and the theme toggle (the design drops both).
+	const topBar = page.getByRole('banner');
+	await expect(topBar.getByText('HUSH-HUSH')).toBeVisible();
+	await expect(topBar.getByText('e2e / local')).toBeVisible();
+	await expect(topBar.getByText('ACTIVE', { exact: true })).toBeVisible();
+	await expect(topBar.getByRole('button', { name: 'Log out' })).toHaveCount(0);
+
+	const accountMenu = topBar.getByRole('button', { name: 'Account menu' });
+	const accountBox = await accountMenu.boundingBox();
+	expect(accountBox?.width).toBeGreaterThanOrEqual(44);
+	expect(accountBox?.height).toBeGreaterThanOrEqual(44);
+	await accountMenu.click();
+	const accountDialog = page.getByRole('dialog', { name: 'Account' });
+	await expect(
+		accountDialog.getByRole('button', { name: 'Log out' }),
+	).toBeVisible();
+	await expect(
+		accountDialog.getByRole('button', {
+			name: /switch to (dark|light) mode/i,
+		}),
+	).toBeVisible();
+	const accountResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(accountResults.violations).toEqual([]);
+	await page.keyboard.press('Escape');
+	await expect(accountDialog).toBeHidden();
+
+	// A failing /healthz must not blank the app or claim it is active.
+	await page.route('**/healthz', (route) => route.abort());
+	await page.reload();
+	await expect(topBar.getByText('OFFLINE', { exact: true })).toBeVisible();
+	await expect(topBar.getByText('ACTIVE', { exact: true })).toHaveCount(0);
+	await expect(topBar.getByText('e2e / local')).toHaveCount(0);
+	await page.unroute('**/healthz');
+	await page.reload();
+	await expect(topBar.getByText('ACTIVE', { exact: true })).toBeVisible();
+
 	const mobileResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -246,6 +286,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.setViewportSize({ width: 1280, height: 720 });
 	await page.goto('/');
 	await expect(tabBar).toBeHidden();
+	// At desktop width Log out sits in the bar itself, and the account menu
+	// button isn't offered.
+	await expect(topBar.getByText('e2e / local')).toBeVisible();
+	await expect(topBar.getByRole('button', { name: 'Log out' })).toBeVisible();
+	await expect(
+		topBar.getByRole('button', { name: 'Account menu' }),
+	).toBeHidden();
 
 	// A real secret with real width pressure - #271's own gap: the
 	// public-pages-only viewport test never caught the authenticated
@@ -1173,10 +1220,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// padded button can differ by even centered on the same line) catches
 	// that without pinning an exact pixel height to font metrics. The nav
 	// links themselves moved to the bottom tab bar below md (#480), so what's
-	// left in the topbar to cluster is the two account controls.
+	// left in the topbar to cluster is the brand, the instance label, the
+	// status pill and the account menu button (#481).
 	const topbarControls = [
-		page.getByRole('button', { name: 'Log out' }),
-		page.getByRole('button', { name: /switch to (dark|light) mode/i }),
+		page.getByRole('banner').getByText('HUSH-HUSH'),
+		page.getByRole('banner').getByText('e2e / local'),
+		page.getByRole('banner').getByText('ACTIVE', { exact: true }),
+		page.getByRole('banner').getByRole('button', { name: 'Account menu' }),
 	];
 	const boxes = await Promise.all(
 		topbarControls.map((control) => control.boundingBox()),
