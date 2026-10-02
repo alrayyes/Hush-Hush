@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.45.0](https://github.com/alrayyes/Hush-Hush/compare/v2.44.1...v2.45.0) (2026-10-02)
+
+
+### Features
+
+* **web-ui:** fixed bottom tab bar for the app nav below md ([#486](https://github.com/alrayyes/Hush-Hush/issues/486)) ([f3b199c](https://github.com/alrayyes/Hush-Hush/commit/f3b199c67587503b0025412e44ff8f5465757022)), closes [#480](https://github.com/alrayyes/Hush-Hush/issues/480)
+
 ## [2.44.1](https://github.com/alrayyes/Hush-Hush/compare/v2.44.0...v2.44.1) (2026-10-02)
 
 
