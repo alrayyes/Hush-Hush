@@ -25,6 +25,7 @@ import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { formatTimestamp, isTokenDead } from '$lib/datetime';
+import TokenCard from '$lib/TokenCard.svelte';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -549,7 +550,19 @@ async function confirmPurgeConsumerToken() {
 			</Dialog.Root>
 		</header>
 
-		<table class="responsive-table">
+		<ul aria-label="Bearer token list" class="m-0 list-none space-y-3 p-0 md:hidden">
+			{#each data.tokens as token (token.id)}
+				<TokenCard
+					{token}
+					subtitle={token.owner ?? 'cli'}
+					onrotate={() => openRotate(token.id)}
+					onrevoke={() => openRevoke(token.id)}
+					onpurge={() => openPurge(token.id)}
+				/>
+			{/each}
+		</ul>
+
+		<table class="responsive-table hidden md:table">
 			<thead>
 				<tr>
 					<th scope="col" class="px-4 py-3">Description</th>
@@ -714,7 +727,19 @@ async function confirmPurgeConsumerToken() {
 			</ul>
 		{/if}
 
-		<table class="responsive-table">
+		<ul aria-label="Consumer token list" class="m-0 list-none space-y-3 p-0 md:hidden">
+			{#each filteredConsumerTokens as token (token.id)}
+				<TokenCard
+					{token}
+					subtitle={token.consumer}
+					onrotate={() => openRotateConsumerToken(token.id)}
+					onrevoke={() => openRevokeConsumerToken(token.id)}
+					onpurge={() => openPurgeConsumerToken(token.id)}
+				/>
+			{/each}
+		</ul>
+
+		<table class="responsive-table hidden md:table">
 			<thead>
 				<tr>
 					<th scope="col" class="px-4 py-3">Consumer</th>
