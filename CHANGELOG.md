@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.49.0](https://github.com/alrayyes/Hush-Hush/compare/v2.48.0...v2.49.0) (2026-10-02)
+
+
+### Features
+
+* **web-ui:** changelog as one card per release ([#528](https://github.com/alrayyes/Hush-Hush/issues/528)) ([24b723e](https://github.com/alrayyes/Hush-Hush/commit/24b723e75eed2f6cf97e9a952d5d228c229bf32e))
+* **web-ui:** show tags on secrets and filter the list by tag ([#529](https://github.com/alrayyes/Hush-Hush/issues/529)) ([1fae1f3](https://github.com/alrayyes/Hush-Hush/commit/1fae1f3b7b7595c06483983ec9f0d9fe3392e2a3))
+
+
+### Bug Fixes
+
+* **ci:** give the lighthouse job 120s for the server to start ([#532](https://github.com/alrayyes/Hush-Hush/issues/532)) ([acbcf85](https://github.com/alrayyes/Hush-Hush/commit/acbcf8516d0864a0b908411cdd8179356d9ebcd3)), closes [#531](https://github.com/alrayyes/Hush-Hush/issues/531)
+* **web-ui:** make a Button rendered as a link look like a button ([#526](https://github.com/alrayyes/Hush-Hush/issues/526)) ([a057fe4](https://github.com/alrayyes/Hush-Hush/commit/a057fe418d425c6b76d074e52e5acb4ac05f5307)), closes [#519](https://github.com/alrayyes/Hush-Hush/issues/519)
+
 ## [2.48.0](https://github.com/alrayyes/Hush-Hush/compare/v2.47.0...v2.48.0) (2026-10-02)
 
 
