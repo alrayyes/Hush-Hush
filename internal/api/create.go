@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/alrayyes/hush-hush/internal/store"
 )
@@ -57,6 +58,21 @@ type ObjectMetadata struct {
 	Tags             []string `json:"tags"`
 	Description      string   `json:"description,omitempty"`
 	KeepReadableCopy bool     `json:"keep_readable_copy,omitempty"`
+	// CreatedAt, UpdatedAt, CreatedBy and UpdatedBy are filled by the list
+	// call only, and left out of a create or update response. An actor is
+	// also left out when the audit log can't say who it was.
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	CreatedBy *Actor     `json:"created_by,omitempty"`
+	UpdatedBy *Actor     `json:"updated_by,omitempty"`
+}
+
+// Actor is who performed an audited write. Type is the audit log's own
+// actor type, "session" or "token". Matches components.schemas.Actor in
+// api/openapi.yaml.
+type Actor struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
 }
 
 // Error is the body every documented error response carries. Matches

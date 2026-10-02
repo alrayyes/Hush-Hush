@@ -44,6 +44,13 @@ type Object struct {
 	UsedBy      []string
 	Tags        []string
 	Description string
+	// CreatedAt and UpdatedAt come from the object's own row. CreatedBy and
+	// UpdatedBy come from the audit log (see attributionFor) and are only
+	// filled by ListObjects; the zero Actor means no audit entry says.
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	CreatedBy Actor
+	UpdatedBy Actor
 	// OwnerID is the users row that created this object, captured once at
 	// creation (specs/secret-objects/spec.md's "Owner recorded from the
 	// creating session" scenario) - accountability and audit metadata
@@ -251,7 +258,7 @@ type ObjectFilter struct {
 // something addressable), sorted by slug. filter narrows the result; its
 // zero value returns everything.
 func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object, error) {
-	query := `SELECT DISTINCT o.id, o.slug, o.description FROM objects o`
+	query := `SELECT DISTINCT o.id, o.slug, o.description, o.created_at, o.updated_at FROM objects o`
 
 	var (
 		conds []string
@@ -283,10 +290,17 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 
 	var objs []Object
 	for rows.Next() {
-		var obj Object
-		if err := rows.Scan(&obj.ID, &obj.Slug, &obj.Description); err != nil {
+		var (
+			obj                  Object
+			createdAt, updatedAt string
+		)
+
+		if err := rows.Scan(&obj.ID, &obj.Slug, &obj.Description, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scan object: %w", err)
 		}
+
+		obj.CreatedAt = parseStoredTime(createdAt)
+		obj.UpdatedAt = parseStoredTime(updatedAt)
 		objs = append(objs, obj)
 	}
 	if err := rows.Err(); err != nil {
@@ -294,17 +308,9 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 	}
 
 	for i := range objs {
-		usedBy, err := s.usedByFor(ctx, objs[i].ID)
-		if err != nil {
+		if err := s.hydrateListed(ctx, &objs[i]); err != nil {
 			return nil, err
 		}
-		objs[i].UsedBy = usedBy
-
-		tags, err := s.tagsFor(ctx, objs[i].ID)
-		if err != nil {
-			return nil, err
-		}
-		objs[i].Tags = tags
 	}
 
 	return objs, nil
