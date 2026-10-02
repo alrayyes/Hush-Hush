@@ -44,6 +44,7 @@ type objectStore interface {
 	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...store.ObjectOption) error
 	DeleteObject(ctx context.Context, slug string) error
+	Ready(ctx context.Context) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
 	QueryAuditLogFilterOptions(ctx context.Context) (store.AuditLogFilterOptions, error)
@@ -120,6 +121,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string, opt
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth(version, o.instanceLabel))
+	mux.HandleFunc("GET /readyz", handleReady(s))
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /consumers", handleHardNavRoute(requireWriteAccess(s, false, handleListConsumers(s)), staticHandler))

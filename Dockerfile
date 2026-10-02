@@ -57,8 +57,10 @@ EXPOSE 8080
 
 # Exec form, not shell form - distroless has no shell to interpret one. The
 # binary's own `healthcheck` subcommand exists for exactly this: nothing else
-# in this image (no curl, no wget) could otherwise probe /healthz.
+# in this image (no curl, no wget) could otherwise probe the server. --ready
+# asks /readyz, which fails when the database can't serve a request - /healthz
+# only says the process is up, so it would stay green over a broken database.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["/hush-hush", "healthcheck"]
+    CMD ["/hush-hush", "healthcheck", "--ready"]
 
 ENTRYPOINT ["/hush-hush"]

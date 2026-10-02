@@ -481,3 +481,20 @@ func tableNames(t *testing.T, s *store.Store) []string {
 
 	return names
 }
+
+func TestReadyIsNilForAnOpenStore(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+
+	require.NoError(t, s.Ready(context.Background()))
+}
+
+func TestReadyFailsOnceTheDatabaseIsClosed(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	require.NoError(t, s.Close())
+
+	require.Error(t, s.Ready(context.Background()))
+}

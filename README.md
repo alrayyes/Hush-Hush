@@ -198,6 +198,10 @@ curl localhost:8080/healthz
 docker exec hush-hush /hush-hush token issue --description "trying it out"
 ```
 
+The image's own health check asks `GET /readyz`, which fails when the
+database can't serve a request, so `docker ps` shows the container as
+`unhealthy` instead of up. `/healthz` only says the process is running.
+
 The image is `distroless/static-debian12` - there's no shell in it, so
 `docker exec -ti <container> sh` has nothing to run. `docker exec` only
 works by naming the binary itself, at `/hush-hush` in the container, the
