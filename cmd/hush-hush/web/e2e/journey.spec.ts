@@ -87,6 +87,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	context,
 	browserName,
 }) => {
+	// One journey registers a passkey and walks every page, and each web-ui
+	// change adds to it, so it has outgrown Playwright's 30s default (#524).
+	// A timeout there fails at whichever step the clock runs out on, which
+	// looks like a click that can't land, not like a timeout. Set here, not
+	// suite-wide, so a hung short test still fails fast.
+	test.setTimeout(120_000);
+
 	test.skip(
 		browserName !== 'chromium',
 		'CDP virtual authenticator is Chromium-only',
