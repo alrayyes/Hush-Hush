@@ -878,6 +878,38 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(settingsResults.violations).toEqual([]);
 
+	// alrayyes/hush-hush#484: the offline recovery notice (ADR 21) shows at
+	// every width, and below md each passkey is a card with Rename and
+	// Delete as 44px targets.
+	const recoveryNotice = page.getByRole('complementary', {
+		name: 'Recovery phrase',
+	});
+	await expect(recoveryNotice).toContainText('shown once');
+	await expect(recoveryNotice).toContainText('keeps no copy');
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(recoveryNotice).toBeVisible();
+	const passkeyCard = page
+		.getByRole('list', { name: 'Passkey list' })
+		.getByRole('listitem')
+		.first();
+	await expect(passkeyCard).toBeVisible();
+	await expect(passkeyCard).toContainText('Added');
+	await expect(passkeyCard).toContainText('Last used');
+	for (const control of [
+		passkeyCard.getByRole('button', { name: 'Rename' }),
+		passkeyCard.getByRole('button', { name: 'Delete' }),
+	]) {
+		const box = await control.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+	const passkeyCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(passkeyCardResults.violations).toEqual([]);
+	await page.setViewportSize({ width: 1280, height: 720 });
+
 	// Consumer tokens: create/rotate/revoke, and the single-select
 	// consumer picker (max=1, showKeyStatus=false -
 	// openspec/changes/consumer-read-tokens-web-ui/design.md). "ci-runner"
