@@ -271,3 +271,52 @@ func TestMCPListReturnsEveryObjectsMetadata(t *testing.T) {
 
 	require.Subset(t, ids, []string{"mcp_list_a", "mcp_list_b"})
 }
+
+func TestMCPInjectUpdateAndListCarryTags(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	result := callTool(t, mux, token, "inject", map[string]any{
+		"slug":  "mcp_tagged",
+		"value": []byte("sealed"),
+		"tags":  []string{"prod"},
+	})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	obj, err := s.GetObject(context.Background(), "mcp_tagged")
+	require.NoError(t, err)
+	require.Equal(t, []string{"prod"}, obj.Tags)
+
+	result = callTool(t, mux, token, "update", map[string]any{
+		"slug":  "mcp_tagged",
+		"value": []byte("sealed2"),
+		"tags":  []string{"homelab"},
+	})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	result = callTool(t, mux, token, "list", map[string]any{"tag": "homelab"})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	var out []struct {
+		Slug string   `json:"slug"`
+		Tags []string `json:"tags"`
+	}
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &out))
+	require.Len(t, out, 1)
+	require.Equal(t, []string{"homelab"}, out[0].Tags)
+}
+
+func TestMCPInjectWithInvalidTagIsAToolError(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	result := callTool(t, mux, issueToken(t, s), "inject", map[string]any{
+		"slug":  "mcp_bad_tag",
+		"value": []byte("sealed"),
+		"tags":  []string{"no way"},
+	})
+	require.True(t, result.IsError)
+}

@@ -33,6 +33,7 @@ type CreateObjectRequest struct {
 	Slug             string   `json:"slug"`
 	Value            []byte   `json:"value"`
 	UsedBy           []string `json:"used_by,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
 	Description      string   `json:"description,omitempty"`
 	KeepReadableCopy bool     `json:"keep_readable_copy,omitempty"`
 }
@@ -53,6 +54,7 @@ type CreateObjectRequest struct {
 type ObjectMetadata struct {
 	Slug             string   `json:"slug"`
 	UsedBy           []string `json:"used_by,omitempty"`
+	Tags             []string `json:"tags"`
 	Description      string   `json:"description,omitempty"`
 	KeepReadableCopy bool     `json:"keep_readable_copy,omitempty"`
 }
@@ -78,6 +80,13 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
+		tags, err := createTags(req.Tags)
+		if err != nil {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+
+			return
+		}
+
 		ownerID, err := s.CurrentUserID(r.Context())
 		if err != nil {
 			writeInternalError(w, r, err)
@@ -85,7 +94,7 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		err = s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description, ownerID)
+		err = s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description, ownerID, store.WithTags(tags))
 		switch {
 		case err == nil:
 			actorType, actorID := actorFrom(r)
@@ -96,7 +105,7 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			}
 
 			writeJSON(w, http.StatusCreated, ObjectMetadata{
-				Slug: req.Slug, UsedBy: req.UsedBy, Description: req.Description,
+				Slug: req.Slug, UsedBy: req.UsedBy, Tags: tags, Description: req.Description,
 				KeepReadableCopy: req.KeepReadableCopy,
 			})
 		case errors.Is(err, store.ErrAlreadyExists):
