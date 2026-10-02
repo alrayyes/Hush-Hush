@@ -293,6 +293,77 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
+	// alrayyes/hush-hush#480: below md the secrets table gives way to one
+	// card per secret, plus a search box that filters both layouts. Done
+	// here, right after the first create, because this is the one place a
+	// real secret exists and nothing has edited or deleted it yet.
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(page.getByRole('table')).toBeHidden();
+
+	const secretList = page.getByRole('list', { name: 'Secrets' });
+	const secretCard = secretList
+		.getByRole('listitem')
+		.filter({ hasText: 'mattermost_deploy_webhook' });
+	await expect(secretCard).toBeVisible();
+	await expect(secretCard).toContainText(
+		'prod deploy webhook for homelab/vps-docker',
+	);
+	await expect(secretCard).toContainText('age-encrypted (X25519)');
+	await expect(secretCard).toContainText(/Updated .+ by admin/);
+
+	// Every control on a card is at least 44x44px.
+	const copySlug = secretCard.getByRole('button', {
+		name: 'Copy slug mattermost_deploy_webhook',
+	});
+	for (const control of [
+		copySlug,
+		secretCard.getByRole('button', { name: 'Inspect' }),
+		secretCard.getByRole('button', { name: 'Edit' }),
+		secretCard.getByRole('button', { name: 'Delete' }),
+	]) {
+		const box = await control.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+
+	await copySlug.click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		'mattermost_deploy_webhook',
+	);
+	await expect(
+		secretCard.getByRole('button', {
+			name: 'Copied mattermost_deploy_webhook',
+		}),
+	).toBeVisible();
+
+	// Delete still goes through the confirmation dialog.
+	await secretCard.getByRole('button', { name: 'Delete' }).click();
+	await expect(
+		page.getByRole('alertdialog', {
+			name: 'Delete mattermost_deploy_webhook?',
+		}),
+	).toBeVisible();
+	await page.getByRole('button', { name: 'Cancel' }).click();
+
+	// Search matches slug or description, and says so when nothing matches.
+	const search = page.getByRole('searchbox', { name: 'Filter secrets' });
+	await search.fill('no-such-secret');
+	await expect(secretCard).toBeHidden();
+	await expect(page.getByText('No secrets match')).toBeVisible();
+	await search.fill('vps-docker');
+	await expect(secretCard).toBeVisible();
+	await search.fill('');
+
+	const cardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(cardResults.violations).toEqual([]);
+
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await expect(page.getByRole('table')).toBeVisible();
+	await expect(secretList).toBeHidden();
+
 	// #299: viewing a secret shows its recorded consumers, and editing one
 	// can change that list - both used to be create-only. View first,
 	// against the "homelab" used_by set at creation above.
@@ -409,7 +480,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('link', { name: 'homelab' }).click();
 	await page.waitForURL('/?used_by=homelab');
 	await expect(page.getByText('consumer: homelab')).toBeVisible();
-	await expect(page.getByText('mattermost_deploy_webhook')).toBeVisible();
+	await expect(
+		page.getByRole('cell', { name: 'mattermost_deploy_webhook' }),
+	).toBeVisible();
 	await page.getByRole('link', { name: 'Clear consumer filter' }).click();
 	await page.waitForURL('/');
 

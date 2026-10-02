@@ -1,4 +1,7 @@
 <script lang="ts">
+import CheckIcon from '@lucide/svelte/icons/check';
+import CopyIcon from '@lucide/svelte/icons/copy';
+import { onDestroy } from 'svelte';
 import { invalidate } from '$app/navigation';
 import {
 	ApiError,
@@ -26,6 +29,39 @@ let { data }: { data: PageData } = $props();
 function apiErrorMessage(err: unknown, fallback: string): string {
 	return err instanceof ApiError ? err.message : fallback;
 }
+
+let query = $state('');
+const filteredObjects = $derived.by(() => {
+	const needle = query.trim().toLowerCase();
+	if (needle === '') return data.objects;
+	return data.objects.filter(
+		(o) =>
+			o.slug.toLowerCase().includes(needle) ||
+			(o.description ?? '').toLowerCase().includes(needle),
+	);
+});
+
+// Which card's copy button is showing its "Copied" state, and the timer
+// that reverts it. One slot, so a newer copy replaces an older one.
+let copiedSlug: string | null = $state(null);
+let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+async function copySlug(slug: string) {
+	try {
+		await navigator.clipboard.writeText(slug);
+	} catch {
+		// Clipboard blocked or unavailable: leave the label alone rather
+		// than claim a copy that didn't happen.
+		return;
+	}
+	clearTimeout(copiedTimer);
+	copiedSlug = slug;
+	copiedTimer = setTimeout(() => {
+		copiedSlug = null;
+	}, 1500);
+}
+
+onDestroy(() => clearTimeout(copiedTimer));
 
 let createOpen = $state(false);
 let createError = $state('');
@@ -310,7 +346,77 @@ async function confirmDelete() {
 	{#if data.objects.length === 0}
 		<p>No secrets stored yet.</p>
 	{:else}
-		<table class="responsive-table">
+		<div class="sticky top-0 z-10 bg-background py-2">
+			<Input
+				type="search"
+				class="w-full"
+				aria-label="Filter secrets"
+				placeholder="Filter by id or description"
+				bind:value={query}
+			/>
+		</div>
+
+		{#if filteredObjects.length === 0}
+			<p>No secrets match &ldquo;{query}&rdquo;.</p>
+		{/if}
+
+		<ul aria-label="Secrets" class="m-0 list-none space-y-3 p-0 md:hidden">
+			{#each filteredObjects as object (object.slug)}
+				{@const attribution = data.attribution.get(object.slug)}
+				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
+					<div class="flex items-start justify-between gap-2">
+						<span class="min-w-0 break-all font-mono text-sm font-semibold">{object.slug}</span>
+						<Button
+							variant="outline"
+							class="min-h-11 min-w-11"
+							aria-label={copiedSlug === object.slug
+								? `Copied ${object.slug}`
+								: `Copy slug ${object.slug}`}
+							onclick={() => copySlug(object.slug)}
+						>
+							{#if copiedSlug === object.slug}
+								<CheckIcon aria-hidden="true" />
+							{:else}
+								<CopyIcon aria-hidden="true" />
+							{/if}
+							{copiedSlug === object.slug ? 'Copied' : 'Copy'}
+						</Button>
+					</div>
+					{#if object.description}
+						<p class="m-0 text-sm">{object.description}</p>
+					{/if}
+					<p class="m-0">
+						<span class="rounded-2xl bg-border-subtle px-2 py-1 text-xs">age-encrypted (X25519)</span>
+					</p>
+					{#if attribution}
+						<p class="m-0 text-sm text-text-muted">
+							Updated
+							<time datetime={attribution.updatedAt} title={attribution.updatedAt}>
+								{formatTimestamp(attribution.updatedAt)}
+							</time>
+							by {attribution.updatedBy}
+						</p>
+					{/if}
+					<div class="flex flex-wrap gap-2">
+						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openView(object.slug)}>
+							Inspect
+						</Button>
+						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openEdit(object.slug)}>
+							Edit
+						</Button>
+						<Button
+							variant="destructive"
+							class="min-h-11 min-w-11"
+							onclick={() => openDelete(object.slug)}
+						>
+							Delete
+						</Button>
+					</div>
+				</li>
+			{/each}
+		</ul>
+
+		<table class="responsive-table hidden md:table">
 			<thead>
 				<tr>
 					<th scope="col" class="px-4 py-3">Id</th>
@@ -323,7 +429,7 @@ async function confirmDelete() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.objects as object (object.slug)}
+				{#each filteredObjects as object (object.slug)}
 					{@const attribution = data.attribution.get(object.slug)}
 					<tr>
 						<td data-label="Id">{object.slug}</td>
