@@ -289,16 +289,51 @@ func (s *Store) PurgeWriteToken(ctx context.Context, id string) error {
 // given its raw revoked_at/expires_at column values - shared by
 // PurgeWriteToken and PurgeConsumerToken's identical eligibility check.
 func isTokenDead(revokedAt sql.NullString, expiresAt string) bool {
-	if revokedAt.Valid {
-		return true
+	return StatusOfToken(revokedAt.Valid, expiresAt, time.Now().UTC()) != TokenActive
+}
+
+// TokenStatus is what a token is right now, by the server's own clock.
+type TokenStatus string
+
+// The three states a write or consumer token can be in.
+const (
+	TokenActive  TokenStatus = "active"
+	TokenExpired TokenStatus = "expired"
+	TokenRevoked TokenStatus = "revoked"
+)
+
+// StatusOfToken classifies a token from its revoked flag and expires_at
+// column value at now. Revoked wins over expired. An unparseable expiry
+// reads as active, the same way the purge check always has. This is the
+// one definition of "dead", shared by the purge eligibility check and the
+// status the API reports, so they can't drift apart.
+func StatusOfToken(revoked bool, expiresAt string, now time.Time) TokenStatus {
+	if revoked {
+		return TokenRevoked
 	}
 
 	expiry, err := time.Parse(time.RFC3339, expiresAt)
 	if err != nil {
-		return false
+		return TokenActive
 	}
 
-	return !time.Now().UTC().Before(expiry)
+	if !now.Before(expiry) {
+		return TokenExpired
+	}
+
+	return TokenActive
+}
+
+// AllowedActions lists what may be done to a token in this state: a live
+// token can be rotated or revoked, a dead one only purged. It is the same
+// rule RotateWriteToken, RevokeWriteToken and PurgeWriteToken enforce
+// themselves, spelled out so a client doesn't have to guess it.
+func (st TokenStatus) AllowedActions() []string {
+	if st == TokenActive {
+		return []string{"rotate", "revoke"}
+	}
+
+	return []string{"purge"}
 }
 
 func hashToken(token string) string {
