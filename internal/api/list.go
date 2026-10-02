@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/alrayyes/hush-hush/internal/store"
 )
@@ -36,9 +37,29 @@ func handleListObjects(s objectStore) http.HandlerFunc {
 
 		metadata := make([]ObjectMetadata, len(objs))
 		for i, obj := range objs {
-			metadata[i] = ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}
+			metadata[i] = ObjectMetadata{
+				Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description,
+				CreatedAt: timeOrNil(obj.CreatedAt), UpdatedAt: timeOrNil(obj.UpdatedAt),
+				CreatedBy: actorOrNil(obj.CreatedBy), UpdatedBy: actorOrNil(obj.UpdatedBy),
+			}
 		}
 
 		writeJSON(w, http.StatusOK, metadata)
 	}
+}
+
+func timeOrNil(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+
+	return &t
+}
+
+func actorOrNil(a store.Actor) *Actor {
+	if a == (store.Actor{}) {
+		return nil
+	}
+
+	return &Actor{Type: a.Type, ID: a.ID}
 }
