@@ -5,6 +5,7 @@ import {
 	secretsOverviewHref,
 	tokensHref,
 	totalPages,
+	truncateKey,
 } from './consumers';
 
 describe('parseConsumersQuery', () => {
@@ -78,5 +79,22 @@ describe('tokensHref', () => {
 		expect(tokensHref('homelab/vps-docker')).toBe(
 			'/settings?consumer=homelab%2Fvps-docker',
 		);
+	});
+});
+
+describe('truncateKey', () => {
+	const key = 'age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqsr5xk3l';
+
+	it('keeps the first 10 and last 6 characters around an ellipsis', () => {
+		expect(truncateKey(key)).toBe(`${key.slice(0, 10)}…${key.slice(-6)}`);
+	});
+
+	it('leaves a key of 16 characters or fewer unchanged', () => {
+		expect(truncateKey('age1short')).toBe('age1short');
+		expect(truncateKey('0123456789abcdef')).toBe('0123456789abcdef');
+	});
+
+	it('truncates a 17 character key', () => {
+		expect(truncateKey('0123456789abcdefg')).toBe('0123456789…bcdefg');
 	});
 });
