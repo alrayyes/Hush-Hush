@@ -1,4 +1,7 @@
 <script lang="ts">
+import CheckIcon from '@lucide/svelte/icons/check';
+import CopyIcon from '@lucide/svelte/icons/copy';
+import { onDestroy } from 'svelte';
 import { goto, invalidate } from '$app/navigation';
 import {
 	ApiError,
@@ -18,6 +21,7 @@ import {
 	secretsOverviewHref,
 	tokensHref,
 	totalPages,
+	truncateKey,
 } from '$lib/consumers';
 import type { PageData } from './$types';
 
@@ -36,6 +40,32 @@ function applyFilter() {
 		keepFocus: true,
 		noScroll: true,
 	});
+}
+
+// Which card's copy button is showing its "Copied" state, and the timer
+// that reverts it. One slot, so a newer copy replaces an older one.
+let copiedConsumer: string | null = $state(null);
+let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+async function copyKey(name: string, key: string) {
+	try {
+		await navigator.clipboard.writeText(key);
+	} catch {
+		// Clipboard blocked or unavailable: leave the label alone rather
+		// than claim a copy that didn't happen.
+		return;
+	}
+	clearTimeout(copiedTimer);
+	copiedConsumer = name;
+	copiedTimer = setTimeout(() => {
+		copiedConsumer = null;
+	}, 1500);
+}
+
+onDestroy(() => clearTimeout(copiedTimer));
+
+function plural(count: number, noun: string): string {
+	return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
@@ -185,7 +215,62 @@ async function confirmDelete() {
 	{#if data.consumers.length === 0}
 		<p>No consumers match{data.q ? ` "${data.q}"` : ' yet'}.</p>
 	{:else}
-		<table class="responsive-table">
+		<ul aria-label="Consumers" class="m-0 list-none space-y-3 p-0 md:hidden">
+			{#each data.consumers as consumer (consumer.name)}
+				{@const tokenCount = data.tokenCounts.get(consumer.name) ?? 0}
+				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
+					<a
+						href={secretsOverviewHref(consumer.name)}
+						class="break-words font-mono font-semibold">{consumer.name}</a
+					>
+					<p class="m-0 text-sm">{plural(consumer.secret_count, 'secret')}</p>
+					<p class="m-0 text-sm">
+						{#if tokenCount > 0}
+							<a href={tokensHref(consumer.name)}>{plural(tokenCount, 'token')}</a>
+						{:else}
+							{plural(tokenCount, 'token')}
+						{/if}
+					</p>
+					{#if consumer.public_key}
+						{@const publicKey = consumer.public_key}
+						<div class="flex items-center justify-between gap-2">
+							<code class="min-w-0 break-all font-mono text-xs">{truncateKey(publicKey)}</code>
+							<Button
+								variant="outline"
+								class="min-h-11 min-w-11"
+								aria-label={copiedConsumer === consumer.name
+									? `Copied public key ${consumer.name}`
+									: `Copy public key ${consumer.name}`}
+								onclick={() => copyKey(consumer.name, publicKey)}
+							>
+								{#if copiedConsumer === consumer.name}
+									<CheckIcon aria-hidden="true" />
+								{:else}
+									<CopyIcon aria-hidden="true" />
+								{/if}
+								{copiedConsumer === consumer.name ? 'Copied' : 'Copy'}
+							</Button>
+						</div>
+					{:else}
+						<p class="m-0 text-sm text-text-muted">not registered</p>
+					{/if}
+					<div class="flex flex-wrap gap-2">
+						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openRename(consumer)}>
+							Rename
+						</Button>
+						<Button
+							variant="destructive"
+							class="min-h-11 min-w-11"
+							onclick={() => openDelete(consumer)}
+						>
+							Delete
+						</Button>
+					</div>
+				</li>
+			{/each}
+		</ul>
+
+		<table class="responsive-table hidden md:table">
 			<thead>
 				<tr>
 					<th scope="col" class="px-4 py-3">Consumer</th>
