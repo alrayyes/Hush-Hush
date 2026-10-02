@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseChangelog } from './changelog';
+import { imageTag, parseChangelog, releaseUrl } from './changelog';
 
 const base = 'https://github.com/alrayyes/Hush-Hush';
 
@@ -143,5 +143,19 @@ describe('parseChangelog', () => {
 			expect(entry.text).not.toBe('');
 			expect(entry.badge).toMatch(/^[A-Z ]+$/);
 		}
+	});
+});
+
+describe('imageTag', () => {
+	it('is the ghcr.io image for a version, with no v prefix', () => {
+		expect(imageTag('2.46.0')).toBe('ghcr.io/alrayyes/hush-hush:2.46.0');
+	});
+});
+
+describe('releaseUrl', () => {
+	it('links the GitHub release page, whose tag does carry the v prefix', () => {
+		expect(releaseUrl('2.46.0')).toBe(
+			'https://github.com/alrayyes/Hush-Hush/releases/tag/v2.46.0',
+		);
 	});
 });

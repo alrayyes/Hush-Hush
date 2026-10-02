@@ -98,3 +98,17 @@ export function parseChangelog(markdown: string): ChangelogRelease[] {
 
 	return releases;
 }
+
+// The container image goreleaser publishes for a release (.goreleaser.yml:
+// `ghcr.io/alrayyes/hush-hush:{{ .Version }}`), whose version has no `v`.
+export function imageTag(version: string): string {
+	return `ghcr.io/alrayyes/hush-hush:${version}`;
+}
+
+// A release's GitHub page, which lists its tarballs. Linked instead of a
+// direct tarball URL because not every release has one attached: v2.44.0
+// and a few others shipped without assets, and a direct link would 404.
+// The tag, unlike the image version, does carry the `v`.
+export function releaseUrl(version: string): string {
+	return `https://github.com/alrayyes/Hush-Hush/releases/tag/v${version}`;
+}
