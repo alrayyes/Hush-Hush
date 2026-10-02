@@ -1137,6 +1137,81 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			`${linkName} has a horizontally scrollable element at 320px`,
 		).toBe(0);
 	}
+
+	// alrayyes/hush-hush#522: the secrets list shows each secret's tags and
+	// filters by one. Done last because it adds secrets, and every earlier
+	// assertion counts audit rows and secrets. The values are sealed here,
+	// not through the dialog (which can't set tags yet, #523).
+	for (const [slug, tags] of [
+		['tagged_one', ['prod', 'homelab']],
+		['tagged_two', ['prod']],
+		['tagged_three', ['backup']],
+	] as const) {
+		const encrypter = new age.Encrypter();
+		encrypter.addRecipient(homelabRecipient);
+		const sealed = await encrypter.encrypt(`value of ${slug}`);
+		const created = await page.request.post('/objects', {
+			headers: { 'X-CSRF-Token': csrfToken },
+			data: { slug, value: btoa(String.fromCharCode(...sealed)), tags },
+		});
+		expect(created.ok()).toBe(true);
+	}
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/');
+	const cardList = page.getByRole('list', { name: 'Secrets' });
+	await expect(cardList.getByRole('listitem')).toHaveCount(5);
+
+	const taggedOne = cardList
+		.getByRole('listitem')
+		.filter({ hasText: 'tagged_one' });
+	// The API doesn't promise an order for an object's tags, so only the set
+	// is asserted.
+	await expect(taggedOne.getByTestId('tag')).toHaveCount(2);
+	expect((await taggedOne.getByTestId('tag').allTextContents()).sort()).toEqual(
+		['homelab', 'prod'],
+	);
+
+	const tagFilter = page.getByRole('group', { name: 'Filter by tag' });
+	await expect(tagFilter.getByRole('button')).toHaveText([
+		'All (5)',
+		'prod (2)',
+		'backup (1)',
+		'homelab (1)',
+	]);
+	for (const pill of await tagFilter.getByRole('button').all()) {
+		const box = await pill.boundingBox();
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+
+	await tagFilter.getByRole('button', { name: 'prod (2)' }).click();
+	await expect(
+		tagFilter.getByRole('button', { name: 'prod (2)' }),
+	).toHaveAttribute('aria-pressed', 'true');
+	await expect(
+		tagFilter.getByRole('button', { name: 'All (5)' }),
+	).toHaveAttribute('aria-pressed', 'false');
+	await expect(cardList.getByRole('listitem')).toHaveCount(2);
+
+	// A tag and the search box both apply.
+	await page
+		.getByRole('searchbox', { name: 'Filter secrets' })
+		.fill('tagged_two');
+	await expect(cardList.getByRole('listitem')).toHaveCount(1);
+	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('');
+
+	// The pills animate their colours when pressed, and axe samples a
+	// mid-transition colour as a false contrast failure: let every CSS
+	// transition finish before scanning.
+	await page.waitForFunction(() => document.getAnimations().length === 0);
+	const tagResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(tagResults.violations).toEqual([]);
+
+	await tagFilter.getByRole('button', { name: 'All (5)' }).click();
+	await expect(cardList.getByRole('listitem')).toHaveCount(5);
+
 	await page.setViewportSize({ width: 1280, height: 800 });
 
 	// Log out lives in .topbar-actions, not <nav> - it's an account
