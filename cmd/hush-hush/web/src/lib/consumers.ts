@@ -63,3 +63,14 @@ export function secretsOverviewHref(consumer: string): string {
 export function tokensHref(consumer: string): string {
 	return `/settings?consumer=${encodeURIComponent(consumer)}`;
 }
+
+// truncateKey shortens a registered age public key for display, keeping
+// enough of each end to recognise it by. A key of 16 characters or fewer
+// is returned as is, since "truncating" it would make it longer.
+export function truncateKey(key: string): string {
+	if (key.length <= 16) {
+		return key;
+	}
+
+	return `${key.slice(0, 10)}…${key.slice(-6)}`;
+}
