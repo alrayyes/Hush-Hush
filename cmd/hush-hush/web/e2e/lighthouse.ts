@@ -25,7 +25,9 @@ const BASE_URL = 'http://localhost:4173';
 // for a slower CI runner without being meaningless as a check.
 const THRESHOLDS = { performance: 70, 'best-practices': 90 };
 
-async function waitForServer(url: string, timeoutMs = 30_000): Promise<void> {
+// 120s, not less: e2e/server.sh runs a full `go build` before the server can
+// answer, and a runner with a cold Go cache needs well over 30s for it.
+async function waitForServer(url: string, timeoutMs = 120_000): Promise<void> {
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
 		try {
