@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.52.0](https://github.com/alrayyes/Hush-Hush/compare/v2.51.0...v2.52.0) (2026-10-02)
+
+
+### Features
+
+* **web-ui:** read created and updated by from the API, and drop the audit-log fold ([#548](https://github.com/alrayyes/Hush-Hush/issues/548)) ([6f9e41e](https://github.com/alrayyes/Hush-Hush/commit/6f9e41e5cc02cf028f4b43ddc72578aa41bc9c67))
+
 ## [2.51.0](https://github.com/alrayyes/Hush-Hush/compare/v2.50.0...v2.51.0) (2026-10-02)
 
 
