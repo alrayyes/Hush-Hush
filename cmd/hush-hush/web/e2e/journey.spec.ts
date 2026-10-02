@@ -1324,6 +1324,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// filters by one. Done last because it adds secrets, and every earlier
 	// assertion counts audit rows and secrets. The values are sealed here,
 	// not through the dialog (which can't set tags yet, #523).
+	// alrayyes/hush-hush#535: attribution came from the first 50 audit
+	// events, so once the log passed 50 a newer secret showed none. Every
+	// read is an event; push the log well past 50, then create the secrets
+	// below and check they still say who made them.
+	for (let i = 0; i < 55; i++) {
+		await page.request.get('/objects/mattermost_deploy_webhook');
+	}
+
 	for (const [slug, tags] of [
 		['tagged_one', ['prod', 'homelab']],
 		['tagged_two', ['prod']],
@@ -1343,6 +1351,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.goto('/');
 	const cardList = page.getByRole('list', { name: 'Secrets' });
 	await expect(cardList.getByRole('listitem')).toHaveCount(5);
+	await expect(
+		cardList.getByRole('listitem').filter({ hasText: 'tagged_three' }),
+	).toContainText(/Updated .+ by admin/);
 
 	const taggedOne = cardList
 		.getByRole('listitem')

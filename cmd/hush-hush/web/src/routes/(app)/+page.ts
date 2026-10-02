@@ -1,5 +1,4 @@
-import { getOwnerIdentity, listObjects, queryAuditLog } from '$lib/api';
-import { attributionByObject } from '$lib/attribution';
+import { getOwnerIdentity, listObjects } from '$lib/api';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ depends, url }) => {
@@ -13,15 +12,13 @@ export const load: PageLoad = async ({ depends, url }) => {
 	// restriction" default otherwise.
 	const usedByFilter = url.searchParams.get('used_by') ?? undefined;
 
-	const [objects, auditLog, ownerPublicKey] = await Promise.all([
+	const [objects, ownerPublicKey] = await Promise.all([
 		listObjects(usedByFilter),
-		queryAuditLog(),
 		getOwnerIdentity(),
 	]);
 
 	return {
 		objects,
-		attribution: attributionByObject(auditLog),
 		usedByFilter,
 		// Undefined until the account has completed a first registration -
 		// the create/edit dialog's owner-recipient checkbox only renders
