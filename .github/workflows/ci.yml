@@ -393,10 +393,38 @@ jobs:
   # spec - the site root (https://alrayyes.github.io/Hush-Hush/) has nothing
   # deployed to it, so there's no root-level llms.txt to write.
   pages:
-    needs: [changes, api]
-    # `api` is skipped when nothing it covers changed, and a job that needs a
-    # skipped job is skipped too. That's wanted here: with no spec or docs
-    # change there's nothing new to deploy.
+    # Every other job in this workflow, so a red test or lint can't be
+    # followed by a deploy: a failure that reports after the deploy started is
+    # a shipped bug, not a caught one (rules/ci.md, "A deploy job depends on
+    # every other job in its own pipeline"). Add a job here when you add one
+    # above; a stale list fails quietly.
+    #
+    # Most of these are skipped when nothing they cover changed, and
+    # `!failure() && !cancelled()` lets the deploy run past a skipped need
+    # while still stopping on a failed or cancelled one (checked on GitHub,
+    # alrayyes/Hush-Hush actions run 37135073068). `api` has to have run and
+    # passed: with no spec or docs change there's nothing new to deploy.
+    needs:
+      [
+        changes,
+        lint,
+        test,
+        pact,
+        build,
+        govulncheck,
+        gomod,
+        goreleaser,
+        dockerfile,
+        container-integration,
+        prose,
+        api,
+        package-json,
+        web,
+        e2e,
+        lighthouse,
+        bun-audit,
+        commits,
+      ]
     if: ${{ !failure() && !cancelled() && needs.api.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
