@@ -307,68 +307,6 @@
 			align-items: center;
 		}
 	}
-
-	/* CHANGELOG.md's own rendered markdown (changelog/+page.svelte) - h1,
-	   h2 and h3 share one font-weight/size in the base layer above, which
-	   left every release's version, its Features/Bug Fixes sub-heading and
-	   the bullets under it reading as one undifferentiated block
-	   (alrayyes/hush-hush#315). A rule between releases and a smaller,
-	   muted treatment for the category sub-heading are what a heading
-	   hierarchy needs beyond a browser default. A thin border-top read as
-	   one continuous wall over ~60 releases (alrayyes/hush-hush#426), so
-	   each release heading is its own filled block instead - scanning down
-	   the page hits a visible band, not a hairline. This is hand-written
-	   CSS, not utility classes, because the markup itself is runtime-
-	   rendered Markdown (`{@html renderChangelog(...)}`) with no
-	   opportunity to attach a class in the template. */
-	.changelog-content h2 {
-		margin-top: var(--spacing-8);
-		padding: var(--spacing-3) var(--spacing-4);
-		background: var(--color-muted);
-		border-radius: var(--radius);
-		font-size: var(--text-xl);
-	}
-
-	/* release-please wraps the version number itself in a compare-URL link
-	   (`## [2.32.0](url) (date)`) - left unstyled, the global `a` rule
-	   (app.css's base layer) painted every one of ~60 release headings
-	   accent-blue and underlined, so the page read as a wall of links with
-	   no heading hierarchy rather than a changelog. Still a real link
-	   (hover restores the underline), just not styled as body prose. */
-	.changelog-content h2 a {
-		color: inherit;
-		text-decoration: none;
-	}
-
-	.changelog-content h2 a:hover {
-		text-decoration: underline;
-	}
-
-	.changelog-content h2:first-child {
-		margin-top: 0;
-	}
-
-	.changelog-content h3 {
-		margin-top: var(--spacing-4);
-		font-size: var(--text-sm);
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	.changelog-content ul {
-		margin: 0 0 var(--spacing-4);
-		padding-left: var(--spacing-6);
-	}
-
-	.changelog-content li {
-		margin-bottom: var(--spacing-2);
-		line-height: 1.6;
-	}
-
-	.changelog-content li:last-child {
-		margin-bottom: 0;
-	}
 }
 
 *,
