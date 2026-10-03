@@ -26,8 +26,8 @@ jobs:
   #
   # A job skipped by `if:` reports Success to a required status check, so the
   # required contexts on main stay satisfied. A job skipped because THIS job
-  # failed reports Success too, which is why `changes` should itself be a
-  # required check.
+  # failed reports Success too, so `changes` has to be covered by something
+  # that fails when it does: that is `all-green` at the end of this file.
   #
   # Every filter lists the files the job covers, its tool's config and
   # lockfile, and this workflow file, so editing the pipeline runs
@@ -654,3 +654,45 @@ jobs:
             --from "${{ github.event.pull_request.base.sha }}" \
             --to "${{ github.event.pull_request.head.sha }}" \
             --verbose
+
+  # The one required check for this workflow (rules/ci.md, "A job that `needs`
+  # a skipped job is skipped too"). Branch protection lists this instead of
+  # each job, so renaming or splitting a job above can't leave an orphaned
+  # required context behind, and a failed `changes` job fails this one rather
+  # than turning everything it gates green by skipping it.
+  #
+  # `always()` so it reports even when a need failed. alls-green fails on a
+  # failed or cancelled need and on a skipped one that isn't allowed: every
+  # filtered job may skip, `changes` may not. `pages` is the deploy and
+  # needs the jobs above, so it can't be waited on here; `lighthouse` warns
+  # and is deliberately never required (see its own comment). Add a job to
+  # `needs` and `allowed-skips` when you add one above.
+  all-green:
+    if: always()
+    needs:
+      [
+        changes,
+        lint,
+        test,
+        pact,
+        build,
+        govulncheck,
+        gomod,
+        goreleaser,
+        dockerfile,
+        container-integration,
+        prose,
+        api,
+        package-json,
+        web,
+        e2e,
+        bun-audit,
+        commits,
+      ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+          allowed-skips: lint, test, pact, build, govulncheck, gomod, goreleaser, dockerfile, container-integration, prose, api, package-json, web, e2e, bun-audit, commits
