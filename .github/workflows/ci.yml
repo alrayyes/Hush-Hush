@@ -688,6 +688,7 @@ jobs:
         prose,
         api,
         package-json,
+        ci-config,
         web,
         e2e,
         bun-audit,
@@ -699,4 +700,4 @@ jobs:
       - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}
-          allowed-skips: lint, test, pact, build, govulncheck, gomod, goreleaser, dockerfile, container-integration, prose, api, package-json, web, e2e, bun-audit, commits
+          allowed-skips: lint, test, pact, build, govulncheck, gomod, goreleaser, dockerfile, container-integration, prose, api, package-json, ci-config, web, e2e, bun-audit, commits
