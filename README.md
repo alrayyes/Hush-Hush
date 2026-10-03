@@ -123,7 +123,9 @@ meant to do all five operations rather than five independently gated
 tools ([`docs/adr/0019-mcp-endpoint.md`](docs/adr/0019-mcp-endpoint.md)).
 `value` is base64-encoded sealed (age) ciphertext on both sides of a tool
 call, the same wire convention `api/openapi.yaml` already uses - this
-server never decrypts it. [`api/openapi.yaml`](api/openapi.yaml)
+server never decrypts it, though it does read the age header and refuses a
+value that isn't a well-formed age file ([`docs/adr/0028-server-reads-the-age-header-and-nothing-more.md`](docs/adr/0028-server-reads-the-age-header-and-nothing-more.md)).
+[`api/openapi.yaml`](api/openapi.yaml)
 documents the route's existence and auth requirement; the actual per-tool
 schemas come from a running server's own `tools/list` call, not the spec.
 

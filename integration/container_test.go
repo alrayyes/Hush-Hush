@@ -14,6 +14,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"filippo.io/age"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -143,11 +145,33 @@ func TestContainerBecomesHealthyThroughItsOwnReadinessCheck(t *testing.T) {
 	require.Zero(t, code)
 }
 
+// sealForTest returns a real age ciphertext sealed to one fresh recipient.
+// The server refuses a value that isn't a well-formed age file
+// (alrayyes/hush-hush#538), so a placeholder string no longer round-trips.
+func sealForTest(t *testing.T) []byte {
+	t.Helper()
+
+	identity, err := age.GenerateX25519Identity()
+	require.NoError(t, err)
+
+	var out bytes.Buffer
+	w, err := age.Encrypt(&out, identity.Recipient())
+	require.NoError(t, err)
+	_, err = w.Write([]byte("plaintext the server never sees"))
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	return out.Bytes()
+}
+
 func TestContainerCreateGetRoundTrip(t *testing.T) {
 	ctx := context.Background()
 
+	sealed := sealForTest(t)
+	createBody := fmt.Sprintf(`{"slug":"container_smoke_test","value":%q}`, base64.StdEncoding.EncodeToString(sealed))
+
 	createReq, err := http.NewRequestWithContext(ctx, http.MethodPost, containerEndpoint+"/objects",
-		bytes.NewReader([]byte(`{"slug":"container_smoke_test","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
+		bytes.NewReader([]byte(createBody)))
 	require.NoError(t, err)
 
 	createReq.Header.Set("Content-Type", "application/json")
@@ -172,5 +196,5 @@ func TestContainerCreateGetRoundTrip(t *testing.T) {
 
 	body, err := io.ReadAll(getResp.Body)
 	require.NoError(t, err)
-	require.Equal(t, []byte("sealed-ciphertext"), body)
+	require.Equal(t, sealed, body)
 }

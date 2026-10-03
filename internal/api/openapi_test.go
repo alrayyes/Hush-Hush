@@ -87,7 +87,7 @@ func contractCases() []contractCase {
 
 				return createRequest(t, hushhush.CreateObjectRequest{
 					Slug:   "contract_create",
-					Value:  []byte("sealed-ciphertext"),
+					Value:  sealedFixture,
 					UsedBy: []string{"homelab/vps-docker"},
 				}, issueToken(t, s))
 			},
@@ -98,7 +98,7 @@ func contractCases() []contractCase {
 				t.Helper()
 
 				return createRequest(t, hushhush.CreateObjectRequest{
-					Slug: "contract_create_owner_opt_in", Value: []byte("sealed-ciphertext"),
+					Slug: "contract_create_owner_opt_in", Value: sealedFixture,
 					KeepReadableCopy: true,
 				}, issueToken(t, s))
 			},
@@ -109,7 +109,7 @@ func contractCases() []contractCase {
 				t.Helper()
 
 				return createRequest(t, hushhush.CreateObjectRequest{
-					Slug: "contract_create_unauth", Value: []byte("v"),
+					Slug: "contract_create_unauth", Value: sealedFixture,
 				}, "")
 			},
 		},
@@ -149,7 +149,7 @@ func contractCases() []contractCase {
 			name: "get object with a consumer token in scope",
 			request: func(t *testing.T, s *store.Store) *http.Request {
 				t.Helper()
-				require.NoError(t, s.CreateObject(t.Context(), "contract_get_consumer", []byte("v"), []string{"homelab"}, "", ""))
+				require.NoError(t, s.CreateObject(t.Context(), "contract_get_consumer", sealedFixture, []string{"homelab"}, "", ""))
 				_, token, err := s.CreateConsumerToken(t.Context(), "homelab", "contract test", time.Hour)
 				require.NoError(t, err)
 
@@ -194,7 +194,7 @@ func contractCases() []contractCase {
 				t.Helper()
 				seedObject(t, s, "contract_update")
 
-				b := []byte(`{"value":"bmV3LXNlYWxlZC12YWx1ZQ=="}`)
+				b := []byte(`{"value":"` + sealedFixtureNewB64 + `"}`)
 				req := httptest.NewRequest(http.MethodPut, "/objects/contract_update", bytes.NewReader(b))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -832,7 +832,7 @@ func seedObject(t *testing.T, s *store.Store, id string) {
 	t.Helper()
 
 	mux := hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion)
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: id, Value: []byte("sealed-ciphertext")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: id, Value: sealedFixture}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)
@@ -845,7 +845,7 @@ func seedObjectWithConsumer(t *testing.T, s *store.Store, id, consumer string) {
 	t.Helper()
 
 	mux := hushhush.NewMux(s, testPublicURL, testWebBuild(), testVersion)
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: id, Value: []byte("sealed-ciphertext"), UsedBy: []string{consumer}}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: id, Value: sealedFixture, UsedBy: []string{consumer}}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code)

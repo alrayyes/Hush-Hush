@@ -86,7 +86,7 @@ func TestSessionCreatesAnObjectWithItsCSRFToken(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/objects",
-		bytes.NewReader([]byte(`{"slug":"session_created","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
+		bytes.NewReader([]byte(`{"slug":"session_created","value":"`+sealedFixtureB64+`"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
@@ -103,7 +103,7 @@ func TestSessionCreatesAnObjectWithoutCSRFTokenIsRejected(t *testing.T) {
 	sessionCookie := seedSession(t, s)
 
 	req := httptest.NewRequest(http.MethodPost, "/objects",
-		bytes.NewReader([]byte(`{"slug":"no_csrf","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
+		bytes.NewReader([]byte(`{"slug":"no_csrf","value":"`+sealedFixtureB64+`"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -129,7 +129,7 @@ func TestBearerTokenStillCreatesAnObjectWithNoSession(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "token_created", Value: []byte("sealed-ciphertext")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "token_created", Value: sealedFixture}, issueToken(t, s))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 

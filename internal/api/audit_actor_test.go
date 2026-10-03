@@ -24,7 +24,7 @@ func TestRevokedTokensAuditEntryStaysAttributable(t *testing.T) {
 	wt, token, err := s.CreateWriteToken(t.Context(), "revoked but attributable", time.Hour, "")
 	require.NoError(t, err)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "revoked_actor", Value: []byte("sealed-ciphertext")}, token)
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "revoked_actor", Value: sealedFixture}, token)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -56,11 +56,11 @@ func TestQueryAuditLogFiltersByActorOverHTTP(t *testing.T) {
 	wt, token, err := s.CreateWriteToken(t.Context(), "filtered", time.Hour, "")
 	require.NoError(t, err)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "actor_filter_target", Value: []byte("v")}, token)
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "actor_filter_target", Value: sealedFixture}, token)
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
 	other := issueToken(t, s)
-	otherReq := createRequest(t, hushhush.CreateObjectRequest{Slug: "actor_filter_other", Value: []byte("v")}, other)
+	otherReq := createRequest(t, hushhush.CreateObjectRequest{Slug: "actor_filter_other", Value: sealedFixture}, other)
 	mux.ServeHTTP(httptest.NewRecorder(), otherReq)
 
 	getReq := httptest.NewRequest(http.MethodGet, "/audit-log?actor="+wt.ID, nil)

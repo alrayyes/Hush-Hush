@@ -190,9 +190,11 @@ paths:
       description: |
         Stores an already-sealed value under a new, caller-chosen slug -
         the object's own internal id is generated server-side and never
-        returned as something addressable. The value is opaque ciphertext
-        to this service - it is never decrypted, and the service has no
-        notion of which recipients it was sealed to. A session-
+        returned as something addressable. The service never decrypts the
+        value, and it can't know how many recipients it was sealed to or
+        whether any key is right. It does read the age header: a value
+        that isn't base64 of a well-formed age file, or whose header
+        names no recipient, is a 422 and nothing is stored. A session-
         authenticated call needs its CSRF token too; a bearer-token-
         authenticated one doesn't, since there's no session to have one.
       tags: [objects]
@@ -221,6 +223,8 @@ paths:
                 $ref: "#/components/schemas/ObjectMetadata"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "409":
           description: An object already exists under that slug.
           content:
@@ -273,7 +277,10 @@ paths:
       operationId: updateObject
       summary: Rotate an object's value
       description: |
-        Replaces the stored ciphertext for an existing object. The
+        Replaces the stored ciphertext for an existing object. The new
+        value is checked the same way a created one is: not base64 of a
+        well-formed age file, or no recipient in its header, is a 422
+        and the stored value is left alone. The
         object's slug and description metadata are always preserved
         unchanged. used_by is preserved too, unless the request body
         includes it - in which case it fully replaces the object's
@@ -305,6 +312,8 @@ paths:
                 $ref: "#/components/schemas/ObjectMetadata"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1484,7 +1493,7 @@ components:
     UnprocessableEntity:
       description: |
         The request parsed, but a value in it is outside what the API
-        allows. The message names the limit.
+        allows. The message names the limit or the problem.
       content:
         application/json:
           schema:
@@ -1563,7 +1572,10 @@ components:
         value:
           type: string
           format: byte
-          description: The sealed (encrypted) value, base64-encoded.
+          description: |
+            The sealed (encrypted) value, base64-encoded. It has to be a
+            well-formed age file naming at least one recipient; the
+            service reads only its header, never the payload.
         used_by:
           $ref: "#/components/schemas/UsedByList"
         tags:
@@ -1580,7 +1592,10 @@ components:
         value:
           type: string
           format: byte
-          description: The new sealed (encrypted) value, base64-encoded.
+          description: |
+            The new sealed (encrypted) value, base64-encoded. It has to be
+            a well-formed age file naming at least one recipient; the
+            service reads only its header, never the payload.
         used_by:
           allOf:
             - $ref: "#/components/schemas/UsedByList"

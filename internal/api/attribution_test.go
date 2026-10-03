@@ -29,7 +29,7 @@ func TestSessionCreateIsAttributedToTheAdminAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/objects",
-		bytes.NewReader([]byte(`{"slug":"attributed_create","value":"c2VhbGVkLWNpcGhlcnRleHQ="}`)))
+		bytes.NewReader([]byte(`{"slug":"attributed_create","value":"`+sealedFixtureB64+`"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Caller", "homelab/vps-docker")
 	req.AddCookie(sessionCookie)
@@ -56,7 +56,7 @@ func TestSessionUpdateIsAttributedToTheAdminAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPut, "/objects/attributed_update",
-		bytes.NewReader([]byte(`{"value":"bmV3LXNlYWxlZC12YWx1ZQ=="}`)))
+		bytes.NewReader([]byte(`{"value":"`+sealedFixtureNewB64+`"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
@@ -109,7 +109,7 @@ func TestBearerTokenWriteIsAttributedToThatToken(t *testing.T) {
 	wt, token, err := s.CreateWriteToken(t.Context(), "ci token", time.Hour, "")
 	require.NoError(t, err)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "attributed_by_token", Value: []byte("sealed-ciphertext")}, token)
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "attributed_by_token", Value: sealedFixture}, token)
 	req.Header.Set("X-Caller", "ci-pipeline")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -132,7 +132,7 @@ func TestBearerTokenUpdateIsAttributedToThatToken(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPut, "/objects/attributed_update_by_token",
-		bytes.NewReader([]byte(`{"value":"bmV3LXNlYWxlZC12YWx1ZQ=="}`)))
+		bytes.NewReader([]byte(`{"value":"`+sealedFixtureNewB64+`"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()

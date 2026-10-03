@@ -77,9 +77,11 @@ export interface paths {
          * Create a new sealed object
          * @description Stores an already-sealed value under a new, caller-chosen slug -
          *     the object's own internal id is generated server-side and never
-         *     returned as something addressable. The value is opaque ciphertext
-         *     to this service - it is never decrypted, and the service has no
-         *     notion of which recipients it was sealed to. A session-
+         *     returned as something addressable. The service never decrypts the
+         *     value, and it can't know how many recipients it was sealed to or
+         *     whether any key is right. It does read the age header: a value
+         *     that isn't base64 of a well-formed age file, or whose header
+         *     names no recipient, is a 422 and nothing is stored. A session-
          *     authenticated call needs its CSRF token too; a bearer-token-
          *     authenticated one doesn't, since there's no session to have one.
          */
@@ -116,7 +118,10 @@ export interface paths {
         get: operations["getObject"];
         /**
          * Rotate an object's value
-         * @description Replaces the stored ciphertext for an existing object. The
+         * @description Replaces the stored ciphertext for an existing object. The new
+         *     value is checked the same way a created one is: not base64 of a
+         *     well-formed age file, or no recipient in its header, is a 422
+         *     and the stored value is left alone. The
          *     object's slug and description metadata are always preserved
          *     unchanged. used_by is preserved too, unless the request body
          *     includes it - in which case it fully replaces the object's
@@ -793,7 +798,9 @@ export interface components {
             slug: components["schemas"]["ObjectSlug"];
             /**
              * Format: byte
-             * @description The sealed (encrypted) value, base64-encoded.
+             * @description The sealed (encrypted) value, base64-encoded. It has to be a
+             *     well-formed age file naming at least one recipient; the
+             *     service reads only its header, never the payload.
              */
             value: string;
             used_by?: components["schemas"]["UsedByList"];
@@ -804,7 +811,9 @@ export interface components {
         UpdateObjectRequest: {
             /**
              * Format: byte
-             * @description The new sealed (encrypted) value, base64-encoded.
+             * @description The new sealed (encrypted) value, base64-encoded. It has to be
+             *     a well-formed age file naming at least one recipient; the
+             *     service reads only its header, never the payload.
              */
             value: string;
             /**
@@ -1318,7 +1327,7 @@ export interface components {
         };
         /**
          * @description The request parsed, but a value in it is outside what the API
-         *     allows. The message names the limit.
+         *     allows. The message names the limit or the problem.
          */
         UnprocessableEntity: {
             headers: {
@@ -1626,6 +1635,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getObject: {
@@ -1723,6 +1733,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     deleteObject: {
