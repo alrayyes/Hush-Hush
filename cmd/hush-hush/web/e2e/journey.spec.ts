@@ -362,6 +362,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
+	// The row has to exist before a second page reads it: the Create click
+	// above returns before the request does.
+	await expect(
+		page.getByRole('cell', { name: 'mattermost_deploy_webhook', exact: true }),
+	).toBeVisible();
+
 	// alrayyes/hush-hush#577: the card list and the table offer the same
 	// actions and show the same facts.
 	await expectListParity(page, {
