@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!.svelte-kit", "!build"]
+		"includes": ["**", "!.svelte-kit", "!build", "!src/lib/api-schema.d.ts"]
 	},
 	"formatter": {
 		"enabled": true,

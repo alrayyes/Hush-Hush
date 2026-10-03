@@ -263,6 +263,7 @@ pre-push:
     - name: web-check
       glob: &web-files
         - "cmd/hush-hush/web/**"
+        - "api/openapi.yaml"
         - "CHANGELOG.md"
         - "LICENSE"
         - "package.json"
@@ -270,6 +271,12 @@ pre-push:
         - ".github/workflows/ci.yml"
         - "lefthook.yml"
       run: cd cmd/hush-hush/web && bun run check
+
+    # Check mode, so a pre-push never rewrites the generated files; a stale
+    # one fails and `bun run generate:api` fixes it.
+    - name: web-api-types
+      glob: *web-files
+      run: cd cmd/hush-hush/web && bun run generate:api:check
 
     - name: web-lint
       glob: *web-files
