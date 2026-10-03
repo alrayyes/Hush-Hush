@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.55.0](https://github.com/alrayyes/Hush-Hush/compare/v2.54.1...v2.55.0) (2026-10-03)
+
+
+### Features
+
+* **tokens:** put a default and a maximum on ttl_seconds ([#572](https://github.com/alrayyes/Hush-Hush/issues/572)) ([70eeec9](https://github.com/alrayyes/Hush-Hush/commit/70eeec930e38fc3b47a3f7bbd9cc92db579da3ab)), closes [#538](https://github.com/alrayyes/Hush-Hush/issues/538)
+
 ## [2.54.1](https://github.com/alrayyes/Hush-Hush/compare/v2.54.0...v2.54.1) (2026-10-03)
 
 
