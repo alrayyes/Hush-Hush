@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.58.1](https://github.com/alrayyes/Hush-Hush/compare/v2.58.0...v2.58.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* bump vitest ([#627](https://github.com/alrayyes/Hush-Hush/issues/627)) ([40fd452](https://github.com/alrayyes/Hush-Hush/commit/40fd4522690a180a88c4758275bbbddb6fb1d7fe))
+
 ## [2.58.0](https://github.com/alrayyes/Hush-Hush/compare/v2.57.1...v2.58.0) (2026-10-03)
 
 
