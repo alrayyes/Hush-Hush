@@ -9,6 +9,7 @@
     "lint:mechanics": "./scripts/lint-mechanics.sh",
     "lint:package-json": "sort-package-json --check package.json",
     "lint:prose": "./scripts/lint-prose.sh",
+    "lint:spectral": "spectral lint api/openapi.yaml",
     "prepare": "lefthook install",
     "test:ci": "bun scripts/test-ci.ts"
   },
@@ -19,6 +20,8 @@
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@redocly/cli": "2.57.0",
+    "@stoplight/spectral-cli": "6.17.0",
+    "@stoplight/spectral-owasp-ruleset": "2.0.1",
     "lefthook": "2.1.15",
     "markdownlint-cli2": "0.23.3",
     "picomatch": "4.0.7",
