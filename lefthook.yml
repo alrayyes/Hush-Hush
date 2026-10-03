@@ -361,11 +361,18 @@ pre-push:
         - "api/**"
         - "docs/api/**"
         - "redocly.yaml"
+        - ".spectral.yaml"
         - "package.json"
         - "bun.lock"
         - ".github/workflows/ci.yml"
         - "lefthook.yml"
       run: bun run lint:api
+
+    # OWASP's API security rules, the part Redocly doesn't check. Same files as
+    # the `api` filter.
+    - name: spectral
+      glob: *api-files
+      run: bun run lint:spectral
 
     # Mirrors the `package-json` filter.
     - name: sort-package-json
