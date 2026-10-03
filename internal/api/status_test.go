@@ -56,12 +56,12 @@ func TestAuthStatusSetsNoCookies(t *testing.T) {
 	require.Empty(t, rec.Result().Cookies())
 }
 
-// TestAuthIdentityRequiresSession covers GET /auth/identity's own gating -
+// TestAuthIdentityRequiresACredential covers GET /auth/identity's own gating -
 // unlike /auth/status, it's never answered anonymously (status.go's
 // handleAuthIdentity doc comment: an age public key isn't secret, but
 // every other endpoint that exposes stored data stays behind a real
 // session or bearer token, and this keeps that same posture).
-func TestAuthIdentityRequiresSession(t *testing.T) {
+func TestAuthIdentityRequiresACredential(t *testing.T) {
 	t.Parallel()
 
 	mux, _ := newTestMux(t)
@@ -118,4 +118,43 @@ func TestAuthIdentityReportsEscrowedPublicKeyOnceSet(t *testing.T) {
 	var identity hushhush.OwnerIdentity
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &identity))
 	require.Equal(t, "age1ownerkey", identity.PublicKey)
+}
+
+// TestAuthIdentityAcceptsAWriteBearerToken is what lets an SDK client, which
+// holds an API key and never a session, honour keep_readable_copy: it has to
+// fetch the owner's public key to add as a sealing recipient. The key is the
+// same whichever credential asks, since there is one user row to read it from.
+func TestAuthIdentityAcceptsAWriteBearerToken(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	_, _, _ = registerCredential(t, mux, nil, "first")
+
+	userID, err := s.CurrentUserID(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, s.SetUserEscrow(context.Background(), userID, "age1ownerkey", "recovery-wrapped"))
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/identity", nil)
+	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var identity hushhush.OwnerIdentity
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &identity))
+	require.Equal(t, "age1ownerkey", identity.PublicKey)
+}
+
+func TestAuthIdentityRejectsAnInvalidBearerToken(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/identity", nil)
+	req.Header.Set("Authorization", "Bearer not-a-real-token")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
