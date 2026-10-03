@@ -85,7 +85,7 @@ pre-commit:
       # Capitalized text` heading convention already trips. `bun run
       # lint:prose` (pre-push, CI) still reports warnings for visibility;
       # this only changes what blocks a commit.
-      run: vale --minAlertLevel=error {staged_files}
+      run: ./scripts/vale.sh --minAlertLevel=error {staged_files}
 
     # Reads only, so it changes nothing to restage. Invoked bare rather than
     # on {staged_files}: what gets linted is the `apis` list in redocly.yaml,
