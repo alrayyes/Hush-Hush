@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.54.0](https://github.com/alrayyes/Hush-Hush/compare/v2.53.0...v2.54.0) (2026-10-03)
+
+
+### Features
+
+* **auth:** let a bearer token call GET /auth/identity ([#562](https://github.com/alrayyes/Hush-Hush/issues/562)) ([ff5b336](https://github.com/alrayyes/Hush-Hush/commit/ff5b336c7cd4ab17fdb217247dd38cf5ba8cdeb7)), closes [#561](https://github.com/alrayyes/Hush-Hush/issues/561)
+
 ## [2.53.0](https://github.com/alrayyes/Hush-Hush/compare/v2.52.0...v2.53.0) (2026-10-02)
 
 
