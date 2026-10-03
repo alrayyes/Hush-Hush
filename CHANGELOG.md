@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.55.1](https://github.com/alrayyes/Hush-Hush/compare/v2.55.0...v2.55.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **web-ui:** keep the card list and the table showing the same things ([#580](https://github.com/alrayyes/Hush-Hush/issues/580)) ([03f06c9](https://github.com/alrayyes/Hush-Hush/commit/03f06c945f011138483deb88490a972f5991e14b))
+
 ## [2.55.0](https://github.com/alrayyes/Hush-Hush/compare/v2.54.1...v2.55.0) (2026-10-03)
 
 
