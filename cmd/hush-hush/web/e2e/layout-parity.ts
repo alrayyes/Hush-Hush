@@ -81,10 +81,22 @@ async function readAt(
 ) {
 	await page.setViewportSize(size);
 	await page.goto(spec.path);
+	// Reload while the row is missing: a page opened just after the data was
+	// written can load before it is committed, and would otherwise wait for a
+	// row that never appears on that load.
 	await expect
-		.poll(async () => (await readRow(page, spec.list)).layout, {
-			message: `${spec.list} has a visible row at ${size.width}px`,
-		})
+		.poll(
+			async () => {
+				const { layout } = await readRow(page, spec.list);
+				if (layout === 'none') await page.reload();
+
+				return layout;
+			},
+			{
+				message: `${spec.list} has a visible row at ${size.width}px`,
+				timeout: 30_000,
+			},
+		)
 		.not.toBe('none');
 	const reading = await readRow(page, spec.list);
 
