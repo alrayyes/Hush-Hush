@@ -10,6 +10,7 @@ import {
 	queryAuditLog,
 } from '$lib/api';
 import { auditActorLabel, toCSV, toJSON } from '$lib/audit-export';
+import { createCopier } from '$lib/clipboard';
 import { Button } from '$lib/components/ui/button/index.js';
 import { Input } from '$lib/components/ui/input/index.js';
 import { Label } from '$lib/components/ui/label/index.js';
@@ -129,24 +130,8 @@ const curlCommand = $derived.by(() => {
 // Whether the curl copy button is showing its "Copied" state, and the
 // timer that reverts it; a newer copy replaces an older timer.
 let copied = $state(false);
-let copiedTimer: ReturnType<typeof setTimeout> | undefined;
-
-async function copyCommand() {
-	try {
-		await navigator.clipboard.writeText(curlCommand);
-	} catch {
-		// Clipboard blocked or unavailable: don't claim a copy that
-		// didn't happen.
-		return;
-	}
-	clearTimeout(copiedTimer);
-	copied = true;
-	copiedTimer = setTimeout(() => {
-		copied = false;
-	}, 1500);
-}
-
-onDestroy(() => clearTimeout(copiedTimer));
+const copier = createCopier<true>((copiedNow) => (copied = copiedNow === true));
+onDestroy(copier.dispose);
 
 const actionPillClass: Record<string, string> = {
 	create: 'border-accent text-accent',
@@ -417,7 +402,7 @@ function exportCSV() {
 
 	<div role="group" aria-label="Query with curl" class="mt-4 space-y-2">
 		<pre class="m-0 font-mono text-xs break-words whitespace-pre-wrap">{curlCommand}</pre>
-		<Button variant="outline" class="min-h-11" onclick={copyCommand}>
+		<Button variant="outline" class="min-h-11" onclick={() => copier.copy(true, curlCommand)}>
 			{#if copied}
 				<CheckIcon aria-hidden="true" />
 			{:else}

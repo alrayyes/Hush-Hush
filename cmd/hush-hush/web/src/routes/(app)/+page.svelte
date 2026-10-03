@@ -13,6 +13,7 @@ import {
 } from '$lib/api';
 import { actorName } from '$lib/attribution';
 import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
+import { createCopier } from '$lib/clipboard';
 import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -56,24 +57,8 @@ const filteredObjects = $derived(filterByTag(searchedObjects, activeTag));
 // Which card's copy button is showing its "Copied" state, and the timer
 // that reverts it. One slot, so a newer copy replaces an older one.
 let copiedSlug: string | null = $state(null);
-let copiedTimer: ReturnType<typeof setTimeout> | undefined;
-
-async function copySlug(slug: string) {
-	try {
-		await navigator.clipboard.writeText(slug);
-	} catch {
-		// Clipboard blocked or unavailable: leave the label alone rather
-		// than claim a copy that didn't happen.
-		return;
-	}
-	clearTimeout(copiedTimer);
-	copiedSlug = slug;
-	copiedTimer = setTimeout(() => {
-		copiedSlug = null;
-	}, 1500);
-}
-
-onDestroy(() => clearTimeout(copiedTimer));
+const copier = createCopier<string>((slug) => (copiedSlug = slug));
+onDestroy(copier.dispose);
 
 let createOpen = $state(false);
 let createError = $state('');
@@ -410,7 +395,7 @@ async function confirmDelete() {
 							aria-label={copiedSlug === object.slug
 								? `Copied ${object.slug}`
 								: `Copy slug ${object.slug}`}
-							onclick={() => copySlug(object.slug)}
+							onclick={() => copier.copy(object.slug, object.slug)}
 						>
 							{#if copiedSlug === object.slug}
 								<CheckIcon aria-hidden="true" />
