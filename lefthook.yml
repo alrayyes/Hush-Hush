@@ -329,6 +329,7 @@ pre-push:
         - ".vale.ini"
         - ".markdownlint*"
         - ".prettier*"
+        - ".editorconfig"
         - "package.json"
         - "bun.lock"
         - "lefthook.yml"
@@ -372,6 +373,19 @@ pre-push:
         - ".github/workflows/ci.yml"
         - "lefthook.yml"
       run: bun run lint:package-json
+
+    # The pipeline's own wiring (scripts/test-ci.ts): CI runs it as `ci-config`.
+    # Same files as that job's filter in ci.yml.
+    - name: ci-config
+      glob:
+        - ".github/workflows/**"
+        - "lefthook.yml"
+        - "scripts/test-ci.ts"
+        - "Dockerfile*"
+        - "go.mod"
+        - "package.json"
+        - "bun.lock"
+      run: bun run test:ci
 
     # A strict superset of a bare `docker build`: testcontainers-go builds
     # the same Dockerfile, then actually starts the container and proves
