@@ -106,6 +106,33 @@ export async function expectListParity(page: Page, spec: ListParity) {
 		expect(cards.reading.layout).toBe('cards');
 		expect(table.reading.layout).toBe('table');
 
+		// alrayyes/hush-hush#578: the table's cells keep their own padding, so
+		// neighbouring values don't read as one string, and the table fits the
+		// page without scrolling sideways.
+		const metrics = await checker.evaluate((listLabel) => {
+			const ul = document.querySelector(`ul[aria-label="${listLabel}"]`);
+			const cell = ul?.parentElement?.querySelector(
+				'table.responsive-table tbody td',
+			);
+
+			return {
+				padding: cell
+					? Number.parseFloat(getComputedStyle(cell).paddingLeft)
+					: 0,
+				scrollWidth: document.documentElement.scrollWidth,
+				clientWidth: document.documentElement.clientWidth,
+			};
+		}, spec.list);
+
+		expect(
+			metrics.padding,
+			`${spec.list}: table cells have horizontal padding`,
+		).toBeGreaterThan(0);
+		expect(
+			metrics.scrollWidth,
+			`${spec.list}: the table fits a ${DESKTOP.width}px page`,
+		).toBeLessThanOrEqual(metrics.clientWidth);
+
 		const without = (actions: string[], skip: Record<string, string> = {}) =>
 			actions.filter((name) => !(name in skip)).sort();
 
