@@ -71,6 +71,7 @@ above:
 cd cmd/hush-hush/web
 bun install
 bun run check      # svelte-check — types, unused exports, Svelte-aware lint
+bun run generate:api # regenerate the API types and limits from api/openapi.yaml
 bun run test       # vitest
 bun run lint       # biome check
 bun run build      # writes build/, which cmd/hush-hush/embed.go embeds
@@ -145,6 +146,14 @@ document is valid OpenAPI; `internal/api/openapi_test.go` checks the
 handlers still match it — a real HTTP round trip through the actual mux,
 per documented operation, validated against the spec's own schema in both
 directions. Part of the ordinary `go test ./...` run, no separate command.
+
+The web app's API types (`src/lib/api-schema.d.ts`, from
+[`openapi-typescript`](https://openapi-ts.dev)) and the limits it reads off the
+spec (`src/lib/api-limits.ts`) are generated from `api/openapi.yaml` and
+committed. Change the spec, then run `bun run generate:api` in
+`cmd/hush-hush/web` and commit the result. The `web` CI job and the `pre-push`
+hook run `bun run generate:api:check`, which fails on a stale file without
+writing it. A spec change that breaks a call site then fails `bun run check`.
 
 ## Contract tests
 

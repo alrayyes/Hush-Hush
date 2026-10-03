@@ -42,8 +42,10 @@ describe('healthSummary', () => {
 	});
 
 	it('is not healthy when the server answers with a status other than ok', async () => {
+		// The spec only allows "ok"; this is an answer from outside it, such
+		// as a proxy's error page, which the client must still not trust.
 		const fetchHealth = async (): Promise<Health> => ({
-			status: 'degraded',
+			status: 'degraded' as Health['status'],
 			version: '2.47.0',
 			environment: 'prod / homelab',
 		});

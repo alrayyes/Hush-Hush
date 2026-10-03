@@ -4,7 +4,11 @@
 // the session's CSRF token from the readable csrf_token cookie and
 // echoes it back, matching auth/spec.md's double-submit requirement.
 
+import { CONSUMERS_PAGE_SIZE_MAX } from './api-limits';
+import type { components } from './api-schema';
 import { bytesToBase64 } from './encoding';
+
+type Schemas = components['schemas'];
 
 export class ApiError extends Error {
 	status: number;
@@ -158,27 +162,9 @@ export async function checkSession(): Promise<boolean> {
 	}
 }
 
-export interface ObjectMetadata {
-	slug: string;
-	description?: string;
-	used_by?: string[];
-	// Labels for grouping and filtering, always present and empty when the
-	// object has none (alrayyes/hush-hush#500).
-	tags: string[];
-	// Who created and last updated the object, and when - returned by
-	// GET /objects and left out of a create or update response; the actors
-	// are also left out for an object the audit log has no entry for
-	// (alrayyes/hush-hush#535).
-	created_at?: string;
-	updated_at?: string;
-	created_by?: Actor;
-	updated_by?: Actor;
-}
+export type ObjectMetadata = Schemas['ObjectMetadata'];
 
-export interface Actor {
-	type: 'session' | 'token' | 'consumer_token';
-	id: string;
-}
+export type Actor = Schemas['Actor'];
 
 // listObjects returns every stored object's metadata, or only those whose
 // recorded used_by lineage includes usedBy when given - the consumers
@@ -200,21 +186,9 @@ export async function listConsumers(): Promise<string[]> {
 	return res.json();
 }
 
-export interface ConsumerEntry {
-	name: string;
-	secret_count: number;
-	// public_key is the consumer's registered age public key, absent
-	// entirely when none has been registered - api/openapi.yaml's
-	// ConsumerEntry schema, extended by alrayyes/Hush-Hush#393. Safe to
-	// hold client-side since it's public; the matching private key never
-	// reaches this API or this client.
-	public_key?: string;
-}
+export type ConsumerEntry = Schemas['ConsumerEntry'];
 
-export interface ConsumersPage {
-	consumers: ConsumerEntry[];
-	total: number;
-}
+export type ConsumersPage = Schemas['ConsumersPage'];
 
 export interface ConsumersQuery {
 	q?: string;
@@ -253,14 +227,14 @@ export async function listConsumersPage(
 
 // listConsumerDirectory returns every consumer entry - name, secret
 // count, and registered public key when one is set - across every page,
-// looping past GET /consumers's own page_size cap (100) if the directory
+// looping past GET /consumers's own page_size cap if the directory
 // is bigger than that. The create/edit form's ConsumerCombobox uses this
 // (rather than listConsumers's plain name array) to resolve each
 // selected consumer into a real age sealing recipient
 // (specs/consumers/spec.md's "Secret form offers existing consumers and
 // accepts a new one" requirement).
 export async function listConsumerDirectory(): Promise<ConsumerEntry[]> {
-	const pageSize = 100;
+	const pageSize = CONSUMERS_PAGE_SIZE_MAX;
 	const entries: ConsumerEntry[] = [];
 	let page = 1;
 
@@ -315,19 +289,7 @@ export async function getObjectValue(slug: string): Promise<string> {
 	return bytesToBase64(bytes);
 }
 
-export interface CreateObjectRequest {
-	slug: string;
-	value: string;
-	description?: string;
-	used_by?: string[];
-	// keep_readable_copy requests that the owner's own escrowed identity
-	// public key be included as an additional sealing recipient -
-	// api/openapi.yaml's KeepReadableCopy schema. This is a request-shape
-	// field only: the server never adds the recipient itself, so the
-	// caller has to have already added the owner's public key
-	// (getOwnerIdentity) to value's own recipients before sealing it.
-	keep_readable_copy?: boolean;
-}
+export type CreateObjectRequest = Schemas['CreateObjectRequest'];
 
 export async function createObject(
 	req: CreateObjectRequest,
@@ -369,16 +331,7 @@ export async function deleteObject(slug: string): Promise<void> {
 	await request(`/objects/${encodeURIComponent(slug)}`, { method: 'DELETE' });
 }
 
-export interface AuditLogEntry {
-	id: number;
-	object_id: string;
-	action: 'create' | 'read' | 'update' | 'delete';
-	timestamp: string;
-	caller?: string;
-	ip: string;
-	actor_type?: 'token' | 'session';
-	actor_id?: string;
-}
+export type AuditLogEntry = Schemas['AuditLogEntry'];
 
 export interface AuditLogQuery {
 	object_id?: string;
@@ -414,16 +367,9 @@ export async function queryAuditLog(
 	return res.json();
 }
 
-export interface AuditActorOption {
-	value: string;
-	label: string;
-}
+export type AuditActorOption = Schemas['AuditActorOption'];
 
-export interface AuditLogFilterOptions {
-	object_ids: string[];
-	actors: AuditActorOption[];
-	callers: string[];
-}
+export type AuditLogFilterOptions = Schemas['AuditLogFilterOptions'];
 
 // queryAuditLogFilterOptions fetches the distinct object ids, actors, and
 // callers that actually appear in the audit log - what backs the audit
@@ -435,18 +381,7 @@ export async function queryAuditLogFilterOptions(): Promise<AuditLogFilterOption
 	return res.json();
 }
 
-export interface Credential {
-	id: string;
-	nickname?: string;
-	created_at: string;
-	last_used_at?: string;
-	// wrapped_identity is this credential's own copy of the escrowed
-	// writer identity's private key, wrapped against this credential's
-	// PRF secret - absent for a credential that doesn't support PRF
-	// (openspec/changes/client-side-encryption/specs/users/spec.md's
-	// "Per-credential wrapping of the escrowed identity" requirement).
-	wrapped_identity?: string;
-}
+export type Credential = Schemas['Credential'];
 
 export async function listCredentials(): Promise<Credential[]> {
 	const res = await request('/credentials');
@@ -474,24 +409,12 @@ export async function deleteCredential(id: string): Promise<void> {
 // clock (alrayyes/hush-hush#536). Optional in the schema, always sent by this
 // server. Hiding a button is cosmetic: the endpoints still enforce the rule
 // and a purge of an active token is a 409.
-export type TokenStatus = 'active' | 'expired' | 'revoked';
+export type TokenStatus = Schemas['TokenStatus'];
 export type TokenAction = 'rotate' | 'revoke' | 'purge';
 
-export interface TokenMetadata {
-	id: string;
-	description: string;
-	owner?: string;
-	created_at: string;
-	expires_at: string;
-	revoked: boolean;
-	status?: TokenStatus;
-	allowed_actions?: TokenAction[];
-	last_used_at?: string;
-}
+export type TokenMetadata = Schemas['TokenMetadata'];
 
-export interface TokenWithValue extends TokenMetadata {
-	value: string;
-}
+export type TokenWithValue = Schemas['TokenWithValue'];
 
 export async function listTokens(): Promise<TokenMetadata[]> {
 	const res = await request('/tokens');
@@ -533,21 +456,9 @@ export async function purgeToken(id: string): Promise<void> {
 	});
 }
 
-export interface ConsumerTokenMetadata {
-	id: string;
-	consumer: string;
-	description: string;
-	created_at: string;
-	expires_at: string;
-	revoked: boolean;
-	status?: TokenStatus;
-	allowed_actions?: TokenAction[];
-	last_used_at?: string;
-}
+export type ConsumerTokenMetadata = Schemas['ConsumerTokenMetadata'];
 
-export interface ConsumerTokenWithValue extends ConsumerTokenMetadata {
-	value: string;
-}
+export type ConsumerTokenWithValue = Schemas['ConsumerTokenWithValue'];
 
 export async function listConsumerTokens(): Promise<ConsumerTokenMetadata[]> {
 	const res = await request('/consumer-tokens');
@@ -595,13 +506,7 @@ export async function purgeConsumerToken(id: string): Promise<void> {
 	});
 }
 
-export interface Health {
-	status: string;
-	version: string;
-	// The operator's own label for this instance (the INSTANCE_LABEL setting),
-	// absent when none is set - alrayyes/hush-hush#512.
-	environment?: string;
-}
+export type Health = Schemas['Health'];
 
 // getHealth is unauthenticated, same as every page's own footer that
 // calls it (web-ui/spec.md's "Footer content is present on every page"

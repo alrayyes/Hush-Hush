@@ -55,6 +55,8 @@ that.
 ## Checking
 
 ```sh
+bun run generate:api  # regenerate src/lib/api-schema.d.ts and api-limits.ts from api/openapi.yaml
+bun run generate:api:check # fail if those generated files are stale (CI and pre-push run this)
 bun run check         # svelte-check: types, unused exports, Svelte-aware lint
 bun run lint          # biome check: JS/TS/CSS/JSON lint and format check
 bun run lint:tailwind # oxlint + @shadcn/lint: Tailwind class usage
