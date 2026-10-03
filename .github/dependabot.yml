@@ -48,6 +48,14 @@ updates:
       # release for a test-tool bump that didn't need one, which costs far less
       # than a vulnerable dependency that's merged and never released.
       prefix: fix
+    # TypeScript 7 is the native port and has no JS compiler API, which
+    # openapi-typescript (generate:api) and svelte-check both call: on 7.0.2
+    # each one crashes. Dependabot can't split a group per dependency, so one
+    # unusable major would hold every other major in the group red
+    # (alrayyes/hush-hush#622). Lift this once both tools support TypeScript 7.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
