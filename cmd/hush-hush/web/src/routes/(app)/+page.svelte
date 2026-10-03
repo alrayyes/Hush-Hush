@@ -422,6 +422,17 @@ async function confirmDelete() {
 					<p class="m-0">
 						<span class="rounded-2xl bg-border-subtle px-2 py-1 text-xs">age-encrypted (X25519)</span>
 					</p>
+					{#if object.created_at}
+						<p class="m-0 text-sm text-text-muted">
+							Created
+							<time datetime={object.created_at} title={object.created_at}>
+								{formatTimestamp(object.created_at)}
+							</time>
+							{#if object.created_by}
+								by {actorName(object.created_by)}
+							{/if}
+						</p>
+					{/if}
 					{#if object.updated_at}
 						<p class="m-0 text-sm text-text-muted">
 							Updated
@@ -434,6 +445,9 @@ async function confirmDelete() {
 						</p>
 					{/if}
 					<div class="flex flex-wrap gap-2">
+						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openView(object.slug)}>
+							View
+						</Button>
 						<Button
 							href={`/secrets/${encodeURIComponent(object.slug)}`}
 							variant="outline"
@@ -474,7 +488,7 @@ async function confirmDelete() {
 					<tr>
 						<td data-label="Id">{object.slug}</td>
 						<td data-label="Description">
-							<span class="block max-w-xs truncate" title={object.description ?? ''}>
+							<span class="block max-w-48 truncate" title={object.description ?? ''}>
 								{object.description ?? ''}
 							</span>
 						</td>
@@ -507,7 +521,31 @@ async function confirmDelete() {
 								</time>
 							{/if}
 						</td>
-						<td data-label="Actions" class="row-actions gap-3">
+						<!-- The card list above offers the same actions; e2e/layout-parity.ts
+							fails if the two drift (alrayyes/hush-hush#577). -->
+						<td data-label="Actions" class="row-actions min-w-48 gap-3">
+							<Button
+								variant="outline"
+								size="sm"
+								aria-label={copiedSlug === object.slug
+									? `Copied ${object.slug}`
+									: `Copy slug ${object.slug}`}
+								onclick={() => copier.copy(object.slug, object.slug)}
+							>
+								{#if copiedSlug === object.slug}
+									<CheckIcon aria-hidden="true" />
+								{:else}
+									<CopyIcon aria-hidden="true" />
+								{/if}
+								<span class="sr-only">{copiedSlug === object.slug ? 'Copied' : 'Copy'}</span>
+							</Button>
+							<Button
+								href={`/secrets/${encodeURIComponent(object.slug)}`}
+								variant="outline"
+								size="sm"
+							>
+								Inspect
+							</Button>
 							<Button variant="outline" size="sm" onclick={() => openView(object.slug)}>
 								View
 							</Button>

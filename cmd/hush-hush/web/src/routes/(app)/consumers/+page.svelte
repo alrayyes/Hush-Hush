@@ -263,6 +263,7 @@ async function confirmDelete() {
 					<th scope="col" class="px-4 py-3">Consumer</th>
 					<th scope="col" class="px-4 py-3">Secrets</th>
 					<th scope="col" class="px-4 py-3">Tokens</th>
+					<th scope="col" class="px-4 py-3">Public key</th>
 					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
@@ -279,6 +280,33 @@ async function confirmDelete() {
 								<a href={tokensHref(consumer.name)}>{tokenCount}</a>
 							{:else}
 								{tokenCount}
+							{/if}
+						</td>
+						<!-- The card list above shows the same key and actions;
+							e2e/layout-parity.ts fails if the two drift (alrayyes/hush-hush#577). -->
+						<td data-label="Public key">
+							{#if consumer.public_key}
+								{@const publicKey = consumer.public_key}
+								<div class="flex items-center gap-2">
+									<code class="font-mono text-xs">{truncateKey(publicKey)}</code>
+									<Button
+										variant="outline"
+										size="sm"
+										aria-label={copiedConsumer === consumer.name
+											? `Copied public key ${consumer.name}`
+											: `Copy public key ${consumer.name}`}
+										onclick={() => copier.copy(consumer.name, publicKey)}
+									>
+										{#if copiedConsumer === consumer.name}
+											<CheckIcon aria-hidden="true" />
+										{:else}
+											<CopyIcon aria-hidden="true" />
+										{/if}
+										{copiedConsumer === consumer.name ? 'Copied' : 'Copy'}
+									</Button>
+								</div>
+							{:else}
+								<span class="text-text-muted">not registered</span>
 							{/if}
 						</td>
 						<td data-label="Actions" class="row-actions gap-3">
