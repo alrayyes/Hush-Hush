@@ -997,7 +997,22 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page
 		.locator('#consumer-token-description')
 		.fill('deploy read token for ci-runner');
-	await page.locator('#consumer-token-ttl').fill('30');
+	// alrayyes/hush-hush#537: the default and the limits come from the API
+	// spec - 90 days, between 1 and 365 - not from the page.
+	const consumerTokenTtl = page.locator('#consumer-token-ttl');
+	await expect(consumerTokenTtl).toHaveValue('90');
+	await expect(consumerTokenTtl).toHaveAttribute('min', '1');
+	await expect(consumerTokenTtl).toHaveAttribute('max', '365');
+	await expect(
+		createConsumerTokenDialog.getByText('From 1 to 365 days.'),
+	).toBeVisible();
+	await consumerTokenTtl.fill('366');
+	expect(
+		await consumerTokenTtl.evaluate(
+			(el) => (el as HTMLInputElement).validity.rangeOverflow,
+		),
+	).toBe(true);
+	await consumerTokenTtl.fill('30');
 	// The Create button's disabled state clears (consumer is picked) but
 	// Tailwind's disabled:opacity-50 briefly outlives the DOM's own
 	// `disabled` property by a tick after the field fills above - a real
