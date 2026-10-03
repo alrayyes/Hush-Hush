@@ -3,6 +3,8 @@
   "ltex.dictionary": {
     "en-GB": [
       "Dependabot",
+      "govulncheck",
+      "lockfiles",
       "Codecov",
       "alrayyes",
       "Forgejo",
