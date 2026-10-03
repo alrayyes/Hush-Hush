@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.57.1](https://github.com/alrayyes/Hush-Hush/compare/v2.57.0...v2.57.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* bump alrayyes/hush-hush ([#624](https://github.com/alrayyes/Hush-Hush/issues/624)) ([6a36ed0](https://github.com/alrayyes/Hush-Hush/commit/6a36ed088f8709843af313a06044d2a3d1d7849e))
+
 ## [2.57.0](https://github.com/alrayyes/Hush-Hush/compare/v2.56.0...v2.57.0) (2026-10-03)
 
 
