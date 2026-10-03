@@ -44,7 +44,7 @@ func TestCreateObjectRecordsAnAuditLogEntry(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: sealedFixture}, issueToken(t, s))
 	req.Header.Set("X-Caller", "homelab/vps-docker")
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -60,7 +60,7 @@ func TestCreateObjectRecordsTheRequestsSourceIP(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: sealedFixture}, issueToken(t, s))
 	req.RemoteAddr = "203.0.113.1:54321"
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -74,7 +74,7 @@ func TestCreateObjectRecordsTheRawRemoteAddrWhenItHasNoPort(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, issueToken(t, s))
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: sealedFixture}, issueToken(t, s))
 	req.RemoteAddr = "not-a-host-port-pair"
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -87,7 +87,7 @@ func TestGetObjectRecordsAnAuditLogEntryWithNoCaller(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "x", sealedFixture, nil, "", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects/x", nil)
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -103,9 +103,9 @@ func TestUpdateObjectRecordsAnAuditLogEntry(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "x", sealedFixture, nil, "", ""))
 
-	mux.ServeHTTP(httptest.NewRecorder(), updateRequest(t, "x", []byte("new"), issueToken(t, s)))
+	mux.ServeHTTP(httptest.NewRecorder(), updateRequest(t, "x", sealedFixtureNew, issueToken(t, s)))
 
 	entries := auditLogEntries(t, s)
 	require.Len(t, entries, 1)
@@ -116,7 +116,7 @@ func TestDeleteObjectRecordsAnAuditLogEntry(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "x", sealedFixture, nil, "", ""))
 
 	mux.ServeHTTP(httptest.NewRecorder(), deleteRequest(t, "x", issueToken(t, s)))
 
@@ -133,7 +133,7 @@ func TestAuditLogSurvivesPurgingTheTokenItAttributesTo(t *testing.T) {
 	require.NoError(t, err)
 
 	mux.ServeHTTP(httptest.NewRecorder(), createRequest(t, hushhush.CreateObjectRequest{
-		Slug: "attributed", Value: []byte("v"),
+		Slug: "attributed", Value: sealedFixture,
 	}, token))
 
 	require.NoError(t, s.RevokeWriteToken(t.Context(), wt.ID))

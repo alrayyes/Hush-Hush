@@ -59,7 +59,7 @@ func TestCreateObjectWithTagsReturnsThemOnCreateAndList(t *testing.T) {
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
 
-	rec := postObject(t, mux, token, `{"slug":"a","value":"dg==","tags":["prod","homelab"]}`)
+	rec := postObject(t, mux, token, `{"slug":"a","value":"`+sealedFixtureB64+`","tags":["prod","homelab"]}`)
 	require.Equal(t, http.StatusCreated, rec.Code)
 
 	var created hushhush.ObjectMetadata
@@ -75,7 +75,7 @@ func TestListObjectsAlwaysCarriesTagsAsAnArray(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "a", sealedFixture, nil, "", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/objects", nil)
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -90,7 +90,7 @@ func TestCreateObjectNormalisesTagsToLowercaseAndDedupes(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	rec := postObject(t, mux, issueToken(t, s), `{"slug":"a","value":"dg==","tags":["Prod","prod"]}`)
+	rec := postObject(t, mux, issueToken(t, s), `{"slug":"a","value":"`+sealedFixtureB64+`","tags":["Prod","prod"]}`)
 	require.Equal(t, http.StatusCreated, rec.Code)
 
 	var created hushhush.ObjectMetadata
@@ -115,7 +115,7 @@ func TestCreateObjectRejectsInvalidTags(t *testing.T) {
 
 			mux, s := newTestMux(t)
 
-			rec := postObject(t, mux, issueToken(t, s), `{"slug":"a","value":"dg==","tags":`+tags+`}`)
+			rec := postObject(t, mux, issueToken(t, s), `{"slug":"a","value":"`+sealedFixtureB64+`","tags":`+tags+`}`)
 			require.Equal(t, http.StatusBadRequest, rec.Code)
 			require.Contains(t, rec.Body.String(), `"error"`)
 		})
@@ -127,20 +127,20 @@ func TestUpdateObjectTagsPreservedReplacedAndCleared(t *testing.T) {
 
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
-	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), nil, "", "", store.WithTags([]string{"prod"})))
+	require.NoError(t, s.CreateObject(context.Background(), "a", sealedFixture, nil, "", "", store.WithTags([]string{"prod"})))
 
-	rec := putObject(t, mux, token, `{"value":"dw=="}`)
+	rec := putObject(t, mux, token, `{"value":"`+sealedFixtureNewB64+`"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, []string{"prod"}, listObjects(t, mux, token, "")[0].Tags)
 
-	rec = putObject(t, mux, token, `{"value":"dw==","tags":["homelab"]}`)
+	rec = putObject(t, mux, token, `{"value":"`+sealedFixtureNewB64+`","tags":["homelab"]}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	var meta hushhush.ObjectMetadata
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
 	require.Equal(t, []string{"homelab"}, meta.Tags)
 
-	rec = putObject(t, mux, token, `{"value":"dw==","tags":[]}`)
+	rec = putObject(t, mux, token, `{"value":"`+sealedFixtureNewB64+`","tags":[]}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Empty(t, listObjects(t, mux, token, "")[0].Tags)
 }
@@ -150,9 +150,9 @@ func TestUpdateObjectRejectsInvalidTags(t *testing.T) {
 
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
-	require.NoError(t, s.CreateObject(context.Background(), "a", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "a", sealedFixture, nil, "", ""))
 
-	rec := putObject(t, mux, token, `{"value":"dw==","tags":["NO WAY"]}`)
+	rec := putObject(t, mux, token, `{"value":"`+sealedFixtureNewB64+`","tags":["NO WAY"]}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
@@ -162,8 +162,8 @@ func TestListObjectsFiltersByTagRepeatedMeansAll(t *testing.T) {
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "both", []byte("v"), nil, "", "", store.WithTags([]string{"prod", "homelab"})))
-	require.NoError(t, s.CreateObject(ctx, "prod_only", []byte("v"), nil, "", "", store.WithTags([]string{"prod"})))
+	require.NoError(t, s.CreateObject(ctx, "both", sealedFixture, nil, "", "", store.WithTags([]string{"prod", "homelab"})))
+	require.NoError(t, s.CreateObject(ctx, "prod_only", sealedFixture, nil, "", "", store.WithTags([]string{"prod"})))
 
 	require.Len(t, listObjects(t, mux, token, "?tag=prod"), 2)
 
