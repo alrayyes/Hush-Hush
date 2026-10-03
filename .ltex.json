@@ -125,7 +125,10 @@
       "ConsumerCombobox",
       "web-ui",
       "href",
-      "hrefs"
+      "hrefs",
+      "fixups",
+      "runbook",
+      "unmergeable"
     ]
   },
   "ltex.disabledRules": {
