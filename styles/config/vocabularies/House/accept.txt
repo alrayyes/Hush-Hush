@@ -151,3 +151,11 @@ playwright-lighthouse
 ConsumerCombobox
 PRs?
 hrefs?
+# Terms .ltex.json already accepts, which Vale's spell-checker flags without
+# these. Each tier keeps its own list and neither reads the other's.
+alrayyes
+autofixer
+dnf
+golangci
+prerendered
+proselint
