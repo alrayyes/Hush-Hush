@@ -244,7 +244,7 @@ func serve() error {
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel)),
+		Handler:           hushhush.AccessLog(slog.Default(), hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel))),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
