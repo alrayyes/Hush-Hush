@@ -125,6 +125,32 @@ commit-msg:
     - name: commitlint
       run: bunx commitlint --edit {1}
 
+# The pre-push globs below mirror the filters under `changes` in
+# .github/workflows/ci.yml, one list per filter, so a push runs the checks CI
+# would run for the same files and no others (rules/ci.md, "Run a check only
+# when the files it covers change"). Edit a list here and its filter there
+# together. Each also names this file and ci.yml, as the filters name ci.yml,
+# so editing the pipeline's own config runs everything.
+#
+# Only pre-push uses them. The pre-commit globs stay per-tool: they pick
+# staged files to hand a fixer, not whether a whole check is worth running.
+
+# The pre-push globs mirror the filters under `changes` in ci.yml, so a push
+# runs the checks CI would run for the same files and no others (rules/ci.md,
+# "Run a check only when the files it covers change"). Edit a list here and its
+# filter there together. Each list also names lefthook.yml and ci.yml, as the
+# filters name ci.yml, so a change to the pipeline's own config runs
+# everything.
+#
+# Each list is spelled out once, at the first job that needs it
+# (`glob: &name-files`), and the other jobs reuse it (`glob: *name-files`).
+# lefthook rejects an unknown top-level key, so there is no shared block to hold
+# them. Patterns like `*.go` have no `**/`, which lefthook's default matcher
+# needs to match a file at the repository root as well as in a directory.
+#
+# The pre-commit globs stay per tool: they pick staged files to hand a fixer,
+# not whether a whole check is worth running.
+#
 # pre-push never writes. A hook rewriting files under a push leaves the pushed
 # commit and the working tree disagreeing about what was reviewed.
 #
@@ -141,7 +167,18 @@ pre-push:
     # trims the run time, and paying that cost on every commit is exactly
     # what the rule argues against. Moved here, alongside the matching
     # `fmt --diff` check-only pass CI's own lint job runs.
+    # Mirrors the `go` filter under `changes` in ci.yml.
     - name: golangci-lint fmt
+      glob: &go-files
+        - "*.go"
+        - "go.mod"
+        - "go.sum"
+        - ".golangci.y*ml"
+        - "api/openapi.yaml"
+        - "pacts/**"
+        - "cmd/hush-hush/web/build/**"
+        - ".github/workflows/ci.yml"
+        - "lefthook.yml"
       run: >-
         docker run --rm --user "$(id -u):$(id -g)"
         -v "$(pwd):/src" -w /src
@@ -152,6 +189,7 @@ pre-push:
         golangci-lint fmt --diff
 
     - name: golangci-lint run
+      glob: *go-files
       run: >-
         docker run --rm --user "$(id -u):$(id -g)"
         -v "$(pwd):/src" -w /src
@@ -163,6 +201,7 @@ pre-push:
 
     # Docker-wrapped, same reasoning and pin as pre-commit's Go jobs above.
     - name: test
+      glob: *go-files
       run: >-
         docker run --rm --user "$(id -u):$(id -g)"
         -v "$(pwd):/src" -w /src
@@ -182,6 +221,7 @@ pre-push:
     # version string, or an orphaned go.sum entry - go-mod.md's reasoning for
     # keeping it here rather than folding it into the pre-commit -fmt step.
     - name: gomod
+      glob: *go-files
       run: >-
         docker run --rm --user "$(id -u):$(id -g)"
         -v "$(pwd):/src" -w /src
@@ -198,11 +238,11 @@ pre-push:
         go mod tidy -diff
 
     # cmd/hush-hush/web is its own bun project (CONTRIBUTING.md), so its
-    # checks need `root` to run `bun run <script>` from that directory
-    # rather than the repo root, where those scripts don't exist. Scoped
-    # with `glob` to that directory the same way `redocly` above is scoped
-    # to `api/`, so a push touching nothing under `cmd/hush-hush/web` skips
-    # both.
+    # checks `cd` there to run `bun run <script>`, where those scripts exist.
+    # Not lefthook's `root:`, which drops every file outside that directory
+    # before `glob` looks at it, so a change to lefthook.yml or ci.yml would
+    # never reach these jobs. Scoped with `glob` to the web filter, so a push
+    # touching none of those files skips all three.
     #
     # `bun run test:e2e` (Playwright/axe-core, alrayyes/hush-hush#384)
     # stays CI-only, decided by timing a real run rather than guessing:
@@ -219,31 +259,47 @@ pre-push:
     # `bun run lighthouse` (Lighthouse, same issue) has the identical
     # native-Go dependency and stays CI-only for the same reason - moot
     # either way, since it only ever warns rather than blocks.
+    # Mirrors the `web` filter.
     - name: web-check
-      root: "cmd/hush-hush/web/"
-      glob: "cmd/hush-hush/web/**/*"
-      run: bun run check
+      glob: &web-files
+        - "cmd/hush-hush/web/**"
+        - "CHANGELOG.md"
+        - "LICENSE"
+        - "package.json"
+        - "bun.lock"
+        - ".github/workflows/ci.yml"
+        - "lefthook.yml"
+      run: cd cmd/hush-hush/web && bun run check
 
     - name: web-lint
-      root: "cmd/hush-hush/web/"
-      glob: "cmd/hush-hush/web/**/*"
-      run: bun run lint
+      glob: *web-files
+      run: cd cmd/hush-hush/web && bun run lint
 
     # @shadcn/lint (rules/tailwind.md) via oxlint - a separate job/script
     # from web-lint above rather than folded into `bun run lint`, matching
     # every other tool here having its own named job.
     - name: web-lint-tailwind
-      root: "cmd/hush-hush/web/"
-      glob: "cmd/hush-hush/web/**/*"
-      run: bun run lint:tailwind
+      glob: *web-files
+      run: cd cmd/hush-hush/web && bun run lint:tailwind
 
     # These are `package.json` scripts rather than the commands spelled out,
     # because CI runs the same ones and a literal copied into two files drifts
     # the first time somebody edits one of them.
+    # Mirrors the `prose` filter.
     - name: prettier
+      glob: &prose-files
+        - "*.{md,yml,yaml}"
+        - "styles/**"
+        - ".vale.ini"
+        - ".markdownlint*"
+        - ".prettier*"
+        - "package.json"
+        - "bun.lock"
+        - "lefthook.yml"
       run: bun run format:check
 
     - name: markdownlint
+      glob: *prose-files
       run: bun run lint:md
 
     # Every other linter here runs at commit, at push and in CI. Vale ran at
@@ -251,18 +307,34 @@ pre-push:
     # workflow as a block of bash with nothing a hook could reuse. It is a
     # script now, and this is the whole-tree run that was missing.
     - name: vale
+      glob: *prose-files
       run: bun run lint:prose
 
     # Grammar and spelling. Left out of pre-commit on the grounds that it is a
     # ~300 MB download, which it is — but it caches outside the repository and
     # then costs about ten seconds.
     - name: mechanics
+      glob: *prose-files
       run: bun run lint:mechanics
 
+    # Mirrors the `api` filter.
     - name: redocly
+      glob: &api-files
+        - "api/**"
+        - "docs/api/**"
+        - "redocly.yaml"
+        - "package.json"
+        - "bun.lock"
+        - ".github/workflows/ci.yml"
+        - "lefthook.yml"
       run: bun run lint:api
 
+    # Mirrors the `package-json` filter.
     - name: sort-package-json
+      glob: &package-json-files
+        - "package.json"
+        - ".github/workflows/ci.yml"
+        - "lefthook.yml"
       run: bun run lint:package-json
 
     # A strict superset of a bare `docker build`: testcontainers-go builds
@@ -277,5 +349,23 @@ pre-push:
     # /var/run/docker.sock into it) for no benefit over just not nesting,
     # the same reasoning ci.yml's own container-integration job gives for
     # staying off a `container:` runner.
+    # Mirrors ci.yml's container-integration `if`: the `go`, `web-src`, `docker`
+    # and `integration` filters together. `web-src` is cmd/hush-hush/web/**
+    # alone, so the web list here lacks the changelog, license and lockfile.
     - name: container-integration
+      glob: &container-integration-files
+        - "*.go"
+        - "go.mod"
+        - "go.sum"
+        - ".golangci.y*ml"
+        - "api/openapi.yaml"
+        - "pacts/**"
+        - "cmd/hush-hush/web/**"
+        - "Dockerfile*"
+        - ".dockerignore"
+        - ".hadolint.y*ml"
+        - "integration/**"
+        - "compose.yaml"
+        - ".github/workflows/ci.yml"
+        - "lefthook.yml"
       run: go test -tags=integration ./integration/... -v

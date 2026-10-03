@@ -101,6 +101,12 @@ and commit lint, and the release are never filtered.
 When you add a job, list the files it covers in the filters under `changes`
 and gate the job on that output. Otherwise it runs on every pull request.
 
+The pre-push hook filters the same way. Each job in `lefthook.yml`'s `pre-push`
+section carries a `glob:` copied from the matching filter, with a comment
+naming it, so pushing only a README runs the prose checks and no Go. Editing
+`lefthook.yml` or `ci.yml` runs every job. When you change a filter in
+`ci.yml`, change its list in `lefthook.yml` in the same commit.
+
 The two dependency audits (`govulncheck` and `bun-audit`) skip a pull request
 that leaves the lockfiles alone, so `audit.yml` runs them again every day. A
 failure there opens or updates one issue per tool, titled "Scheduled audit
