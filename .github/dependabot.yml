@@ -83,3 +83,16 @@ updates:
         update-types: [minor, patch]
       major:
         update-types: [major]
+  # compose.yaml pins the published image by tag and digest, and this is what
+  # keeps that pin current. compose.build.yaml names only a local build.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]

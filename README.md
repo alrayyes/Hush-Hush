@@ -240,8 +240,8 @@ docker exec hush-hush /hush-hush token issue --description "trying it out"
 [`compose.yaml`](compose.yaml) wraps the same flags, including the volume:
 
 ```sh
-docker compose up          # pulls the published image
-docker compose up --build  # or builds the local Dockerfile instead
+docker compose up   # pulls the published image, pinned by tag and digest
+docker compose -f compose.yaml -f compose.build.yaml up --build   # or builds the local Dockerfile
 docker compose exec hush-hush /hush-hush token issue --description "trying it out"
 ```
 
