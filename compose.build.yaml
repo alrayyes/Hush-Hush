@@ -1,0 +1,11 @@
+# Builds the image from the local Dockerfile instead of pulling the published
+# one. Use it as an override:
+#
+#   docker compose -f compose.yaml -f compose.build.yaml up --build
+#
+# compose.yaml pins its image by tag and digest, and Docker refuses to tag a
+# build with a digest, so this names the local build separately.
+services:
+  hush-hush:
+    image: hush-hush:local
+    build: .
