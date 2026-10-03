@@ -39,13 +39,16 @@ type OwnerIdentity struct {
 	PublicKey string `json:"public_key,omitempty"`
 }
 
-// handleAuthIdentity reports the calling session's own escrowed identity
-// public key - session-gated (unlike GET /auth/status) since, although an
-// age public key isn't secret on its own, every other endpoint that
-// exposes stored data (GET /consumers included) stays behind
-// requireWriteAccess/requireSession rather than serving an anonymous
-// caller, and this keeps the same posture rather than carving out an
-// exception.
+// handleAuthIdentity reports the owner's escrowed identity public key. It
+// takes a write bearer token or a session (requireWriteAccess, no CSRF
+// check: it's a read), never an anonymous caller: an age public key isn't
+// secret on its own, but every other endpoint that exposes stored data stays
+// behind a credential, and this keeps the same posture.
+//
+// A bearer token is accepted so an SDK client, which holds an API key and
+// never a session, can fetch the key it has to add as a sealing recipient
+// to honour keep_readable_copy. There is one user row to read the key from,
+// so the answer is the same whichever credential asks.
 func handleAuthIdentity(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		publicKey, err := s.CurrentUserPublicKey(r.Context())
