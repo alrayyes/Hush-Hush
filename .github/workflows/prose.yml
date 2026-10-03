@@ -34,12 +34,9 @@ concurrency:
   group: prose-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Pinned like everything else. Vale's style packages are versioned
-  # separately and fetched by `vale sync`.
-  VALE_VERSION: v3.17.1
-  # ltex-ls-plus is pinned inside scripts/lint-mechanics.sh instead, so the
-  # hook and this workflow cannot install different versions of it.
+# ltex-ls-plus is pinned inside scripts/lint-mechanics.sh, so the hook and this
+# workflow cannot install different versions of it. Vale's own image is pinned
+# on the `style` job below, and its style packages are fetched by `vale sync`.
 
 jobs:
   # Mechanics: grammar, spelling, the phonetic article. These have a right
@@ -61,14 +58,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
-      image: golang:1.27-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+      # The official image, not `go install`: that needs a Go toolchain and
+      # breaks when Vale moves its module path. The image is Alpine with
+      # /bin/vale as its entrypoint, runs as root and ships node but not git
+      # or bash, hence the entrypoint override and the apk step below.
+      image: jdkato/vale:v3.17.1@sha256:7dba3c9104ba366f172d119022c4ec53a005f7d14dc1b80e285421a3f0b71657 # renovate: datasource=docker depName=jdkato/vale
+      options: --entrypoint ""
     steps:
-      - run: apt-get update && apt-get install -y --no-install-recommends ca-certificates git nodejs
+      - run: apk add --no-cache bash git
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install Vale
-        env:
-          GOTOOLCHAIN: auto
-        run: go install github.com/errata-ai/vale/v3/cmd/vale@${{ env.VALE_VERSION }}
       - name: Vale
         # The same script the pre-push hook runs, so the two cannot check
         # different files or disagree about what's worth failing on.

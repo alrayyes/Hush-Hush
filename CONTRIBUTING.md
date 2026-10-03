@@ -23,12 +23,11 @@ for whoever runs it.
   tools resolve and stay pinned. `cmd/hush-hush/web` is a **second, separate**
   bun project — the actual web UI frontend — with its own `package.json` and
   `bun install`; see [its own README](cmd/hush-hush/web/README.md).
-- **[Vale](https://vale.sh)** on your `PATH`, for the style tier of the
-  prose lint:
-
-  ```sh
-  go install github.com/errata-ai/vale/v3/cmd/vale@latest
-  ```
+- **[Vale](https://vale.sh)**, for the style tier of the prose lint, or
+  Docker. `scripts/vale.sh` uses a `vale` on your `PATH` and otherwise runs
+  the same pinned `jdkato/vale` image CI does, so you can skip installing it.
+  Don't `go install` it: that needs a Go toolchain and breaks when Vale moves
+  its module path.
 
   `ltex-cli-plus` needs nothing installed: the hook fetches and caches it
   on first use.
