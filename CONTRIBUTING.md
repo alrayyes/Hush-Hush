@@ -207,9 +207,10 @@ go test -tags=integration ./integration/... -v
 Two Dockerfiles, deliberately not one:
 
 - **`Dockerfile`** compiles from source - what `docker build .`, the
-  preceding container integration test, and `docker compose up --build`
-  all use. Its first stage builds the frontend (`cmd/hush-hush/web`)
-  before the Go stage's `go:embed` ever reads it, so the built image
+  preceding container integration test, and `compose.build.yaml` (the
+  override that makes `docker compose up --build` build locally) all use.
+  Its first stage builds the frontend (`cmd/hush-hush/web`) before the Go
+  stage's `go:embed` ever reads it, so the built image
   always ships a fresh frontend regardless of what's committed. hadolint
   lints it same as any other.
 - **`Dockerfile.release`** only `COPY`s an already-cross-compiled binary -
