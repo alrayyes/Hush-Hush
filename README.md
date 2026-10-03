@@ -211,7 +211,11 @@ docker exec hush-hush /hush-hush token issue --description "trying it out"
 
 The image's own health check asks `GET /readyz`, which fails when the
 database can't serve a request, so `docker ps` shows the container as
-`unhealthy` instead of up. `/healthz` only says the process is running.
+`unhealthy` instead of up. `/healthz` only says the process is running. On
+`docker stop` the server answers 503 on `/readyz` first and keeps serving for
+3 seconds before it stops accepting connections, then lets in-flight requests
+finish, so a load balancer in front has time to take it out of rotation. That
+fits inside the default 10-second grace period `docker stop` allows.
 
 The image is `distroless/static-debian12` - there's no shell in it, so
 `docker exec -ti <container> sh` has nothing to run. `docker exec` only
