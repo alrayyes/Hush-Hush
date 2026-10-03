@@ -307,6 +307,7 @@ export async function updateObject(
 	value: string,
 	usedBy?: string[],
 	keepReadableCopy?: boolean,
+	tags?: string[],
 ): Promise<ObjectMetadata> {
 	const res = await request(`/objects/${encodeURIComponent(slug)}`, {
 		method: 'PUT',
@@ -320,6 +321,8 @@ export async function updateObject(
 		body: JSON.stringify({
 			value,
 			...(usedBy === undefined ? {} : { used_by: usedBy }),
+			// Same rule as used_by: absent leaves the tags alone, [] clears them.
+			...(tags === undefined ? {} : { tags }),
 			keep_readable_copy: keepReadableCopy ?? false,
 		}),
 	});
