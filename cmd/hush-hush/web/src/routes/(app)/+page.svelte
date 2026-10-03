@@ -11,6 +11,7 @@ import {
 	getObjectValue,
 	updateObject,
 } from '$lib/api';
+import { TAGS_MAX_ITEMS } from '$lib/api-limits';
 import { actorName } from '$lib/attribution';
 import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
 import { createCopier } from '$lib/clipboard';
@@ -24,7 +25,13 @@ import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { consumersHref } from '$lib/consumers';
 import { formatTimestamp } from '$lib/datetime';
 import { resolveRecipients, sealValue } from '$lib/sealing';
-import { filterByTag, tagCounts } from '$lib/tags';
+import {
+	filterByTag,
+	formatTags,
+	parseTags,
+	tagCounts,
+	validateTags,
+} from '$lib/tags';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -65,6 +72,8 @@ let createError = $state('');
 let createSlug = $state('');
 let createValue = $state('');
 let createDescription = $state('');
+let createTags = $state('');
+let createTagsError = $state('');
 let createUsedBy: string[] = $state([]);
 let createEntries: ConsumerEntry[] = $state([]);
 // Opt-in, never sticky across opens - specs/secret-objects/spec.md's
@@ -93,6 +102,8 @@ function resetCreateForm() {
 	createSlug = '';
 	createValue = '';
 	createDescription = '';
+	createTags = '';
+	createTagsError = '';
 	createUsedBy = [];
 	createKeepReadableCopy = false;
 	createError = '';
@@ -101,6 +112,13 @@ function resetCreateForm() {
 async function submitCreate(event: SubmitEvent) {
 	event.preventDefault();
 	createError = '';
+
+	const tags = parseTags(createTags);
+	const tagsError = validateTags(tags);
+	createTagsError = tagsError ?? '';
+	if (tagsError) {
+		return;
+	}
 
 	// A secret sealed to zero recipients could never be decrypted by
 	// anyone - the create/edit modes this replaces at least produced
@@ -119,6 +137,7 @@ async function submitCreate(event: SubmitEvent) {
 			slug: createSlug,
 			value,
 			description: createDescription || undefined,
+			tags: tags.length > 0 ? tags : undefined,
 			used_by: createUsedBy.length > 0 ? createUsedBy : undefined,
 			keep_readable_copy: createKeepReadableCopy || undefined,
 		});
@@ -136,6 +155,10 @@ async function submitCreate(event: SubmitEvent) {
 let editOpen = $state(false);
 let editSlug = $state('');
 let editValue = $state('');
+let editTags = $state('');
+// What the field opened with, so an untouched field isn't sent at all.
+let editInitialTags: string[] = [];
+let editTagsError = $state('');
 let editUsedBy: string[] = $state([]);
 let editEntries: ConsumerEntry[] = $state([]);
 let editError = $state('');
@@ -162,12 +185,24 @@ function openEdit(slug: string) {
 	editUsedBy = [...(data.objects.find((o) => o.slug === slug)?.used_by ?? [])];
 	editKeepReadableCopy = false;
 	editError = '';
+	editInitialTags = [
+		...(data.objects.find((o) => o.slug === slug)?.tags ?? []),
+	];
+	editTags = formatTags(editInitialTags);
+	editTagsError = '';
 	editOpen = true;
 }
 
 async function submitEdit(event: SubmitEvent) {
 	event.preventDefault();
 	editError = '';
+
+	const tags = parseTags(editTags);
+	const tagsError = validateTags(tags);
+	editTagsError = tagsError ?? '';
+	if (tagsError) {
+		return;
+	}
 
 	if (editEffectiveRecipients.length === 0) {
 		editError =
@@ -177,7 +212,14 @@ async function submitEdit(event: SubmitEvent) {
 
 	try {
 		const value = await sealValue(editValue, editEffectiveRecipients);
-		await updateObject(editSlug, value, editUsedBy, editKeepReadableCopy);
+		await updateObject(
+			editSlug,
+			value,
+			editUsedBy,
+			editKeepReadableCopy,
+			// Omitted when the field is as it opened, which leaves the tags alone.
+			tags.join(',') === editInitialTags.join(',') ? undefined : tags,
+		);
 		editOpen = false;
 		await invalidate('app:objects');
 		// An edit can introduce a consumer the directory page hasn't seen
@@ -270,6 +312,27 @@ async function confirmDelete() {
 						<div class="space-y-1">
 							<Label for="create-description">Description</Label>
 							<Input id="create-description" class="w-full" bind:value={createDescription} />
+						</div>
+
+						<div class="space-y-1">
+							<Label for="create-tags">Tags</Label>
+							<Input
+								id="create-tags"
+								class="w-full"
+								bind:value={createTags}
+								oninput={() => (createTagsError = '')}
+								aria-invalid={createTagsError ? true : undefined}
+								aria-describedby={createTagsError ? 'create-tags-hint create-tags-error' : 'create-tags-hint'}
+							/>
+							<p id="create-tags-hint" class="text-sm text-text-muted">
+								Optional. Separate with commas, up to {TAGS_MAX_ITEMS}. Lowercase
+								letters, numbers and . _ / - only.
+							</p>
+							{#if createTagsError}
+								<p id="create-tags-error" role="alert" class="text-sm text-error">
+									{createTagsError}
+								</p>
+							{/if}
 						</div>
 
 						<div class="space-y-1">
@@ -567,6 +630,27 @@ async function confirmDelete() {
 				<div class="space-y-1">
 					<Label for="edit-value">New value</Label>
 					<Textarea id="edit-value" class="w-full" bind:value={editValue} required rows={6} />
+				</div>
+
+				<div class="space-y-1">
+					<Label for="edit-tags">Tags</Label>
+					<Input
+						id="edit-tags"
+						class="w-full"
+						bind:value={editTags}
+						oninput={() => (editTagsError = '')}
+						aria-invalid={editTagsError ? true : undefined}
+						aria-describedby={editTagsError ? 'edit-tags-hint edit-tags-error' : 'edit-tags-hint'}
+					/>
+					<p id="edit-tags-hint" class="text-sm text-text-muted">
+						Optional. Separate with commas, up to {TAGS_MAX_ITEMS}. Lowercase
+						letters, numbers and . _ / - only.
+					</p>
+					{#if editTagsError}
+						<p id="edit-tags-error" role="alert" class="text-sm text-error">
+							{editTagsError}
+						</p>
+					{/if}
 				</div>
 
 				<div class="space-y-1">

@@ -332,6 +332,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page
 		.locator('#create-description')
 		.fill('prod deploy webhook for homelab/vps-docker');
+	// alrayyes/hush-hush#523: uppercase and a repeat are accepted and
+	// normalised, so what comes back is the lowercase set once.
+	await page.locator('#create-tags').fill('Prod, homelab, prod');
 	await createConsumersLoaded;
 	await page.locator('#create-used-by').fill('homelab');
 	await page.getByRole('listbox').waitFor();
@@ -344,6 +347,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// specs/consumers/spec.md's "Picking a consumer with a registered
 	// public key resolves a recipient" scenario.
 	await page.getByRole('option', { name: 'homelab', exact: true }).click();
+	// A tag the API's pattern rejects stops the submit and is named.
+	await page.locator('#create-tags').fill('prod, bad tag');
+	await page.getByRole('button', { name: 'Create' }).click();
+	await expect(
+		createDialog.getByText('"bad tag" is not a valid tag.'),
+	).toBeVisible();
+	await expect(createDialog).toBeVisible();
+	await page.locator('#create-tags').fill('Prod, homelab, prod');
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
@@ -364,6 +375,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		'prod deploy webhook for homelab/vps-docker',
 	);
 	await expect(secretCard).toContainText('age-encrypted (X25519)');
+	// The API returns tags sorted, whatever order they were entered in.
+	await expect(secretCard.getByTestId('tag')).toHaveText(['homelab', 'prod']);
 	await expect(secretCard).toContainText(/Updated .+ by admin/);
 
 	// Every control on a card is at least 44x44px.
@@ -544,6 +557,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		name: 'Edit mattermost_deploy_webhook',
 	});
 	await expect(editDialog.getByLabel('Remove homelab')).toBeVisible();
+	// The field opens with the secret's current tags.
+	await expect(editDialog.locator('#edit-tags')).toHaveValue('homelab, prod');
 	await editConsumersLoaded;
 	await editDialog.locator('#edit-used-by').fill('ci');
 	await editDialog.getByRole('listbox').waitFor();
@@ -555,12 +570,16 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// already keyed above, still resolves one, so Save stays enabled).
 	await expect(editDialog.getByText('(no key)')).toBeVisible();
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
+	await editDialog.locator('#edit-tags').fill('prod');
 	const editResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(editResults.violations).toEqual([]);
 	await editDialog.getByRole('button', { name: 'Save' }).click();
 	await editDialog.waitFor({ state: 'hidden' });
+	await expect(page.locator('[data-testid="tag"]:visible')).toHaveText([
+		'prod',
+	]);
 
 	await page.getByRole('button', { name: 'View' }).click();
 	await expect(
@@ -576,6 +595,19 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await editDialog.locator('#edit-value').fill(btoa('rotated-again'));
 	await editDialog.getByRole('button', { name: 'Save' }).click();
 	await editDialog.waitFor({ state: 'hidden' });
+	// An edit that leaves the Tags field alone leaves the tags alone.
+	await expect(page.locator('[data-testid="tag"]:visible')).toHaveText([
+		'prod',
+	]);
+
+	// Emptying the field clears them - and leaves this secret untagged for
+	// the tag-filter journey below, which counts tags across the list.
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await editDialog.locator('#edit-value').fill(btoa('rotated-final'));
+	await editDialog.locator('#edit-tags').fill('');
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await editDialog.waitFor({ state: 'hidden' });
+	await expect(page.locator('[data-testid="tag"]:visible')).toHaveCount(0);
 
 	// The secret just created recorded "homelab" as a consumer - the
 	// directory's own filtering and select-to-filter navigation
@@ -823,12 +855,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('option', { name: 'admin', exact: true }).click();
 	await expect(page.getByText('actor: admin')).toBeVisible();
 	// Every row so far (the create, both "View" reads, the detail page's
-	// own read of the ciphertext (#480), both edits) is
+	// own read of the ciphertext (#480), all three edits) is
 	// now attributed to admin - waiting on the row count itself (not
 	// just the chip, which updates synchronously before the refetch
 	// resolves) avoids asserting against the table's still-unfiltered
 	// content.
-	await expect(rows).toHaveCount(6);
+	await expect(rows).toHaveCount(7);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').nth(2)).toHaveText('admin');
 	}
@@ -836,14 +868,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await actorTrigger.click();
 	await page.getByRole('option', { name: 'Any actor' }).click();
 	await expect(page.getByText('actor: admin')).toHaveCount(0);
-	await expect(rows).toHaveCount(6);
+	await expect(rows).toHaveCount(7);
 
 	await objectTrigger.click();
 	await page.getByRole('option', { name: 'mattermost_deploy_webhook' }).click();
 	await expect(
 		page.getByText('object: mattermost_deploy_webhook'),
 	).toBeVisible();
-	await expect(rows).toHaveCount(6);
+	await expect(rows).toHaveCount(7);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').first()).toHaveText(
 			'mattermost_deploy_webhook',
