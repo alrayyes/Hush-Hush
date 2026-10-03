@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.56.0](https://github.com/alrayyes/Hush-Hush/compare/v2.55.1...v2.56.0) (2026-10-03)
+
+
+### Features
+
+* **web-ui:** set tags when creating or editing a secret ([#601](https://github.com/alrayyes/Hush-Hush/issues/601)) ([8a2ca5f](https://github.com/alrayyes/Hush-Hush/commit/8a2ca5fecb9b939f7d920fe23ecea02e51e9c6a3))
+
 ## [2.55.1](https://github.com/alrayyes/Hush-Hush/compare/v2.55.0...v2.55.1) (2026-10-03)
 
 
