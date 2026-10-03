@@ -26,7 +26,12 @@ import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { formatTimestamp } from '$lib/datetime';
 import TokenCard from '$lib/TokenCard.svelte';
-import { TTL_DAYS, tokenStatusLabel, ttlDaysToSeconds } from '$lib/tokens';
+import {
+	TTL_DAYS,
+	tokenRemaining,
+	tokenStatusLabel,
+	ttlDaysToSeconds,
+} from '$lib/tokens';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -645,10 +650,16 @@ async function confirmPurgeConsumerToken() {
 								{formatTimestamp(token.created_at)}
 							</time>
 						</td>
+						<!-- The cards show the same time left as a badge
+							(lib/TokenCard.svelte); e2e/layout-parity.ts fails if they drift
+							(alrayyes/hush-hush#577). -->
 						<td data-label="Expires">
 							<time datetime={token.expires_at} title={token.expires_at}>
 								{formatTimestamp(token.expires_at)}
 							</time>
+							{#if tokenRemaining(token) !== token.status}
+								<span class="block text-sm text-text-muted">{tokenRemaining(token)}</span>
+							{/if}
 						</td>
 						<td data-label="Last used">
 							{#if token.last_used_at}
@@ -830,10 +841,16 @@ async function confirmPurgeConsumerToken() {
 								{formatTimestamp(token.created_at)}
 							</time>
 						</td>
+						<!-- The cards show the same time left as a badge
+							(lib/TokenCard.svelte); e2e/layout-parity.ts fails if they drift
+							(alrayyes/hush-hush#577). -->
 						<td data-label="Expires">
 							<time datetime={token.expires_at} title={token.expires_at}>
 								{formatTimestamp(token.expires_at)}
 							</time>
+							{#if tokenRemaining(token) !== token.status}
+								<span class="block text-sm text-text-muted">{tokenRemaining(token)}</span>
+							{/if}
 						</td>
 						<td data-label="Last used">
 							{#if token.last_used_at}

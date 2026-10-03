@@ -2,6 +2,10 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import * as age from 'age-encryption';
 import { unwrapIdentityWithRecoveryPhrase } from '../src/lib/identity';
+import { expectListParity, expectNavParity } from './layout-parity';
+
+// A timestamp as formatTimestamp writes it, for the parity checks.
+const TIMESTAMP = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
 
 // alrayyes/hush-hush#272: /audit-log is both a SvelteKit page route and a
 // real backend API endpoint, and Go's mux used to route a hard
@@ -358,6 +362,21 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
+	// alrayyes/hush-hush#577: the card list and the table offer the same
+	// actions and show the same facts.
+	await expectListParity(page, {
+		path: '/',
+		list: 'Secrets',
+		ids: ['mattermost_deploy_webhook'],
+		facts: {
+			description: { pattern: /prod deploy webhook for homelab\/vps-docker/ },
+			'created by and updated by': { pattern: /admin/, times: 2 },
+			'created and updated': { pattern: TIMESTAMP, times: 2 },
+			tags: { pattern: /homelab/ },
+		},
+	});
+	await expectNavParity(page);
+
 	// alrayyes/hush-hush#480: below md the secrets table gives way to one
 	// card per secret, plus a search box that filters both layouts. Done
 	// here, right after the first create, because this is the one place a
@@ -627,6 +646,15 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(consumersResults.violations).toEqual([]);
+	await expectListParity(page, {
+		path: '/consumers',
+		list: 'Consumers',
+		ids: ['homelab'],
+		facts: {
+			'secret count': { pattern: /\b1\b/ },
+			'public key': { pattern: /age1[a-z0-9]{4}/ },
+		},
+	});
 
 	// alrayyes/hush-hush#482: below md the directory table becomes one
 	// card per consumer - name, secrets and tokens counts, the registered
@@ -689,7 +717,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.waitForURL('/?used_by=homelab');
 	await expect(page.getByText('consumer: homelab')).toBeVisible();
 	await expect(
-		page.getByRole('cell', { name: 'mattermost_deploy_webhook' }),
+		page.getByRole('cell', { name: 'mattermost_deploy_webhook', exact: true }),
 	).toBeVisible();
 	await page.getByRole('link', { name: 'Clear consumer filter' }).click();
 	await page.waitForURL('/');
@@ -785,6 +813,17 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(auditLogResults.violations).toEqual([]);
+	await expectListParity(page, {
+		path: '/audit-log',
+		list: 'Audit events',
+		ids: [],
+		facts: {
+			object: { pattern: /mattermost_deploy_webhook/ },
+			actor: { pattern: /admin/ },
+			'caller address': { pattern: /127\.0\.0\.1/ },
+			time: { pattern: TIMESTAMP },
+		},
+	});
 
 	const rows = page.locator('tbody tr');
 
@@ -1010,6 +1049,15 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(passkeyCardResults.violations).toEqual([]);
 	await page.setViewportSize({ width: 1280, height: 720 });
+	await expectListParity(page, {
+		path: '/settings',
+		list: 'Passkey list',
+		ids: [],
+		facts: {
+			added: { pattern: TIMESTAMP },
+			'last used': { pattern: /never/ },
+		},
+	});
 
 	// Consumer tokens: create/rotate/revoke, and the single-select
 	// consumer picker (max=1, showKeyStatus=false -
@@ -1074,6 +1122,20 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	const consumerTokenRow = page.getByRole('row', { name: /ci-runner/ });
 	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Active');
+	// Before the clock-skew page below: page.clock is the context's clock, so a
+	// page opened after it would see the skewed time.
+	await expectListParity(page, {
+		path: '/settings',
+		list: 'Consumer token list',
+		ids: ['ci-runner'],
+		facts: {
+			description: { pattern: /deploy read token for ci-runner/ },
+			status: { pattern: /Active/ },
+			'created and expires': { pattern: TIMESTAMP, times: 2 },
+			'last used': { pattern: /never/ },
+			'time left': { pattern: /\d+d left/ },
+		},
+	});
 
 	// alrayyes/hush-hush#536: whether a token is active, and which buttons it
 	// gets, is the server's answer, not the browser clock's. A browser whose
@@ -1254,6 +1316,17 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	const shortLivedRow = page.getByRole('row', { name: /short-lived token/ });
 	await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired');
+	await expectListParity(page, {
+		path: '/settings',
+		list: 'Bearer token list',
+		ids: [],
+		facts: {
+			description: { pattern: /short-lived token/ },
+			status: { pattern: /Expired/ },
+			'created and expires': { pattern: TIMESTAMP, times: 2 },
+			'last used': { pattern: /never/ },
+		},
+	});
 
 	// #484: an expired token's card says so, and offers only the permanent
 	// delete, not Rotate or Revoke.
