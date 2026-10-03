@@ -242,26 +242,26 @@ func serve() error {
 		return fmt.Errorf("open embedded web build: %w", err)
 	}
 
+	readiness := hushhush.NewReadiness(s)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel)),
+		Handler:           hushhush.AccessLog(slog.Default(), hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel), hushhush.WithReadiness(readiness))),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			slog.Error("shutdown", "error", err)
-		}
-	}()
+	listener, err := net.Listen("tcp", cfg.Addr)
+	if err != nil {
+		slog.Error("listen", "error", err)
+
+		return fmt.Errorf("listen on %s: %w", cfg.Addr, err)
+	}
 
 	slog.Info("starting", "version", version, "addr", cfg.Addr, "db", cfg.DBPath)
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+
+	if err := serveUntilDone(ctx, srv, listener, readiness, drainDelay, shutdownTimeout); err != nil {
 		slog.Error("server stopped", "error", err)
 
 		return fmt.Errorf("server stopped: %w", err)
@@ -445,5 +445,58 @@ func newTokenRevokeCmd() *cobra.Command {
 
 			return nil
 		},
+	}
+}
+
+const (
+	// drainDelay is how long the server keeps answering after /readyz has gone
+	// 503, so a load balancer or orchestrator sees it and stops sending traffic
+	// before the listener closes. It covers the readiness cache (3 seconds) and
+	// is short enough that with shutdownTimeout it fits inside Docker's default
+	// 10 second stop grace period.
+	drainDelay = 3 * time.Second
+
+	// shutdownTimeout is how long in-flight requests get to finish once the
+	// server stops accepting.
+	shutdownTimeout = 5 * time.Second
+)
+
+// serveUntilDone serves on listener until ctx is cancelled, then drains and
+// shuts down, and returns only once that has finished. http.Server.Serve
+// returns the moment Shutdown is called, not when it completes, so returning
+// then would let the process exit (and the store close, through serve's
+// defers) under requests still in flight.
+func serveUntilDone(ctx context.Context, srv *http.Server, listener net.Listener, ready *hushhush.Readiness, drain, timeout time.Duration) error {
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		<-ctx.Done()
+		drainAndShutdown(srv, ready, drain, timeout)
+	}()
+
+	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("serve: %w", err)
+	}
+
+	<-done
+
+	return nil
+}
+
+// drainAndShutdown stops the server without refusing requests already on their
+// way. It marks the process not ready, waits drain for whoever is routing to it
+// to notice, then closes the listener and lets in-flight requests finish for up
+// to timeout.
+func drainAndShutdown(srv *http.Server, ready *hushhush.Readiness, drain, timeout time.Duration) {
+	ready.Drain()
+	time.Sleep(drain)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("shutdown", "error", err)
 	}
 }

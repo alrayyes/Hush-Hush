@@ -551,13 +551,13 @@ async function confirmDelete() {
 					<tr>
 						<td data-label="Id">{object.slug}</td>
 						<td data-label="Description">
-							<span class="block max-w-48 truncate" title={object.description ?? ''}>
+							<span class="block max-w-40 truncate" title={object.description ?? ''}>
 								{object.description ?? ''}
 							</span>
 						</td>
 						<td data-label="Tags">
 							{#if object.tags.length > 0}
-								<div class="flex flex-wrap gap-1">
+								<div class="flex max-w-28 flex-wrap gap-1">
 									{#each object.tags as tag (tag)}
 										<span
 											data-testid="tag"
@@ -586,7 +586,7 @@ async function confirmDelete() {
 						</td>
 						<!-- The card list above offers the same actions; e2e/layout-parity.ts
 							fails if the two drift (alrayyes/hush-hush#577). -->
-						<td data-label="Actions" class="row-actions min-w-48 gap-3">
+						<td data-label="Actions" class="row-actions min-w-44 gap-3">
 							<Button
 								variant="outline"
 								size="sm"

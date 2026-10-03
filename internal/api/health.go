@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 )
@@ -40,14 +41,20 @@ type readinessChecker interface {
 	Ready(ctx context.Context) error
 }
 
-// handleReady answers 200 when the store can serve a request and 503 when
-// it can't. /healthz stays unconditional for anything that only wants to
-// know the process is up; this is what the container's own health check
-// asks.
-func handleReady(s readinessChecker) http.HandlerFunc {
+// handleReady answers 200 when the process should be sent requests and 503
+// when it shouldn't: the store can't serve one, or the server is draining
+// ahead of a shutdown. /healthz stays unconditional for anything that only
+// wants to know the process is up; this is what the container's own health
+// check asks.
+func handleReady(ready *Readiness) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := s.Ready(r.Context()); err != nil {
-			slog.WarnContext(r.Context(), "not ready", "error", err)
+		if err := ready.check(r.Context()); err != nil {
+			// A drain is expected and every prober asks during it; logging each
+			// one would be noise. A real failure is worth a line.
+			if !errors.Is(err, errDraining) {
+				slog.WarnContext(r.Context(), "not ready", "error", err)
+			}
+
 			writeJSON(w, http.StatusServiceUnavailable, Ready{Status: "unavailable"})
 
 			return

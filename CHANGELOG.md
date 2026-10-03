@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.58.1](https://github.com/alrayyes/Hush-Hush/compare/v2.58.0...v2.58.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* bump vitest ([#627](https://github.com/alrayyes/Hush-Hush/issues/627)) ([40fd452](https://github.com/alrayyes/Hush-Hush/commit/40fd4522690a180a88c4758275bbbddb6fb1d7fe))
+
+## [2.58.0](https://github.com/alrayyes/Hush-Hush/compare/v2.57.1...v2.58.0) (2026-10-03)
+
+
+### Features
+
+* **health:** bound and cache the readiness probe, and drain before shutting down ([#612](https://github.com/alrayyes/Hush-Hush/issues/612)) ([e1147b0](https://github.com/alrayyes/Hush-Hush/commit/e1147b0c824dd8288dbc1d175f522cad3bb60ac2)), closes [#592](https://github.com/alrayyes/Hush-Hush/issues/592)
+
+## [2.57.1](https://github.com/alrayyes/Hush-Hush/compare/v2.57.0...v2.57.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* bump alrayyes/hush-hush ([#624](https://github.com/alrayyes/Hush-Hush/issues/624)) ([6a36ed0](https://github.com/alrayyes/Hush-Hush/commit/6a36ed088f8709843af313a06044d2a3d1d7849e))
+
+## [2.57.0](https://github.com/alrayyes/Hush-Hush/compare/v2.56.0...v2.57.0) (2026-10-03)
+
+
+### Features
+
+* **logging:** log one structured line per request ([#607](https://github.com/alrayyes/Hush-Hush/issues/607)) ([b888f06](https://github.com/alrayyes/Hush-Hush/commit/b888f069fb6be5bfe338ca7192af588f81b83385)), closes [#591](https://github.com/alrayyes/Hush-Hush/issues/591)
+
+
+### Bug Fixes
+
+* bump the minor-and-patch group across 1 directory with 11 updates ([#610](https://github.com/alrayyes/Hush-Hush/issues/610)) ([50e4de0](https://github.com/alrayyes/Hush-Hush/commit/50e4de0bed33dba341dba8e7313cd2d5e453d693))
+
 ## [2.56.0](https://github.com/alrayyes/Hush-Hush/compare/v2.55.1...v2.56.0) (2026-10-03)
 
 

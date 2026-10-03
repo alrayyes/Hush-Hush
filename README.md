@@ -180,6 +180,12 @@ for, so it has no `init` command and no config file:
 have to be run against the file (or, in a container, inside the container)
 the server they're managing tokens for is actually using.
 
+The server writes JSON logs to stdout, one `request` line per request with
+`method`, `path`, `status`, `duration_ms` and `remote`. The level follows the
+response: 5xx is `ERROR`, 4xx is `WARN`, anything else `INFO`, and a healthy
+`/healthz` or `/readyz` probe is `DEBUG`, so a poller doesn't fill the log. A
+line never carries the query string, a header, a cookie or a body.
+
 See [`hush-hush-cli`'s own README](https://github.com/alrayyes/hush-hush-cli#configuration)
 for the client's configuration - a different shape, since it's run
 interactively by a person rather than deployed as a service.
@@ -205,7 +211,11 @@ docker exec hush-hush /hush-hush token issue --description "trying it out"
 
 The image's own health check asks `GET /readyz`, which fails when the
 database can't serve a request, so `docker ps` shows the container as
-`unhealthy` instead of up. `/healthz` only says the process is running.
+`unhealthy` instead of up. `/healthz` only says the process is running. On
+`docker stop` the server answers 503 on `/readyz` first and keeps serving for
+3 seconds before it stops accepting connections, then lets in-flight requests
+finish, so a load balancer in front has time to take it out of rotation. That
+fits inside the default 10-second grace period `docker stop` allows.
 
 The image is `distroless/static-debian12` - there's no shell in it, so
 `docker exec -ti <container> sh` has nothing to run. `docker exec` only
