@@ -101,6 +101,15 @@ and commit lint, and the release are never filtered.
 When you add a job, list the files it covers in the filters under `changes`
 and gate the job on that output. Otherwise it runs on every pull request.
 
+`scripts/test-ci.ts` (`bun run test:ci`, run by CI's `ci-config` job and the
+pre-push hook) tests that wiring. It has one case per path saying which jobs
+should run, checks the pre-push hook runs the same ones, and checks the lists
+that go stale quietly: the `needs:` lists, the `golang` image pins, and the
+`pact-go` version against `go.mod`. When you add a job or
+a filter, add a case for it. A job reads more than its name suggests, which is
+how `.editorconfig` went unlisted for the prose job even though prettier reads
+it.
+
 The pre-push hook filters the same way. Each job in `lefthook.yml`'s `pre-push`
 section carries a `glob:` copied from the matching filter, with a comment
 naming it, so pushing only a README runs the prose checks and no Go. Editing
