@@ -21,7 +21,7 @@
     "@redocly/cli": "2.57.0",
     "lefthook": "2.1.15",
     "markdownlint-cli2": "0.23.3",
-    "picomatch": "2.3.2",
+    "picomatch": "4.0.7",
     "prettier": "3.9.9",
     "sort-package-json": "4.0.0"
   },
