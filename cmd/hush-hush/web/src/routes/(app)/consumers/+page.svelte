@@ -10,6 +10,7 @@ import {
 	deleteConsumer,
 	renameConsumer,
 } from '$lib/api';
+import { createCopier } from '$lib/clipboard';
 import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -47,22 +48,8 @@ function applyFilter() {
 let copiedConsumer: string | null = $state(null);
 let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
-async function copyKey(name: string, key: string) {
-	try {
-		await navigator.clipboard.writeText(key);
-	} catch {
-		// Clipboard blocked or unavailable: leave the label alone rather
-		// than claim a copy that didn't happen.
-		return;
-	}
-	clearTimeout(copiedTimer);
-	copiedConsumer = name;
-	copiedTimer = setTimeout(() => {
-		copiedConsumer = null;
-	}, 1500);
-}
-
-onDestroy(() => clearTimeout(copiedTimer));
+const copier = createCopier<string>((name) => (copiedConsumer = name));
+onDestroy(copier.dispose);
 
 function plural(count: number, noun: string): string {
 	return `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -241,7 +228,7 @@ async function confirmDelete() {
 								aria-label={copiedConsumer === consumer.name
 									? `Copied public key ${consumer.name}`
 									: `Copy public key ${consumer.name}`}
-								onclick={() => copyKey(consumer.name, publicKey)}
+								onclick={() => copier.copy(consumer.name, publicKey)}
 							>
 								{#if copiedConsumer === consumer.name}
 									<CheckIcon aria-hidden="true" />

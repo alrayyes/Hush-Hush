@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
 import { imageTag, parseChangelog, releaseUrl } from '$lib/changelog';
+import { createCopier } from '$lib/clipboard';
 import { Button } from '$lib/components/ui/button/index.js';
 import type { PageData } from './$types';
 
@@ -20,24 +21,8 @@ function badgeClass(badge: string): string {
 // Which release's copy button is showing "Copied", and the timer that
 // reverts it. One slot, so a newer copy replaces an older one.
 let copiedVersion: string | null = $state(null);
-let copiedTimer: ReturnType<typeof setTimeout> | undefined;
-
-async function copyTag(version: string) {
-	try {
-		await navigator.clipboard.writeText(imageTag(version));
-	} catch {
-		// Clipboard blocked or unavailable: leave the label alone rather
-		// than claim a copy that didn't happen.
-		return;
-	}
-	clearTimeout(copiedTimer);
-	copiedVersion = version;
-	copiedTimer = setTimeout(() => {
-		copiedVersion = null;
-	}, 1500);
-}
-
-onDestroy(() => clearTimeout(copiedTimer));
+const copier = createCopier<string>((version) => (copiedVersion = version));
+onDestroy(copier.dispose);
 </script>
 
 <svelte:head>
@@ -85,7 +70,7 @@ onDestroy(() => clearTimeout(copiedTimer));
 							aria-label={copiedVersion === release.version
 								? `Copied image tag for ${release.version}`
 								: `Copy image tag for ${release.version}`}
-							onclick={() => copyTag(release.version)}
+							onclick={() => copier.copy(release.version, imageTag(release.version))}
 						>
 							{copiedVersion === release.version ? 'Copied' : 'Copy'}
 						</Button>
