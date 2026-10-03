@@ -84,7 +84,7 @@ func TestCreateObjectRoundTripsThroughStorageUnchanged(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	sealed := []byte("sealed-ciphertext")
+	sealed := sealedFixture
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
 		Slug:   "mattermost_deploy_webhook",
@@ -116,7 +116,7 @@ func TestCreateObjectWithDescriptionReturnsItInMetadata(t *testing.T) {
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
 		Slug:        "mattermost_deploy_webhook",
-		Value:       []byte("sealed-ciphertext"),
+		Value:       sealedFixture,
 		Description: "prod deploy webhook",
 	}, issueToken(t, s))
 
@@ -135,7 +135,7 @@ func TestCreateObjectWithoutBearerTokenIsRejected(t *testing.T) {
 
 	mux, _ := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, "")
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: sealedFixture}, "")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
@@ -151,7 +151,7 @@ func TestCreateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 
 	mux, _ := newTestMux(t)
 
-	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: []byte("v")}, "wrong-token")
+	req := createRequest(t, hushhush.CreateObjectRequest{Slug: "x", Value: sealedFixture}, "wrong-token")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
@@ -164,10 +164,10 @@ func TestCreateObjectDuplicateIDConflicts(t *testing.T) {
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
 
-	first := createRequest(t, hushhush.CreateObjectRequest{Slug: "dup", Value: []byte("v1")}, token)
+	first := createRequest(t, hushhush.CreateObjectRequest{Slug: "dup", Value: sealedFixture}, token)
 	mux.ServeHTTP(httptest.NewRecorder(), first)
 
-	second := createRequest(t, hushhush.CreateObjectRequest{Slug: "dup", Value: []byte("v2")}, token)
+	second := createRequest(t, hushhush.CreateObjectRequest{Slug: "dup", Value: sealedFixtureNew}, token)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, second)
 
@@ -183,7 +183,7 @@ func TestCreateObjectValueIsBase64EncodedOverTheWire(t *testing.T) {
 
 	mux, s := newTestMux(t)
 
-	raw := []byte("sealed-ciphertext")
+	raw := sealedFixture
 	payload := struct {
 		Slug  string `json:"slug"`
 		Value string `json:"value"`
@@ -214,7 +214,7 @@ func TestCreateObjectOwnerOptsInToKeepAReadableCopy(t *testing.T) {
 	mux, s := newTestMux(t)
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
-		Slug: "grafana_admin_password", Value: []byte("sealed-ciphertext"),
+		Slug: "grafana_admin_password", Value: sealedFixture,
 		KeepReadableCopy: true,
 	}, issueToken(t, s))
 
@@ -240,7 +240,7 @@ func TestCreateObjectOwnerRecipientIsNotTheDefault(t *testing.T) {
 	mux, s := newTestMux(t)
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
-		Slug: "mattermost_deploy_webhook", Value: []byte("sealed-ciphertext"),
+		Slug: "mattermost_deploy_webhook", Value: sealedFixture,
 	}, issueToken(t, s))
 
 	rec := httptest.NewRecorder()
@@ -266,7 +266,7 @@ func TestCreateObjectRecordsOwnerFromTheCreatingSession(t *testing.T) {
 	mux, s := newTestMux(t)
 
 	req := createRequest(t, hushhush.CreateObjectRequest{
-		Slug: "mattermost_deploy_webhook", Value: []byte("sealed-ciphertext"),
+		Slug: "mattermost_deploy_webhook", Value: sealedFixture,
 	}, issueToken(t, s))
 
 	rec := httptest.NewRecorder()

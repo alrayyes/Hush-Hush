@@ -153,14 +153,14 @@ func TestMCPInjectCreatesAnObjectAndRecordsAnAuditEntry(t *testing.T) {
 
 	result := callTool(t, mux, token, "inject", map[string]any{
 		"slug":    "mcp_inject_target",
-		"value":   []byte("sealed-ciphertext"),
+		"value":   sealedFixture,
 		"used_by": []string{"homelab/vps-docker"},
 	})
 	require.False(t, result.IsError, "content: %+v", result.Content)
 
 	obj, err := s.GetObject(context.Background(), "mcp_inject_target")
 	require.NoError(t, err)
-	require.Equal(t, []byte("sealed-ciphertext"), obj.Value)
+	require.Equal(t, sealedFixture, obj.Value)
 
 	entries, err := s.QueryAuditLog(context.Background(), store.AuditLogFilter{ObjectID: "mcp_inject_target"})
 	require.NoError(t, err)
@@ -175,11 +175,11 @@ func TestMCPInjectDuplicateIDIsAToolError(t *testing.T) {
 	mux, s := newTestMux(t)
 	token := issueToken(t, s)
 
-	args := map[string]any{"slug": "mcp_dup", "value": []byte("v1")}
+	args := map[string]any{"slug": "mcp_dup", "value": sealedFixture}
 	first := callTool(t, mux, token, "inject", args)
 	require.False(t, first.IsError)
 
-	second := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_dup", "value": []byte("v2")})
+	second := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_dup", "value": sealedFixtureNew})
 	require.True(t, second.IsError)
 }
 
@@ -197,7 +197,7 @@ func TestMCPGetReturnsTheSealedValueAndRecordsAnAuditEntry(t *testing.T) {
 		Value []byte `json:"value"`
 	}
 	require.NoError(t, json.Unmarshal(result.StructuredContent, &out))
-	require.Equal(t, []byte("sealed-ciphertext"), out.Value)
+	require.Equal(t, sealedFixture, out.Value)
 
 	entries, err := s.QueryAuditLog(context.Background(), store.AuditLogFilter{ObjectID: "mcp_get_target"})
 	require.NoError(t, err)
@@ -225,13 +225,13 @@ func TestMCPUpdateReplacesTheValue(t *testing.T) {
 	seedObject(t, s, "mcp_update_target")
 
 	result := callTool(t, mux, token, "update", map[string]any{
-		"slug": "mcp_update_target", "value": []byte("new-sealed-value"),
+		"slug": "mcp_update_target", "value": sealedFixtureNew,
 	})
 	require.False(t, result.IsError, "content: %+v", result.Content)
 
 	obj, err := s.GetObject(context.Background(), "mcp_update_target")
 	require.NoError(t, err)
-	require.Equal(t, []byte("new-sealed-value"), obj.Value)
+	require.Equal(t, sealedFixtureNew, obj.Value)
 }
 
 func TestMCPDeleteRemovesTheObject(t *testing.T) {
@@ -280,7 +280,7 @@ func TestMCPInjectUpdateAndListCarryTags(t *testing.T) {
 
 	result := callTool(t, mux, token, "inject", map[string]any{
 		"slug":  "mcp_tagged",
-		"value": []byte("sealed"),
+		"value": sealedFixture,
 		"tags":  []string{"prod"},
 	})
 	require.False(t, result.IsError, "content: %+v", result.Content)
@@ -291,7 +291,7 @@ func TestMCPInjectUpdateAndListCarryTags(t *testing.T) {
 
 	result = callTool(t, mux, token, "update", map[string]any{
 		"slug":  "mcp_tagged",
-		"value": []byte("sealed2"),
+		"value": sealedFixtureNew,
 		"tags":  []string{"homelab"},
 	})
 	require.False(t, result.IsError, "content: %+v", result.Content)
@@ -315,7 +315,7 @@ func TestMCPInjectWithInvalidTagIsAToolError(t *testing.T) {
 
 	result := callTool(t, mux, issueToken(t, s), "inject", map[string]any{
 		"slug":  "mcp_bad_tag",
-		"value": []byte("sealed"),
+		"value": sealedFixture,
 		"tags":  []string{"no way"},
 	})
 	require.True(t, result.IsError)

@@ -13,7 +13,7 @@
             "used_by": [
               "homelab/vps-docker"
             ],
-            "value": "c2VhbGVkLWNpcGhlcnRleHQ="
+            "value": "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBaVnRKUm12eVpWa0tteUFiUWpWVXZFUkhhSFlnWnhPUnlwZGZUandQV1Y0CmNldUVrc1U1NWsvcXFaTFJLT0M3YlNrTVluMU9QbEdvWFFUSTBTUHJCWmcKLS0tIFgvYlNMUkhHZEJFcXA2Y04rTkZBblhPZ2tsYk9HMGdOblpzSERoOEVGZXcKchHAR2Exz22zBu9KUNRuf5NR3p6n4D5lvPSrfd8THrWmYR+hzg/WcYqaKFPGj7cl1iUW96W+Qt+zxJOC18e/"
           },
           "contentType": "application/json",
           "encoded": false
@@ -117,7 +117,7 @@
       "request": {
         "body": {
           "content": {
-            "value": "bmV3LXNlYWxlZC1jaXBoZXJ0ZXh0"
+            "value": "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBvMCtHUk0zVXZYdmc0YmhzeElGZzhuYitnMUNIOXhLZjhnUExYQ3k0ZEdrCmdvc2lubGdpZFRVSVBMcEcybURPSGJ6V1BMbFVXZ2I0UTdVK0phT0lHeFEKLS0tIGpwVzM4aHB2SXhqZVdsaGpKRDV2QkQ2T00ydGN6dVIyMnlRNFQ3anY3UEEKgQMrW5F/z7YTkftYouYPySuv2kz+xqO4AQN16pehllGoiN7/vQSNPqk5j07oOclfZS8ERWaabWhWM4cKoim4"
           },
           "contentType": "application/json",
           "encoded": false

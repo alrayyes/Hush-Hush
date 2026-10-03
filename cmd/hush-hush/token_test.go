@@ -143,3 +143,55 @@ func TestTokenRevokeUnknownIDFails(t *testing.T) {
 
 	require.Error(t, root.Execute())
 }
+
+// The local token commands mint straight into the store, so they have to
+// hold the same lifetime limit the HTTP API does (alrayyes/hush-hush#537).
+func TestTokenIssueRejectsATTLAboveTheMaximum(t *testing.T) {
+	path := dbPath(t)
+
+	root := newRootCmd()
+	root.SetArgs([]string{"token", "issue", "--description", "too long", "--ttl", "8761h"})
+	root.SetOut(new(bytes.Buffer))
+	root.SetErr(new(bytes.Buffer))
+
+	err := root.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "8760h", "the message should name the limit")
+
+	s, openErr := store.Open(path)
+	require.NoError(t, openErr)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+	tokens, listErr := s.ListWriteTokens(t.Context())
+	require.NoError(t, listErr)
+	require.Empty(t, tokens, "a rejected TTL must mint nothing")
+}
+
+func TestTokenIssueAcceptsATTLAtTheMaximum(t *testing.T) {
+	dbPath(t)
+
+	root := newRootCmd()
+	root.SetArgs([]string{"token", "issue", "--description", "a year", "--ttl", "8760h"})
+	root.SetOut(new(bytes.Buffer))
+	require.NoError(t, root.Execute())
+}
+
+func TestTokenRotateRejectsATTLAboveTheMaximum(t *testing.T) {
+	path := dbPath(t)
+
+	s, err := store.Open(path)
+	require.NoError(t, err)
+	wt, _, err := s.CreateWriteToken(t.Context(), "a", time.Hour, "")
+	require.NoError(t, err)
+	require.NoError(t, s.Close())
+
+	viper.Reset()
+	t.Setenv("DB_PATH", path)
+	root := newRootCmd()
+	root.SetArgs([]string{"token", "rotate", wt.ID, "--ttl", "8761h"})
+	root.SetOut(new(bytes.Buffer))
+	root.SetErr(new(bytes.Buffer))
+
+	err = root.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "8760h")
+}

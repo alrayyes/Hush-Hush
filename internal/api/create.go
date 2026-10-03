@@ -81,18 +81,36 @@ type Error struct {
 	Error string `json:"error"`
 }
 
+// readCreateRequest decodes a create body and checks it. When it isn't
+// acceptable it has already answered the caller, and returns false.
+func readCreateRequest(w http.ResponseWriter, r *http.Request) (CreateObjectRequest, bool) {
+	var req CreateObjectRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		status, message := decodeFailure(err)
+		writeError(w, r, status, message)
+
+		return req, false
+	}
+
+	if req.Slug == "" || len(req.Value) == 0 {
+		writeError(w, r, http.StatusBadRequest, "slug and value are required")
+
+		return req, false
+	}
+
+	if err := validateAgeCiphertext(req.Value); err != nil {
+		writeError(w, r, http.StatusUnprocessableEntity, err.Error())
+
+		return req, false
+	}
+
+	return req, true
+}
+
 func handleCreateObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req CreateObjectRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, r, http.StatusBadRequest, "malformed request body")
-
-			return
-		}
-
-		if req.Slug == "" || len(req.Value) == 0 {
-			writeError(w, r, http.StatusBadRequest, "slug and value are required")
-
+		req, ok := readCreateRequest(w, r)
+		if !ok {
 			return
 		}
 

@@ -65,15 +65,18 @@ running the same binary again, directly against that database file:
 ```
 
 Any number of tokens can be valid at once, each with its own description
-and expiry (`--ttl`, default 90 days) - `hush-hush token list` shows what's
-issued, `hush-hush token revoke <id>` invalidates one without touching the
-others, and `hush-hush token rotate <id> --ttl <duration>` replaces a
-token's secret and expiry in place, keeping its id and description - the
-old secret stops working immediately, and the new one is shown once, the
-same as `token issue`. Issuing a token has no HTTP endpoint: minting the
-credential that authenticates the write path can't itself need a token to
-call over the network, so `token issue` is direct store access instead,
-same as the server's own `DB_PATH`. Listing, revoking, and rotating a
+and expiry (`--ttl`, default 90 days, at most 365) - `hush-hush token list`
+shows what's issued, `hush-hush token revoke <id>` invalidates one without
+touching the others, and `hush-hush token rotate <id> --ttl <duration>`
+replaces a token's secret and expiry in place, keeping its id and
+description - the old secret stops working immediately, and the new one is
+shown once, the same as `token issue`. The same limit holds over HTTP, where
+a `ttl_seconds` over 365 days is a 422 and an omitted one gets the 90-day
+default; a token issued before the limit existed keeps working until it
+expires. Issuing a token has no HTTP endpoint: minting the credential that
+authenticates the write path can't itself need a token to call over the
+network, so `token issue` is direct store access instead, same as the
+server's own `DB_PATH`. Listing, revoking, and rotating a
 token, by contrast, are also available over HTTP once a session is logged
 in - the web UI's settings page uses these.
 
@@ -120,7 +123,9 @@ meant to do all five operations rather than five independently gated
 tools ([`docs/adr/0019-mcp-endpoint.md`](docs/adr/0019-mcp-endpoint.md)).
 `value` is base64-encoded sealed (age) ciphertext on both sides of a tool
 call, the same wire convention `api/openapi.yaml` already uses - this
-server never decrypts it. [`api/openapi.yaml`](api/openapi.yaml)
+server never decrypts it, though it does read the age header and refuses a
+value that isn't a well-formed age file ([`docs/adr/0028-server-reads-the-age-header-and-nothing-more.md`](docs/adr/0028-server-reads-the-age-header-and-nothing-more.md)).
+[`api/openapi.yaml`](api/openapi.yaml)
 documents the route's existence and auth requirement; the actual per-tool
 schemas come from a running server's own `tools/list` call, not the spec.
 

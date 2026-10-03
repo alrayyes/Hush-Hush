@@ -41,7 +41,7 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), []string{"homelab/vps-docker"}, "", ""))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), issueToken(t, s)))
+	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", sealedFixtureNew, issueToken(t, s)))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -52,7 +52,7 @@ func TestUpdateObjectReplacesValuePreservingIDAndUsedBy(t *testing.T) {
 
 	obj, err := s.GetObject(ctx, "mattermost_deploy_webhook")
 	require.NoError(t, err)
-	require.Equal(t, []byte("new"), obj.Value)
+	require.Equal(t, sealedFixtureNew, obj.Value)
 	require.Equal(t, []string{"homelab/vps-docker"}, obj.UsedBy)
 }
 
@@ -64,7 +64,7 @@ func TestUpdateObjectPreservesDescription(t *testing.T) {
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "prod deploy webhook", ""))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), issueToken(t, s)))
+	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", sealedFixtureNew, issueToken(t, s)))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -82,7 +82,7 @@ func TestUpdateObjectReplacesUsedByWhenGiven(t *testing.T) {
 
 	usedBy := []string{"ci", "homelab/nas"}
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequestWithUsedBy(t, "mattermost_deploy_webhook", []byte("new"), &usedBy, issueToken(t, s)))
+	mux.ServeHTTP(rec, updateRequestWithUsedBy(t, "mattermost_deploy_webhook", sealedFixtureNew, &usedBy, issueToken(t, s)))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -104,7 +104,7 @@ func TestUpdateObjectCanClearUsedByWithEmptyArray(t *testing.T) {
 
 	empty := []string{}
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequestWithUsedBy(t, "mattermost_deploy_webhook", []byte("new"), &empty, issueToken(t, s)))
+	mux.ServeHTTP(rec, updateRequestWithUsedBy(t, "mattermost_deploy_webhook", sealedFixtureNew, &empty, issueToken(t, s)))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -127,7 +127,7 @@ func TestUpdateObjectOwnerOptsInToKeepAReadableCopy(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "", ""))
 
-	body, err := json.Marshal(hushhush.UpdateObjectRequest{Value: []byte("new"), KeepReadableCopy: true})
+	body, err := json.Marshal(hushhush.UpdateObjectRequest{Value: sealedFixtureNew, KeepReadableCopy: true})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPut, "/objects/mattermost_deploy_webhook", bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -150,7 +150,7 @@ func TestUpdateObjectOwnerRecipientIsNotTheDefault(t *testing.T) {
 	require.NoError(t, s.CreateObject(ctx, "mattermost_deploy_webhook", []byte("old"), nil, "", ""))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", []byte("new"), issueToken(t, s)))
+	mux.ServeHTTP(rec, updateRequest(t, "mattermost_deploy_webhook", sealedFixtureNew, issueToken(t, s)))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -165,7 +165,7 @@ func TestUpdateObjectUnknownIDReturnsNotFound(t *testing.T) {
 	mux, s := newTestMux(t)
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "nope", []byte("v"), issueToken(t, s)))
+	mux.ServeHTTP(rec, updateRequest(t, "nope", sealedFixture, issueToken(t, s)))
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
@@ -174,10 +174,10 @@ func TestUpdateObjectWithoutBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "x", sealedFixture, nil, "", ""))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "x", []byte("new"), ""))
+	mux.ServeHTTP(rec, updateRequest(t, "x", sealedFixtureNew, ""))
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
@@ -186,10 +186,10 @@ func TestUpdateObjectWithWrongBearerTokenIsRejected(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
-	require.NoError(t, s.CreateObject(context.Background(), "x", []byte("v"), nil, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "x", sealedFixture, nil, "", ""))
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateRequest(t, "x", []byte("new"), "wrong-token"))
+	mux.ServeHTTP(rec, updateRequest(t, "x", sealedFixtureNew, "wrong-token"))
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }

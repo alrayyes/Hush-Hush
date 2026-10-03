@@ -176,6 +176,10 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
 		}
 
+		if err := validateAgeCiphertext(value); err != nil {
+			return nil, ObjectMetadata{}, err
+		}
+
 		tags, err := createTags(in.Tags)
 		if err != nil {
 			return nil, ObjectMetadata{}, err
@@ -238,6 +242,10 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 		value, err := base64.StdEncoding.DecodeString(in.Value)
 		if err != nil {
 			return nil, ObjectMetadata{}, errMCPValueNotBase64
+		}
+
+		if err := validateAgeCiphertext(value); err != nil {
+			return nil, ObjectMetadata{}, err
 		}
 
 		opts, err := updateTagOptions(in.Tags)

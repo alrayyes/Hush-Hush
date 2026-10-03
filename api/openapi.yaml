@@ -190,9 +190,11 @@ paths:
       description: |
         Stores an already-sealed value under a new, caller-chosen slug -
         the object's own internal id is generated server-side and never
-        returned as something addressable. The value is opaque ciphertext
-        to this service - it is never decrypted, and the service has no
-        notion of which recipients it was sealed to. A session-
+        returned as something addressable. The service never decrypts the
+        value, and it can't know how many recipients it was sealed to or
+        whether any key is right. It does read the age header: a value
+        that isn't base64 of a well-formed age file, or whose header
+        names no recipient, is a 422 and nothing is stored. A session-
         authenticated call needs its CSRF token too; a bearer-token-
         authenticated one doesn't, since there's no session to have one.
       tags: [objects]
@@ -221,6 +223,8 @@ paths:
                 $ref: "#/components/schemas/ObjectMetadata"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "409":
           description: An object already exists under that slug.
           content:
@@ -273,7 +277,10 @@ paths:
       operationId: updateObject
       summary: Rotate an object's value
       description: |
-        Replaces the stored ciphertext for an existing object. The
+        Replaces the stored ciphertext for an existing object. The new
+        value is checked the same way a created one is: not base64 of a
+        well-formed age file, or no recipient in its header, is a 422
+        and the stored value is left alone. The
         object's slug and description metadata are always preserved
         unchanged. used_by is preserved too, unless the request body
         includes it - in which case it fully replaces the object's
@@ -305,6 +312,8 @@ paths:
                 $ref: "#/components/schemas/ObjectMetadata"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1048,6 +1057,8 @@ paths:
                 $ref: "#/components/schemas/TokenWithValue"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -1133,6 +1144,8 @@ paths:
                 $ref: "#/components/schemas/TokenWithValue"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -1204,6 +1217,8 @@ paths:
                 $ref: "#/components/schemas/ConsumerTokenWithValue"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -1292,6 +1307,8 @@ paths:
                 $ref: "#/components/schemas/ConsumerTokenWithValue"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -1473,6 +1490,17 @@ components:
           example:
             error: from must be RFC 3339
 
+    UnprocessableEntity:
+      description: |
+        The request parsed, but a value in it is outside what the API
+        allows. The message names the limit or the problem.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: ttl_seconds must be at most 31536000 (365 days)
+
     Unauthorized:
       description: The request is missing a valid bearer token.
       content:
@@ -1544,7 +1572,10 @@ components:
         value:
           type: string
           format: byte
-          description: The sealed (encrypted) value, base64-encoded.
+          description: |
+            The sealed (encrypted) value, base64-encoded. It has to be a
+            well-formed age file naming at least one recipient; the
+            service reads only its header, never the payload.
         used_by:
           $ref: "#/components/schemas/UsedByList"
         tags:
@@ -1561,7 +1592,10 @@ components:
         value:
           type: string
           format: byte
-          description: The new sealed (encrypted) value, base64-encoded.
+          description: |
+            The new sealed (encrypted) value, base64-encoded. It has to be
+            a well-formed age file naming at least one recipient; the
+            service reads only its header, never the payload.
         used_by:
           allOf:
             - $ref: "#/components/schemas/UsedByList"
@@ -2037,6 +2071,25 @@ components:
       pattern: "^[0-9a-f]{16}$"
       examples: [a1b2c3d4e5f6a7b8]
 
+    TokenTtlSeconds:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 31536000
+      default: 7776000
+      description: |
+        How long a token stays valid for, starting now. The default is 90
+        days (7776000), and the cap is 365 days (31536000): a longer
+        lifetime is a 422 that names the limit. A zero or negative value is
+        a 400. The cap applies when a token is minted or rotated; a token
+        issued before it existed keeps working until it expires.
+
+        The field stays `required` so generated clients keep a plain
+        integer rather than an optional one, which would change their types
+        for a limit they don't need. A request that leaves it out anyway is
+        given the default rather than rejected.
+      examples: [7776000]
+
     CreateTokenRequest:
       type: object
       required: [description, ttl_seconds]
@@ -2045,11 +2098,7 @@ components:
           type: string
           examples: [web UI test token]
         ttl_seconds:
-          type: integer
-          format: int64
-          minimum: 1
-          description: How long the token stays valid for, starting now.
-          examples: [7776000]
+          $ref: "#/components/schemas/TokenTtlSeconds"
 
     TokenMetadata:
       type: object
@@ -2110,11 +2159,7 @@ components:
       required: [ttl_seconds]
       properties:
         ttl_seconds:
-          type: integer
-          format: int64
-          minimum: 1
-          description: How long the rotated token stays valid for, starting now.
-          examples: [7776000]
+          $ref: "#/components/schemas/TokenTtlSeconds"
 
     TokenWithValue:
       allOf:
@@ -2151,11 +2196,7 @@ components:
           type: string
           examples: [deploy read token]
         ttl_seconds:
-          type: integer
-          format: int64
-          minimum: 1
-          description: How long the token stays valid for, starting now.
-          examples: [7776000]
+          $ref: "#/components/schemas/TokenTtlSeconds"
 
     ConsumerTokenMetadata:
       type: object
@@ -2189,11 +2230,7 @@ components:
       required: [ttl_seconds]
       properties:
         ttl_seconds:
-          type: integer
-          format: int64
-          minimum: 1
-          description: How long the rotated token stays valid for, starting now.
-          examples: [7776000]
+          $ref: "#/components/schemas/TokenTtlSeconds"
 
     ConsumerTokenWithValue:
       allOf:

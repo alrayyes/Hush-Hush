@@ -77,9 +77,11 @@ export interface paths {
          * Create a new sealed object
          * @description Stores an already-sealed value under a new, caller-chosen slug -
          *     the object's own internal id is generated server-side and never
-         *     returned as something addressable. The value is opaque ciphertext
-         *     to this service - it is never decrypted, and the service has no
-         *     notion of which recipients it was sealed to. A session-
+         *     returned as something addressable. The service never decrypts the
+         *     value, and it can't know how many recipients it was sealed to or
+         *     whether any key is right. It does read the age header: a value
+         *     that isn't base64 of a well-formed age file, or whose header
+         *     names no recipient, is a 422 and nothing is stored. A session-
          *     authenticated call needs its CSRF token too; a bearer-token-
          *     authenticated one doesn't, since there's no session to have one.
          */
@@ -116,7 +118,10 @@ export interface paths {
         get: operations["getObject"];
         /**
          * Rotate an object's value
-         * @description Replaces the stored ciphertext for an existing object. The
+         * @description Replaces the stored ciphertext for an existing object. The new
+         *     value is checked the same way a created one is: not base64 of a
+         *     well-formed age file, or no recipient in its header, is a 422
+         *     and the stored value is left alone. The
          *     object's slug and description metadata are always preserved
          *     unchanged. used_by is preserved too, unless the request body
          *     includes it - in which case it fully replaces the object's
@@ -793,7 +798,9 @@ export interface components {
             slug: components["schemas"]["ObjectSlug"];
             /**
              * Format: byte
-             * @description The sealed (encrypted) value, base64-encoded.
+             * @description The sealed (encrypted) value, base64-encoded. It has to be a
+             *     well-formed age file naming at least one recipient; the
+             *     service reads only its header, never the payload.
              */
             value: string;
             used_by?: components["schemas"]["UsedByList"];
@@ -804,7 +811,9 @@ export interface components {
         UpdateObjectRequest: {
             /**
              * Format: byte
-             * @description The new sealed (encrypted) value, base64-encoded.
+             * @description The new sealed (encrypted) value, base64-encoded. It has to be
+             *     a well-formed age file naming at least one recipient; the
+             *     service reads only its header, never the payload.
              */
             value: string;
             /**
@@ -1185,15 +1194,26 @@ export interface components {
         };
         /** @example a1b2c3d4e5f6a7b8 */
         TokenId: string;
+        /**
+         * Format: int64
+         * @description How long a token stays valid for, starting now. The default is 90
+         *     days (7776000), and the cap is 365 days (31536000): a longer
+         *     lifetime is a 422 that names the limit. A zero or negative value is
+         *     a 400. The cap applies when a token is minted or rotated; a token
+         *     issued before it existed keeps working until it expires.
+         *
+         *     The field stays `required` so generated clients keep a plain
+         *     integer rather than an optional one, which would change their types
+         *     for a limit they don't need. A request that leaves it out anyway is
+         *     given the default rather than rejected.
+         * @default 7776000
+         * @example 7776000
+         */
+        TokenTtlSeconds: number;
         CreateTokenRequest: {
             /** @example web UI test token */
             description: string;
-            /**
-             * Format: int64
-             * @description How long the token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         TokenMetadata: {
             id: components["schemas"]["TokenId"];
@@ -1236,12 +1256,7 @@ export interface components {
          */
         TokenAllowedActions: ("rotate" | "revoke" | "purge")[];
         RotateTokenRequest: {
-            /**
-             * Format: int64
-             * @description How long the rotated token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         TokenWithValue: components["schemas"]["TokenMetadata"] & {
             /**
@@ -1265,12 +1280,7 @@ export interface components {
             consumer: string;
             /** @example deploy read token */
             description: string;
-            /**
-             * Format: int64
-             * @description How long the token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         ConsumerTokenMetadata: {
             id: components["schemas"]["ConsumerTokenId"];
@@ -1290,12 +1300,7 @@ export interface components {
             allowed_actions?: components["schemas"]["TokenAllowedActions"];
         };
         RotateConsumerTokenRequest: {
-            /**
-             * Format: int64
-             * @description How long the rotated token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         ConsumerTokenWithValue: components["schemas"]["ConsumerTokenMetadata"] & {
             /**
@@ -1315,6 +1320,23 @@ export interface components {
                 /**
                  * @example {
                  *       "error": "from must be RFC 3339"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description The request parsed, but a value in it is outside what the API
+         *     allows. The message names the limit or the problem.
+         */
+        UnprocessableEntity: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "error": "ttl_seconds must be at most 31536000 (365 days)"
                  *     }
                  */
                 "application/json": components["schemas"]["Error"];
@@ -1613,6 +1635,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getObject: {
@@ -1710,6 +1733,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     deleteObject: {
@@ -2443,6 +2467,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     revokeToken: {
@@ -2518,6 +2543,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     purgeToken: {
@@ -2614,6 +2640,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     revokeConsumerToken: {
@@ -2689,6 +2716,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     purgeConsumerToken: {

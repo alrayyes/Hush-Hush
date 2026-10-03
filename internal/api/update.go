@@ -27,6 +27,32 @@ type UpdateObjectRequest struct {
 	KeepReadableCopy bool `json:"keep_readable_copy,omitempty"`
 }
 
+// readUpdateRequest decodes an update body and checks it. When it isn't
+// acceptable it has already answered the caller, and returns false.
+func readUpdateRequest(w http.ResponseWriter, r *http.Request) (UpdateObjectRequest, bool) {
+	var req UpdateObjectRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		status, message := decodeFailure(err)
+		writeError(w, r, status, message)
+
+		return req, false
+	}
+
+	if len(req.Value) == 0 {
+		writeError(w, r, http.StatusBadRequest, "value is required")
+
+		return req, false
+	}
+
+	if err := validateAgeCiphertext(req.Value); err != nil {
+		writeError(w, r, http.StatusUnprocessableEntity, err.Error())
+
+		return req, false
+	}
+
+	return req, true
+}
+
 // handleUpdateObject replaces an object's sealed value, leaving its slug and
 // description metadata unchanged. used_by is left unchanged too unless the
 // request includes it, in which case it fully replaces the object's
@@ -34,16 +60,8 @@ type UpdateObjectRequest struct {
 // since both hand back the object's current metadata.
 func handleUpdateObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req UpdateObjectRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, r, http.StatusBadRequest, "malformed request body")
-
-			return
-		}
-
-		if len(req.Value) == 0 {
-			writeError(w, r, http.StatusBadRequest, "value is required")
-
+		req, ok := readUpdateRequest(w, r)
+		if !ok {
 			return
 		}
 
