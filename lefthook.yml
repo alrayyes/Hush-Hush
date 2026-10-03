@@ -197,6 +197,7 @@ pre-push:
     - name: golangci-lint fmt
       glob: &go-files
         - "*.go"
+        - "**/testdata/**"
         - "go.mod"
         - "go.sum"
         - ".golangci.y*ml"
@@ -405,6 +406,7 @@ pre-push:
     - name: container-integration
       glob: &container-integration-files
         - "*.go"
+        - "**/testdata/**"
         - "go.mod"
         - "go.sum"
         - ".golangci.y*ml"

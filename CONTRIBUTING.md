@@ -60,7 +60,21 @@ bun run lint:md
 bun run lint:api           # redocly lint, bare — no path argument
 bun run lint:prose         # vale
 bun run lint:mechanics     # ltex-cli-plus
+bun run test:ci            # the pipeline's own wiring (see "Which CI jobs run")
 ```
+
+The check that reads an uploaded value's age header
+(`internal/api/ciphertext.go`) is fuzzed, since it parses whatever bytes a
+client sends. Its seeds run with a plain `go test`. The fuzzing itself is a
+longer pass to run when you change that code, not on every push:
+
+```sh
+go test ./internal/api -run='^$' -fuzz=FuzzValidateAgeCiphertext -fuzztime=60s
+```
+
+An input that breaks a property is written under
+`internal/api/testdata/fuzz/`. Commit it: from then on every `go test` replays
+it.
 
 `cmd/hush-hush/web`'s own commands run from inside that directory, against
 its own `bun install` — nothing above touches it, and it touches nothing

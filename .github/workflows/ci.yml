@@ -59,6 +59,7 @@ jobs:
           filters: |
             go:
               - '**/*.go'
+              - '**/testdata/**'
               - 'go.mod'
               - 'go.sum'
               - '.golangci.y*ml'
