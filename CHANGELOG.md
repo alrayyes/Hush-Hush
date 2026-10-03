@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.54.1](https://github.com/alrayyes/Hush-Hush/compare/v2.54.0...v2.54.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **web-ui:** restore the go:embed placeholder that [#555](https://github.com/alrayyes/Hush-Hush/issues/555) and [#556](https://github.com/alrayyes/Hush-Hush/issues/556) overwrote ([#569](https://github.com/alrayyes/Hush-Hush/issues/569)) ([0487e69](https://github.com/alrayyes/Hush-Hush/commit/0487e698add05bf58b6aa53abe98a5f36fc988fb)), closes [#568](https://github.com/alrayyes/Hush-Hush/issues/568)
+
 ## [2.54.0](https://github.com/alrayyes/Hush-Hush/compare/v2.53.0...v2.54.0) (2026-10-03)
 
 
