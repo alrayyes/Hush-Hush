@@ -39,9 +39,11 @@ Full list and what each one does: [CONTRIBUTING.md](CONTRIBUTING.md).
   `go.md`'s "a server keeps everything in `internal/` and its commands in
   `cmd/`" — there's nothing here worth exporting, since the API this
   service offers is its endpoints, not its Go packages.
-- **The scaffold's `GET /widgets/{id}` placeholder is gone.** `api/openapi.yaml`
-  now describes the real secret-object endpoints (`objects`, `audit-log`),
-  implemented in `internal/api`.
+- **Vale runs through `scripts/vale.sh`**, which uses a `vale` on `PATH` and
+  otherwise the pinned `jdkato/vale` image (needs Docker). Its style packages
+  aren't committed: run `scripts/vale.sh sync` once on a fresh clone, or the
+  first commit that touches Markdown fails with `style 'Google' does not
+exist`. Don't `go install` Vale.
 - **`LICENSE` is GPL-3.0**, decided when this repo was created from the
   scaffold (the scaffold itself ships unlicensed on purpose - that's a
   decision each stamped project makes for itself).
