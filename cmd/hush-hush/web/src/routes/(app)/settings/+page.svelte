@@ -26,7 +26,7 @@ import { Label } from '$lib/components/ui/label/index.js';
 import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { formatTimestamp } from '$lib/datetime';
 import TokenCard from '$lib/TokenCard.svelte';
-import { tokenStatusLabel } from '$lib/tokens';
+import { TTL_DAYS, tokenStatusLabel, ttlDaysToSeconds } from '$lib/tokens';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -117,13 +117,13 @@ async function confirmDeleteCredential() {
 
 let createTokenOpen = $state(false);
 let tokenDescription = $state('');
-let tokenTTLDays = $state(90);
+let tokenTTLDays = $state(TTL_DAYS.default);
 let tokenError = $state('');
 let createdToken: TokenWithValue | null = $state(null);
 
 function resetTokenForm() {
 	tokenDescription = '';
-	tokenTTLDays = 90;
+	tokenTTLDays = TTL_DAYS.default;
 	tokenError = '';
 	createdToken = null;
 }
@@ -135,7 +135,7 @@ async function submitCreateToken(event: SubmitEvent) {
 	try {
 		createdToken = await createToken(
 			tokenDescription,
-			tokenTTLDays * 24 * 60 * 60,
+			ttlDaysToSeconds(tokenTTLDays),
 		);
 		await invalidate('app:settings');
 	} catch (err) {
@@ -172,13 +172,13 @@ async function confirmRevoke() {
 
 let rotateOpen = $state(false);
 let rotateId = $state('');
-let rotateTTLDays = $state(90);
+let rotateTTLDays = $state(TTL_DAYS.default);
 let rotateError = $state('');
 let rotatedToken: TokenWithValue | null = $state(null);
 
 function openRotate(id: string) {
 	rotateId = id;
-	rotateTTLDays = 90;
+	rotateTTLDays = TTL_DAYS.default;
 	rotateError = '';
 	rotatedToken = null;
 	rotateOpen = true;
@@ -189,7 +189,7 @@ async function submitRotate(event: SubmitEvent) {
 	rotateError = '';
 
 	try {
-		rotatedToken = await rotateToken(rotateId, rotateTTLDays * 24 * 60 * 60);
+		rotatedToken = await rotateToken(rotateId, ttlDaysToSeconds(rotateTTLDays));
 		await invalidate('app:settings');
 	} catch (err) {
 		rotateError = apiErrorMessage(err, 'Failed to rotate the token.');
@@ -199,7 +199,7 @@ async function submitRotate(event: SubmitEvent) {
 function closeRotate() {
 	rotateOpen = false;
 	rotateId = '';
-	rotateTTLDays = 90;
+	rotateTTLDays = TTL_DAYS.default;
 	rotateError = '';
 	rotatedToken = null;
 }
@@ -233,14 +233,14 @@ $effect(() => {
 let createConsumerTokenOpen = $state(false);
 let consumerTokenConsumer: string[] = $state([]);
 let consumerTokenDescription = $state('');
-let consumerTokenTTLDays = $state(90);
+let consumerTokenTTLDays = $state(TTL_DAYS.default);
 let consumerTokenError = $state('');
 let createdConsumerToken: ConsumerTokenWithValue | null = $state(null);
 
 function resetConsumerTokenForm() {
 	consumerTokenConsumer = [];
 	consumerTokenDescription = '';
-	consumerTokenTTLDays = 90;
+	consumerTokenTTLDays = TTL_DAYS.default;
 	consumerTokenError = '';
 	createdConsumerToken = null;
 }
@@ -253,7 +253,7 @@ async function submitCreateConsumerToken(event: SubmitEvent) {
 		createdConsumerToken = await createConsumerToken(
 			consumerTokenConsumer[0],
 			consumerTokenDescription,
-			consumerTokenTTLDays * 24 * 60 * 60,
+			ttlDaysToSeconds(consumerTokenTTLDays),
 		);
 		await invalidate('app:settings');
 	} catch (err) {
@@ -293,13 +293,13 @@ async function confirmRevokeConsumerToken() {
 
 let rotateConsumerTokenOpen = $state(false);
 let rotateConsumerTokenId = $state('');
-let rotateConsumerTokenTTLDays = $state(90);
+let rotateConsumerTokenTTLDays = $state(TTL_DAYS.default);
 let rotateConsumerTokenError = $state('');
 let rotatedConsumerToken: ConsumerTokenWithValue | null = $state(null);
 
 function openRotateConsumerToken(id: string) {
 	rotateConsumerTokenId = id;
-	rotateConsumerTokenTTLDays = 90;
+	rotateConsumerTokenTTLDays = TTL_DAYS.default;
 	rotateConsumerTokenError = '';
 	rotatedConsumerToken = null;
 	rotateConsumerTokenOpen = true;
@@ -312,7 +312,7 @@ async function submitRotateConsumerToken(event: SubmitEvent) {
 	try {
 		rotatedConsumerToken = await rotateConsumerToken(
 			rotateConsumerTokenId,
-			rotateConsumerTokenTTLDays * 24 * 60 * 60,
+			ttlDaysToSeconds(rotateConsumerTokenTTLDays),
 		);
 		await invalidate('app:settings');
 	} catch (err) {
@@ -326,7 +326,7 @@ async function submitRotateConsumerToken(event: SubmitEvent) {
 function closeRotateConsumerToken() {
 	rotateConsumerTokenOpen = false;
 	rotateConsumerTokenId = '';
-	rotateConsumerTokenTTLDays = 90;
+	rotateConsumerTokenTTLDays = TTL_DAYS.default;
 	rotateConsumerTokenError = '';
 	rotatedConsumerToken = null;
 }
@@ -581,12 +581,17 @@ async function confirmPurgeConsumerToken() {
 									<Label for="token-ttl">Valid for (days)</Label>
 									<Input
 										id="token-ttl"
+										aria-describedby="token-ttl-hint"
 										class="w-full"
 										type="number"
-										min="1"
+										min={TTL_DAYS.min}
+										max={TTL_DAYS.max}
 										bind:value={tokenTTLDays}
 										required
 									/>
+								<p id="token-ttl-hint" class="text-sm text-text-muted">
+										From {TTL_DAYS.min} to {TTL_DAYS.max} days.
+								</p>
 								</div>
 
 								{#if tokenError}
@@ -742,12 +747,17 @@ async function confirmPurgeConsumerToken() {
 									<Label for="consumer-token-ttl">Valid for (days)</Label>
 									<Input
 										id="consumer-token-ttl"
+										aria-describedby="consumer-token-ttl-hint"
 										class="w-full"
 										type="number"
-										min="1"
+										min={TTL_DAYS.min}
+										max={TTL_DAYS.max}
 										bind:value={consumerTokenTTLDays}
 										required
 									/>
+								<p id="consumer-token-ttl-hint" class="text-sm text-text-muted">
+										From {TTL_DAYS.min} to {TTL_DAYS.max} days.
+								</p>
 								</div>
 
 								{#if consumerTokenError}
@@ -974,12 +984,17 @@ async function confirmPurgeConsumerToken() {
 						<Label for="rotate-ttl">Valid for (days)</Label>
 						<Input
 							id="rotate-ttl"
+							aria-describedby="rotate-ttl-hint"
 							class="w-full"
 							type="number"
-							min="1"
+							min={TTL_DAYS.min}
+							max={TTL_DAYS.max}
 							bind:value={rotateTTLDays}
 							required
 						/>
+					<p id="rotate-ttl-hint" class="text-sm text-text-muted">
+							From {TTL_DAYS.min} to {TTL_DAYS.max} days.
+					</p>
 					</div>
 
 					{#if rotateError}
@@ -1054,12 +1069,17 @@ async function confirmPurgeConsumerToken() {
 						<Label for="rotate-consumer-token-ttl">Valid for (days)</Label>
 						<Input
 							id="rotate-consumer-token-ttl"
+							aria-describedby="rotate-consumer-token-ttl-hint"
 							class="w-full"
 							type="number"
-							min="1"
+							min={TTL_DAYS.min}
+							max={TTL_DAYS.max}
 							bind:value={rotateConsumerTokenTTLDays}
 							required
 						/>
+					<p id="rotate-consumer-token-ttl-hint" class="text-sm text-text-muted">
+							From {TTL_DAYS.min} to {TTL_DAYS.max} days.
+					</p>
 					</div>
 
 					{#if rotateConsumerTokenError}

@@ -12,6 +12,15 @@ type Parameter = {
 const specPath = new URL('../../../../api/openapi.yaml', import.meta.url);
 const spec = Bun.YAML.parse(await Bun.file(specPath).text()) as {
 	paths: Record<string, { get?: { parameters?: Parameter[] } }>;
+	components: {
+		schemas: {
+			TokenTtlSeconds?: {
+				minimum?: number;
+				maximum?: number;
+				default?: number;
+			};
+		};
+	};
 };
 
 const pageSize = spec.paths['/consumers']?.get?.parameters?.find(
@@ -23,6 +32,16 @@ if (typeof max !== 'number') {
 	throw new Error('GET /consumers page_size has no maximum in the spec');
 }
 
+const ttl = spec.components.schemas.TokenTtlSeconds;
+
+if (
+	typeof ttl?.minimum !== 'number' ||
+	typeof ttl.maximum !== 'number' ||
+	typeof ttl.default !== 'number'
+) {
+	throw new Error('TokenTtlSeconds needs a minimum, maximum and default');
+}
+
 const out = new URL('../src/lib/api-limits.ts', import.meta.url);
 
 const generated = `// Generated from api/openapi.yaml by scripts/generate-api-limits.ts.
@@ -30,6 +49,11 @@ const generated = `// Generated from api/openapi.yaml by scripts/generate-api-li
 
 // GET /consumers: the most consumers one page may ask for.
 export const CONSUMERS_PAGE_SIZE_MAX = ${max};
+
+// ttl_seconds on every token create and rotate: TokenTtlSeconds.
+export const TOKEN_TTL_SECONDS_MIN = ${ttl.minimum};
+export const TOKEN_TTL_SECONDS_MAX = ${ttl.maximum};
+export const TOKEN_TTL_SECONDS_DEFAULT = ${ttl.default};
 `;
 
 if (process.argv.includes('--check')) {
