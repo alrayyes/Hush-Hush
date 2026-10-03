@@ -43,12 +43,10 @@ Tailwind CSS v4 - utility classes on the markup, not hand-rolled CSS.
 `src/app.css` holds the design tokens (`@theme`: `bg`, `surface`,
 `text`, `text-muted`, `border`, `border-subtle`, `accent`, `error`,
 `warning`, `accent-contrast`, `danger`, `danger-contrast` - each usable as
-a `bg-*`/`text-*`/`border-*` utility) plus the two patterns that stay
-handwritten because no Tailwind utility covers them: the responsive-table
-reflow pattern (`.responsive-table`) and the changelog's rendered-Markdown
-heading treatment (`.changelog-content`, applied to runtime-rendered HTML
-with no opportunity to attach a class in the template), both under
-Tailwind's `@layer` system. A new component reaches for these tokens and
+a `bg-*`/`text-*`/`border-*` utility) plus the one pattern that stays
+handwritten because no Tailwind utility covers it: the
+responsive-table reflow pattern (`.responsive-table`), under Tailwind's
+`@layer` system. A new component reaches for these tokens and
 Tailwind's own spacing/radius scale rather than a raw value or a new
 scoped `<style>` block; `bun run lint:tailwind` (`@shadcn/lint` flags a
 raw color, an arbitrary value, or an inline `style=`) is the check for
