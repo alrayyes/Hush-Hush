@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.58.0](https://github.com/alrayyes/Hush-Hush/compare/v2.57.1...v2.58.0) (2026-10-03)
+
+
+### Features
+
+* **health:** bound and cache the readiness probe, and drain before shutting down ([#612](https://github.com/alrayyes/Hush-Hush/issues/612)) ([e1147b0](https://github.com/alrayyes/Hush-Hush/commit/e1147b0c824dd8288dbc1d175f522cad3bb60ac2)), closes [#592](https://github.com/alrayyes/Hush-Hush/issues/592)
+
 ## [2.57.1](https://github.com/alrayyes/Hush-Hush/compare/v2.57.0...v2.57.1) (2026-10-03)
 
 
