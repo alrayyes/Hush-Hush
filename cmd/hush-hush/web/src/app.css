@@ -161,7 +161,6 @@
 		font-family: inherit;
 		font-weight: 600;
 		line-height: 1.25;
-		margin: 0 0 var(--spacing-4);
 	}
 
 	h1 {
@@ -170,10 +169,6 @@
 
 	h2 {
 		font-size: var(--text-lg);
-	}
-
-	p {
-		margin: 0 0 var(--spacing-4);
 	}
 
 	/* Links stay underlined - color alone isn't an accessible way to mark
