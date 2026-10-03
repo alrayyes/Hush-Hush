@@ -24,7 +24,7 @@ git config --global --add safe.directory "$(pwd)"
 # exits 0, which reads exactly like a pass.
 if [ ! -d styles/Google ] || [ ! -d styles/proselint ]; then
   echo "Fetching Vale's style packages"
-  vale sync
+  scripts/vale.sh sync
 fi
 
 # The prose this repository wrote. A bare `vale .` also reads the generated
@@ -49,7 +49,7 @@ echo "$files"
 # VALE_REPORT is where CI wants a copy for the job summary. Locally there is
 # nowhere to put one, and the terminal already has it.
 # shellcheck disable=SC2086
-vale --output=line $files | tee "${VALE_REPORT:-/dev/null}"
+scripts/vale.sh --output=line $files | tee "${VALE_REPORT:-/dev/null}"
 
 # Errors are the tier worth failing on — a misspelt product name, or a term
 # this repository has already decided how to spell. Warnings are advice, and
@@ -60,7 +60,7 @@ vale --output=line $files | tee "${VALE_REPORT:-/dev/null}"
 # grepping it for ":error:" matched nothing and this could not fail however
 # wrong the prose was.
 # shellcheck disable=SC2086
-if ! vale --minAlertLevel=error --output=line $files >/dev/null; then
+if ! scripts/vale.sh --minAlertLevel=error --output=line $files >/dev/null; then
   echo "Vale reported errors"
   exit 1
 fi
