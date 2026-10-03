@@ -9,7 +9,8 @@
     "lint:mechanics": "./scripts/lint-mechanics.sh",
     "lint:package-json": "sort-package-json --check package.json",
     "lint:prose": "./scripts/lint-prose.sh",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "test:ci": "bun scripts/test-ci.ts"
   },
   "overrides": {
     "smol-toml": "1.7.2"
@@ -20,6 +21,7 @@
     "@redocly/cli": "2.57.0",
     "lefthook": "2.1.15",
     "markdownlint-cli2": "0.23.3",
+    "picomatch": "2.3.2",
     "prettier": "3.9.9",
     "sort-package-json": "4.0.0"
   },

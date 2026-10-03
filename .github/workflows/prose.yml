@@ -18,6 +18,9 @@ on:
       - .vale.ini
       - .ltex.json
       - styles/**
+      - scripts/lint-prose.sh
+      - scripts/lint-mechanics.sh
+      - scripts/vale.sh
       - .github/workflows/prose.yml
   pull_request:
     paths:
@@ -25,6 +28,9 @@ on:
       - .vale.ini
       - .ltex.json
       - styles/**
+      - scripts/lint-prose.sh
+      - scripts/lint-mechanics.sh
+      - scripts/vale.sh
       - .github/workflows/prose.yml
 
 permissions:
