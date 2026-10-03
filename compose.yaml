@@ -1,6 +1,8 @@
-# `docker compose up` pulls the published image; `docker compose up --build`
-# rebuilds from the local Dockerfile instead and tags it the same way -
-# both flows the README documents work through this one file.
+# `docker compose up` pulls the published image, pinned by tag and digest like
+# every other image here. To build from the local Dockerfile instead, add the
+# override: `docker compose -f compose.yaml -f compose.build.yaml up --build`.
+# It's a separate file because a build can't be tagged with a digest, so a
+# `build:` beside this pinned `image:` would break `up --build`.
 #
 # DB_PATH points at the named volume below rather than :memory: - a
 # write-path token is issued by running the image's own binary again
@@ -12,8 +14,7 @@
 # ownership into /data for exactly this reason - no separate chown step.
 services:
   hush-hush:
-    image: ghcr.io/alrayyes/hush-hush:latest
-    build: .
+    image: ghcr.io/alrayyes/hush-hush:2.55.0@sha256:9bb12cab2cc3588643beca20f4156dc6bef083fa42e5ae29a60461f27ec32339
     restart: unless-stopped
     ports:
       - "8080:8080"
