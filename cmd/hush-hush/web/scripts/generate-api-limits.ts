@@ -14,6 +14,8 @@ const spec = Bun.YAML.parse(await Bun.file(specPath).text()) as {
 	paths: Record<string, { get?: { parameters?: Parameter[] } }>;
 	components: {
 		schemas: {
+			Tag?: { pattern?: string };
+			Tags?: { maxItems?: number };
 			TokenTtlSeconds?: {
 				minimum?: number;
 				maximum?: number;
@@ -30,6 +32,18 @@ const max = pageSize?.schema?.maximum;
 
 if (typeof max !== 'number') {
 	throw new Error('GET /consumers page_size has no maximum in the spec');
+}
+
+const tagPattern = spec.components.schemas.Tag?.pattern;
+const tagsMaxItems = spec.components.schemas.Tags?.maxItems;
+
+if (typeof tagPattern !== 'string' || typeof tagsMaxItems !== 'number') {
+	throw new Error('Tag has no pattern, or Tags no maxItems, in the spec');
+}
+
+// Biome's quote style for the generated file, so it needs no reformatting.
+function singleQuoted(text: string): string {
+	return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 const ttl = spec.components.schemas.TokenTtlSeconds;
@@ -49,6 +63,12 @@ const generated = `// Generated from api/openapi.yaml by scripts/generate-api-li
 
 // GET /consumers: the most consumers one page may ask for.
 export const CONSUMERS_PAGE_SIZE_MAX = ${max};
+
+// A single tag: Tag's pattern, which also fixes its length.
+export const TAG_PATTERN = '${singleQuoted(tagPattern)}';
+
+// The most tags one object may carry: Tags' maxItems.
+export const TAGS_MAX_ITEMS = ${tagsMaxItems};
 
 // ttl_seconds on every token create and rotate: TokenTtlSeconds.
 export const TOKEN_TTL_SECONDS_MIN = ${ttl.minimum};
