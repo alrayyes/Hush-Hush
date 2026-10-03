@@ -1,3 +1,10 @@
+# Commit prefixes decide what releases (rules/release-bots.md): `fix` cuts a
+# patch release for a dependency that ships, `chore` and `ci` release nothing.
+# Each ecosystem has a minor-and-patch group and a separate major group. A
+# grouped update gets Dependabot's lowercase title ("bump the ... group"),
+# which passes commitlint's subject-case rule; an ungrouped one is
+# sentence-case and doesn't. The major group stays separate so one pull
+# request never bundles a major bump with unrelated minor ones.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -6,6 +13,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: fix
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
   - package-ecosystem: bun
     directory: /
     schedule:
@@ -17,15 +29,49 @@ updates:
       # releases.md's fix: rationale (a change to what ships) doesn't hold
       # for this repo's bun ecosystem specifically.
       prefix: chore
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
+  # The web UI has its own package.json and bun.lock, and it ships: the build
+  # compiles it into the SPA the Go binary embeds. Nothing watched it before.
+  - package-ecosystem: bun
+    directory: /cmd/hush-hush/web
+    schedule:
+      interval: weekly
+    commit-message:
+      # No prefix-development split, unlike the usual dev/prod one. A bundled
+      # SPA compiles most of its devDependencies into what ships (svelte, the
+      # icon set, the date library bits-ui builds on), so package.json's
+      # section doesn't say what reaches a user. Plain `fix` can cut a patch
+      # release for a test-tool bump that didn't need one, which costs far less
+      # than a vulnerable dependency that's merged and never released.
+      prefix: fix
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: ci
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: fix
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
