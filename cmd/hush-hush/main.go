@@ -303,6 +303,21 @@ func openStoreForTokenCmd() (*store.Store, error) {
 	return s, nil
 }
 
+// errTTLAboveMaximum is what checkTokenTTL wraps, so a caller can test for it.
+var errTTLAboveMaximum = errors.New("--ttl is above the maximum lifetime")
+
+// checkTokenTTL holds the local token commands to the same lifetime limit the
+// HTTP API enforces, since they mint straight into the store. Only the upper
+// bound is checked here: a zero or negative TTL is the store's to reject, as
+// it always was.
+func checkTokenTTL(ttl time.Duration) error {
+	if ttl > hushhush.MaxTokenTTL {
+		return fmt.Errorf("%w: at most %s", errTTLAboveMaximum, hushhush.MaxTokenTTL)
+	}
+
+	return nil
+}
+
 func newTokenIssueCmd() *cobra.Command {
 	var (
 		description string
@@ -313,6 +328,10 @@ func newTokenIssueCmd() *cobra.Command {
 		Use:   "issue",
 		Short: "Issue a new write-path token",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := checkTokenTTL(ttl); err != nil {
+				return err
+			}
+
 			s, err := openStoreForTokenCmd()
 			if err != nil {
 				return err
@@ -336,7 +355,7 @@ func newTokenIssueCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&description, "description", "", "what this token is for")
-	cmd.Flags().DurationVar(&ttl, "ttl", 90*24*time.Hour, "how long the token stays valid")
+	cmd.Flags().DurationVar(&ttl, "ttl", hushhush.DefaultTokenTTL, "how long the token stays valid, at most "+hushhush.MaxTokenTTL.String())
 	_ = cmd.MarkFlagRequired("description")
 
 	return cmd
@@ -377,6 +396,10 @@ func newTokenRotateCmd() *cobra.Command {
 		Short: "Replace a token's secret and expiry, keeping its id and description",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkTokenTTL(ttl); err != nil {
+				return err
+			}
+
 			s, err := openStoreForTokenCmd()
 			if err != nil {
 				return err

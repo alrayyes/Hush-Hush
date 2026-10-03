@@ -1185,15 +1185,26 @@ export interface components {
         };
         /** @example a1b2c3d4e5f6a7b8 */
         TokenId: string;
+        /**
+         * Format: int64
+         * @description How long a token stays valid for, starting now. The default is 90
+         *     days (7776000), and the cap is 365 days (31536000): a longer
+         *     lifetime is a 422 that names the limit. A zero or negative value is
+         *     a 400. The cap applies when a token is minted or rotated; a token
+         *     issued before it existed keeps working until it expires.
+         *
+         *     The field stays `required` so generated clients keep a plain
+         *     integer rather than an optional one, which would change their types
+         *     for a limit they don't need. A request that leaves it out anyway is
+         *     given the default rather than rejected.
+         * @default 7776000
+         * @example 7776000
+         */
+        TokenTtlSeconds: number;
         CreateTokenRequest: {
             /** @example web UI test token */
             description: string;
-            /**
-             * Format: int64
-             * @description How long the token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         TokenMetadata: {
             id: components["schemas"]["TokenId"];
@@ -1236,12 +1247,7 @@ export interface components {
          */
         TokenAllowedActions: ("rotate" | "revoke" | "purge")[];
         RotateTokenRequest: {
-            /**
-             * Format: int64
-             * @description How long the rotated token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         TokenWithValue: components["schemas"]["TokenMetadata"] & {
             /**
@@ -1265,12 +1271,7 @@ export interface components {
             consumer: string;
             /** @example deploy read token */
             description: string;
-            /**
-             * Format: int64
-             * @description How long the token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         ConsumerTokenMetadata: {
             id: components["schemas"]["ConsumerTokenId"];
@@ -1290,12 +1291,7 @@ export interface components {
             allowed_actions?: components["schemas"]["TokenAllowedActions"];
         };
         RotateConsumerTokenRequest: {
-            /**
-             * Format: int64
-             * @description How long the rotated token stays valid for, starting now.
-             * @example 7776000
-             */
-            ttl_seconds: number;
+            ttl_seconds: components["schemas"]["TokenTtlSeconds"];
         };
         ConsumerTokenWithValue: components["schemas"]["ConsumerTokenMetadata"] & {
             /**
@@ -1315,6 +1311,23 @@ export interface components {
                 /**
                  * @example {
                  *       "error": "from must be RFC 3339"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description The request parsed, but a value in it is outside what the API
+         *     allows. The message names the limit.
+         */
+        UnprocessableEntity: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "error": "ttl_seconds must be at most 31536000 (365 days)"
                  *     }
                  */
                 "application/json": components["schemas"]["Error"];
@@ -2443,6 +2456,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     revokeToken: {
@@ -2518,6 +2532,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     purgeToken: {
@@ -2614,6 +2629,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     revokeConsumerToken: {
@@ -2689,6 +2705,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     purgeConsumerToken: {

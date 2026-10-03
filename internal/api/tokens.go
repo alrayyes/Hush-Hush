@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -14,6 +15,44 @@ import (
 // missing or not greater than zero - tokens/spec.md's "Missing or zero
 // TTL is rejected" scenario.
 var errNonPositiveTTL = errors.New("ttl_seconds must be a positive integer")
+
+// The token lifetime policy (alrayyes/hush-hush#537): a token lasts 90 days
+// unless the request says otherwise, and never more than a year. Retention
+// is a rule the API owns, not the UI, so the CLI and SDKs get the same
+// answer. api/openapi.yaml states both as `default` and `maximum` on
+// ttl_seconds; keep the two in step (a test pins them together).
+//
+// The maximum applies when a token is minted or rotated. A token issued
+// before it existed keeps working until it expires.
+//
+// Exported so the local `token` subcommands, which mint straight into the
+// store, hold the same limit as the HTTP routes.
+const (
+	DefaultTokenTTL = 90 * 24 * time.Hour
+	MaxTokenTTL     = 365 * 24 * time.Hour
+
+	defaultTokenTTLSeconds = int64(DefaultTokenTTL / time.Second)
+	maxTokenTTLSeconds     = int64(MaxTokenTTL / time.Second)
+)
+
+// resolveTTL turns a request's optional ttl_seconds into a duration. An
+// absent value is the default; zero or less is a 400 (the same rule as
+// before the default existed, and tokens/spec.md's "Missing or zero TTL is
+// rejected" scenario for an explicit zero); above the maximum is a 422 that
+// names the limit. status is 0 when the TTL is usable.
+func resolveTTL(raw *int64) (ttl time.Duration, status int, message string) {
+	switch {
+	case raw == nil:
+		return time.Duration(defaultTokenTTLSeconds) * time.Second, 0, ""
+	case *raw <= 0:
+		return 0, http.StatusBadRequest, errNonPositiveTTL.Error()
+	case *raw > maxTokenTTLSeconds:
+		return 0, http.StatusUnprocessableEntity,
+			fmt.Sprintf("ttl_seconds must be at most %d (365 days)", maxTokenTTLSeconds)
+	default:
+		return time.Duration(*raw) * time.Second, 0, ""
+	}
+}
 
 // adminOwner is what a session-created token's owner is recorded as -
 // literal, since there's only one admin account (design.md's "single
@@ -79,20 +118,26 @@ func tokenMetadataFromStore(t store.WriteToken) TokenMetadata {
 // account, returning its raw value exactly once.
 func handleCreateToken(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req CreateTokenRequest
+		// ttl_seconds is a pointer so an absent value (the default) is
+		// told apart from an explicit zero (a 400).
+		var req struct {
+			Description string `json:"description"`
+			TTLSeconds  *int64 `json:"ttl_seconds"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, r, http.StatusBadRequest, "malformed request body")
 
 			return
 		}
 
-		if req.TTLSeconds <= 0 {
-			writeError(w, r, http.StatusBadRequest, errNonPositiveTTL.Error())
+		ttl, status, message := resolveTTL(req.TTLSeconds)
+		if status != 0 {
+			writeError(w, r, status, message)
 
 			return
 		}
 
-		wt, value, err := s.CreateWriteToken(r.Context(), req.Description, time.Duration(req.TTLSeconds)*time.Second, adminOwner)
+		wt, value, err := s.CreateWriteToken(r.Context(), req.Description, ttl, adminOwner)
 		if err != nil {
 			writeInternalError(w, r, err)
 
@@ -137,7 +182,7 @@ func handleRotate[T any](rotate func(ctx context.Context, id string, ttl time.Du
 		id := r.PathValue("id")
 
 		var req struct {
-			TTLSeconds int64 `json:"ttl_seconds"`
+			TTLSeconds *int64 `json:"ttl_seconds"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, r, http.StatusBadRequest, "malformed request body")
@@ -145,13 +190,14 @@ func handleRotate[T any](rotate func(ctx context.Context, id string, ttl time.Du
 			return
 		}
 
-		if req.TTLSeconds <= 0 {
-			writeError(w, r, http.StatusBadRequest, errNonPositiveTTL.Error())
+		ttl, status, message := resolveTTL(req.TTLSeconds)
+		if status != 0 {
+			writeError(w, r, status, message)
 
 			return
 		}
 
-		v, value, err := rotate(r.Context(), id, time.Duration(req.TTLSeconds)*time.Second)
+		v, value, err := rotate(r.Context(), id, ttl)
 		if errors.Is(err, store.ErrTokenNotFound) {
 			writeError(w, r, http.StatusNotFound, "unknown token")
 
@@ -251,7 +297,11 @@ func consumerTokenMetadataFromStore(t store.ConsumerToken) ConsumerTokenMetadata
 // the given consumer, returning its raw value exactly once.
 func handleCreateConsumerToken(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req CreateConsumerTokenRequest
+		var req struct {
+			Consumer    string `json:"consumer"`
+			Description string `json:"description"`
+			TTLSeconds  *int64 `json:"ttl_seconds"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, r, http.StatusBadRequest, "malformed request body")
 
@@ -264,13 +314,14 @@ func handleCreateConsumerToken(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		if req.TTLSeconds <= 0 {
-			writeError(w, r, http.StatusBadRequest, errNonPositiveTTL.Error())
+		ttl, status, message := resolveTTL(req.TTLSeconds)
+		if status != 0 {
+			writeError(w, r, status, message)
 
 			return
 		}
 
-		ct, value, err := s.CreateConsumerToken(r.Context(), req.Consumer, req.Description, time.Duration(req.TTLSeconds)*time.Second)
+		ct, value, err := s.CreateConsumerToken(r.Context(), req.Consumer, req.Description, ttl)
 		if err != nil {
 			writeInternalError(w, r, err)
 
