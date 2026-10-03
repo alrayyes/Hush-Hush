@@ -545,6 +545,11 @@ jobs:
 
   # Same reasoning as govulncheck above, for the bun ecosystem: pinning
   # stops it drifting, not a known CVE in whatever's pinned right now.
+  # GHSA-vfj7-8cjw-p6xm (braces, DoS on deeply nested patterns) is ignored:
+  # no patched release exists (the range is <= 3.0.3, the latest), and the
+  # only path is markdownlint-cli2 > micromatch, which expands the fixed globs
+  # in our own config and never untrusted input, in dev and CI tooling that
+  # doesn't ship. Drop the flag, here and in audit.yml, once braces has a fix.
   bun-audit:
     needs: changes
     if: needs.changes.outputs.bun-lock == 'true'
@@ -558,7 +563,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: bun install --frozen-lockfile --ignore-scripts
-      - run: bun audit
+      - run: bun audit --ignore=GHSA-vfj7-8cjw-p6xm
 
   # A hook is something you can skip, and the version number depends on
   # these messages being right, so the whole branch is checked here too.

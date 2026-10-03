@@ -43,6 +43,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: scripts/audit-issue.sh govulncheck "$RUNNER_TEMP/audit.txt"
 
+  # braces advisory ignored for the reason given on ci.yml's bun-audit job.
   bun-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -56,7 +57,7 @@ jobs:
         run: |
           docker run --rm --entrypoint "" -v "$PWD":/src -w /src \
             oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 \
-            sh -c 'bun install --frozen-lockfile --ignore-scripts && bun audit' 2>&1 | tee "$RUNNER_TEMP/audit.txt"
+            sh -c 'bun install --frozen-lockfile --ignore-scripts && bun audit --ignore=GHSA-vfj7-8cjw-p6xm' 2>&1 | tee "$RUNNER_TEMP/audit.txt"
       - name: Open or update the issue
         if: failure()
         env:
