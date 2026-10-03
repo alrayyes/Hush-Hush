@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.58.2](https://github.com/alrayyes/Hush-Hush/compare/v2.58.1...v2.58.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* **web-ui:** fit the secrets table on a 1280px page when a secret has tags ([#633](https://github.com/alrayyes/Hush-Hush/issues/633)) ([4f6d1c3](https://github.com/alrayyes/Hush-Hush/commit/4f6d1c39a0afaa1da3c2ef0361ab85a4dfb72b87))
+
 ## [2.58.1](https://github.com/alrayyes/Hush-Hush/compare/v2.58.0...v2.58.1) (2026-10-03)
 
 
