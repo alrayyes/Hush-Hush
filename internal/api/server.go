@@ -19,12 +19,20 @@ type MuxOption func(*muxOptions)
 
 type muxOptions struct {
 	instanceLabel string
+	readiness     *Readiness
 }
 
 // WithInstanceLabel sets the operator's short label for this instance,
 // reported as `environment` on GET /healthz. Empty means none.
 func WithInstanceLabel(label string) MuxOption {
 	return func(o *muxOptions) { o.instanceLabel = label }
+}
+
+// WithReadiness supplies the Readiness /readyz answers from, so the caller can
+// Drain it when shutdown starts. Without it the mux makes its own around the
+// store, which nothing can drain.
+func WithReadiness(r *Readiness) MuxOption {
+	return func(o *muxOptions) { o.readiness = r }
 }
 
 // objectStore is what this package needs from a store - defined here,
@@ -121,7 +129,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string, opt
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealth(version, o.instanceLabel))
-	mux.HandleFunc("GET /readyz", handleReady(s))
+	mux.HandleFunc("GET /readyz", handleReady(readinessFor(o, s)))
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
 	mux.HandleFunc("GET /objects", requireWriteAccess(s, false, handleListObjects(s)))
 	mux.HandleFunc("GET /consumers", handleHardNavRoute(requireWriteAccess(s, false, handleListConsumers(s)), staticHandler))
@@ -445,4 +453,14 @@ func writeInternalError(w http.ResponseWriter, r *http.Request, err error) {
 	slog.ErrorContext(r.Context(), "internal error",
 		"method", r.Method, "path", r.URL.Path, "error", err)
 	writeJSON(w, http.StatusInternalServerError, Error{Error: "internal error"})
+}
+
+// readinessFor is the Readiness the caller gave the mux, or a default around
+// the store.
+func readinessFor(o muxOptions, s readinessChecker) *Readiness {
+	if o.readiness != nil {
+		return o.readiness
+	}
+
+	return NewReadiness(s)
 }
