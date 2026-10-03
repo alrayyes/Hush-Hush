@@ -101,6 +101,13 @@ and commit lint, and the release are never filtered.
 When you add a job, list the files it covers in the filters under `changes`
 and gate the job on that output. Otherwise it runs on every pull request.
 
+The two dependency audits (`govulncheck` and `bun-audit`) skip a pull request
+that leaves the lockfiles alone, so `audit.yml` runs them again every day. A
+failure there opens or updates one issue per tool, titled "Scheduled audit
+failed: govulncheck" or "Scheduled audit failed: bun-audit", because nobody
+watches a scheduled run. You can start it by hand from the Actions tab. Its
+commands mirror the jobs in `ci.yml`, so change both together.
+
 ## How it fits together
 
 `internal/api` holds the handler, and `cmd/hush-hush/main.go` is the
