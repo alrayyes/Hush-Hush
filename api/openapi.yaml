@@ -38,9 +38,10 @@ info:
 
 servers:
   - url: "{scheme}://{host}"
+    x-internal: false
     description: |
       No canonical host - this is meant to run anywhere, not just one
-      environment.
+      environment: local, staging or production.
     variables:
       scheme:
         default: https

@@ -58,6 +58,7 @@ golangci-lint fmt          # the fixer; `run` stays the check
 bun run format:check       # prettier --check, add --write to fix
 bun run lint:md
 bun run lint:api           # redocly lint, bare — no path argument
+bun run lint:spectral      # OWASP's API security rules over api/openapi.yaml
 bun run lint:prose         # vale
 bun run lint:mechanics     # ltex-cli-plus
 ```

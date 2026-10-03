@@ -1,0 +1,63 @@
+# OWASP's API security rules, on top of what Redocly checks (rules/api.md). Redocly
+# says whether the description is well formed; this says whether it describes an API
+# that's safe to run. A finding is fixed, or waived below with the reason beside it.
+extends:
+  - "@stoplight/spectral-owasp-ruleset"
+
+rules:
+  # The server enforces almost no size limits (#617): no request body cap, and no
+  # length on a slug, description or sealed value. The spec can't honestly state a
+  # maxLength the server doesn't check, so these stay visible as warnings. #617
+  # enforces the limits, declares them, and sets all three back to error.
+  owasp:api4:2023-string-limit: warn
+  owasp:api4:2023-array-limit: warn
+  owasp:api4:2023-integer-limit: warn
+  # string-restricted (a format, pattern or enum on a string) is a warning in
+  # OWASP's own ruleset, and the same ticket covers it: the patterns come with
+  # the limits.
+
+  # There's no rate limiting (#618). Documenting headers and a 429 the server never
+  # sends would be the first lie in the file. If #618 builds it, these go back on.
+  owasp:api4:2023-rate-limit: off
+  owasp:api4:2023-rate-limit-responses-429: off
+
+  # The web UI is served by the same server, and WebAuthn ties a session to its
+  # origin, so no browser makes a cross-origin call to this API and nothing sets
+  # CORS headers. A header the server never sends isn't worth declaring.
+  owasp:api8:2023-define-cors-origin: off
+
+  # Every operation can answer 500 with the same generic body. Listing it on all of
+  # them documents nothing a client acts on, and would add a response to every
+  # generated SDK for no behaviour.
+  owasp:api8:2023-define-error-responses-500: off
+
+  # This fires on operations whose only input is a path parameter (an id or a slug),
+  # which the server answers with 404, never 400. Writing a 400 on them would
+  # describe a response that doesn't exist.
+  owasp:api8:2023-define-error-validation: off
+
+# The unauthenticated operations, all deliberate. A new operation that forgets its
+# security scheme still fails: only these are waived, by path, not the rules.
+overrides:
+  - files:
+      # Probes. ADR 2 and the image's own health check are why they stay open.
+      - "api/openapi.yaml#/paths/~1healthz/get"
+      - "api/openapi.yaml#/paths/~1readyz/get"
+      # The read path is open by design, with the audit log as the control
+      # (ADR 2). Reading an object itself needs a credential (ADR 24).
+      # {slug} is %7Bslug%7D here: Spectral percent-encodes the braces in a path
+      # pointer, and a glob or an escape doesn't match it.
+      - "api/openapi.yaml#/paths/~1objects~1%7Bslug%7D~1used-by/get"
+      - "api/openapi.yaml#/paths/~1audit-log/get"
+      - "api/openapi.yaml#/paths/~1audit-log~1filter-options/get"
+      # Says whether an account exists yet, so the UI can offer registration.
+      - "api/openapi.yaml#/paths/~1auth~1status/get"
+      # These make the session; nothing can authenticate them first.
+      - "api/openapi.yaml#/paths/~1auth~1login~1begin/post"
+      - "api/openapi.yaml#/paths/~1auth~1login~1finish/post"
+      - "api/openapi.yaml#/paths/~1auth~1register~1begin/post"
+      - "api/openapi.yaml#/paths/~1auth~1register~1finish/post"
+    rules:
+      owasp:api2:2023-read-restricted: off
+      owasp:api2:2023-write-restricted: off
+      owasp:api8:2023-define-error-responses-401: off
