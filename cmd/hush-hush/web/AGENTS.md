@@ -36,6 +36,6 @@ Tailwind CSS v4, utility classes in markup - not a new scoped `<style>`
 block, and not a raw color/spacing value where a `src/app.css` `@theme`
 token or Tailwind's own scale already covers it. `bun run lint:tailwind`
 (`@shadcn/lint` via oxlint) checks that. See this directory's own
-`README.md`'s "Styling" section for the available tokens and the two
-hand-written patterns (`.responsive-table`, `.changelog-content`) that
-stay CSS because no Tailwind utility covers them.
+`README.md`'s "Styling" section for the available tokens and the one
+hand-written pattern (`.responsive-table`) that stays CSS because no
+Tailwind utility covers it.
