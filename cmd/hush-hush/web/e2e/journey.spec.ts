@@ -620,8 +620,17 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	]);
 
 	// Emptying the field clears them - and leaves this secret untagged for
-	// the tag-filter journey below, which counts tags across the list.
+	// the tag-filter journey below, which counts tags across the list. The
+	// dialog's own GET /consumers is awaited first, as for the first edit
+	// above: it resolving mid-fill makes the dialog re-grab focus and drop
+	// keystrokes.
+	const clearConsumersLoaded = page.waitForResponse(
+		(res) =>
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
+	);
 	await page.getByRole('button', { name: 'Edit' }).click();
+	await clearConsumersLoaded;
 	await editDialog.locator('#edit-value').fill(btoa('rotated-final'));
 	await editDialog.locator('#edit-tags').fill('');
 	await editDialog.getByRole('button', { name: 'Save' }).click();
