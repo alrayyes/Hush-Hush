@@ -4,6 +4,12 @@
 # Grows a job here the same PR that adds the tool it runs — a linter with no
 # hook is a linter you only meet at CI.
 
+# Silent on a clean run, full detail on a failure. lefthook's default prints a
+# banner and a line per job, which is noise to a person and pure token cost once
+# a hook's output lands in an agent's tool result (rules/linting.md).
+output:
+  - failure
+
 # pre-commit may write. Let every fixer run and restage what it touched — a
 # commit should not fail over a quote style a tool can settle by itself.
 pre-commit:
@@ -42,7 +48,7 @@ pre-commit:
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
         go mod edit -fmt go.mod
       stage_fixed: true
 
@@ -156,6 +162,26 @@ commit-msg:
 #
 # Parallel because of that: nothing here touches a file, so no job can be
 # reading what another is rewriting.
+# Checks CI runs that this hook doesn't, and why (a gap should be a decision,
+# not an oversight):
+#
+# - govulncheck and bun-audit read an advisory database that changes under
+#   you. A green local run says nothing about next week and a red one blames the
+#   wrong push, so CI runs them when a lockfile changes and audit.yml runs them
+#   daily.
+# - pact (provider verification) links a native Pact library at build time,
+#   behind the `pact` build tag, which needs `pact-go install` first. No other
+#   hook needs that download.
+# - goreleaser check needs the goreleaser binary, which no other hook installs.
+#   It only reads .goreleaser.yml, and CI runs it before a release can be cut,
+#   so a typo costs a red job, not a bad release.
+# - gitleaks scans the whole git history. CI checks out all of it and runs the
+#   scan on every push and pull request; a local clone may not have it.
+# - e2e and lighthouse: see web-check below.
+#
+# The toolchain pins below (golang:1.27.1-bookworm@sha256:69a7...) are the same
+# image as the Dockerfile's and CI's. Dependabot bumps the Dockerfile only, so
+# change them together.
 pre-push:
   parallel: true
   jobs:
@@ -200,6 +226,9 @@ pre-push:
         golangci-lint run
 
     # Docker-wrapped, same reasoning and pin as pre-commit's Go jobs above.
+    # `-race` like CI's own test job, so a data race fails here instead of in
+    # the pipeline. It roughly doubles the run (4s to 9s on a warm cache), which
+    # a push can carry. CI also writes coverage, which only matters there.
     - name: test
       glob: *go-files
       run: >-
@@ -207,8 +236,8 @@ pre-push:
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
-        go test ./...
+        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+        go test -race ./...
 
     # No check-only flag on `go mod edit -fmt`, so the gate is running it
     # again and diffing. A no-op on a go.mod pre-commit already canonicalized;
@@ -227,14 +256,14 @@ pre-push:
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
         go mod edit -fmt go.mod
         && git diff --exit-code go.mod
         && docker run --rm --user "$(id -u):$(id -g)"
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.0-bookworm@sha256:ded31c68586d2e49e760acc2e65a884b23d032e9bbbed0ae0c55abd3fcaf4452
+        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
         go mod tidy -diff
 
     # cmd/hush-hush/web is its own bun project (CONTRIBUTING.md), so its
