@@ -82,7 +82,12 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: fix
+      # `chore`, unlike the `docker` entry's `fix`: that one bumps the images the
+      # Dockerfile builds on, which end up in the released image. compose.yaml
+      # is an example for people running the published image and ships in
+      # nothing. It's a root file, so release-please's directory-only
+      # exclude-paths can't skip it either: the commit type is the only lever.
+      prefix: chore
     groups:
       minor-and-patch:
         update-types: [minor, patch]
