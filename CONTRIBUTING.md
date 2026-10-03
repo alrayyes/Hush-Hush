@@ -251,3 +251,16 @@ open carrying the next version and changelog entry — merging that pull
 request tags the release. [goreleaser](https://goreleaser.com) then builds
 the binaries onto the release release-please just cut. Nobody picks a
 version by hand.
+
+A release means shipped behaviour changed, so a commit that only touches
+docs, tests or CI shouldn't cut one, even if it's typed `fix:`. What ships is
+`cmd/` (the web UI included), `internal/`, `go.mod`, `go.sum`, `api/`,
+`Dockerfile*` and `.goreleaser.yml`. Two things keep the rest out. The
+release-please config lists directories that never count: `docs`, `scripts`,
+`openspec`, `styles`, `.github`, `.claude`, `integration`, `pacts` and
+`cmd/hush-hush/web/e2e`. It only takes directory prefixes, so it can't name a
+root file like `lefthook.yml` or `README.md`, and a commit that mixes an
+excluded directory with real code still counts. For those, and for tests that
+sit beside the code they test (`*_test.go`, `*.spec.ts`), the commit type is
+the lever: type it `docs:`, `test:`, `ci:`, `build:` or `chore:`, and
+reserve `feat:`, `fix:` and `perf:` for a change to a path that ships.
