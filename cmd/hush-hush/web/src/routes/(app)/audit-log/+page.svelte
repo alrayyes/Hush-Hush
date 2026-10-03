@@ -380,6 +380,7 @@ function exportCSV() {
 				<th scope="col" class="px-4 py-3">Action</th>
 				<th scope="col" class="px-4 py-3">Actor</th>
 				<th scope="col" class="px-4 py-3">Caller</th>
+				<th scope="col" class="px-4 py-3">IP</th>
 				<th scope="col" class="px-4 py-3">Timestamp</th>
 			</tr>
 		</thead>
@@ -390,6 +391,7 @@ function exportCSV() {
 					<td data-label="Action">{entry.action}</td>
 					<td data-label="Actor">{auditActorLabel(entry)}</td>
 					<td data-label="Caller">{entry.caller ?? ''}</td>
+					<td data-label="IP">{entry.ip}</td>
 					<td data-label="Timestamp">
 						<time datetime={entry.timestamp} title={entry.timestamp}>
 							{formatTimestamp(entry.timestamp)}

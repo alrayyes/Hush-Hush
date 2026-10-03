@@ -1,8 +1,8 @@
 <script lang="ts">
 import type { TokenAction, TokenStatus } from '$lib/api';
 import { Button } from '$lib/components/ui/button/index.js';
-import { formatRemaining, formatTimestamp } from '$lib/datetime';
-import { tokenStatusLabel } from '$lib/tokens';
+import { formatTimestamp } from '$lib/datetime';
+import { tokenRemaining, tokenStatusLabel } from '$lib/tokens';
 
 // One token as a card, for the below-md list on the Settings page
 // (alrayyes/hush-hush#484). Bearer and consumer tokens share the shape
@@ -31,11 +31,7 @@ let {
 } = $props();
 
 const statusLabel = $derived(tokenStatusLabel(token.status));
-const remaining = $derived(
-	token.status === 'revoked' || token.status === 'expired'
-		? token.status
-		: (formatRemaining(token.expires_at, new Date()) ?? token.status ?? ''),
-);
+const remaining = $derived(tokenRemaining(token));
 const badgeClass = $derived(
 	token.status === 'revoked' || token.status === 'expired'
 		? 'border-error text-error'

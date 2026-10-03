@@ -4,6 +4,7 @@ import {
 	TOKEN_TTL_SECONDS_MAX,
 	TOKEN_TTL_SECONDS_MIN,
 } from './api-limits';
+import { formatRemaining } from './datetime';
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -28,4 +29,19 @@ export function tokenStatusLabel(status: TokenStatus | undefined): string {
 	if (status === undefined) return '';
 
 	return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+// tokenRemaining is the short word under a token's expiry, in the card and
+// the table alike: the time left while the server calls the token active,
+// otherwise its status. The status is the server's answer (#536); the clock
+// only describes how long an active token has left.
+export function tokenRemaining(
+	token: { status?: TokenStatus; expires_at: string },
+	now: Date = new Date(),
+): string {
+	if (token.status === 'revoked' || token.status === 'expired') {
+		return token.status;
+	}
+
+	return formatRemaining(token.expires_at, now) ?? token.status ?? '';
 }
