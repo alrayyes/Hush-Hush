@@ -67,6 +67,8 @@ const GO = ['build', 'gomod', 'govulncheck', 'lint', 'pact', 'test'];
 const cases: [path: string, expected: string[]][] = [
   ['internal/api/create.go', [...GO, 'container-integration', 'e2e', 'lighthouse']],
   ['main.go', [...GO, 'container-integration']],
+  // Go tests read testdata/, including the fuzz corpus a crasher is committed to.
+  ['internal/api/testdata/fuzz/FuzzValidateAgeCiphertext/seed1', [...GO, 'container-integration', 'e2e', 'lighthouse']],
   ['go.mod', [...GO, 'container-integration', 'ci-config']],
   ['go.sum', [...GO, 'container-integration']],
   ['.golangci.yml', [...GO, 'container-integration', 'prose']],
