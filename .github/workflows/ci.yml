@@ -553,15 +553,16 @@ jobs:
   # once (go-releases.md's release job pairs the same two actions for the
   # same reason: goreleaser's own before.hooks build the frontend).
   #
-  # Required (alrayyes/hush-hush#384), so it can't be skipped by an
-  # `on.pull_request.paths` filter at the trigger level - ci.md's "never
+  # Meant to block a merge (alrayyes/hush-hush#384). It's gated by the job-level
+  # `if:` below, not by `on.pull_request.paths` at the trigger: ci.md's "never
   # require a status check gated behind paths" would leave every non-web
   # pull request permanently BLOCKED, since "never ran" isn't "passed" to
-  # either forge. The job itself always runs and always reports; only the
-  # steps below skip when the diff touches neither the frontend source
-  # nor the backend HTTP contract it exercises (internal/api, the OpenAPI
-  # spec) - a backend-only auth change silently passing an e2e assertion
-  # it actually broke is exactly the gap alrayyes/hush-hush#452 closes.
+  # either forge. A job skipped by `if:` reports success, so a diff that
+  # touches neither the frontend source nor the backend HTTP contract it
+  # exercises (internal/api, the OpenAPI spec) still merges. A backend-only
+  # auth change silently passing an e2e assertion it actually broke is exactly
+  # the gap alrayyes/hush-hush#452 closes. Whether this job blocks a merge is a
+  # branch-protection setting, not something this file decides.
   e2e:
     needs: changes
     if: needs.changes.outputs.web-tests == 'true'

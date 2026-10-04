@@ -10,9 +10,10 @@ name: release-auto-merge
 
 on: pull_request
 
+# The default GITHUB_TOKEN gets read access only: the one step authenticates as
+# RELEASE_TOKEN (see below), so nothing here uses the default token's write scopes.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: release-auto-merge-${{ github.ref }}
