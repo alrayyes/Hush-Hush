@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.58.6](https://github.com/alrayyes/Hush-Hush/compare/v2.58.5...v2.58.6) (2026-10-05)
+
+
+### Bug Fixes
+
+* **web-ui:** keep a secret's value out of spell-check and autofill ([#664](https://github.com/alrayyes/Hush-Hush/issues/664)) ([d31603a](https://github.com/alrayyes/Hush-Hush/commit/d31603a656b9ebacd5140e29e977a94c1a44407f))
+
 ## [2.58.5](https://github.com/alrayyes/Hush-Hush/compare/v2.58.4...v2.58.5) (2026-10-05)
 
 
