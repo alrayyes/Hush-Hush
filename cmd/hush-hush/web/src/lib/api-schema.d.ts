@@ -1520,9 +1520,16 @@ export interface components {
         csrfTokenOptional: string;
         /** @description The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404. */
         objectId: string;
+        /** @description How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all. */
+        pageLimit: number;
+        /** @description How many rows to skip. With `limit` left out, a page is 50 rows. */
+        pageOffset: number;
     };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description How many rows there are in all, whatever page was returned. */
+        TotalCount: number;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -1603,6 +1610,10 @@ export interface operations {
                  *     case-insensitively.
                  */
                 tag?: components["schemas"]["Tag"][];
+                /** @description How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all. */
+                limit?: components["parameters"]["pageLimit"];
+                /** @description How many rows to skip. With `limit` left out, a page is 50 rows. */
+                offset?: components["parameters"]["pageOffset"];
             };
             header?: never;
             path?: never;
@@ -1613,6 +1624,7 @@ export interface operations {
             /** @description Matching objects' metadata, sorted by slug. */
             200: {
                 headers: {
+                    "X-Total-Count": components["headers"]["TotalCount"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2395,7 +2407,12 @@ export interface operations {
     };
     listCredentials: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all. */
+                limit?: components["parameters"]["pageLimit"];
+                /** @description How many rows to skip. With `limit` left out, a page is 50 rows. */
+                offset?: components["parameters"]["pageOffset"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2405,12 +2422,14 @@ export interface operations {
             /** @description The admin account's registered credentials. */
             200: {
                 headers: {
+                    "X-Total-Count": components["headers"]["TotalCount"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Credential"][];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
         };
     };
@@ -2503,7 +2522,12 @@ export interface operations {
     };
     listTokens: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all. */
+                limit?: components["parameters"]["pageLimit"];
+                /** @description How many rows to skip. With `limit` left out, a page is 50 rows. */
+                offset?: components["parameters"]["pageOffset"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2513,12 +2537,14 @@ export interface operations {
             /** @description Every issued token's metadata. */
             200: {
                 headers: {
+                    "X-Total-Count": components["headers"]["TotalCount"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["TokenMetadata"][];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
         };
     };
@@ -2679,7 +2705,12 @@ export interface operations {
     };
     listConsumerTokens: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all. */
+                limit?: components["parameters"]["pageLimit"];
+                /** @description How many rows to skip. With `limit` left out, a page is 50 rows. */
+                offset?: components["parameters"]["pageOffset"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2689,12 +2720,14 @@ export interface operations {
             /** @description Every issued consumer token's metadata. */
             200: {
                 headers: {
+                    "X-Total-Count": components["headers"]["TotalCount"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ConsumerTokenMetadata"][];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
         };
     };

@@ -181,6 +181,8 @@ paths:
             maxItems: 10
           style: form
           explode: true
+        - $ref: "#/components/parameters/pageLimit"
+        - $ref: "#/components/parameters/pageOffset"
       responses:
         "200":
           description: Matching objects' metadata, sorted by slug.
@@ -190,6 +192,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ObjectMetadata"
+          headers:
+            X-Total-Count:
+              $ref: "#/components/headers/TotalCount"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1050,9 +1055,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Credential"
+          headers:
+            X-Total-Count:
+              $ref: "#/components/headers/TotalCount"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "400":
+          $ref: "#/components/responses/BadRequest"
+      parameters:
+        - $ref: "#/components/parameters/pageLimit"
+        - $ref: "#/components/parameters/pageOffset"
   /credentials/{id}:
     patch:
       operationId: renameCredential
@@ -1175,9 +1188,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TokenMetadata"
+          headers:
+            X-Total-Count:
+              $ref: "#/components/headers/TotalCount"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "400":
+          $ref: "#/components/responses/BadRequest"
+      parameters:
+        - $ref: "#/components/parameters/pageLimit"
+        - $ref: "#/components/parameters/pageOffset"
   /tokens/{id}:
     delete:
       operationId: revokeToken
@@ -1343,9 +1364,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ConsumerTokenMetadata"
+          headers:
+            X-Total-Count:
+              $ref: "#/components/headers/TotalCount"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "400":
+          $ref: "#/components/responses/BadRequest"
+      parameters:
+        - $ref: "#/components/parameters/pageLimit"
+        - $ref: "#/components/parameters/pageOffset"
   /consumer-tokens/{id}:
     delete:
       operationId: revokeConsumerToken
@@ -1600,6 +1629,28 @@ components:
         type: string
         format: uuid
         maxLength: 36
+
+    pageLimit:
+      name: limit
+      in: query
+      required: false
+      description: How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 500
+        default: 50
+    pageOffset:
+      name: offset
+      in: query
+      required: false
+      description: How many rows to skip. With `limit` left out, a page is 50 rows.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 2147483647
   responses:
     BadRequest:
       description: The request could not be parsed as documented.
@@ -2457,3 +2508,11 @@ components:
                 The raw consumer token. Shown here once, at creation, and
                 never again.
               maxLength: 64
+  headers:
+    TotalCount:
+      description: How many rows there are in all, whatever page was returned.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 2147483647
