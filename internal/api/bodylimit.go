@@ -47,6 +47,12 @@ func limitBody(next http.Handler) http.Handler {
 			return
 		}
 
+		if err := checkRequestMetadata(r); err != nil {
+			writeError(w, r, http.StatusUnprocessableEntity, err.Error())
+
+			return
+		}
+
 		r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 		next.ServeHTTP(w, r)
 	})

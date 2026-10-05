@@ -166,6 +166,7 @@ paths:
           description: Restrict to objects whose recorded used_by lineage includes this consumer.
           schema:
             type: string
+            maxLength: 128
         - name: tag
           in: query
           required: false
@@ -177,6 +178,7 @@ paths:
             type: array
             items:
               $ref: "#/components/schemas/Tag"
+            maxItems: 10
           style: form
           explode: true
       responses:
@@ -193,6 +195,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     post:
       operationId: createObject
       summary: Create a new sealed object
@@ -279,11 +283,14 @@ paths:
               schema:
                 type: string
                 format: binary
+                maxLength: 1048576
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     put:
       operationId: updateObject
       summary: Rotate an object's value
@@ -353,6 +360,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /objects/{slug}/used-by:
     get:
       operationId: getObjectUsedBy
@@ -407,6 +416,7 @@ paths:
           description: Restrict to consumers whose name contains this substring, case-insensitive.
           schema:
             type: string
+            maxLength: 128
         - name: page
           in: query
           required: false
@@ -415,6 +425,7 @@ paths:
             type: integer
             format: int32
             minimum: 1
+            maximum: 2147483647
         - name: page_size
           in: query
           required: false
@@ -439,6 +450,7 @@ paths:
                   - type: array
                     items:
                       type: string
+                      maxLength: 128
                   - $ref: "#/components/schemas/ConsumersPage"
               examples:
                 unpaginated:
@@ -459,6 +471,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     post:
       operationId: addConsumer
       summary: Add a consumer with no secret referencing it yet
@@ -503,6 +517,8 @@ paths:
         "409":
           $ref: "#/components/responses/ConsumerAlreadyExists"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /consumers/{name}:
     patch:
       operationId: updateConsumer
@@ -570,6 +586,8 @@ paths:
         "404":
           $ref: "#/components/responses/UnknownConsumer"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteConsumer
       summary: Remove a consumer from every object that references it
@@ -595,6 +613,8 @@ paths:
         "404":
           $ref: "#/components/responses/UnknownConsumer"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /audit-log:
     get:
       operationId: queryAuditLog
@@ -618,6 +638,7 @@ paths:
           description: Restrict to entries recorded with this caller identity.
           schema:
             type: string
+            maxLength: 128
         - name: actor
           in: query
           required: false
@@ -631,6 +652,7 @@ paths:
             values, alongside every real actor.
           schema:
             type: string
+            maxLength: 128
         - name: from
           in: query
           required: false
@@ -638,6 +660,7 @@ paths:
           schema:
             type: string
             format: date-time
+            maxLength: 64
         - name: to
           in: query
           required: false
@@ -645,6 +668,7 @@ paths:
           schema:
             type: string
             format: date-time
+            maxLength: 64
         - name: after
           in: query
           required: false
@@ -657,6 +681,8 @@ paths:
           schema:
             type: integer
             format: int64
+            minimum: 0
+            maximum: 9223372036854775807
         - name: order
           in: query
           required: false
@@ -688,9 +714,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditLogEntry"
+                maxItems: 500
         "400":
           $ref: "#/components/responses/BadRequest"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /audit-log/filter-options:
     get:
       operationId: queryAuditLogFilterOptions
@@ -771,6 +800,7 @@ paths:
               schema:
                 type: string
                 description: One or more MCP JSON-RPC 2.0 responses, streamed as server-sent events.
+                maxLength: 1572864
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -832,6 +862,7 @@ paths:
               description: The new session cookie, and a second, readable csrf_token cookie carrying its CSRF token.
               schema:
                 type: string
+                maxLength: 512
           content:
             application/json:
               schema:
@@ -895,6 +926,7 @@ paths:
               description: The new session cookie, and a second, readable csrf_token cookie carrying its CSRF token.
               schema:
                 type: string
+                maxLength: 512
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -918,6 +950,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /auth/status:
     get:
       operationId: getAuthStatus
@@ -1025,6 +1059,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteCredential
       summary: Remove a passkey
@@ -1054,6 +1090,8 @@ paths:
               example:
                 error: cannot remove the last remaining passkey
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /tokens:
     post:
       operationId: createToken
@@ -1136,6 +1174,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /tokens/{id}/rotate:
     post:
       operationId: rotateToken
@@ -1211,6 +1251,8 @@ paths:
         "409":
           $ref: "#/components/responses/TokenStillActive"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /consumer-tokens:
     post:
       operationId: createConsumerToken
@@ -1303,6 +1345,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /consumer-tokens/{id}/rotate:
     post:
       operationId: rotateConsumerToken
@@ -1381,6 +1425,8 @@ paths:
         "409":
           $ref: "#/components/responses/TokenStillActive"
 
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 components:
   securitySchemes:
     bearerAuth:
@@ -1452,6 +1498,7 @@ components:
       schema:
         type: string
 
+        maxLength: 128
     credentialId:
       name: id
       in: path
@@ -1475,6 +1522,7 @@ components:
       schema:
         type: string
 
+        maxLength: 128
     tokenId:
       name: id
       in: path
@@ -1504,6 +1552,7 @@ components:
       schema:
         type: string
 
+        maxLength: 128
     csrfTokenOptional:
       name: X-CSRF-Token
       in: header
@@ -1517,6 +1566,7 @@ components:
       schema:
         type: string
 
+        maxLength: 128
   responses:
     BadRequest:
       description: The request could not be parsed as documented.
@@ -1707,6 +1757,7 @@ components:
           description: |
             When the object was created. Returned by `GET /objects`; left
             out of a create or update response.
+          maxLength: 64
         updated_at:
           type: string
           format: date-time
@@ -1714,6 +1765,7 @@ components:
             When the object's value was last replaced - equal to
             `created_at` for an object never updated. Returned by
             `GET /objects`; left out of a create or update response.
+          maxLength: 64
         created_by:
           allOf:
             - $ref: "#/components/schemas/Actor"
@@ -1741,9 +1793,11 @@ components:
         type:
           type: string
           examples: [session]
+          maxLength: 16
         id:
           type: string
           examples: [a1b2c3d4e5f6a7b8]
+          maxLength: 128
 
     Tag:
       type: string
@@ -1802,10 +1856,13 @@ components:
         name:
           type: string
           description: A distinct consumer name recorded in some object's used_by list.
+          maxLength: 128
         secret_count:
           type: integer
           format: int32
           description: How many stored secret objects' used_by list includes this consumer.
+          minimum: 0
+          maximum: 2147483647
         public_key:
           type: string
           description: |
@@ -1814,6 +1871,7 @@ components:
             sent to or stored by this API. Absent entirely when no key has
             been registered for this consumer, rather than present as an
             error or `null`.
+          maxLength: 512
       example:
         name: homelab/vps-docker
         secret_count: 1
@@ -1826,6 +1884,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConsumerEntry"
+          maxItems: 100
         total:
           type: integer
           format: int32
@@ -1834,6 +1893,8 @@ components:
             across every page - not just this page's own count - so a
             caller can render page-number navigation.
 
+          minimum: 0
+          maximum: 2147483647
     AddConsumerRequest:
       type: object
       required: [name]
@@ -1887,6 +1948,8 @@ components:
           description: |
             This entry's own id - stable and strictly increasing, so it
             doubles as the cursor for the `after` query parameter.
+          minimum: 1
+          maximum: 9223372036854775807
         object_id:
           $ref: "#/components/schemas/ObjectSlug"
         action:
@@ -1895,9 +1958,11 @@ components:
         timestamp:
           type: string
           format: date-time
+          maxLength: 64
         caller:
           type: string
           description: The caller's presented identity, if any.
+          maxLength: 128
         ip:
           type: string
           description: |
@@ -1907,6 +1972,7 @@ components:
             address; this service isn't deployed behind a reverse proxy or
             load balancer, so X-Forwarded-For (or similar) support isn't
             implemented yet.
+          maxLength: 45
         actor_type:
           type: string
           enum: [token, session]
@@ -1920,6 +1986,7 @@ components:
             The specific token id or admin account this call was
             authenticated as - absent for an unauthenticated read.
 
+          maxLength: 128
     AuditActorOption:
       type: object
       required: [value, label]
@@ -1927,9 +1994,11 @@ components:
         value:
           type: string
           description: What to send back as the `actor` query parameter to select this actor.
+          maxLength: 128
         label:
           type: string
           description: What to show the user - "admin", "token:<id>", or "none".
+          maxLength: 256
       example:
         value: a1b2c3d4e5f6a7b8
         label: "token:a1b2c3d4e5f6a7b8"
@@ -1952,6 +2021,7 @@ components:
           type: array
           items:
             type: string
+            maxLength: 128
           description: Every distinct caller currently recorded in the audit log.
 
     Ready:
@@ -1977,6 +2047,7 @@ components:
             to the changelog page rather than hardcoding a version that
             would drift from what's actually running.
           examples: ["2.6.0", "dev"]
+          maxLength: 64
         environment:
           type: string
           maxLength: 40
@@ -1999,6 +2070,7 @@ components:
             What went wrong, in terms safe to show a caller. Nothing here
             handles authentication with a detail worth holding back.
           examples: [unknown object]
+          maxLength: 1024
 
     AuthStatus:
       type: object
@@ -2020,6 +2092,7 @@ components:
           examples:
             - age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqssgxdaz2
 
+          maxLength: 512
     RegistrationOptions:
       type: object
       description: |
@@ -2096,6 +2169,7 @@ components:
     CredentialId:
       type: string
       examples: [Zm9vYmFyYmF6]
+      maxLength: 1400
 
     Credential:
       type: object
@@ -2106,13 +2180,16 @@ components:
         nickname:
           type: string
           examples: [YubiKey 5C]
+          maxLength: 100
         created_at:
           type: string
           format: date-time
+          maxLength: 64
         last_used_at:
           type: string
           format: date-time
           description: Absent if this credential has never been used to log in.
+          maxLength: 64
         wrapped_identity:
           type: string
           description: |
@@ -2124,6 +2201,7 @@ components:
             wrapped, and only unwrappable with that same credential's own
             PRF secret or the break-glass recovery phrase.
 
+          maxLength: 4096
     CredentialRenameRequest:
       type: object
       required: [nickname]
@@ -2137,6 +2215,7 @@ components:
       type: string
       pattern: "^[0-9a-f]{16}$"
       examples: [a1b2c3d4e5f6a7b8]
+      maxLength: 16
 
     TokenTtlSeconds:
       type: integer
@@ -2176,24 +2255,29 @@ components:
           $ref: "#/components/schemas/TokenId"
         description:
           type: string
+          maxLength: 200
         owner:
           type: string
           description: |
             The admin account that created this token over HTTP. Absent
             for a token issued via the `token` CLI command, which has no
             session to attribute to - never a guessed value.
+          maxLength: 128
         created_at:
           type: string
           format: date-time
+          maxLength: 64
         expires_at:
           type: string
           format: date-time
+          maxLength: 64
         revoked:
           type: boolean
         last_used_at:
           type: string
           format: date-time
           description: Absent if this token has never authenticated a request.
+          maxLength: 64
         status:
           $ref: "#/components/schemas/TokenStatus"
         allowed_actions:
@@ -2221,6 +2305,7 @@ components:
       items:
         type: string
         enum: [rotate, revoke, purge]
+      maxItems: 3
 
     RotateTokenRequest:
       type: object
@@ -2242,10 +2327,12 @@ components:
                 never again - the same as a token issued via the `token`
                 CLI command.
 
+              maxLength: 64
     ConsumerTokenId:
       type: string
       pattern: "^[0-9a-f]{16}$"
       examples: [b2c3d4e5f6a7b8c9]
+      maxLength: 16
 
     CreateConsumerTokenRequest:
       type: object
@@ -2276,20 +2363,25 @@ components:
           $ref: "#/components/schemas/ConsumerTokenId"
         consumer:
           type: string
+          maxLength: 128
         description:
           type: string
+          maxLength: 200
         created_at:
           type: string
           format: date-time
+          maxLength: 64
         expires_at:
           type: string
           format: date-time
+          maxLength: 64
         revoked:
           type: boolean
         last_used_at:
           type: string
           format: date-time
           description: Absent if this token has never authenticated a request.
+          maxLength: 64
         status:
           $ref: "#/components/schemas/TokenStatus"
         allowed_actions:
@@ -2313,3 +2405,4 @@ components:
               description: |
                 The raw consumer token. Shown here once, at creation, and
                 never again.
+              maxLength: 64

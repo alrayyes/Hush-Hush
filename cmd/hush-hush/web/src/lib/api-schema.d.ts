@@ -1599,6 +1599,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     createObject: {
@@ -1706,6 +1707,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     updateObject: {
@@ -1811,6 +1813,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getObjectUsedBy: {
@@ -1882,6 +1885,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     addConsumer: {
@@ -1930,6 +1934,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             409: components["responses"]["ConsumerAlreadyExists"];
             413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     deleteConsumer: {
@@ -1970,6 +1975,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["UnknownConsumer"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     updateConsumer: {
@@ -2025,6 +2031,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["UnknownConsumer"];
             413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     queryAuditLog: {
@@ -2082,6 +2089,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     queryAuditLogFilterOptions: {
@@ -2294,6 +2302,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getAuthStatus: {
@@ -2405,6 +2414,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     renameCredential: {
@@ -2444,6 +2454,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listTokens: {
@@ -2539,6 +2550,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     rotateToken: {
@@ -2618,6 +2630,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["TokenStillActive"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listConsumerTokens: {
@@ -2714,6 +2727,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     rotateConsumerToken: {
@@ -2793,6 +2807,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["TokenStillActive"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
 }

@@ -16,9 +16,10 @@ const (
 )
 
 var (
-	errTooManyTags = fmt.Errorf("an object takes at most %d tags", maxTagsPerObject)
-	errInvalidTag  = fmt.Errorf("a tag is 1 to %d characters from a-z, 0-9, '.', '_', '/' and '-'", maxTagLength)
-	errTagsNil     = errors.New("tags is required")
+	errTooManyTags       = fmt.Errorf("an object takes at most %d tags", maxTagsPerObject)
+	errTooManyTagFilters = fmt.Errorf("a filter takes at most %d tags", maxTagsPerObject)
+	errInvalidTag        = fmt.Errorf("a tag is 1 to %d characters from a-z, 0-9, '.', '_', '/' and '-'", maxTagLength)
+	errTagsNil           = errors.New("tags is required")
 
 	tagPattern = regexp.MustCompile(`^[a-z0-9._/-]+$`)
 )
