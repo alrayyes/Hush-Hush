@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -139,6 +141,11 @@ type mcpDeleteOutput struct {
 type mcpListInput struct {
 	UsedBy string `json:"used_by,omitempty" jsonschema:"restrict to objects whose recorded used_by lineage includes this consumer"`
 	Tag    string `json:"tag,omitempty" jsonschema:"restrict to objects carrying this tag"`
+	// Limit and Offset page the result like GET /objects does. They're pointers
+	// so a client that sends neither gets the first page, and one that sends 0
+	// is refused rather than read as absent.
+	Limit  *int `json:"limit,omitempty" jsonschema:"how many objects to return, 1 to 500; 50 when left out"`
+	Offset *int `json:"offset,omitempty" jsonschema:"how many objects to skip; add the number you got to read the next page"`
 }
 
 // handleMCP serves the MCP endpoint (alrayyes/hush-hush#346) - inject/get/
@@ -205,7 +212,7 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list",
-		Description: "List every stored object's metadata (slug, used_by, description) - never the sealed value.",
+		Description: "List stored objects' metadata (id, slug, used_by, description) - never the sealed value. One page of 50 unless limit says otherwise; the result's text says how many there are in all.",
 	}, mcpList(s))
 
 	return srv
@@ -390,16 +397,46 @@ func mcpList(s objectStore) mcp.ToolHandlerFor[mcpListInput, []ObjectMetadata] {
 			filter.Tags = []string{tag}
 		}
 
+		limit, offset, err := pageBounds(optionalInt(in.Limit), optionalInt(in.Offset))
+		if err != nil {
+			return nil, nil, err
+		}
+
 		objs, err := s.ListObjects(ctx, filter)
 		if err != nil {
 			return nil, nil, mcpInternalError(ctx, "list", err)
 		}
+
+		total := len(objs)
+		objs = objs[min(offset, total):min(offset+limit, total)]
 
 		metadata := make([]ObjectMetadata, len(objs))
 		for i, obj := range objs {
 			metadata[i] = ObjectMetadata{ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}
 		}
 
-		return nil, metadata, nil
+		return pageSummary(len(metadata), total, offset), metadata, nil
 	}
+}
+
+// optionalInt is a paging input as the query-string form pageBounds reads: ""
+// for one that wasn't given.
+func optionalInt(v *int) string {
+	if v == nil {
+		return ""
+	}
+
+	return strconv.Itoa(*v)
+}
+
+// pageSummary is the text a list result carries beside its array, so a client
+// can tell a full list from a page of one: the structured result stays a plain
+// array, as the HTTP lists do, and the total has nowhere else to go.
+func pageSummary(shown, total, offset int) *mcp.CallToolResult {
+	text := fmt.Sprintf("Showing %d of %d objects, from offset %d.", shown, total, offset)
+	if next := offset + shown; next < total {
+		text += fmt.Sprintf(" Pass offset=%d for the next page.", next)
+	}
+
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}
 }
