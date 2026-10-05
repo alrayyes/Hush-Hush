@@ -1,11 +1,21 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import * as age from 'age-encryption';
 import { unwrapIdentityWithRecoveryPhrase } from '../src/lib/identity';
 import { expectListParity, expectNavParity } from './layout-parity';
 
 // A timestamp as formatTimestamp writes it, for the parity checks.
 const TIMESTAMP = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
+
+// alrayyes/hush-hush#661: a secret's plaintext is typed or pasted into these
+// fields before it is sealed, so they opt out of everything a browser might
+// send elsewhere - Chrome and Edge's enhanced spell check uploads field text.
+async function expectValueFieldIsPrivate(field: Locator) {
+	await expect(field).toHaveAttribute('spellcheck', 'false');
+	await expect(field).toHaveAttribute('autocomplete', 'off');
+	await expect(field).toHaveAttribute('autocapitalize', 'off');
+	await expect(field).toHaveAttribute('autocorrect', 'off');
+}
 
 // alrayyes/hush-hush#272: /audit-log is both a SvelteKit page route and a
 // real backend API endpoint, and Go's mux used to route a hard
@@ -331,6 +341,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(createDialog.getByText(/plain text/i)).toHaveCount(0);
 	await expect(createDialog.getByText(/ciphertext/i)).toHaveCount(0);
 	const plaintextValue = 'prod deploy webhook secret, sealed client-side';
+	await expectValueFieldIsPrivate(page.locator('#create-value'));
 	await page.locator('#create-id').fill('mattermost_deploy_webhook');
 	await page.locator('#create-value').fill(plaintextValue);
 	await page
@@ -594,6 +605,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// than silently sealing to fewer recipients than picked ("homelab",
 	// already keyed above, still resolves one, so Save stays enabled).
 	await expect(editDialog.getByText('(no key)')).toBeVisible();
+	await expectValueFieldIsPrivate(editDialog.locator('#edit-value'));
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
 	await editDialog.locator('#edit-tags').fill('prod');
 	const editResults = await new AxeBuilder({ page })
