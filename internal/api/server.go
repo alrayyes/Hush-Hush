@@ -42,7 +42,7 @@ func WithReadiness(r *Readiness) MuxOption {
 // database (go-test.md's "reach for a fake before a mock").
 type objectStore interface {
 	CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string, opts ...store.ObjectOption) error
-	GetObject(ctx context.Context, slug string) (store.Object, error)
+	GetObject(ctx context.Context, slug string, opts ...store.ObjectOption) (store.Object, error)
 	ListObjects(ctx context.Context, filter store.ObjectFilter) ([]store.Object, error)
 	ListConsumers(ctx context.Context) ([]string, error)
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
@@ -51,7 +51,7 @@ type objectStore interface {
 	SetConsumerPublicKey(ctx context.Context, name, publicKey string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...store.ObjectOption) error
-	DeleteObject(ctx context.Context, slug string) error
+	DeleteObject(ctx context.Context, slug string, opts ...store.ObjectOption) error
 	Ready(ctx context.Context) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)

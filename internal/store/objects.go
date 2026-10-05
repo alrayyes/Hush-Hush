@@ -16,6 +16,16 @@ var ErrAlreadyExists = errors.New("object already exists")
 // ErrNotFound is returned when no object exists under the given id.
 var ErrNotFound = errors.New("object not found")
 
+// ErrAmbiguousSlug is returned when a slug has several variants (one value
+// per group of consumers, alrayyes/hush-hush#668) and the call named no
+// consumer to say which one it means.
+var ErrAmbiguousSlug = errors.New("slug has several variants; name a consumer")
+
+// ErrVariantConflict is returned when a change would put one consumer in two
+// variants of the same slug. A consumer reads one value per slug, so it can
+// only be in one.
+var ErrVariantConflict = errors.New("consumer would be in two variants of one slug")
+
 // ErrUnknownConsumer is returned by RenameConsumer and DeleteConsumer when
 // no stored object's used_by list currently records the given name.
 var ErrUnknownConsumer = errors.New("unknown consumer")
@@ -67,7 +77,25 @@ type Object struct {
 type ObjectOption func(*objectOptions)
 
 type objectOptions struct {
-	tags *[]string
+	tags     *[]string
+	consumer string
+	id       string
+}
+
+// WithID picks, on GetObject, UpdateObject and DeleteObject, the object with
+// this UUID id. It has to be an object under the slug given, or the call is
+// ErrNotFound, so an id can't be used to reach into another name. It settles
+// which variant a slug with several means, and wins over ForConsumer.
+func WithID(id string) ObjectOption {
+	return func(o *objectOptions) { o.id = id }
+}
+
+// ForConsumer picks, on GetObject, UpdateObject and DeleteObject, the variant
+// of a slug whose used_by list names consumer. Without it, a slug with one
+// variant is addressed as it always was, and a slug with several is
+// ErrAmbiguousSlug. CreateObject ignores it.
+func ForConsumer(consumer string) ObjectOption {
+	return func(o *objectOptions) { o.consumer = consumer }
 }
 
 // WithTags sets the object's tags. On UpdateObject it replaces them, and
@@ -107,15 +135,11 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	var exists int
-	switch err := tx.QueryRowContext(ctx, `SELECT 1 FROM objects WHERE slug = ?`, slug).Scan(&exists); {
-	case err == nil:
-		return ErrAlreadyExists
-	case !errors.Is(err, sql.ErrNoRows):
-		return fmt.Errorf("check existing object: %w", err)
+	if err := checkCreatable(ctx, tx, slug, usedBy); err != nil {
+		return err
 	}
 
-	id, err := randomHex(16)
+	id, err := newUUID()
 	if err != nil {
 		return fmt.Errorf("generate object id: %w", err)
 	}
@@ -150,13 +174,127 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 	return nil
 }
 
-// GetObject fetches an object's sealed value and used_by lineage by slug.
-// It returns ErrNotFound if no object exists under that slug.
-func (s *Store) GetObject(ctx context.Context, slug string) (Object, error) {
+// querier is the part of *sql.DB and *sql.Tx the helpers below need.
+type querier interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// checkCreatable decides whether a new object may take slug. A slug nobody
+// holds is free. A slug that is held can take another variant, provided the
+// new one names at least one consumer and none of them already has a variant
+// of that slug; otherwise it's ErrAlreadyExists. It runs in the same
+// transaction as the insert, so two concurrent creates can't both win.
+func checkCreatable(ctx context.Context, q querier, slug string, usedBy []string) error {
+	var held int
+	switch err := q.QueryRowContext(ctx, `SELECT 1 FROM objects WHERE slug = ? LIMIT 1`, slug).Scan(&held); {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil
+	case err != nil:
+		return fmt.Errorf("check existing object: %w", err)
+	}
+
+	if len(usedBy) == 0 {
+		return ErrAlreadyExists
+	}
+
+	taken, err := consumersWithVariant(ctx, q, slug, "", usedBy)
+	if err != nil {
+		return err
+	}
+
+	if len(taken) > 0 {
+		return ErrAlreadyExists
+	}
+
+	return nil
+}
+
+// consumersWithVariant returns those of consumers that already appear in a
+// variant of slug other than the one with id exceptID ("" for none).
+func consumersWithVariant(ctx context.Context, q querier, slug, exceptID string, consumers []string) ([]string, error) {
+	var taken []string
+
+	for _, c := range consumers {
+		var found int
+
+		err := q.QueryRowContext(ctx, `
+			SELECT 1 FROM objects o JOIN used_by u ON u.object_id = o.id
+			WHERE o.slug = ? AND u.consumer = ? AND o.id <> ? LIMIT 1`,
+			slug, c, exceptID,
+		).Scan(&found)
+
+		switch {
+		case err == nil:
+			taken = append(taken, c)
+		case !errors.Is(err, sql.ErrNoRows):
+			return nil, fmt.Errorf("check consumer variant: %w", err)
+		}
+	}
+
+	return taken, nil
+}
+
+// resolveObjectID finds the internal id of the object slug addresses: the
+// variant naming consumer when one is given, otherwise the only object under
+// the slug. It returns ErrNotFound when there is none and ErrAmbiguousSlug
+// when no consumer was named and there are several.
+func resolveObjectID(ctx context.Context, q querier, slug string, o objectOptions) (string, error) {
+	query, args := `SELECT id FROM objects WHERE slug = ? LIMIT 2`, []any{slug}
+
+	switch {
+	case o.id != "":
+		query, args = `SELECT id FROM objects WHERE slug = ? AND id = ? LIMIT 2`, append(args, o.id)
+	case o.consumer != "":
+		query = `SELECT o.id FROM objects o JOIN used_by u ON u.object_id = o.id WHERE o.slug = ? AND u.consumer = ? LIMIT 2`
+		args = append(args, o.consumer)
+	}
+
+	rows, err := q.QueryContext(ctx, query, args...)
+	if err != nil {
+		return "", fmt.Errorf("resolve object: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var ids []string
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return "", fmt.Errorf("scan object id: %w", err)
+		}
+
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("iterate object ids: %w", err)
+	}
+
+	switch len(ids) {
+	case 0:
+		return "", ErrNotFound
+	case 1:
+		return ids[0], nil
+	default:
+		return "", ErrAmbiguousSlug
+	}
+}
+
+// GetObject fetches an object's sealed value and used_by lineage by slug,
+// naming a variant with ForConsumer when the slug has several. It returns
+// ErrNotFound if no object matches and ErrAmbiguousSlug if the slug has
+// several variants and no consumer was named.
+func (s *Store) GetObject(ctx context.Context, slug string, opts ...ObjectOption) (Object, error) {
+	id, err := resolveObjectID(ctx, s.db, slug, applyObjectOptions(opts))
+	if err != nil {
+		return Object{}, err
+	}
+
 	obj := Object{Slug: slug}
 	var ownerID sql.NullString
 
-	switch err := s.db.QueryRowContext(ctx, `SELECT id, value, description, owner_id FROM objects WHERE slug = ?`, slug).Scan(&obj.ID, &obj.Value, &obj.Description, &ownerID); {
+	switch err := s.db.QueryRowContext(ctx, `SELECT id, value, description, owner_id FROM objects WHERE id = ?`, id).Scan(&obj.ID, &obj.Value, &obj.Description, &ownerID); {
 	case errors.Is(err, sql.ErrNoRows):
 		return Object{}, ErrNotFound
 	case err != nil:
@@ -334,26 +472,29 @@ func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, use
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	id, err := resolveObjectID(ctx, tx, slug, options)
+	if err != nil {
+		return err
+	}
+
+	if usedBy != nil {
+		taken, err := consumersWithVariant(ctx, tx, slug, id, *usedBy)
+		if err != nil {
+			return err
+		}
+
+		if len(taken) > 0 {
+			return ErrVariantConflict
+		}
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	result, err := tx.ExecContext(ctx,
-		`UPDATE objects SET value = ?, updated_at = ? WHERE slug = ?`,
-		value, now, slug,
-	)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE objects SET value = ?, updated_at = ? WHERE id = ?`, value, now, id); err != nil {
 		return fmt.Errorf("update object: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("check rows affected: %w", err)
-	}
-
-	if rows == 0 {
-		return ErrNotFound
-	}
-
-	if err := replaceObjectRelations(ctx, tx, slug, usedBy, options.tags); err != nil {
+	if err := replaceObjectRelations(ctx, tx, id, usedBy, options.tags); err != nil {
 		return err
 	}
 
@@ -366,25 +507,16 @@ func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, use
 
 // replaceObjectRelations rewrites an updated object's used_by and tags
 // rows, each only when given - split out of UpdateObject to keep it
-// readable.
-func replaceObjectRelations(ctx context.Context, tx *sql.Tx, slug string, usedBy, tags *[]string) error {
+// readable. used_by.object_id keys off the internal id (schema.sql's own
+// comment on why), which the caller has already resolved.
+func replaceObjectRelations(ctx context.Context, tx *sql.Tx, id string, usedBy, tags *[]string) error {
 	if usedBy != nil {
-		// used_by.object_id keys off the internal id, not slug (schema.sql's
-		// own comment on why) - both statements below resolve it from slug
-		// via the same subquery rather than a separate round trip, since the
-		// caller's UPDATE already proved a matching row exists.
-		if _, err := tx.ExecContext(ctx,
-			`DELETE FROM used_by WHERE object_id = (SELECT id FROM objects WHERE slug = ?)`,
-			slug,
-		); err != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM used_by WHERE object_id = ?`, id); err != nil {
 			return fmt.Errorf("clear used_by: %w", err)
 		}
 
 		for _, consumer := range *usedBy {
-			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO used_by (object_id, consumer) VALUES ((SELECT id FROM objects WHERE slug = ?), ?)`,
-				slug, consumer,
-			); err != nil {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`, id, consumer); err != nil {
 				return fmt.Errorf("insert used_by: %w", err)
 			}
 		}
@@ -392,11 +524,6 @@ func replaceObjectRelations(ctx context.Context, tx *sql.Tx, slug string, usedBy
 
 	if tags == nil {
 		return nil
-	}
-
-	var id string
-	if err := tx.QueryRowContext(ctx, `SELECT id FROM objects WHERE slug = ?`, slug).Scan(&id); err != nil {
-		return fmt.Errorf("select object id: %w", err)
 	}
 
 	return replaceTags(ctx, tx, id, *tags)
@@ -599,6 +726,10 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 	}
 
 	if oldName != newName {
+		if err := checkRenameKeepsVariantsApart(ctx, tx, oldName, newName); err != nil {
+			return ConsumerEntry{}, err
+		}
+
 		if err := rewriteUsedByForRename(ctx, tx, oldName, newName); err != nil {
 			return ConsumerEntry{}, err
 		}
@@ -626,6 +757,30 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 	}
 
 	return ConsumerEntry{Name: newName, SecretCount: count, PublicKey: resolvedKey}, nil
+}
+
+// checkRenameKeepsVariantsApart refuses a rename that would leave newName in
+// two variants of one slug: oldName in one, newName already in another. The
+// two names merge on a rename, and a consumer reads one value per slug.
+func checkRenameKeepsVariantsApart(ctx context.Context, q querier, oldName, newName string) error {
+	var clash int
+
+	err := q.QueryRowContext(ctx, `
+		SELECT 1 FROM used_by ua
+		JOIN objects a ON a.id = ua.object_id
+		JOIN objects b ON b.slug = a.slug AND b.id <> a.id
+		JOIN used_by ub ON ub.object_id = b.id
+		WHERE ua.consumer = ? AND ub.consumer = ? LIMIT 1`, oldName, newName,
+	).Scan(&clash)
+
+	switch {
+	case err == nil:
+		return ErrVariantConflict
+	case errors.Is(err, sql.ErrNoRows):
+		return nil
+	default:
+		return fmt.Errorf("check rename against variants: %w", err)
+	}
 }
 
 // rewriteUsedByForRename is RenameConsumer's own used_by/consumers rewrite
@@ -785,23 +940,29 @@ func escapeLike(s string) string {
 	return replacer.Replace(s)
 }
 
-// DeleteObject permanently removes the object addressed by slug, its
-// used_by rows cascading with it (schema.sql's ON DELETE CASCADE, keyed
-// off the internal id regardless of how the row was located here). It
-// returns ErrNotFound if no object exists under that slug.
-func (s *Store) DeleteObject(ctx context.Context, slug string) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM objects WHERE slug = ?`, slug)
+// DeleteObject permanently removes the object addressed by slug (the variant
+// naming a consumer, with ForConsumer), its used_by rows cascading with it
+// (schema.sql's ON DELETE CASCADE, keyed off the internal id). It returns
+// ErrNotFound if no object matches and ErrAmbiguousSlug if the slug has
+// several variants and no consumer was named.
+func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOption) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	id, err := resolveObjectID(ctx, tx, slug, applyObjectOptions(opts))
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM objects WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("delete object: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("check rows affected: %w", err)
-	}
-
-	if rows == 0 {
-		return ErrNotFound
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil
