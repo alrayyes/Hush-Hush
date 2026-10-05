@@ -3,6 +3,7 @@ package api_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -167,4 +168,33 @@ func TestMCPInjectRefusesAValueOverTheMaximum(t *testing.T) {
 	})
 
 	require.True(t, result.IsError, "content: %+v", result.Content)
+}
+
+// The body cap has to leave room for a value at its maximum together with
+// every other field at its own, or a request that obeys every field limit
+// would still be refused.
+func TestARequestAtEveryFieldLimitFitsInTheBodyCap(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, createRequest(t, hushhush.CreateObjectRequest{
+		Slug:        chars(128),
+		Value:       sealedValueOfSize(t, hushhush.MaxValueBytes),
+		UsedBy:      distinctNames(100, 128),
+		Description: strings.Repeat("é", 1000),
+	}, issueToken(t, s)))
+
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+}
+
+// distinctNames is n names of the given length, no two alike: a used_by list
+// with a repeat is refused by the store (alrayyes/hush-hush#646).
+func distinctNames(n, length int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = fmt.Sprintf("%0*d", length, i)
+	}
+
+	return out
 }

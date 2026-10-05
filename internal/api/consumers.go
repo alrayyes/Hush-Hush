@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -137,7 +136,7 @@ func consumersPageFrom(page store.ConsumerPage) ConsumersPage {
 // AddConsumerRequest is the POST /consumers body. Matches
 // components.schemas.AddConsumerRequest in api/openapi.yaml.
 type AddConsumerRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" maxLength:"128"`
 }
 
 // handleAddConsumer adds a consumer to the directory with no secret
@@ -146,10 +145,7 @@ type AddConsumerRequest struct {
 func handleAddConsumer(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req AddConsumerRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 
@@ -182,8 +178,8 @@ func handleAddConsumer(s objectStore) http.HandlerFunc {
 // consumer unchanged - there's no way to clear a registered public key
 // through this endpoint, only to set or replace one.
 type UpdateConsumerRequest struct {
-	Name      string `json:"name,omitempty"`
-	PublicKey string `json:"public_key,omitempty"`
+	Name      string `json:"name,omitempty" maxLength:"128"`
+	PublicKey string `json:"public_key,omitempty" maxLength:"512"`
 }
 
 // handleUpdateConsumer renames a consumer, registers or updates its
@@ -202,10 +198,7 @@ type UpdateConsumerRequest struct {
 func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req UpdateConsumerRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 
