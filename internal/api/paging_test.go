@@ -99,15 +99,30 @@ func rows(t *testing.T, rec *httptest.ResponseRecorder) int {
 	return len(got)
 }
 
-func TestAListWithNoPagingParametersIsUnchanged(t *testing.T) {
+func TestAListWithNoPagingParametersIsTheFirstPage(t *testing.T) {
 	t.Parallel()
 
 	for _, ep := range pagedEndpoints() {
 		t.Run(ep.name, func(t *testing.T) {
 			t.Parallel()
 
-			get := ep.seed(t, 3)
+			get := ep.seed(t, 60)
 			rec := get("")
+
+			require.Equal(t, hushhush.DefaultListPageSize, rows(t, rec), "an unpaged request is one page, not every row")
+			require.Equal(t, "60", rec.Header().Get("X-Total-Count"), "and the total says there is more")
+		})
+	}
+}
+
+func TestAShortListWithNoPagingParametersIsComplete(t *testing.T) {
+	t.Parallel()
+
+	for _, ep := range pagedEndpoints() {
+		t.Run(ep.name, func(t *testing.T) {
+			t.Parallel()
+
+			rec := ep.seed(t, 3)("")
 
 			require.Equal(t, 3, rows(t, rec))
 			require.Equal(t, "3", rec.Header().Get("X-Total-Count"))
@@ -218,6 +233,10 @@ func TestSpecDocumentsThePagingOnEveryPagedList(t *testing.T) {
 		require.NotNil(t, got["offset"].Max, path)
 
 		require.Contains(t, op.Responses.Value("200").Value.Headers, "X-Total-Count", path)
+
+		list := op.Responses.Value("200").Value.Content.Get("application/json").Schema.Value
+		require.NotNil(t, list.MaxItems, "%s: a list is at most one page, so its array has a maxItems", path)
+		require.EqualValues(t, hushhush.MaxListPageSize, *list.MaxItems, path)
 	}
 }
 

@@ -56,16 +56,14 @@ overrides:
       owasp:api2:2023-write-restricted: off
       owasp:api8:2023-define-error-responses-401: off
 
-  # The list endpoints return every row unless a caller asks for a page (limit and
-  # offset, #649), so a maxItems here would be a number the server doesn't keep.
-  # Making a page the default breaks the web UI and the SDKs, which read the plain
-  # array today, so these arrays are waived by path, not the rule (ADR 31).
+  # Four list endpoints are one page now (limit, 50 by default, at most 500), so
+  # their arrays carry a maxItems the server keeps (ADR 31, 34). What is left
+  # still sends every row it has: the plain, unpaged GET /consumers array, which
+  # `page` and `page_size` already replace for a client that wants a bound, and
+  # the audit log's filter options, which are derived lists. Waived by path, not
+  # the rule.
   - files:
-      - "api/openapi.yaml#/paths/~1objects/get/responses/200/content/application~1json/schema"
       - "api/openapi.yaml#/paths/~1consumers/get/responses/200/content/application~1json/schema/oneOf/0"
-      - "api/openapi.yaml#/paths/~1credentials/get/responses/200/content/application~1json/schema"
-      - "api/openapi.yaml#/paths/~1tokens/get/responses/200/content/application~1json/schema"
-      - "api/openapi.yaml#/paths/~1consumer-tokens/get/responses/200/content/application~1json/schema"
       - "api/openapi.yaml#/components/schemas/AuditLogFilterOptions/properties/object_ids"
       - "api/openapi.yaml#/components/schemas/AuditLogFilterOptions/properties/actors"
       - "api/openapi.yaml#/components/schemas/AuditLogFilterOptions/properties/callers"
