@@ -47,6 +47,22 @@ slow body was never cut off.
   Tags keep their own limits (10 of at most 32 characters). The MCP tools'
   inputs are held to the same ones.
 
+- **Query parameters and headers have limits.** A string query parameter
+  (`q`, `used_by`, `object_id`, `caller`, `actor`) is at most 128 characters,
+  `from` and `to` 64, a filter takes at most 10 `tag`s, and `X-Caller` and
+  `X-CSRF-Token` are at most 128. `X-Caller` is stored in the audit log, so
+  it was the one header that mattered most. Over any of them is a 422, or a
+  400 for the tag count and the integers (`page` at most 2147483647, `after`
+  at least 0), which already answered 400 for a bad value.
+- **Everything the server sends is bounded in the spec too**, so every string,
+  array and integer has a limit and the three Spectral limit rules are errors
+  again. A response string takes the limit of the request field it echoes, and
+  a generated value (an id, a timestamp, a token) its fixed length. The one
+  exception is the arrays of the list endpoints that return every row
+  (`/objects`, `/consumers` without a page, `/credentials`, `/tokens`,
+  `/consumer-tokens` and the audit log's filter options): a `maxItems` there
+  would be a number the server doesn't keep, so `.spectral.yaml` waives them by
+  path. Paging them is a decision of its own ([issue #649](https://github.com/alrayyes/hush-hush/issues/649)).
 - The server sets a **30 second `ReadTimeout`** and a **64 KiB
   `MaxHeaderBytes`**, so a caller that dribbles a body or a header is dropped.
 - The spec documents the 413 on every operation that takes a body, and states

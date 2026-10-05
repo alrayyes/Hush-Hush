@@ -17,7 +17,14 @@ func handleListObjects(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		filter := store.ObjectFilter{UsedBy: r.URL.Query().Get("used_by")}
 
-		for _, tag := range r.URL.Query()["tag"] {
+		tags := r.URL.Query()["tag"]
+		if len(tags) > maxTagsPerObject {
+			writeError(w, r, http.StatusBadRequest, errTooManyTagFilters.Error())
+
+			return
+		}
+
+		for _, tag := range tags {
 			tag, err := normaliseTag(tag)
 			if err != nil {
 				writeError(w, r, http.StatusBadRequest, err.Error())
