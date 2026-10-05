@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.61.0](https://github.com/alrayyes/Hush-Hush/compare/v2.60.0...v2.61.0) (2026-10-05)
+
+
+### Features
+
+* **api:** page the list endpoints with limit and offset ([#663](https://github.com/alrayyes/Hush-Hush/issues/663)) ([41251f4](https://github.com/alrayyes/Hush-Hush/commit/41251f4a9f276f56ab7351558d92d7d274f5f646)), closes [#649](https://github.com/alrayyes/Hush-Hush/issues/649)
+* **web-ui:** read the lists a page at a time ([#678](https://github.com/alrayyes/Hush-Hush/issues/678)) ([08bd755](https://github.com/alrayyes/Hush-Hush/commit/08bd755261b0c139ad0d964472af2854f84fdbd9)), closes [#677](https://github.com/alrayyes/Hush-Hush/issues/677)
+
 ## [2.60.0](https://github.com/alrayyes/Hush-Hush/compare/v2.59.0...v2.60.0) (2026-10-05)
 
 
