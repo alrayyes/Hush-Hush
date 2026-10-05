@@ -247,6 +247,10 @@ func serve() error {
 		Addr:              cfg.Addr,
 		Handler:           hushhush.AccessLog(slog.Default(), hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel), hushhush.WithReadiness(readiness))),
 		ReadHeaderTimeout: 5 * time.Second,
+		// A body is at most hushhush.MaxBodyBytes, so a caller that takes
+		// longer than this to send one is holding the connection, not sending.
+		ReadTimeout:    30 * time.Second,
+		MaxHeaderBytes: 64 << 10,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

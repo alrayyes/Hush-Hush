@@ -87,7 +87,8 @@ func handleFinishLogin(s objectStore, wa *webauthn.WebAuthn) http.HandlerFunc {
 
 		var req LoginFinishRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, r, http.StatusBadRequest, "malformed request body")
+			status, message := decodeFailure(err)
+			writeError(w, r, status, message)
 
 			return
 		}

@@ -224,6 +224,8 @@ paths:
               value: YWdlLWVuY3J5cHRpb24ub3JnL3Yx
               used_by: [homelab/vps-docker]
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "201":
           description: The object was created.
           content:
@@ -313,6 +315,8 @@ paths:
             example:
               value: YWdlLWVuY3J5cHRpb24ub3JnL3Yx
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: The object's value was replaced.
           content:
@@ -481,6 +485,8 @@ paths:
             example:
               name: homelab/new-device
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "201":
           description: The consumer was added.
           content:
@@ -545,6 +551,8 @@ paths:
                 value:
                   public_key: age1exampleplaceholderpublickey
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: The consumer was updated; the resulting entry under its (possibly new) name.
           content:
@@ -750,6 +758,8 @@ paths:
               type: object
               description: An MCP JSON-RPC 2.0 request.
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: An MCP JSON-RPC 2.0 response, or an event stream of one or more of them.
           content:
@@ -780,6 +790,8 @@ paths:
         - {}
         - cookieAuth: []
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: Registration options for the browser's WebAuthn ceremony.
           content:
@@ -811,6 +823,8 @@ paths:
             schema:
               $ref: "#/components/schemas/RegistrationFinishRequest"
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "201":
           description: The credential was stored and a session issued.
           headers:
@@ -837,6 +851,8 @@ paths:
       tags: [auth]
       security: []
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: Login options for the browser's WebAuthn ceremony.
           content:
@@ -870,6 +886,8 @@ paths:
             schema:
               $ref: "#/components/schemas/LoginFinishRequest"
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "204":
           description: The assertion was verified and a session issued.
           headers:
@@ -994,6 +1012,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CredentialRenameRequest"
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: The credential's nickname was updated.
           content:
@@ -1058,6 +1078,8 @@ paths:
               description: web UI test token
               ttl_seconds: 7776000
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "201":
           description: The token was created.
           content:
@@ -1145,6 +1167,8 @@ paths:
             example:
               ttl_seconds: 7776000
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: The token was rotated.
           content:
@@ -1218,6 +1242,8 @@ paths:
               description: deploy read token
               ttl_seconds: 7776000
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "201":
           description: The consumer token was created.
           content:
@@ -1308,6 +1334,8 @@ paths:
             example:
               ttl_seconds: 7776000
       responses:
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "200":
           description: The consumer token was rotated.
           content:
@@ -1499,6 +1527,18 @@ components:
           example:
             error: from must be RFC 3339
 
+    PayloadTooLarge:
+      description: |
+        The request body is larger than the server reads, or a sealed
+        `value` is over its 1 MiB limit. The server stops reading at the
+        limit.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: value is larger than the 1048576 byte limit
+
     UnprocessableEntity:
       description: |
         The request parsed, but a value in it is outside what the API
@@ -1581,10 +1621,12 @@ components:
         value:
           type: string
           format: byte
+          maxLength: 1398104
           description: |
             The sealed (encrypted) value, base64-encoded. It has to be a
             well-formed age file naming at least one recipient; the
-            service reads only its header, never the payload.
+            service reads only its header, never the payload. At most 1 MiB
+            once decoded.
         used_by:
           $ref: "#/components/schemas/UsedByList"
         tags:
@@ -1601,10 +1643,12 @@ components:
         value:
           type: string
           format: byte
+          maxLength: 1398104
           description: |
             The new sealed (encrypted) value, base64-encoded. It has to be
             a well-formed age file naming at least one recipient; the
-            service reads only its header, never the payload.
+            service reads only its header, never the payload. At most 1 MiB
+            once decoded.
         used_by:
           allOf:
             - $ref: "#/components/schemas/UsedByList"

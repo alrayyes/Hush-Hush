@@ -125,7 +125,8 @@ func handleCreateToken(s objectStore) http.HandlerFunc {
 			TTLSeconds  *int64 `json:"ttl_seconds"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, r, http.StatusBadRequest, "malformed request body")
+			status, message := decodeFailure(err)
+			writeError(w, r, status, message)
 
 			return
 		}
@@ -185,7 +186,8 @@ func handleRotate[T any](rotate func(ctx context.Context, id string, ttl time.Du
 			TTLSeconds *int64 `json:"ttl_seconds"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, r, http.StatusBadRequest, "malformed request body")
+			status, message := decodeFailure(err)
+			writeError(w, r, status, message)
 
 			return
 		}
@@ -303,7 +305,8 @@ func handleCreateConsumerToken(s objectStore) http.HandlerFunc {
 			TTLSeconds  *int64 `json:"ttl_seconds"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, r, http.StatusBadRequest, "malformed request body")
+			status, message := decodeFailure(err)
+			writeError(w, r, status, message)
 
 			return
 		}

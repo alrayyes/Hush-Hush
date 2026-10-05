@@ -5,10 +5,10 @@ extends:
   - "@stoplight/spectral-owasp-ruleset"
 
 rules:
-  # The server enforces almost no size limits (#617): no request body cap, and no
-  # length on a slug, description or sealed value. The spec can't honestly state a
-  # maxLength the server doesn't check, so these stay visible as warnings. #617
-  # enforces the limits, declares them, and sets all three back to error.
+  # The server caps a request body and a sealed value (ADR 31), but a slug,
+  # description or name still has no length, and the spec can't honestly state a
+  # maxLength the server doesn't check, so these stay visible as warnings. The rest
+  # of #617 enforces those limits, declares them, and sets all three back to error.
   owasp:api4:2023-string-limit: warn
   owasp:api4:2023-array-limit: warn
   owasp:api4:2023-integer-limit: warn
