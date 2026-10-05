@@ -34,6 +34,8 @@ func readUpdateRequest(w http.ResponseWriter, r *http.Request) (UpdateObjectRequ
 		return req, false
 	}
 
+	req.UsedBy = uniqueConsumersPtr(req.UsedBy)
+
 	if len(req.Value) == 0 {
 		writeError(w, r, http.StatusBadRequest, "value is required")
 
