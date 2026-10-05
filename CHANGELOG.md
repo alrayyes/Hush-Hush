@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.58.4](https://github.com/alrayyes/Hush-Hush/compare/v2.58.3...v2.58.4) (2026-10-05)
+
+
+### Bug Fixes
+
+* **api:** bound every query parameter, header and spec string, array and integer ([#650](https://github.com/alrayyes/Hush-Hush/issues/650)) ([646d134](https://github.com/alrayyes/Hush-Hush/commit/646d134e5744ae9435f5938259a6f6992c855277)), closes [#617](https://github.com/alrayyes/Hush-Hush/issues/617)
+* **api:** limit the length of every request field ([#647](https://github.com/alrayyes/Hush-Hush/issues/647)) ([64926ec](https://github.com/alrayyes/Hush-Hush/commit/64926ec069245d8dbb6b0f30ccfae8b20bc8c103))
+
 ## [2.58.3](https://github.com/alrayyes/Hush-Hush/compare/v2.58.2...v2.58.3) (2026-10-05)
 
 
