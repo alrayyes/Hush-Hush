@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listConsumerDirectory, updateObject } from './api';
-import { CONSUMERS_PAGE_SIZE_MAX } from './api-limits';
+import {
+	checkSession,
+	listConsumerDirectory,
+	listObjects,
+	listTokens,
+	updateObject,
+} from './api';
+import { CONSUMERS_PAGE_SIZE_MAX, PAGE_LIMIT_MAX } from './api-limits';
 
 describe('listConsumerDirectory', () => {
 	afterEach(() => {
@@ -63,5 +69,102 @@ describe('updateObject', () => {
 		fetchMock.mockClear();
 		await updateObject('a', 'sealed', ['x'], false, []);
 		expect(sentBody(fetchMock).tags).toEqual([]);
+	});
+});
+
+// alrayyes/hush-hush#677: the list endpoints page on request and #662 will
+// make a page the default, so the UI asks for pages itself and keeps going
+// until it has every row. The page size is the spec's own cap.
+describe('the paged list calls', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	const rows = (count: number) =>
+		Array.from({ length: count }, (_, i) => ({ id: String(i) }));
+
+	function stubPages(pages: { rows: unknown[]; total?: number }[]) {
+		const fetchMock = vi.fn();
+		for (const page of pages) {
+			fetchMock.mockResolvedValueOnce(
+				new Response(JSON.stringify(page.rows), {
+					status: 200,
+					headers:
+						page.total === undefined
+							? {}
+							: { 'X-Total-Count': String(page.total) },
+				}),
+			);
+		}
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubGlobal('document', { cookie: '' });
+
+		return fetchMock;
+	}
+
+	const urls = (fetchMock: ReturnType<typeof stubPages>) =>
+		fetchMock.mock.calls.map((call) => String(call[0]));
+
+	it('asks for a page the size the spec caps it at', async () => {
+		const fetchMock = stubPages([{ rows: rows(2), total: 2 }]);
+
+		await listTokens();
+
+		expect(urls(fetchMock)).toEqual([
+			`/tokens?limit=${PAGE_LIMIT_MAX}&offset=0`,
+		]);
+	});
+
+	it('keeps asking until it has as many rows as X-Total-Count says', async () => {
+		const fetchMock = stubPages([
+			{ rows: rows(PAGE_LIMIT_MAX), total: PAGE_LIMIT_MAX + 3 },
+			{ rows: rows(3), total: PAGE_LIMIT_MAX + 3 },
+		]);
+
+		const tokens = await listTokens();
+
+		expect(tokens).toHaveLength(PAGE_LIMIT_MAX + 3);
+		expect(urls(fetchMock)).toEqual([
+			`/tokens?limit=${PAGE_LIMIT_MAX}&offset=0`,
+			`/tokens?limit=${PAGE_LIMIT_MAX}&offset=${PAGE_LIMIT_MAX}`,
+		]);
+	});
+
+	it('stops on an empty page even when the total says there is more', async () => {
+		const fetchMock = stubPages([
+			{ rows: rows(PAGE_LIMIT_MAX), total: 10_000 },
+			{ rows: [], total: 10_000 },
+		]);
+
+		const tokens = await listTokens();
+
+		expect(tokens).toHaveLength(PAGE_LIMIT_MAX);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it('stops after a short page when the response carries no total', async () => {
+		const fetchMock = stubPages([{ rows: rows(4) }]);
+
+		await listTokens();
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it('keeps the used_by filter on every page of the secrets list', async () => {
+		const fetchMock = stubPages([{ rows: rows(1), total: 1 }]);
+
+		await listObjects('homelab');
+
+		expect(urls(fetchMock)).toEqual([
+			`/objects?used_by=homelab&limit=${PAGE_LIMIT_MAX}&offset=0`,
+		]);
+	});
+
+	it('probes the session with one row, not the whole passkey list', async () => {
+		const fetchMock = stubPages([{ rows: rows(1), total: 9 }]);
+
+		await checkSession();
+
+		expect(urls(fetchMock)).toEqual(['/credentials?limit=1']);
 	});
 });

@@ -4,7 +4,7 @@
 // the session's CSRF token from the readable csrf_token cookie and
 // echoes it back, matching auth/spec.md's double-submit requirement.
 
-import { CONSUMERS_PAGE_SIZE_MAX } from './api-limits';
+import { CONSUMERS_PAGE_SIZE_MAX, PAGE_LIMIT_MAX } from './api-limits';
 import type { components } from './api-schema';
 import { bytesToBase64 } from './encoding';
 
@@ -150,7 +150,8 @@ export async function getOwnerIdentity(): Promise<string | undefined> {
 // there's no dedicated "who am I" endpoint to call instead.
 export async function checkSession(): Promise<boolean> {
 	try {
-		await request('/credentials');
+		// One row is enough to prove the session; the list itself isn't wanted.
+		await request('/credentials?limit=1');
 
 		return true;
 	} catch (err) {
@@ -166,15 +167,39 @@ export type ObjectMetadata = Schemas['ObjectMetadata'];
 
 export type Actor = Schemas['Actor'];
 
+// listAllPages reads every row of a paged list endpoint: GET /objects,
+// /tokens, /consumer-tokens and /credentials take limit and offset and say
+// how many rows exist in X-Total-Count (alrayyes/hush-hush#649). The UI
+// filters and searches what it has loaded, so it asks for pages of the
+// spec's own cap until it has them all, rather than rely on the default
+// page size staying what it is (#662). An empty page ends the loop whatever
+// the total claims, and so does a short one when no total came back.
+async function listAllPages<T>(path: string, query = ''): Promise<T[]> {
+	const rows: T[] = [];
+
+	for (;;) {
+		const params = `${query ? `${query}&` : ''}limit=${PAGE_LIMIT_MAX}&offset=${rows.length}`;
+		const res = await request(`${path}?${params}`);
+		const page = (await res.json()) as T[];
+		const total = Number(res.headers.get('X-Total-Count'));
+		rows.push(...page);
+
+		if (page.length === 0) break;
+		if (Number.isFinite(total) && total > 0 && rows.length >= total) break;
+		if (!total && page.length < PAGE_LIMIT_MAX) break;
+	}
+
+	return rows;
+}
+
 // listObjects returns every stored object's metadata, or only those whose
 // recorded used_by lineage includes usedBy when given - the consumers
 // directory page's "select a consumer" navigation reuses this same
 // filter rather than a dedicated endpoint (alrayyes/hush-hush#252).
 export async function listObjects(usedBy?: string): Promise<ObjectMetadata[]> {
-	const qs = usedBy ? `?used_by=${encodeURIComponent(usedBy)}` : '';
-	const res = await request(`/objects${qs}`);
+	const filter = usedBy ? `used_by=${encodeURIComponent(usedBy)}` : '';
 
-	return res.json();
+	return listAllPages<ObjectMetadata>('/objects', filter);
 }
 
 // listConsumers returns every distinct used_by consumer name already
@@ -387,9 +412,7 @@ export async function queryAuditLogFilterOptions(): Promise<AuditLogFilterOption
 export type Credential = Schemas['Credential'];
 
 export async function listCredentials(): Promise<Credential[]> {
-	const res = await request('/credentials');
-
-	return res.json();
+	return listAllPages<Credential>('/credentials');
 }
 
 export async function renameCredential(
@@ -420,9 +443,7 @@ export type TokenMetadata = Schemas['TokenMetadata'];
 export type TokenWithValue = Schemas['TokenWithValue'];
 
 export async function listTokens(): Promise<TokenMetadata[]> {
-	const res = await request('/tokens');
-
-	return res.json();
+	return listAllPages<TokenMetadata>('/tokens');
 }
 
 export async function createToken(
@@ -464,9 +485,7 @@ export type ConsumerTokenMetadata = Schemas['ConsumerTokenMetadata'];
 export type ConsumerTokenWithValue = Schemas['ConsumerTokenWithValue'];
 
 export async function listConsumerTokens(): Promise<ConsumerTokenMetadata[]> {
-	const res = await request('/consumer-tokens');
-
-	return res.json();
+	return listAllPages<ConsumerTokenMetadata>('/consumer-tokens');
 }
 
 export async function createConsumerToken(
