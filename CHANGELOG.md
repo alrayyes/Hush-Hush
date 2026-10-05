@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.59.0](https://github.com/alrayyes/Hush-Hush/compare/v2.58.6...v2.59.0) (2026-10-05)
+
+
+### Features
+
+* **api:** serve the web UI under a Content-Security-Policy ([#666](https://github.com/alrayyes/Hush-Hush/issues/666)) ([dc66859](https://github.com/alrayyes/Hush-Hush/commit/dc668595355f1898f9cb42f078202324cc138e7b)), closes [#660](https://github.com/alrayyes/Hush-Hush/issues/660)
+
 ## [2.58.6](https://github.com/alrayyes/Hush-Hush/compare/v2.58.5...v2.58.6) (2026-10-05)
 
 
