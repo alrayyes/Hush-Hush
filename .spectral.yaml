@@ -16,8 +16,9 @@ rules:
   # OWASP's own ruleset, and the same ticket covers it: the patterns come with
   # the limits.
 
-  # There's no rate limiting (#618). Documenting headers and a 429 the server never
-  # sends would be the first lie in the file. If #618 builds it, these go back on.
+  # Rate limiting is the reverse proxy's job (ADR 30, #618). Documenting headers and
+  # a 429 the server never sends would be the first lie in the file, so these stay
+  # off for good. If the server ever limits itself, they go back on.
   owasp:api4:2023-rate-limit: off
   owasp:api4:2023-rate-limit-responses-429: off
 

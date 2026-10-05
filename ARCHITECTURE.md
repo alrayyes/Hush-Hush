@@ -58,6 +58,9 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   shutdown starts. The server then keeps serving for a few seconds so a load
   balancer notices, stops accepting, and waits for in-flight requests before
   the process exits.
+- **Rate limiting**: none in the server. The reverse proxy in front of it
+  limits the unauthenticated and token-checked routes
+  ([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)).
 
 ## Why it's built this way
 
