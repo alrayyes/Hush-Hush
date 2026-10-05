@@ -2058,6 +2058,13 @@ components:
           maximum: 9223372036854775807
         object_id:
           $ref: "#/components/schemas/ObjectSlug"
+        variant_id:
+          type: string
+          format: uuid
+          maxLength: 36
+          description: The UUID of the object the entry is about. `object_id` is only its name, which several variants can share. Left out of an entry written before this was recorded.
+          examples:
+            - 0b9f6c1e-3c7a-4a52-9d57-4f2a1c8e5b10
         action:
           type: string
           enum: [create, read, update, delete]

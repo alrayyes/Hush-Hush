@@ -1020,6 +1020,12 @@ export interface components {
              */
             id: number;
             object_id: components["schemas"]["ObjectSlug"];
+            /**
+             * Format: uuid
+             * @description The UUID of the object the entry is about. `object_id` is only its name, which several variants can share. Left out of an entry written before this was recorded.
+             * @example 0b9f6c1e-3c7a-4a52-9d57-4f2a1c8e5b10
+             */
+            variant_id?: string;
             /** @enum {string} */
             action: "create" | "read" | "update" | "delete";
             /** Format: date-time */

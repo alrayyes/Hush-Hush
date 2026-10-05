@@ -105,7 +105,7 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 		}
 
 		actorType, actorID := actorFrom(r)
-		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionUpdate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionUpdate, callerFrom(r), sourceIPFrom(r), actorType, actorID, store.AuditVariant(id)); err != nil {
 			writeInternalError(w, r, err)
 
 			return

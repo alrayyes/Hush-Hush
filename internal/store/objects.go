@@ -967,9 +967,15 @@ func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOpt
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	id, err := resolveObjectID(ctx, tx, slug, applyObjectOptions(opts))
+	options := applyObjectOptions(opts)
+
+	id, err := resolveObjectID(ctx, tx, slug, options)
 	if err != nil {
 		return err
+	}
+
+	if options.idOut != nil {
+		*options.idOut = id
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM objects WHERE id = ?`, id); err != nil {
