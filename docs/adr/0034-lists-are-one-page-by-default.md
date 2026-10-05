@@ -40,4 +40,8 @@ Python SDKs have no method for these lists.
 - Paging slices the rows the handler has loaded, so it bounds the response and
   not the database read. That is fine at this scale. If it stops being fine,
   the fix is a query with `LIMIT` and `OFFSET`, behind the same API.
-- The MCP `list` tool reads the store directly and is not paged by this.
+- The MCP `list` tool reads the store directly, so it pages on its own
+  ([issue #685](https://github.com/alrayyes/hush-hush/issues/685)): the same
+  `limit` and `offset`, 50 by default. Its structured result stays an array,
+  and the total is in the result's text, since a tool result has no header to
+  carry it. An agent that ignores the text sees only the first page.
