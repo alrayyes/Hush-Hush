@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/alrayyes/Hush-Hush/compare/v3.0.0...v3.1.0) (2026-10-05)
+
+
+### Features
+
+* **api:** record which variant an audit entry is about ([#686](https://github.com/alrayyes/Hush-Hush/issues/686)) ([a14001b](https://github.com/alrayyes/Hush-Hush/commit/a14001b8106eb341bcb8cb191eb8471c0573af5d)), closes [#684](https://github.com/alrayyes/Hush-Hush/issues/684)
+
 ## [3.0.0](https://github.com/alrayyes/Hush-Hush/compare/v2.61.0...v3.0.0) (2026-10-05)
 
 
