@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.58.3](https://github.com/alrayyes/Hush-Hush/compare/v2.58.2...v2.58.3) (2026-10-05)
+
+
+### Bug Fixes
+
+* **api:** cap a request body at 1.5 MiB and a sealed value at 1 MiB ([#645](https://github.com/alrayyes/Hush-Hush/issues/645)) ([8b02ccf](https://github.com/alrayyes/Hush-Hush/commit/8b02ccf1bd30f6fe71efa1a80be1b25dc004fe05))
+
 ## [2.58.2](https://github.com/alrayyes/Hush-Hush/compare/v2.58.1...v2.58.2) (2026-10-03)
 
 
