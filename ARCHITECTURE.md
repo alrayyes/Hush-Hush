@@ -58,6 +58,10 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   shutdown starts. The server then keeps serving for a few seconds so a load
   balancer notices, stops accepting, and waits for in-flight requests before
   the process exits.
+- **Size limits**: a sealed value is at most 1 MiB, and no route reads more
+  than 1.5 MiB of body, the unauthenticated ones included. Over either is a
+  413, and a field over its limit is a 422
+  ([ADR 31](docs/adr/0031-request-body-and-value-size-limits.md)).
 - **Rate limiting**: none in the server. The reverse proxy in front of it
   limits the unauthenticated and token-checked routes
   ([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)).
