@@ -88,6 +88,8 @@ func readCreateRequest(w http.ResponseWriter, r *http.Request) (CreateObjectRequ
 		return req, false
 	}
 
+	req.UsedBy = uniqueConsumers(req.UsedBy)
+
 	if req.Slug == "" || len(req.Value) == 0 {
 		writeError(w, r, http.StatusBadRequest, "slug and value are required")
 

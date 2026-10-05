@@ -210,6 +210,8 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
+		in.UsedBy = uniqueConsumers(in.UsedBy)
+
 		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description, ownerID, store.WithTags(tags))
 		switch {
 		case err == nil:
@@ -273,7 +275,7 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, err
 		}
 
-		err = s.UpdateObject(ctx, in.Slug, value, in.UsedBy, opts...)
+		err = s.UpdateObject(ctx, in.Slug, value, uniqueConsumersPtr(in.UsedBy), opts...)
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrNotFound):
