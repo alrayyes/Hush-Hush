@@ -92,7 +92,7 @@ func (s *Store) AuthenticateConsumerToken(ctx context.Context, token string) (id
 // plaintext.
 func (s *Store) ListConsumerTokens(ctx context.Context) ([]ConsumerToken, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, consumer, description, created_at, expires_at, revoked_at, last_used_at FROM consumer_tokens ORDER BY created_at`)
+		`SELECT id, consumer, description, created_at, expires_at, revoked_at, last_used_at FROM consumer_tokens ORDER BY created_at, id`)
 	if err != nil {
 		return nil, fmt.Errorf("list consumer tokens: %w", err)
 	}

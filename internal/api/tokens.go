@@ -172,7 +172,7 @@ func handleListTokens(s objectStore) http.HandlerFunc {
 			out = append(out, tokenMetadataFromStore(t))
 		}
 
-		writeJSON(w, http.StatusOK, out)
+		writePage(w, r, out)
 	}
 }
 
@@ -347,7 +347,7 @@ func handleListConsumerTokens(s objectStore) http.HandlerFunc {
 			out = append(out, consumerTokenMetadataFromStore(t))
 		}
 
-		writeJSON(w, http.StatusOK, out)
+		writePage(w, r, out)
 	}
 }
 

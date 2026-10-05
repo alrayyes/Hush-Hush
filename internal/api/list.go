@@ -51,7 +51,7 @@ func handleListObjects(s objectStore) http.HandlerFunc {
 			}
 		}
 
-		writeJSON(w, http.StatusOK, metadata)
+		writePage(w, r, metadata)
 	}
 }
 

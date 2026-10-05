@@ -117,7 +117,7 @@ func (s *Store) AuthenticateWriteToken(ctx context.Context, token string) (id st
 // which by design no longer exists anywhere to list.
 func (s *Store) ListWriteTokens(ctx context.Context) ([]WriteToken, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, description, owner, created_at, expires_at, revoked_at, last_used_at FROM write_tokens ORDER BY created_at`)
+		`SELECT id, description, owner, created_at, expires_at, revoked_at, last_used_at FROM write_tokens ORDER BY created_at, id`)
 	if err != nil {
 		return nil, fmt.Errorf("list write tokens: %w", err)
 	}

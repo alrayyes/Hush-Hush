@@ -56,10 +56,10 @@ overrides:
       owasp:api2:2023-write-restricted: off
       owasp:api8:2023-define-error-responses-401: off
 
-  # The list endpoints return every row, with no page size to bound the array,
-  # so a maxItems here would be a number the server doesn't keep. Paging them is
-  # #649 (ADR 31); until that ships, these arrays are waived by
-  # path, not the rule.
+  # The list endpoints return every row unless a caller asks for a page (limit and
+  # offset, #649), so a maxItems here would be a number the server doesn't keep.
+  # Making a page the default breaks the web UI and the SDKs, which read the plain
+  # array today, so these arrays are waived by path, not the rule (ADR 31).
   - files:
       - "api/openapi.yaml#/paths/~1objects/get/responses/200/content/application~1json/schema"
       - "api/openapi.yaml#/paths/~1consumers/get/responses/200/content/application~1json/schema/oneOf/0"

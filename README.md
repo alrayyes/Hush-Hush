@@ -204,6 +204,10 @@ consumer is in at most one such variant of a name, and every object has a UUID
 passes `?id=` to say which
 ([ADR 33](docs/adr/0033-one-name-many-variants.md)).
 
+`GET /objects`, `/tokens`, `/consumer-tokens` and `/credentials` return every
+row unless you pass `limit` (1 to 500) and `offset`; `X-Total-Count` always
+carries the total.
+
 The server doesn't rate limit. Run it behind a reverse proxy and limit
 `/auth/*` and the routes that check a token there
 ([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)). Exposed

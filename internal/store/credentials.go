@@ -75,7 +75,7 @@ func (s *Store) CreateCredential(ctx context.Context, c Credential) error {
 // keyed off exactly this.
 func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, public_key, sign_count, aaguid, nickname, created_at, last_used_at, backup_eligible, user_id, wrapped_identity FROM webauthn_credentials ORDER BY created_at`)
+		`SELECT id, public_key, sign_count, aaguid, nickname, created_at, last_used_at, backup_eligible, user_id, wrapped_identity FROM webauthn_credentials ORDER BY created_at, id`)
 	if err != nil {
 		return nil, fmt.Errorf("list credentials: %w", err)
 	}

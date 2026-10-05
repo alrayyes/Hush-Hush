@@ -35,7 +35,7 @@ func handleListCredentials(s objectStore) http.HandlerFunc {
 			out = append(out, credentialFromStore(c))
 		}
 
-		writeJSON(w, http.StatusOK, out)
+		writePage(w, r, out)
 	}
 }
 
