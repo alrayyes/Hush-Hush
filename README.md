@@ -163,6 +163,12 @@ Then open `http://localhost:8080` in a browser and register a passkey.
 built into the binary at compile time - see
 [its own README](cmd/hush-hush/web/README.md) for how to work on it.
 
+The server sends the UI a strict Content-Security-Policy: only this origin's
+scripts run, plus the build's own inline ones, so a script injected into the
+page can't read a secret before it's sealed
+([ADR 32](docs/adr/0032-content-security-policy-for-the-web-ui.md)). A reverse
+proxy in front must pass the header through, not replace it.
+
 ### Configuration
 
 The server (`hush-hush`) takes its settings from the environment alone -

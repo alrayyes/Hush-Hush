@@ -62,6 +62,9 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   than 1.5 MiB of body, the unauthenticated ones included. Over either is a
   413, and a field over its limit is a 422
   ([ADR 31](docs/adr/0031-request-body-and-value-size-limits.md)).
+- **Content-Security-Policy**: the web UI is served under a strict one, sent as
+  a header, with the hashes of the build's inline scripts computed at startup
+  ([ADR 32](docs/adr/0032-content-security-policy-for-the-web-ui.md)).
 - **Rate limiting**: none in the server. The reverse proxy in front of it
   limits the unauthenticated and token-checked routes
   ([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)).

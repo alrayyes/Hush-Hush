@@ -1,9 +1,55 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"io/fs"
 	"net/http"
+	"regexp"
+	"strings"
 )
+
+// inlineScript finds a script element's attributes and body. The index.html
+// it's run against is this project's own build output, a handful of
+// well-formed tags, so a regular expression is enough and no HTML parser has
+// to become a direct dependency.
+var inlineScript = regexp.MustCompile(`(?is)<script\b([^>]*)>(.*?)</script>`)
+
+// contentSecurityPolicy is the policy the web UI is served under
+// (alrayyes/hush-hush#660). A script runs only if it comes from this origin or
+// is one of the inline scripts in the build's own index.html, so a script an
+// attacker injects into the page doesn't run and can't read a secret before
+// it's sealed. Styles allow inline because SvelteKit and the component
+// library set style attributes; a style can't run code. frame-ancestors is
+// only honoured in a header, which is why the policy is sent from here and
+// not as a meta tag.
+func contentSecurityPolicy(build fs.FS) string {
+	sources := []string{"'self'"}
+
+	if index, err := fs.ReadFile(build, "index.html"); err == nil {
+		for _, m := range inlineScript.FindAllSubmatch(index, -1) {
+			if strings.Contains(strings.ToLower(string(m[1])), "src=") || len(m[2]) == 0 {
+				continue
+			}
+
+			sum := sha256.Sum256(m[2])
+			sources = append(sources, "'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'")
+		}
+	}
+
+	return strings.Join([]string{
+		"default-src 'self'",
+		"script-src " + strings.Join(sources, " "),
+		"style-src 'self' 'unsafe-inline'",
+		"img-src 'self' data:",
+		"font-src 'self'",
+		"connect-src 'self'",
+		"frame-ancestors 'none'",
+		"base-uri 'none'",
+		"form-action 'self'",
+		"object-src 'none'",
+	}, "; ")
+}
 
 // handleStatic serves the embedded SPA build - any path that doesn't
 // match a real file in build gets index.html instead, so SvelteKit's own
@@ -13,8 +59,11 @@ import (
 // API pattern already claimed - design.md's "Routing boundary" decision.
 func handleStatic(build fs.FS) http.Handler {
 	fileServer := http.FileServerFS(build)
+	policy := contentSecurityPolicy(build)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy", policy)
+
 		path := r.URL.Path[1:] // ServeMux guarantees a leading "/"
 		if path == "" {
 			path = "index.html"
