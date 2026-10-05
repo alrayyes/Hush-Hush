@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.58.5](https://github.com/alrayyes/Hush-Hush/compare/v2.58.4...v2.58.5) (2026-10-05)
+
+
+### Bug Fixes
+
+* **api:** record a consumer named twice in used_by once ([#648](https://github.com/alrayyes/Hush-Hush/issues/648)) ([0b5f356](https://github.com/alrayyes/Hush-Hush/commit/0b5f356ee8b3f53af26a660e380f07edb54767c5)), closes [#646](https://github.com/alrayyes/Hush-Hush/issues/646)
+
 ## [2.58.4](https://github.com/alrayyes/Hush-Hush/compare/v2.58.3...v2.58.4) (2026-10-05)
 
 
