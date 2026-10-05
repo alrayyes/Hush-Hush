@@ -808,7 +808,8 @@ export interface components {
              * Format: byte
              * @description The sealed (encrypted) value, base64-encoded. It has to be a
              *     well-formed age file naming at least one recipient; the
-             *     service reads only its header, never the payload.
+             *     service reads only its header, never the payload. At most 1 MiB
+             *     once decoded.
              */
             value: string;
             used_by?: components["schemas"]["UsedByList"];
@@ -821,7 +822,8 @@ export interface components {
              * Format: byte
              * @description The new sealed (encrypted) value, base64-encoded. It has to be
              *     a well-formed age file naming at least one recipient; the
-             *     service reads only its header, never the payload.
+             *     service reads only its header, never the payload. At most 1 MiB
+             *     once decoded.
              */
             value: string;
             /**
@@ -1334,6 +1336,24 @@ export interface components {
             };
         };
         /**
+         * @description The request body is larger than the server reads, or a sealed
+         *     `value` is over its 1 MiB limit. The server stops reading at the
+         *     limit.
+         */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "error": "value is larger than the 1048576 byte limit"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
          * @description The request parsed, but a value in it is outside what the API
          *     allows. The message names the limit or the problem.
          */
@@ -1643,6 +1663,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -1741,6 +1762,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -1906,6 +1928,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             409: components["responses"]["ConsumerAlreadyExists"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     deleteConsumer: {
@@ -2000,6 +2023,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["UnknownConsumer"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     queryAuditLog: {
@@ -2127,6 +2151,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     beginRegistration: {
@@ -2149,6 +2174,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     finishRegistration: {
@@ -2177,6 +2203,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     beginLogin: {
@@ -2211,6 +2238,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     finishLogin: {
@@ -2236,6 +2264,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     logout: {
@@ -2413,6 +2442,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     listTokens: {
@@ -2475,6 +2505,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -2551,6 +2582,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -2648,6 +2680,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -2724,6 +2757,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };

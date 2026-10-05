@@ -127,7 +127,8 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string, opt
 
 	staticHandler := handleStatic(webBuild)
 
-	mux := http.NewServeMux()
+	serveMux := http.NewServeMux()
+	mux := limitedMux{serveMux}
 	mux.HandleFunc("GET /healthz", handleHealth(version, o.instanceLabel))
 	mux.HandleFunc("GET /readyz", handleReady(readinessFor(o, s)))
 	mux.HandleFunc("POST /objects", requireWriteAccess(s, true, handleCreateObject(s)))
@@ -170,14 +171,14 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string, opt
 
 	mux.Handle("/", staticHandler)
 
-	return mux
+	return serveMux
 }
 
 // registerTokenRoutes wires up both write bearer token and consumer read
 // token management endpoints - split out of NewMux to keep it under
 // golangci-lint's funlen limit, not because these routes are handled any
 // differently from the rest of it.
-func registerTokenRoutes(mux *http.ServeMux, s objectStore) {
+func registerTokenRoutes(mux limitedMux, s objectStore) {
 	mux.HandleFunc("POST /tokens", requireSession(s, requireCSRF(handleCreateToken(s))))
 	mux.HandleFunc("GET /tokens", requireSession(s, handleListTokens(s)))
 	mux.HandleFunc("DELETE /tokens/{id}", requireSession(s, requireCSRF(handleRevokeToken(s))))
