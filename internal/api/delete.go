@@ -17,7 +17,9 @@ func handleDeleteObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		err := s.DeleteObject(r.Context(), slug, opts...)
+		var id string
+
+		err := s.DeleteObject(r.Context(), slug, append(opts, store.IntoID(&id))...)
 		if objectLookupFailed(w, r, err) {
 			return
 		}
@@ -29,7 +31,7 @@ func handleDeleteObject(s objectStore) http.HandlerFunc {
 		}
 
 		actorType, actorID := actorFrom(r)
-		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionDelete, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(r.Context(), slug, store.AuditActionDelete, callerFrom(r), sourceIPFrom(r), actorType, actorID, store.AuditVariant(id)); err != nil {
 			writeInternalError(w, r, err)
 
 			return

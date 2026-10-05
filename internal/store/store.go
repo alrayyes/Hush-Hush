@@ -60,6 +60,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	if err := addAuditLogVariantColumn(db); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	if err := migrateObjectIDsToUUID(db); err != nil {
 		_ = db.Close()
 
@@ -343,6 +349,14 @@ func objectIDsPendingSlugMigration(db *sql.DB) ([]string, error) {
 	}
 
 	return ids, nil
+}
+
+// addAuditLogVariantColumn adds audit_log.variant_id, the variant of a name an
+// entry is about, when it has one (alrayyes/hush-hush#684): a name can hold
+// several objects, and object_id only holds the name. Nullable, since an entry
+// written before this has none.
+func addAuditLogVariantColumn(db *sql.DB) error {
+	return addColumnIfMissing(db, "audit_log", "variant_id", "TEXT")
 }
 
 // addColumnIfMissing adds column to table if it isn't already there. The

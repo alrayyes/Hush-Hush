@@ -29,6 +29,9 @@ type AuditLogEntry struct {
 	IP        string `json:"ip"`
 	ActorType string `json:"actor_type,omitempty"`
 	ActorID   string `json:"actor_id,omitempty"`
+	// VariantID is the UUID of the object the entry is about, left out for an
+	// entry written before it was recorded.
+	VariantID string `json:"variant_id,omitempty"`
 }
 
 // defaultAuditLogLimit and maxAuditLogLimit match api/openapi.yaml's
@@ -185,6 +188,7 @@ func auditLogEntriesFrom(rows []store.AuditLogEntry) []AuditLogEntry {
 			IP:        row.IP,
 			ActorType: row.ActorType,
 			ActorID:   row.ActorID,
+			VariantID: row.VariantID,
 		}
 	}
 

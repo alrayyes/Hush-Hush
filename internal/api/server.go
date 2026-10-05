@@ -53,7 +53,7 @@ type objectStore interface {
 	UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...store.ObjectOption) error
 	DeleteObject(ctx context.Context, slug string, opts ...store.ObjectOption) error
 	Ready(ctx context.Context) error
-	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string) error
+	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string, opts ...store.AuditOption) error
 	QueryAuditLog(ctx context.Context, filter store.AuditLogFilter) ([]store.AuditLogEntry, error)
 	QueryAuditLogFilterOptions(ctx context.Context) (store.AuditLogFilterOptions, error)
 	AuthenticateWriteToken(ctx context.Context, token string) (id string, valid bool, err error)

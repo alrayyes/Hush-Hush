@@ -141,7 +141,7 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 		switch {
 		case err == nil:
 			actorType, actorID := actorFrom(r)
-			if err := s.RecordAuditLog(r.Context(), req.Slug, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r), actorType, actorID); err != nil {
+			if err := s.RecordAuditLog(r.Context(), req.Slug, store.AuditActionCreate, callerFrom(r), sourceIPFrom(r), actorType, actorID, store.AuditVariant(id)); err != nil {
 				writeInternalError(w, r, err)
 
 				return
