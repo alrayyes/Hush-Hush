@@ -21,6 +21,19 @@ const (
 	AuditActionDelete AuditAction = "delete"
 )
 
+// AuditOption sets an optional field on an audit entry.
+type AuditOption func(*auditOptions)
+
+type auditOptions struct {
+	variantID string
+}
+
+// AuditVariant records which variant of the name the entry is about, by the
+// object's UUID id. Leave it off for an entry that isn't about one object.
+func AuditVariant(id string) AuditOption {
+	return func(o *auditOptions) { o.variantID = id }
+}
+
 // RecordAuditLog appends an entry to the audit log. caller may be empty,
 // recorded as NULL rather than an empty string, matching the spec's "the
 // caller's presented identity, if any." ip is the request's source
@@ -35,7 +48,12 @@ const (
 // the audit-log spec requires entries be immutable once recorded, and the
 // simplest way to guarantee that is to never write the code that would
 // violate it.
-func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action AuditAction, caller, ip, actorType, actorID string) error {
+func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action AuditAction, caller, ip, actorType, actorID string, opts ...AuditOption) error {
+	var o auditOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	callerValue := nullableString(caller)
 	actorTypeValue := nullableString(actorType)
 	actorIDValue := nullableString(actorID)
@@ -43,8 +61,8 @@ func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action Audi
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO audit_log (object_id, action, caller, ip, timestamp, actor_type, actor_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		objectID, string(action), callerValue, ip, now, actorTypeValue, actorIDValue,
+		`INSERT INTO audit_log (object_id, action, caller, ip, timestamp, actor_type, actor_id, variant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		objectID, string(action), callerValue, ip, now, actorTypeValue, actorIDValue, nullableString(o.variantID),
 	); err != nil {
 		return fmt.Errorf("record audit log: %w", err)
 	}
@@ -71,6 +89,9 @@ type AuditLogEntry struct {
 	IP        string
 	ActorType string
 	ActorID   string
+	// VariantID is the UUID of the object the entry is about, empty for an
+	// entry written before it was recorded.
+	VariantID string
 }
 
 // actorFilterNone is AuditLogFilter.Actor's sentinel value matching an
@@ -160,7 +181,7 @@ func buildAuditLogQuery(filter AuditLogFilter) (string, []any) {
 		args = append(args, filter.After)
 	}
 
-	query := `SELECT id, object_id, action, caller, ip, timestamp, actor_type, actor_id FROM audit_log`
+	query := `SELECT id, object_id, action, caller, ip, timestamp, actor_type, actor_id, variant_id FROM audit_log`
 	if len(clauses) > 0 {
 		// clauses are fixed strings from this function alone ("object_id
 		// = ?" and the like) - every actual value travels through args
@@ -191,9 +212,10 @@ func scanAuditLogRows(rows *sql.Rows) ([]AuditLogEntry, error) {
 			e                          AuditLogEntry
 			action                     string
 			caller, actorType, actorID sql.NullString
+			variantID                  sql.NullString
 		)
 
-		if err := rows.Scan(&e.ID, &e.ObjectID, &action, &caller, &e.IP, &e.Timestamp, &actorType, &actorID); err != nil {
+		if err := rows.Scan(&e.ID, &e.ObjectID, &action, &caller, &e.IP, &e.Timestamp, &actorType, &actorID, &variantID); err != nil {
 			return nil, fmt.Errorf("scan audit log entry: %w", err)
 		}
 
@@ -201,6 +223,7 @@ func scanAuditLogRows(rows *sql.Rows) ([]AuditLogEntry, error) {
 		e.Caller = caller.String
 		e.ActorType = actorType.String
 		e.ActorID = actorID.String
+		e.VariantID = variantID.String
 		entries = append(entries, e)
 	}
 

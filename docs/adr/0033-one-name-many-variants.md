@@ -50,9 +50,10 @@ later changes, and it gives the web UI something to key a row on.
 - **The id is exposed after all.** ADR 22 kept it internal so a slug could be
   renamed. That still holds, because nothing else references the slug, and a
   UUID is safe to show.
-- **The audit log still records the name, not the id**, so an entry for a
-  name with several variants doesn't say which one it was. Recording the id is
-  a separate change.
+- **An audit entry names its variant.** `object_id` stays the name, so an
+  entry still groups by name, and a new `variant_id` holds the object's UUID
+  ([issue #684](https://github.com/alrayyes/hush-hush/issues/684)). An entry
+  written before that has none.
 - **Clients keyed by name see a name twice in a list.** `GET /objects` returns
   every variant. The web UI keys its lists by slug, so showing variants is its
   own change.

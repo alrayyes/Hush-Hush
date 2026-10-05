@@ -86,7 +86,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     ip TEXT NOT NULL DEFAULT '',
     timestamp TEXT NOT NULL,
     actor_type TEXT,
-    actor_id TEXT
+    actor_id TEXT,
+    variant_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_object_id ON audit_log (object_id);

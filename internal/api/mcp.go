@@ -260,7 +260,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionCreate, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionCreate, caller, sourceIP, actorType, actorID, store.AuditVariant(id)); err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
@@ -285,7 +285,7 @@ func mcpGet(s objectStore, caller, sourceIP, actorType, actorID string) mcp.Tool
 			return nil, mcpGetOutput{}, mcpLookupError(ctx, "get", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionRead, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionRead, caller, sourceIP, actorType, actorID, store.AuditVariant(obj.ID)); err != nil {
 			return nil, mcpGetOutput{}, mcpInternalError(ctx, "get", err)
 		}
 
@@ -320,7 +320,7 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, err
 		}
 
-		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionUpdate, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionUpdate, caller, sourceIP, actorType, actorID, store.AuditVariant(obj.ID)); err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
 		}
 
@@ -361,11 +361,13 @@ func mcpDelete(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, mcpDeleteOutput{}, err
 		}
 
-		if err := s.DeleteObject(ctx, in.Slug, opts...); err != nil {
+		var id string
+
+		if err := s.DeleteObject(ctx, in.Slug, append(opts, store.IntoID(&id))...); err != nil {
 			return nil, mcpDeleteOutput{}, mcpLookupError(ctx, "delete", err)
 		}
 
-		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionDelete, caller, sourceIP, actorType, actorID); err != nil {
+		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionDelete, caller, sourceIP, actorType, actorID, store.AuditVariant(id)); err != nil {
 			return nil, mcpDeleteOutput{}, mcpInternalError(ctx, "delete", err)
 		}
 

@@ -286,3 +286,45 @@ func TestHexIDsFromAnOlderDatabaseBecomeUUIDsAndKeepTheirRows(t *testing.T) {
 	require.Equal(t, []string{"prod"}, obj.Tags)
 	require.Equal(t, []byte("v"), obj.Value)
 }
+
+func TestAnAuditEntryKeepsTheVariantItIsAbout(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := t.Context()
+
+	require.NoError(t, s.RecordAuditLog(ctx, "release_token", store.AuditActionRead, "", "10.0.0.1", "", "", store.AuditVariant("0b9f6c1e-3c7a-4a52-9d57-4f2a1c8e5b10")))
+	require.NoError(t, s.RecordAuditLog(ctx, "release_token", store.AuditActionRead, "", "10.0.0.1", "", ""))
+
+	entries, err := s.QueryAuditLog(ctx, store.AuditLogFilter{ObjectID: "release_token"})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.Equal(t, "0b9f6c1e-3c7a-4a52-9d57-4f2a1c8e5b10", entries[0].VariantID)
+	require.Empty(t, entries[1].VariantID, "an entry with no variant stays without one")
+}
+
+func TestADatabaseWithNoVariantColumnInTheAuditLogGainsIt(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "old.db")
+
+	s, err := store.Open(path)
+	require.NoError(t, err)
+	require.NoError(t, s.RecordAuditLog(t.Context(), "old", store.AuditActionCreate, "", "10.0.0.1", "", ""))
+	require.NoError(t, s.Close())
+
+	db, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	_, err = db.Exec(`ALTER TABLE audit_log DROP COLUMN variant_id`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	s, err = store.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	entries, err := s.QueryAuditLog(t.Context(), store.AuditLogFilter{ObjectID: "old"})
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "what was logged before is still there")
+	require.Empty(t, entries[0].VariantID)
+}
