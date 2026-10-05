@@ -23,6 +23,21 @@ var (
 	errMCPUnknownObject        = errors.New("unknown object")
 )
 
+// decodeMCPValue turns a tool's base64 text into the sealed value, refusing
+// text that isn't base64 and a value over MaxValueBytes.
+func decodeMCPValue(text string) ([]byte, error) {
+	value, err := base64.StdEncoding.DecodeString(text)
+	if err != nil {
+		return nil, errMCPValueNotBase64
+	}
+
+	if len(value) > MaxValueBytes {
+		return nil, errValueTooLarge
+	}
+
+	return value, nil
+}
+
 // mcpInjectInput is the "inject" tool's input - CreateObjectRequest's
 // fields, except Value is base64 text rather than []byte.
 //
@@ -171,9 +186,9 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPSlugAndValueRequired
 		}
 
-		value, err := base64.StdEncoding.DecodeString(in.Value)
+		value, err := decodeMCPValue(in.Value)
 		if err != nil {
-			return nil, ObjectMetadata{}, errMCPValueNotBase64
+			return nil, ObjectMetadata{}, err
 		}
 
 		if err := validateAgeCiphertext(value); err != nil {
@@ -241,9 +256,9 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueRequired
 		}
 
-		value, err := base64.StdEncoding.DecodeString(in.Value)
+		value, err := decodeMCPValue(in.Value)
 		if err != nil {
-			return nil, ObjectMetadata{}, errMCPValueNotBase64
+			return nil, ObjectMetadata{}, err
 		}
 
 		if err := validateAgeCiphertext(value); err != nil {

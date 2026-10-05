@@ -50,10 +50,14 @@ func validateAgeCiphertext(value []byte) error {
 }
 
 // decodeFailure maps a request-body decode error to the status and message a
-// handler should answer with. A value that isn't valid base64 is a 422: the
+// handler should answer with. A body over the cap is a 413. A value that isn't valid base64 is a 422: the
 // body is well-formed JSON, the value in it just isn't an age file. Anything
 // else is a body that didn't parse at all, a 400.
 func decodeFailure(err error) (status int, message string) {
+	if isTooLarge(err) {
+		return http.StatusRequestEntityTooLarge, errBodyTooLarge.Error()
+	}
+
 	if _, ok := errors.AsType[base64.CorruptInputError](err); ok {
 		return http.StatusUnprocessableEntity, errValueNotB64.Error()
 	}

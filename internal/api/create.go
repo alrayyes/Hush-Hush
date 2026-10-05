@@ -100,6 +100,12 @@ func readCreateRequest(w http.ResponseWriter, r *http.Request) (CreateObjectRequ
 		return req, false
 	}
 
+	if len(req.Value) > MaxValueBytes {
+		writeError(w, r, http.StatusRequestEntityTooLarge, errValueTooLarge.Error())
+
+		return req, false
+	}
+
 	if err := validateAgeCiphertext(req.Value); err != nil {
 		writeError(w, r, http.StatusUnprocessableEntity, err.Error())
 
