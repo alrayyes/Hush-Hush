@@ -17,7 +17,7 @@ const (
 	// itself, not its base64 form.
 	MaxValueBytes = 1 << 20
 	// MaxBodyBytes is the largest request body any route reads.
-	MaxBodyBytes = MaxValueBytes*3/2 + 64<<10
+	MaxBodyBytes = MaxValueBytes * 3 / 2
 )
 
 var errBodyTooLarge = fmt.Errorf("request body is larger than the %d byte limit", MaxBodyBytes)
