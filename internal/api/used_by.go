@@ -40,3 +40,40 @@ func handleGetObjectUsedBy(s objectStore) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, UsedBy{UsedBy: usedBy})
 	}
 }
+
+// uniqueConsumers drops a consumer named twice, keeping the first of each in
+// order. The store keys a used_by row on object and consumer, so a repeat would
+// be a constraint failure, and a repeat means nothing a caller would want
+// refused (alrayyes/hush-hush#646). A nil list stays nil: absent and empty are
+// different on update.
+func uniqueConsumers(consumers []string) []string {
+	if consumers == nil {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(consumers))
+	out := make([]string, 0, len(consumers))
+
+	for _, c := range consumers {
+		if _, dup := seen[c]; dup {
+			continue
+		}
+
+		seen[c] = struct{}{}
+		out = append(out, c)
+	}
+
+	return out
+}
+
+// uniqueConsumersPtr is uniqueConsumers for an update's optional list, where
+// nil means "leave it alone".
+func uniqueConsumersPtr(consumers *[]string) *[]string {
+	if consumers == nil {
+		return nil
+	}
+
+	unique := uniqueConsumers(*consumers)
+
+	return &unique
+}
