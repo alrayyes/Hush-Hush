@@ -1603,6 +1603,7 @@ components:
   schemas:
     ObjectSlug:
       type: string
+      maxLength: 128
       pattern: "^[a-z0-9][a-z0-9_-]*$"
       examples: [mattermost_deploy_webhook]
       description: |
@@ -1746,6 +1747,7 @@ components:
 
     Tag:
       type: string
+      maxLength: 32
       pattern: "^[a-z0-9._/-]{1,32}$"
       examples: [prod]
 
@@ -1765,6 +1767,7 @@ components:
 
     ObjectDescription:
       type: string
+      maxLength: 1000
       description: |
         A free-text label set at creation, for a reader who only knows the
         slug. Fixed at creation - there is no way to change it later.
@@ -1772,6 +1775,7 @@ components:
 
     UsedByList:
       type: array
+      maxItems: 100
       description: |
         The consumers (repos or hosts) recorded as depending on this
         object. Set at creation, and replaceable later via
@@ -1780,6 +1784,7 @@ components:
         A consumer named more than once is recorded once.
       items:
         type: string
+        maxLength: 128
       examples:
         - [homelab/vps-docker]
 
@@ -1835,6 +1840,7 @@ components:
       properties:
         name:
           type: string
+          maxLength: 128
           description: The consumer's name. Rejected if it already appears in the directory.
           examples: [homelab/new-device]
 
@@ -1849,6 +1855,7 @@ components:
       properties:
         name:
           type: string
+          maxLength: 128
           description: |
             The consumer's new name. If it already matches another
             recorded consumer, the two merge - every object recording
@@ -1859,6 +1866,7 @@ components:
           examples: [homelab/vps-docker-2]
         public_key:
           type: string
+          maxLength: 512
           description: |
             Registers or replaces the consumer's age public key, safe to
             store server-side since it's public. A consumer's private key
@@ -2033,10 +2041,12 @@ components:
           additionalProperties: true
         nickname:
           type: string
+          maxLength: 100
           description: A human-readable label for this credential, shown in the credentials list.
           examples: [YubiKey 5C]
         wrapped_identity:
           type: string
+          maxLength: 4096
           description: |
             This credential's own copy of the user's escrowed writer
             identity private key, wrapped client-side with a key derived
@@ -2047,6 +2057,7 @@ components:
             it.
         public_key:
           type: string
+          maxLength: 512
           description: |
             The escrowed writer identity's age recipient string, sent
             only on the account's first-ever registration - a repeat
@@ -2056,6 +2067,7 @@ components:
             [age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq]
         recovery_wrapped_identity:
           type: string
+          maxLength: 4096
           description: |
             The escrowed writer identity's private key, wrapped
             client-side with a key derived from the one-time break-glass
@@ -2118,6 +2130,7 @@ components:
       properties:
         nickname:
           type: string
+          maxLength: 100
           examples: [YubiKey 5C - office]
 
     TokenId:
@@ -2150,6 +2163,7 @@ components:
       properties:
         description:
           type: string
+          maxLength: 200
           examples: [web UI test token]
         ttl_seconds:
           $ref: "#/components/schemas/TokenTtlSeconds"
@@ -2239,6 +2253,7 @@ components:
       properties:
         consumer:
           type: string
+          maxLength: 128
           description: |
             The consumer this token is scoped to - it authorizes
             `getObject` only for an object whose `used_by` list includes
@@ -2248,6 +2263,7 @@ components:
           examples: [homelab/vps-docker]
         description:
           type: string
+          maxLength: 200
           examples: [deploy read token]
         ttl_seconds:
           $ref: "#/components/schemas/TokenTtlSeconds"

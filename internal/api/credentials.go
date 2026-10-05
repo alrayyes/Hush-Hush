@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,7 +16,7 @@ var errLastCredential = errors.New("cannot remove the last remaining passkey")
 // CredentialRenameRequest is the PATCH /credentials/{id} body. Matches
 // components.schemas.CredentialRenameRequest in api/openapi.yaml.
 type CredentialRenameRequest struct {
-	Nickname string `json:"nickname"`
+	Nickname string `json:"nickname" maxLength:"100"`
 }
 
 // handleListCredentials returns every registered credential's nickname
@@ -44,10 +43,7 @@ func handleListCredentials(s objectStore) http.HandlerFunc {
 func handleRenameCredential(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CredentialRenameRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 

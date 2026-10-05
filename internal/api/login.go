@@ -86,10 +86,7 @@ func handleFinishLogin(s objectStore, wa *webauthn.WebAuthn) http.HandlerFunc {
 		}
 
 		var req LoginFinishRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 

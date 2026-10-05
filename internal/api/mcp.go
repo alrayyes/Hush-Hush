@@ -23,9 +23,14 @@ var (
 	errMCPUnknownObject        = errors.New("unknown object")
 )
 
-// decodeMCPValue turns a tool's base64 text into the sealed value, refusing
-// text that isn't base64 and a value over MaxValueBytes.
-func decodeMCPValue(text string) ([]byte, error) {
+// checkMCPInput holds a tool's input to its field limits, then turns its
+// base64 text into the sealed value, refusing text that isn't base64 and a
+// value over MaxValueBytes.
+func checkMCPInput(in any, text string) ([]byte, error) {
+	if err := checkLimits(in); err != nil {
+		return nil, err
+	}
+
 	value, err := base64.StdEncoding.DecodeString(text)
 	if err != nil {
 		return nil, errMCPValueNotBase64
@@ -51,10 +56,10 @@ func decodeMCPValue(text string) ([]byte, error) {
 // them - a real base64 argument fails that validation outright. A plain
 // string field, decoded by hand, sidesteps the mismatch.
 type mcpInjectInput struct {
-	Slug        string   `json:"slug" jsonschema:"the object's new caller-facing slug"`
+	Slug        string   `json:"slug" maxLength:"128" jsonschema:"the object's new caller-facing slug"`
 	Value       string   `json:"value" jsonschema:"the sealed (age) ciphertext, base64-encoded"`
-	UsedBy      []string `json:"used_by,omitempty" jsonschema:"consumers to record against the object"`
-	Description string   `json:"description,omitempty" jsonschema:"a human-readable note about the object"`
+	UsedBy      []string `json:"used_by,omitempty" maxItems:"100" maxLength:"128" jsonschema:"consumers to record against the object"`
+	Description string   `json:"description,omitempty" maxLength:"1000" jsonschema:"a human-readable note about the object"`
 	Tags        []string `json:"tags,omitempty" jsonschema:"labels for grouping, lowercase a-z 0-9 . _ / -, at most 10"`
 }
 
@@ -75,9 +80,9 @@ type mcpGetOutput struct {
 // fields plus the slug (the HTTP PUT takes it from the URL path instead),
 // Value base64-encoded for the same reason mcpInjectInput's is.
 type mcpUpdateInput struct {
-	Slug   string    `json:"slug" jsonschema:"the object's slug"`
+	Slug   string    `json:"slug" maxLength:"128" jsonschema:"the object's slug"`
 	Value  string    `json:"value" jsonschema:"the new sealed ciphertext, base64-encoded"`
-	UsedBy *[]string `json:"used_by,omitempty" jsonschema:"replaces the object's recorded consumers; omit to leave them unchanged"`
+	UsedBy *[]string `json:"used_by,omitempty" maxItems:"100" maxLength:"128" jsonschema:"replaces the object's recorded consumers; omit to leave them unchanged"`
 	Tags   *[]string `json:"tags,omitempty" jsonschema:"replaces the object's tags; an empty list clears them; omit to leave them unchanged"`
 }
 
@@ -186,7 +191,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPSlugAndValueRequired
 		}
 
-		value, err := decodeMCPValue(in.Value)
+		value, err := checkMCPInput(in, in.Value)
 		if err != nil {
 			return nil, ObjectMetadata{}, err
 		}
@@ -256,7 +261,7 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, errMCPValueRequired
 		}
 
-		value, err := decodeMCPValue(in.Value)
+		value, err := checkMCPInput(in, in.Value)
 		if err != nil {
 			return nil, ObjectMetadata{}, err
 		}

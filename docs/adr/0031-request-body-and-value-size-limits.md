@@ -28,6 +28,25 @@ slow body was never cut off.
   read. A chunked one is cut off at the limit. Both answer 413 with the usual
   `{error}` body. The cap sits on every route, the four unauthenticated ones
   included, and a route added later gets it too.
+- **Request fields have limits too**, declared as `maxLength` and `maxItems`
+  struct tags on the request types, so the rule sits beside the field and one
+  decode helper enforces them. Over a limit is a 422 naming the field and the
+  limit, the same status as an over-long token lifetime. Characters are
+  counted, not bytes, the way the spec's `maxLength` counts them.
+
+  | Field                                           | Limit           |
+  | ----------------------------------------------- | --------------- |
+  | object `slug`, consumer name, `used_by` entry   | 128 characters  |
+  | `used_by`                                       | 100 entries     |
+  | object `description`                            | 1000 characters |
+  | token `description`                             | 200 characters  |
+  | credential `nickname`                           | 100 characters  |
+  | consumer `public_key`, escrow `public_key`      | 512 characters  |
+  | `wrapped_identity`, `recovery_wrapped_identity` | 4096 characters |
+
+  Tags keep their own limits (10 of at most 32 characters). The MCP tools'
+  inputs are held to the same ones.
+
 - The server sets a **30 second `ReadTimeout`** and a **64 KiB
   `MaxHeaderBytes`**, so a caller that dribbles a body or a header is dropped.
 - The spec documents the 413 on every operation that takes a body, and states
@@ -45,6 +64,8 @@ limit at all. Rate limiting is different, and is the proxy's job
   large through the web UI or the CLI; a client that needs more has to split
   the secret.
 - Changing the value limit touches the constant, the spec's two `maxLength`s
-  and the 413 example text. The spec test is what keeps them honest.
-- The other request fields (slug, description, names) get their own limits in
-  a follow-up, as part of the same ticket.
+  and the 413 example text. Changing a field limit touches its tag and the
+  spec. A test compares each tag with the spec and fails if they disagree.
+- A limit is a number a client has already stored data against. These sit well
+  above what the web UI and the CLI produce, so nothing existing breaks, but
+  raising one later is free and lowering one is not.
