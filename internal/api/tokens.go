@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -114,20 +113,27 @@ func tokenMetadataFromStore(t store.WriteToken) TokenMetadata {
 	}
 }
 
+// createTokenBody and createConsumerTokenBody are what the two create
+// handlers decode into: the request types above with ttl_seconds as a pointer,
+// so an absent value (the default) is told apart from an explicit zero (a
+// 400). They carry the field limits for those schemas.
+type createTokenBody struct {
+	Description string `json:"description" maxLength:"200"`
+	TTLSeconds  *int64 `json:"ttl_seconds"`
+}
+
+type createConsumerTokenBody struct {
+	Consumer    string `json:"consumer" maxLength:"128"`
+	Description string `json:"description" maxLength:"200"`
+	TTLSeconds  *int64 `json:"ttl_seconds"`
+}
+
 // handleCreateToken issues a new write bearer token, owned by the admin
 // account, returning its raw value exactly once.
 func handleCreateToken(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// ttl_seconds is a pointer so an absent value (the default) is
-		// told apart from an explicit zero (a 400).
-		var req struct {
-			Description string `json:"description"`
-			TTLSeconds  *int64 `json:"ttl_seconds"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		var req createTokenBody
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 
@@ -185,10 +191,7 @@ func handleRotate[T any](rotate func(ctx context.Context, id string, ttl time.Du
 		var req struct {
 			TTLSeconds *int64 `json:"ttl_seconds"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 
@@ -299,15 +302,8 @@ func consumerTokenMetadataFromStore(t store.ConsumerToken) ConsumerTokenMetadata
 // the given consumer, returning its raw value exactly once.
 func handleCreateConsumerToken(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Consumer    string `json:"consumer"`
-			Description string `json:"description"`
-			TTLSeconds  *int64 `json:"ttl_seconds"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		var req createConsumerTokenBody
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -15,7 +14,7 @@ import (
 // (alrayyes/hush-hush#299).
 type UpdateObjectRequest struct {
 	Value  []byte    `json:"value"`
-	UsedBy *[]string `json:"used_by,omitempty"`
+	UsedBy *[]string `json:"used_by,omitempty" maxItems:"100" maxLength:"128"`
 	// Tags follows UsedBy's rule: absent leaves them alone, an empty array
 	// clears them (alrayyes/hush-hush#500).
 	Tags *[]string `json:"tags,omitempty"`
@@ -31,10 +30,7 @@ type UpdateObjectRequest struct {
 // acceptable it has already answered the caller, and returns false.
 func readUpdateRequest(w http.ResponseWriter, r *http.Request) (UpdateObjectRequest, bool) {
 	var req UpdateObjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		status, message := decodeFailure(err)
-		writeError(w, r, status, message)
-
+	if !decodeRequest(w, r, &req) {
 		return req, false
 	}
 

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -31,11 +30,11 @@ import (
 // resolved consumer. Omitting it (the default) means the owner was not
 // added as a recipient.
 type CreateObjectRequest struct {
-	Slug             string   `json:"slug"`
+	Slug             string   `json:"slug" maxLength:"128"`
 	Value            []byte   `json:"value"`
-	UsedBy           []string `json:"used_by,omitempty"`
+	UsedBy           []string `json:"used_by,omitempty" maxItems:"100" maxLength:"128"`
 	Tags             []string `json:"tags,omitempty"`
-	Description      string   `json:"description,omitempty"`
+	Description      string   `json:"description,omitempty" maxLength:"1000"`
 	KeepReadableCopy bool     `json:"keep_readable_copy,omitempty"`
 }
 
@@ -85,10 +84,7 @@ type Error struct {
 // acceptable it has already answered the caller, and returns false.
 func readCreateRequest(w http.ResponseWriter, r *http.Request) (CreateObjectRequest, bool) {
 	var req CreateObjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		status, message := decodeFailure(err)
-		writeError(w, r, status, message)
-
+	if !decodeRequest(w, r, &req) {
 		return req, false
 	}
 
