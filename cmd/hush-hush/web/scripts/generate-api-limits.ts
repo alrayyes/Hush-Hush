@@ -13,6 +13,7 @@ const specPath = new URL('../../../../api/openapi.yaml', import.meta.url);
 const spec = Bun.YAML.parse(await Bun.file(specPath).text()) as {
 	paths: Record<string, { get?: { parameters?: Parameter[] } }>;
 	components: {
+		parameters: { pageLimit?: Parameter };
 		schemas: {
 			Tag?: { pattern?: string };
 			Tags?: { maxItems?: number };
@@ -32,6 +33,13 @@ const max = pageSize?.schema?.maximum;
 
 if (typeof max !== 'number') {
 	throw new Error('GET /consumers page_size has no maximum in the spec');
+}
+
+// The `limit` the list endpoints take (#649): the most rows one page may ask for.
+const pageLimit = spec.components.parameters.pageLimit?.schema?.maximum;
+
+if (typeof pageLimit !== 'number') {
+	throw new Error('The pageLimit parameter has no maximum in the spec');
 }
 
 const tagPattern = spec.components.schemas.Tag?.pattern;
@@ -63,6 +71,10 @@ const generated = `// Generated from api/openapi.yaml by scripts/generate-api-li
 
 // GET /consumers: the most consumers one page may ask for.
 export const CONSUMERS_PAGE_SIZE_MAX = ${max};
+
+// limit on GET /objects, /tokens, /consumer-tokens and /credentials: the most
+// rows one page may ask for.
+export const PAGE_LIMIT_MAX = ${pageLimit};
 
 // A single tag: Tag's pattern, which also fixes its length.
 export const TAG_PATTERN = '${singleQuoted(tagPattern)}';

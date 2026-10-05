@@ -4,6 +4,10 @@
 // GET /consumers: the most consumers one page may ask for.
 export const CONSUMERS_PAGE_SIZE_MAX = 100;
 
+// limit on GET /objects, /tokens, /consumer-tokens and /credentials: the most
+// rows one page may ask for.
+export const PAGE_LIMIT_MAX = 500;
+
 // A single tag: Tag's pattern, which also fixes its length.
 export const TAG_PATTERN = '^[a-z0-9._/-]{1,32}$';
 
