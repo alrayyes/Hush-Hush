@@ -186,6 +186,11 @@ response: 5xx is `ERROR`, 4xx is `WARN`, anything else `INFO`, and a healthy
 `/healthz` or `/readyz` probe is `DEBUG`, so a poller doesn't fill the log. A
 line never carries the query string, a header, a cookie or a body.
 
+The server doesn't rate limit. Run it behind a reverse proxy and limit
+`/auth/*` and the routes that check a token there
+([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)). Exposed
+directly, it has no limit.
+
 See [`hush-hush-cli`'s own README](https://github.com/alrayyes/hush-hush-cli#configuration)
 for the client's configuration - a different shape, since it's run
 interactively by a person rather than deployed as a service.
