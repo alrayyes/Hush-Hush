@@ -186,6 +186,11 @@ response: 5xx is `ERROR`, 4xx is `WARN`, anything else `INFO`, and a healthy
 `/healthz` or `/readyz` probe is `DEBUG`, so a poller doesn't fill the log. A
 line never carries the query string, a header, a cookie or a body.
 
+A sealed value is at most 1 MiB and no request body is read past 1.5 MiB; over
+either the server answers 413. A slug, name or description over its limit is a
+422 that names the field
+([ADR 31](docs/adr/0031-request-body-and-value-size-limits.md)).
+
 The server doesn't rate limit. Run it behind a reverse proxy and limit
 `/auth/*` and the routes that check a token there
 ([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)). Exposed
