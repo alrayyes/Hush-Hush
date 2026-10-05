@@ -67,7 +67,7 @@ func credentialFromStore(c store.Credential) Credential {
 // it twice with two different parsers is how the two disagree.
 type RegistrationFinishRequest struct {
 	Credential json.RawMessage `json:"credential"`
-	Nickname   string          `json:"nickname"`
+	Nickname   string          `json:"nickname" maxLength:"100"`
 
 	// WrappedIdentity is this credential's own PRF-wrapped copy of the
 	// user's escrowed writer identity private key, base64-encoded -
@@ -76,7 +76,7 @@ type RegistrationFinishRequest struct {
 	// detected at registration" requirement). The server never verifies
 	// or unwraps this - it's opaque ciphertext to this package, stored
 	// exactly as given.
-	WrappedIdentity string `json:"wrapped_identity,omitempty"`
+	WrappedIdentity string `json:"wrapped_identity,omitempty" maxLength:"4096"`
 
 	// PublicKey and RecoveryWrappedIdentity are only sent on the
 	// account's first-ever registration (design.md's "Escrowed identity:
@@ -88,8 +88,8 @@ type RegistrationFinishRequest struct {
 	// itself idempotent against a later registration resending these, so
 	// this handler doesn't need to re-derive "is this the first one"
 	// beyond what the client already decided.
-	PublicKey               string `json:"public_key,omitempty"`
-	RecoveryWrappedIdentity string `json:"recovery_wrapped_identity,omitempty"`
+	PublicKey               string `json:"public_key,omitempty" maxLength:"512"`
+	RecoveryWrappedIdentity string `json:"recovery_wrapped_identity,omitempty" maxLength:"4096"`
 }
 
 // handleBeginRegistration starts a WebAuthn registration ceremony.
@@ -170,10 +170,7 @@ func handleFinishRegistration(s objectStore, wa *webauthn.WebAuthn) http.Handler
 		}
 
 		var req RegistrationFinishRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			status, message := decodeFailure(err)
-			writeError(w, r, status, message)
-
+		if !decodeRequest(w, r, &req) {
 			return
 		}
 
