@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.60.0](https://github.com/alrayyes/Hush-Hush/compare/v2.59.0...v2.60.0) (2026-10-05)
+
+
+### Features
+
+* **api:** one name can hold a different value per consumer, each under a UUID ([#671](https://github.com/alrayyes/Hush-Hush/issues/671)) ([91c557e](https://github.com/alrayyes/Hush-Hush/commit/91c557e2b93e985deb57c5548bbf6e9f0eabb27e))
+
 ## [2.59.0](https://github.com/alrayyes/Hush-Hush/compare/v2.58.6...v2.59.0) (2026-10-05)
 
 
