@@ -220,6 +220,10 @@ func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 				writeError(w, r, http.StatusNotFound, "unknown consumer")
 
 				return
+			case errors.Is(err, store.ErrVariantConflict):
+				writeError(w, r, http.StatusConflict, errVariantConflict.Error())
+
+				return
 			default:
 				writeInternalError(w, r, err)
 

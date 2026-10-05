@@ -241,7 +241,7 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "409":
-          description: An object already exists under that slug.
+          description: An object already exists under that name for one of its `used_by` consumers, or the name is taken and `used_by` is empty. A name can hold one object per group of consumers, and a consumer is in at most one of them.
           content:
             application/json:
               schema:
@@ -275,6 +275,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
+        - $ref: "#/components/parameters/objectId"
       responses:
         "200":
           description: The sealed object.
@@ -291,6 +292,10 @@ paths:
 
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "409":
+          $ref: "#/components/responses/VariantConflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
     put:
       operationId: updateObject
       summary: Rotate an object's value
@@ -313,6 +318,7 @@ paths:
         - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
+        - $ref: "#/components/parameters/objectId"
       requestBody:
         required: true
         content:
@@ -337,6 +343,10 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "409":
+          $ref: "#/components/responses/VariantConflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
     delete:
       operationId: deleteObject
       summary: Remove an object
@@ -352,6 +362,7 @@ paths:
         - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
+        - $ref: "#/components/parameters/objectId"
       responses:
         "204":
           description: The object was removed.
@@ -362,6 +373,10 @@ paths:
 
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "409":
+          $ref: "#/components/responses/VariantConflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /objects/{slug}/used-by:
     get:
       operationId: getObjectUsedBy
@@ -373,6 +388,7 @@ paths:
       tags: [objects]
       parameters:
         - $ref: "#/components/parameters/slug"
+        - $ref: "#/components/parameters/objectId"
       responses:
         "200":
           description: The object's recorded consumers.
@@ -385,6 +401,12 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "409":
+          $ref: "#/components/responses/VariantConflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /consumers:
     get:
       operationId: listConsumers
@@ -588,6 +610,8 @@ paths:
 
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "409":
+          $ref: "#/components/responses/VariantConflict"
     delete:
       operationId: deleteConsumer
       summary: Remove a consumer from every object that references it
@@ -1567,6 +1591,15 @@ components:
         type: string
 
         maxLength: 128
+    objectId:
+      name: id
+      in: query
+      required: false
+      description: The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404.
+      schema:
+        type: string
+        format: uuid
+        maxLength: 36
   responses:
     BadRequest:
       description: The request could not be parsed as documented.
@@ -1650,6 +1683,14 @@ components:
           example:
             error: token must be revoked or expired before it can be purged
 
+    VariantConflict:
+      description: The name has several variants and no `id` was given to say which, or the change would put a consumer in two variants of one name. A consumer is in at most one variant of a name.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: name has several variants; pass id to say which
   schemas:
     ObjectSlug:
       type: string
@@ -1739,8 +1780,18 @@ components:
 
     ObjectMetadata:
       type: object
-      required: [slug, tags]
+      required:
+        - id
+        - slug
+        - tags
       properties:
+        id:
+          type: string
+          format: uuid
+          maxLength: 36
+          description: The object's UUID. Several objects can share a name (each is a variant, with its own value and consumers), so this is what tells them apart and what `id` selects.
+          examples:
+            - 0b9f6c1e-3c7a-4a52-9d57-4f2a1c8e5b10
         slug:
           $ref: "#/components/schemas/ObjectSlug"
         used_by:

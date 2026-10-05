@@ -52,6 +52,9 @@ type CreateObjectRequest struct {
 // the only observable effect), so a later GET/List call never carries
 // this field at all, only the create/update call that set it.
 type ObjectMetadata struct {
+	// ID is the object's UUID. Several objects can share a Slug, so this is
+	// what tells them apart (alrayyes/hush-hush#668).
+	ID               string   `json:"id"`
 	Slug             string   `json:"slug"`
 	UsedBy           []string `json:"used_by,omitempty"`
 	Tags             []string `json:"tags"`
@@ -132,7 +135,9 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		err = s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description, ownerID, store.WithTags(tags))
+		var id string
+
+		err = s.CreateObject(r.Context(), req.Slug, req.Value, req.UsedBy, req.Description, ownerID, store.WithTags(tags), store.IntoID(&id))
 		switch {
 		case err == nil:
 			actorType, actorID := actorFrom(r)
@@ -143,7 +148,7 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 			}
 
 			writeJSON(w, http.StatusCreated, ObjectMetadata{
-				Slug: req.Slug, UsedBy: req.UsedBy, Tags: tags, Description: req.Description,
+				ID: id, Slug: req.Slug, UsedBy: req.UsedBy, Tags: tags, Description: req.Description,
 				KeepReadableCopy: req.KeepReadableCopy,
 			})
 		case errors.Is(err, store.ErrAlreadyExists):

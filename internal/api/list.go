@@ -45,7 +45,7 @@ func handleListObjects(s objectStore) http.HandlerFunc {
 		metadata := make([]ObjectMetadata, len(objs))
 		for i, obj := range objs {
 			metadata[i] = ObjectMetadata{
-				Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description,
+				ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description,
 				CreatedAt: timeOrNil(obj.CreatedAt), UpdatedAt: timeOrNil(obj.UpdatedAt),
 				CreatedBy: actorOrNil(obj.CreatedBy), UpdatedBy: actorOrNil(obj.UpdatedBy),
 			}

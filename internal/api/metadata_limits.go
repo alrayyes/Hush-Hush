@@ -16,7 +16,7 @@ import (
 // validated by its handler, which already rejects anything out of range.
 var (
 	queryLimits = map[string]int{
-		"q": 128, "used_by": 128, "object_id": 128, "caller": 128, "actor": 128,
+		"q": 128, "used_by": 128, "id": 36, "object_id": 128, "caller": 128, "actor": 128,
 		// An RFC 3339 timestamp is at most 35 characters, so this is generous.
 		"from": 64, "to": 64,
 	}

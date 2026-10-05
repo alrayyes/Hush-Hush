@@ -46,10 +46,13 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
 - **Tags**: an object carries free-form labels for grouping and filtering,
   stored beside its consumer list, not inside the sealed value
   ([ADR 27](docs/adr/0027-object-tags.md)).
-- **Addressing**: `objects.id` is an internal identifier; every
-  caller-facing path (the API, the CLI, the audit log) addresses an
-  object by its `slug` instead, decoupled so a slug can be renamed later
-  without touching anything that references the object internally.
+- **Addressing**: an object has a UUID `id`, and callers ask for it by its
+  `slug`, a name that is not unique. Objects that share a name are variants,
+  each with its own value and consumers, and a consumer is in at most one of
+  them, so `consumer_a` and `consumer_d` can ask for `release_token` and get
+  different values. A consumer token resolves to its variant itself; a write
+  token or session names one with `?id=`
+  ([ADR 33](docs/adr/0033-one-name-many-variants.md)).
 - **Web UI**: SvelteKit, built static and embedded into the Go binary with
   `go:embed`; passkey (WebAuthn) authentication.
 - **Operations**: one structured JSON log line per request, never carrying a

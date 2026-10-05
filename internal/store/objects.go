@@ -80,6 +80,13 @@ type objectOptions struct {
 	tags     *[]string
 	consumer string
 	id       string
+	idOut    *string
+}
+
+// IntoID makes CreateObject and UpdateObject store the UUID id of the object
+// it made or changed in *dst, so the caller can name that variant afterward.
+func IntoID(dst *string) ObjectOption {
+	return func(o *objectOptions) { o.idOut = dst }
 }
 
 // WithID picks, on GetObject, UpdateObject and DeleteObject, the object with
@@ -169,6 +176,10 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	if options.idOut != nil {
+		*options.idOut = id
 	}
 
 	return nil
@@ -475,6 +486,10 @@ func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, use
 	id, err := resolveObjectID(ctx, tx, slug, options)
 	if err != nil {
 		return err
+	}
+
+	if options.idOut != nil {
+		*options.idOut = id
 	}
 
 	if usedBy != nil {

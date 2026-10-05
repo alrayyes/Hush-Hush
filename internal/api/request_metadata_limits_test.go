@@ -33,12 +33,12 @@ func getWith(t *testing.T, target string, headers map[string]string) *httptest.R
 }
 
 var stringQueryLimits = map[string]int{
-	"q": 128, "used_by": 128, "object_id": 128, "caller": 128, "actor": 128, "from": 64, "to": 64,
+	"q": 128, "used_by": 128, "object_id": 128, "caller": 128, "actor": 128, "from": 64, "to": 64, "id": 36,
 }
 
 var stringQueryPaths = map[string]string{
 	"q": "/consumers", "used_by": "/objects", "object_id": "/audit-log",
-	"caller": "/audit-log", "actor": "/audit-log", "from": "/audit-log", "to": "/audit-log",
+	"caller": "/audit-log", "actor": "/audit-log", "from": "/audit-log", "to": "/audit-log", "id": "/objects/x",
 }
 
 func TestAQueryValueOverItsLimitIsRefusedWithTheLimit(t *testing.T) {

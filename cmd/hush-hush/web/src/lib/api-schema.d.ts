@@ -860,6 +860,12 @@ export interface components {
          */
         KeepReadableCopy: boolean;
         ObjectMetadata: {
+            /**
+             * Format: uuid
+             * @description The object's UUID. Several objects can share a name (each is a variant, with its own value and consumers), so this is what tells them apart and what `id` selects.
+             * @example 0b9f6c1e-3c7a-4a52-9d57-4f2a1c8e5b10
+             */
+            id: string;
             slug: components["schemas"]["ObjectSlug"];
             used_by?: components["schemas"]["UsedByList"];
             tags: components["schemas"]["Tags"];
@@ -1448,6 +1454,20 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description The name has several variants and no `id` was given to say which, or the change would put a consumer in two variants of one name. A consumer is in at most one variant of a name. */
+        VariantConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "error": "name has several variants; pass id to say which"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Error"];
+            };
+        };
     };
     parameters: {
         /**
@@ -1498,6 +1518,8 @@ export interface components {
          *     form used where session auth is the only option.
          */
         csrfTokenOptional: string;
+        /** @description The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404. */
+        objectId: string;
     };
     requestBodies: never;
     headers: never;
@@ -1651,7 +1673,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description An object already exists under that slug. */
+            /** @description An object already exists under that name for one of its `used_by` consumers, or the name is taken and `used_by` is empty. A name can hold one object per group of consumers, and a consumer is in at most one of them. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1671,7 +1693,10 @@ export interface operations {
     };
     getObject: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404. */
+                id?: components["parameters"]["objectId"];
+            };
             header?: {
                 /**
                  * @description The caller's own identity - a repo or host name, whatever the
@@ -1705,14 +1730,19 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VariantConflict"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
     updateObject: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404. */
+                id?: components["parameters"]["objectId"];
+            };
             header?: {
                 /**
                  * @description The caller's own identity - a repo or host name, whatever the
@@ -1763,15 +1793,20 @@ export interface operations {
                     "application/json": components["schemas"]["ObjectMetadata"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VariantConflict"];
             413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
     deleteObject: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404. */
+                id?: components["parameters"]["objectId"];
+            };
             header?: {
                 /**
                  * @description The caller's own identity - a repo or host name, whatever the
@@ -1811,14 +1846,19 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VariantConflict"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
     getObjectUsedBy: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The UUID of one variant, when the name has several. Without it a name with one variant is addressed as always, and a name with several is a 409. It has to belong to that name, or the answer is 404. */
+                id?: components["parameters"]["objectId"];
+            };
             header?: never;
             path: {
                 /**
@@ -1850,7 +1890,10 @@ export interface operations {
                     "application/json": components["schemas"]["UsedBy"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VariantConflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listConsumers: {
@@ -2030,6 +2073,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["UnknownConsumer"];
+            409: components["responses"]["VariantConflict"];
             413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["UnprocessableEntity"];
         };

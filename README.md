@@ -197,6 +197,13 @@ either the server answers 413. A slug, name or description over its limit is a
 422 that names the field
 ([ADR 31](docs/adr/0031-request-body-and-value-size-limits.md)).
 
+One name can hold a different value per consumer: create the name again with a
+different `used_by`, and each consumer's token reads the value made for it. A
+consumer is in at most one such variant of a name, and every object has a UUID
+`id`; a write token that reads, changes or deletes a name with several variants
+passes `?id=` to say which
+([ADR 33](docs/adr/0033-one-name-many-variants.md)).
+
 The server doesn't rate limit. Run it behind a reverse proxy and limit
 `/auth/*` and the routes that check a token there
 ([ADR 30](docs/adr/0030-rate-limiting-is-the-reverse-proxys-job.md)). Exposed
