@@ -192,6 +192,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ObjectMetadata"
+                maxItems: 500
           headers:
             X-Total-Count:
               $ref: "#/components/headers/TotalCount"
@@ -1055,6 +1056,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Credential"
+                maxItems: 500
           headers:
             X-Total-Count:
               $ref: "#/components/headers/TotalCount"
@@ -1188,6 +1190,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TokenMetadata"
+                maxItems: 500
           headers:
             X-Total-Count:
               $ref: "#/components/headers/TotalCount"
@@ -1364,6 +1367,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ConsumerTokenMetadata"
+                maxItems: 500
           headers:
             X-Total-Count:
               $ref: "#/components/headers/TotalCount"
@@ -1634,7 +1638,7 @@ components:
       name: limit
       in: query
       required: false
-      description: How many rows to return. Give `limit`, `offset` or both to get one page; give neither and the response is every row. `X-Total-Count` says how many there are in all.
+      description: "How many rows to return, at most. A list is one page: 50 rows when `limit` is left out. `X-Total-Count` says how many there are in all, so read the rest by asking for the next `offset`."
       schema:
         type: integer
         format: int32
@@ -1645,7 +1649,7 @@ components:
       name: offset
       in: query
       required: false
-      description: How many rows to skip. With `limit` left out, a page is 50 rows.
+      description: How many rows to skip. Add the number of rows you got to read the next page.
       schema:
         type: integer
         format: int32
@@ -2510,7 +2514,7 @@ components:
               maxLength: 64
   headers:
     TotalCount:
-      description: How many rows there are in all, whatever page was returned.
+      description: How many rows there are in all, whatever page was returned. A list is one page, so compare it with the rows you have.
       schema:
         type: integer
         format: int32

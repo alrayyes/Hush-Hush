@@ -62,13 +62,8 @@ slow body was never cut off.
   (`/objects`, `/consumers` without a page, `/credentials`, `/tokens`,
   `/consumer-tokens` and the audit log's filter options): a `maxItems` there
   would be a number the server doesn't keep, so `.spectral.yaml` waives them by
-  path. `GET /objects`, `/tokens`, `/consumer-tokens` and `/credentials` can be
-  paged with `limit` (1 to 500) and `offset`, and say the total in
-  `X-Total-Count` ([issue #649](https://github.com/alrayyes/hush-hush/issues/649)),
-  but a request with neither still gets every row, so no client breaks. The
-  array stays the response shape, so the SDKs' types don't change. That is why
-  the waiver stays: bounding the unpaged response is a breaking change for the
-  web UI and the SDKs, and needs them to page first.
+  path. Four of those lists became one page of 50 by default, so their
+  arrays no longer need the waiver ([ADR 34](0034-lists-are-one-page-by-default.md)).
 - The server sets a **30 second `ReadTimeout`** and a **64 KiB
   `MaxHeaderBytes`**, so a caller that dribbles a body or a header is dropped.
 - The spec documents the 413 on every operation that takes a body, and states
