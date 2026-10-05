@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/alrayyes/Hush-Hush/compare/v3.1.0...v3.2.0) (2026-10-05)
+
+
+### Features
+
+* **api:** page the MCP list tool ([#687](https://github.com/alrayyes/Hush-Hush/issues/687)) ([1e06ac8](https://github.com/alrayyes/Hush-Hush/commit/1e06ac8c4e69cee3afe272b217351f6a744b78dc)), closes [#685](https://github.com/alrayyes/Hush-Hush/issues/685)
+
 ## [3.1.0](https://github.com/alrayyes/Hush-Hush/compare/v3.0.0...v3.1.0) (2026-10-05)
 
 
