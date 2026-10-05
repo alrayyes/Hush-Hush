@@ -82,7 +82,8 @@ jobs:
       - run: bun run screenshots
         working-directory: cmd/hush-hush/web
 
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      - id: pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
           base: main
@@ -95,3 +96,22 @@ jobs:
           branch: docs/screenshots-update
           delete-branch: true
           add-paths: docs/screenshots/*.png
+
+      # Ryan's standing yes for this class (alrayyes/hush-hush#656): the diff is
+      # generated images only, and the checks every pull request waits for still
+      # gate the merge. RELEASE_TOKEN, not GITHUB_TOKEN, for the reason
+      # release-auto-merge.yml gives: a GITHUB_TOKEN merge doesn't fire the push
+      # event. The path guard keeps the exemption to images: anything else in
+      # the diff, and it waits for a person like any other pull request.
+      - name: Enable auto-merge
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          PR: ${{ steps.pr.outputs.pull-request-number }}
+        run: |
+          others=$(gh pr diff "$PR" --name-only | grep -vcE '^docs/screenshots/[^/]+\.png$' || true)
+          if [ "$others" != "0" ]; then
+            echo "::notice::#$PR changes more than the screenshots, so it waits for a person"
+            exit 0
+          fi
+          gh pr merge "$PR" --auto --squash --delete-branch
