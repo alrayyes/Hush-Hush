@@ -13,7 +13,7 @@ import (
 var (
 	errFromMustBeRFC3339  = errors.New("from must be RFC 3339")
 	errToMustBeRFC3339    = errors.New("to must be RFC 3339")
-	errAfterMustBeInteger = errors.New("after must be an integer")
+	errAfterMustBeInteger = errors.New("after must be a non-negative integer")
 	errInvalidOrder       = errors.New("order must be asc or desc")
 	errInvalidLimit       = errors.New("limit must be an integer between 1 and 500")
 )
@@ -94,7 +94,7 @@ func auditLogFilterFrom(r *http.Request) (store.AuditLogFilter, error) {
 
 	if after := q.Get("after"); after != "" {
 		id, err := strconv.ParseInt(after, 10, 64)
-		if err != nil {
+		if err != nil || id < 0 {
 			return store.AuditLogFilter{}, errAfterMustBeInteger
 		}
 

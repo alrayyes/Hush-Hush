@@ -5,16 +5,9 @@ extends:
   - "@stoplight/spectral-owasp-ruleset"
 
 rules:
-  # The server enforces a limit on every request body field (ADR 31), and the spec
-  # states them. What's left without one is the strings, arrays and integers the
-  # server only sends or reads as a query parameter, which the rest of #617 bounds
-  # before it sets all three back to error.
-  owasp:api4:2023-string-limit: warn
-  owasp:api4:2023-array-limit: warn
-  owasp:api4:2023-integer-limit: warn
   # string-restricted (a format, pattern or enum on a string) is a warning in
-  # OWASP's own ruleset, and the same ticket covers it: the patterns come with
-  # the limits.
+  # OWASP's own ruleset, and stays one: a length is what bounds a string, and a
+  # pattern is added where the server checks one.
 
   # Rate limiting is the reverse proxy's job (ADR 30, #618). Documenting headers and
   # a 429 the server never sends would be the first lie in the file, so these stay
@@ -62,3 +55,19 @@ overrides:
       owasp:api2:2023-read-restricted: off
       owasp:api2:2023-write-restricted: off
       owasp:api8:2023-define-error-responses-401: off
+
+  # The list endpoints return every row, with no page size to bound the array,
+  # so a maxItems here would be a number the server doesn't keep. Paging them is
+  # #649 (ADR 31); until that ships, these arrays are waived by
+  # path, not the rule.
+  - files:
+      - "api/openapi.yaml#/paths/~1objects/get/responses/200/content/application~1json/schema"
+      - "api/openapi.yaml#/paths/~1consumers/get/responses/200/content/application~1json/schema/oneOf/0"
+      - "api/openapi.yaml#/paths/~1credentials/get/responses/200/content/application~1json/schema"
+      - "api/openapi.yaml#/paths/~1tokens/get/responses/200/content/application~1json/schema"
+      - "api/openapi.yaml#/paths/~1consumer-tokens/get/responses/200/content/application~1json/schema"
+      - "api/openapi.yaml#/components/schemas/AuditLogFilterOptions/properties/object_ids"
+      - "api/openapi.yaml#/components/schemas/AuditLogFilterOptions/properties/actors"
+      - "api/openapi.yaml#/components/schemas/AuditLogFilterOptions/properties/callers"
+    rules:
+      owasp:api4:2023-array-limit: off

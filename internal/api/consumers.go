@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -105,7 +106,7 @@ func consumerFilterFrom(q url.Values) (store.ConsumerFilter, error) {
 
 	if page := q.Get("page"); page != "" {
 		n, err := strconv.Atoi(page)
-		if err != nil || n < 1 {
+		if err != nil || n < 1 || n > math.MaxInt32 {
 			return store.ConsumerFilter{}, errInvalidConsumerPage
 		}
 
