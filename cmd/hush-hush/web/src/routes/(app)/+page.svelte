@@ -32,6 +32,7 @@ import {
 	tagCounts,
 	validateTags,
 } from '$lib/tags';
+import { valueFieldAttributes } from '$lib/value-field';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -304,6 +305,7 @@ async function confirmDelete() {
 								id="create-value"
 								class="w-full"
 								bind:value={createValue}
+								{...valueFieldAttributes}
 								required
 								rows={4}
 							/>
@@ -667,7 +669,14 @@ async function confirmDelete() {
 			<div class="space-y-4">
 				<div class="space-y-1">
 					<Label for="edit-value">New value</Label>
-					<Textarea id="edit-value" class="w-full" bind:value={editValue} required rows={6} />
+					<Textarea
+						id="edit-value"
+						class="w-full"
+						bind:value={editValue}
+						required
+						rows={6}
+						{...valueFieldAttributes}
+					/>
 				</div>
 
 				<div class="space-y-1">
