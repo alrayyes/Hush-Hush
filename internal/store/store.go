@@ -60,6 +60,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	if err := migrateObjectIDsToUUID(db); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	if err := backfillOwnership(db); err != nil {
 		_ = db.Close()
 
@@ -231,7 +237,16 @@ func addObjectsSlugColumn(db *sql.DB) error {
 		return err
 	}
 
-	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_objects_slug ON objects (slug)`); err != nil {
+	// A slug is no longer unique: it can hold one variant per group of
+	// consumers (alrayyes/hush-hush#668), with "a consumer is in at most one
+	// variant" enforced in code, in the transaction that writes. A database
+	// from before that still has the unique index, so drop it and keep a
+	// plain one for lookups.
+	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_objects_slug`); err != nil {
+		return fmt.Errorf("drop unique objects slug index: %w", err)
+	}
+
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_objects_slug_lookup ON objects (slug)`); err != nil {
 		return fmt.Errorf("create objects slug index: %w", err)
 	}
 
@@ -281,7 +296,7 @@ func migrateObjectSlugs(db *sql.DB) error {
 	}
 
 	for _, oldID := range oldIDs {
-		newID, err := randomHex(16)
+		newID, err := newUUID()
 		if err != nil {
 			return fmt.Errorf("generate object id: %w", err)
 		}

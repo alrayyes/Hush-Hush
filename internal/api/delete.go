@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -13,14 +12,17 @@ func handleDeleteObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 
-		err := s.DeleteObject(r.Context(), slug)
-		switch {
-		case err == nil:
-		case errors.Is(err, store.ErrNotFound):
-			writeError(w, r, http.StatusNotFound, "unknown object")
-
+		opts, ok := selectorFrom(w, r)
+		if !ok {
 			return
-		default:
+		}
+
+		err := s.DeleteObject(r.Context(), slug, opts...)
+		if objectLookupFailed(w, r, err) {
+			return
+		}
+
+		if err != nil {
 			writeInternalError(w, r, err)
 
 			return

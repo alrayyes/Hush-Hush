@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted. Partly changed by [ADR 33](0033-one-name-many-variants.md): the id
+is now a UUID the API returns, and the slug is no longer unique.
 
 ## Context
 

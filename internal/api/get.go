@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 	"slices"
 
@@ -20,10 +19,19 @@ func handleGetObject(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 
-		obj, err := s.GetObject(r.Context(), slug)
-		if errors.Is(err, store.ErrNotFound) {
-			writeError(w, r, http.StatusNotFound, "unknown object")
+		opts, ok := selectorFrom(w, r)
+		if !ok {
+			return
+		}
 
+		// A consumer token has a consumer, so a name with several variants
+		// resolves to the one that names it.
+		if auth, ok := r.Context().Value(consumerTokenContextKey{}).(consumerTokenAuth); ok {
+			opts = append([]store.ObjectOption{store.ForConsumer(auth.consumer)}, opts...)
+		}
+
+		obj, err := s.GetObject(r.Context(), slug, opts...)
+		if objectLookupFailed(w, r, err) {
 			return
 		}
 

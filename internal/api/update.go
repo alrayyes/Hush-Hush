@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/alrayyes/hush-hush/internal/store"
@@ -78,20 +77,27 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 
 		slug := r.PathValue("slug")
 
-		err = s.UpdateObject(r.Context(), slug, req.Value, req.UsedBy, opts...)
-		switch {
-		case err == nil:
-		case errors.Is(err, store.ErrNotFound):
-			writeError(w, r, http.StatusNotFound, "unknown object")
-
+		selector, ok := selectorFrom(w, r)
+		if !ok {
 			return
-		default:
+		}
+
+		var id string
+
+		err = s.UpdateObject(r.Context(), slug, req.Value, req.UsedBy, append(append(opts, selector...), store.IntoID(&id))...)
+		if objectLookupFailed(w, r, err) {
+			return
+		}
+
+		if err != nil {
 			writeInternalError(w, r, err)
 
 			return
 		}
 
-		obj, err := s.GetObject(r.Context(), slug)
+		// Read it back by id: the update may have changed which consumers
+		// name this variant, and a name with several wouldn't say which.
+		obj, err := s.GetObject(r.Context(), slug, store.WithID(id))
 		if err != nil {
 			writeInternalError(w, r, err)
 
@@ -106,7 +112,7 @@ func handleUpdateObject(s objectStore) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, ObjectMetadata{
-			Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description,
+			ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description,
 			KeepReadableCopy: req.KeepReadableCopy,
 		})
 	}

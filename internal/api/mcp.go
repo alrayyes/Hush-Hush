@@ -23,6 +23,40 @@ var (
 	errMCPUnknownObject        = errors.New("unknown object")
 )
 
+// mcpSelector holds a tool's input to its field limits and turns its optional
+// id into the store option that picks a variant.
+func mcpSelector(in any, id string) ([]store.ObjectOption, error) {
+	if err := checkLimits(in); err != nil {
+		return nil, err
+	}
+
+	if id == "" {
+		return nil, nil
+	}
+
+	if !objectIDPattern.MatchString(id) {
+		return nil, errInvalidObjectID
+	}
+
+	return []store.ObjectOption{store.WithID(id)}, nil
+}
+
+// mcpLookupError is what a tool answers when a lookup or write by name fails:
+// the same three outcomes the HTTP handlers map to 404 and 409, or an internal
+// error it logs.
+func mcpLookupError(ctx context.Context, tool string, err error) error {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		return errMCPUnknownObject
+	case errors.Is(err, store.ErrAmbiguousSlug):
+		return errAmbiguousName
+	case errors.Is(err, store.ErrVariantConflict):
+		return errVariantConflict
+	default:
+		return mcpInternalError(ctx, tool, err)
+	}
+}
+
 // checkMCPInput holds a tool's input to its field limits, then turns its
 // base64 text into the sealed value, refusing text that isn't base64 and a
 // value over MaxValueBytes.
@@ -67,6 +101,7 @@ type mcpInjectInput struct {
 // single value api/openapi.yaml's getObject documents.
 type mcpGetInput struct {
 	Slug string `json:"slug" jsonschema:"the object's slug"`
+	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 }
 
 // mcpGetOutput is the "get" tool's output - the sealed ciphertext exactly
@@ -81,6 +116,7 @@ type mcpGetOutput struct {
 // Value base64-encoded for the same reason mcpInjectInput's is.
 type mcpUpdateInput struct {
 	Slug   string    `json:"slug" maxLength:"128" jsonschema:"the object's slug"`
+	ID     string    `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 	Value  string    `json:"value" jsonschema:"the new sealed ciphertext, base64-encoded"`
 	UsedBy *[]string `json:"used_by,omitempty" maxItems:"100" maxLength:"128" jsonschema:"replaces the object's recorded consumers; omit to leave them unchanged"`
 	Tags   *[]string `json:"tags,omitempty" jsonschema:"replaces the object's tags; an empty list clears them; omit to leave them unchanged"`
@@ -89,6 +125,7 @@ type mcpUpdateInput struct {
 // mcpDeleteInput is the "delete" tool's input - just the object's slug.
 type mcpDeleteInput struct {
 	Slug string `json:"slug" jsonschema:"the object's slug"`
+	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 }
 
 // mcpDeleteOutput confirms a delete happened, since the HTTP DELETE's 204
@@ -212,7 +249,9 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 
 		in.UsedBy = uniqueConsumers(in.UsedBy)
 
-		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description, ownerID, store.WithTags(tags))
+		var id string
+
+		err = s.CreateObject(ctx, in.Slug, value, in.UsedBy, in.Description, ownerID, store.WithTags(tags), store.IntoID(&id))
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrAlreadyExists):
@@ -225,7 +264,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}
 
-		return nil, ObjectMetadata{Slug: in.Slug, UsedBy: in.UsedBy, Tags: tags, Description: in.Description}, nil
+		return nil, ObjectMetadata{ID: id, Slug: in.Slug, UsedBy: in.UsedBy, Tags: tags, Description: in.Description}, nil
 	}
 }
 
@@ -236,13 +275,14 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 // HTTP GET records.
 func mcpGet(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpGetInput, mcpGetOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpGetInput) (*mcp.CallToolResult, mcpGetOutput, error) {
-		obj, err := s.GetObject(ctx, in.Slug)
-		switch {
-		case err == nil:
-		case errors.Is(err, store.ErrNotFound):
-			return nil, mcpGetOutput{}, errMCPUnknownObject
-		default:
-			return nil, mcpGetOutput{}, mcpInternalError(ctx, "get", err)
+		opts, err := mcpSelector(in, in.ID)
+		if err != nil {
+			return nil, mcpGetOutput{}, err
+		}
+
+		obj, err := s.GetObject(ctx, in.Slug, opts...)
+		if err != nil {
+			return nil, mcpGetOutput{}, mcpLookupError(ctx, "get", err)
 		}
 
 		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionRead, caller, sourceIP, actorType, actorID); err != nil {
@@ -275,39 +315,54 @@ func mcpUpdate(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 			return nil, ObjectMetadata{}, err
 		}
 
-		err = s.UpdateObject(ctx, in.Slug, value, uniqueConsumersPtr(in.UsedBy), opts...)
-		switch {
-		case err == nil:
-		case errors.Is(err, store.ErrNotFound):
-			return nil, ObjectMetadata{}, errMCPUnknownObject
-		default:
-			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
-		}
-
-		obj, err := s.GetObject(ctx, in.Slug)
+		obj, err := mcpUpdateObject(ctx, s, in, value, opts)
 		if err != nil {
-			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
+			return nil, ObjectMetadata{}, err
 		}
 
 		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionUpdate, caller, sourceIP, actorType, actorID); err != nil {
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "update", err)
 		}
 
-		return nil, ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}, nil
+		return nil, ObjectMetadata{ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}, nil
 	}
+}
+
+// mcpUpdateObject replaces the variant of in's slug that in.ID (or the slug
+// alone) names, and reads it back by id, since the update may change which
+// consumers name it.
+func mcpUpdateObject(ctx context.Context, s objectStore, in mcpUpdateInput, value []byte, opts []store.ObjectOption) (store.Object, error) {
+	selector, err := mcpSelector(in, in.ID)
+	if err != nil {
+		return store.Object{}, err
+	}
+
+	var id string
+
+	opts = append(append(opts, selector...), store.IntoID(&id))
+	if err := s.UpdateObject(ctx, in.Slug, value, uniqueConsumersPtr(in.UsedBy), opts...); err != nil {
+		return store.Object{}, mcpLookupError(ctx, "update", err)
+	}
+
+	obj, err := s.GetObject(ctx, in.Slug, store.WithID(id))
+	if err != nil {
+		return store.Object{}, mcpInternalError(ctx, "update", err)
+	}
+
+	return obj, nil
 }
 
 // mcpDelete is the "delete" tool's handler - the same removal
 // handleDeleteObject (delete.go) performs over HTTP.
 func mcpDelete(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpDeleteInput, mcpDeleteOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpDeleteInput) (*mcp.CallToolResult, mcpDeleteOutput, error) {
-		err := s.DeleteObject(ctx, in.Slug)
-		switch {
-		case err == nil:
-		case errors.Is(err, store.ErrNotFound):
-			return nil, mcpDeleteOutput{}, errMCPUnknownObject
-		default:
-			return nil, mcpDeleteOutput{}, mcpInternalError(ctx, "delete", err)
+		opts, err := mcpSelector(in, in.ID)
+		if err != nil {
+			return nil, mcpDeleteOutput{}, err
+		}
+
+		if err := s.DeleteObject(ctx, in.Slug, opts...); err != nil {
+			return nil, mcpDeleteOutput{}, mcpLookupError(ctx, "delete", err)
 		}
 
 		if err := s.RecordAuditLog(ctx, in.Slug, store.AuditActionDelete, caller, sourceIP, actorType, actorID); err != nil {
@@ -342,7 +397,7 @@ func mcpList(s objectStore) mcp.ToolHandlerFor[mcpListInput, []ObjectMetadata] {
 
 		metadata := make([]ObjectMetadata, len(objs))
 		for i, obj := range objs {
-			metadata[i] = ObjectMetadata{Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}
+			metadata[i] = ObjectMetadata{ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}
 		}
 
 		return nil, metadata, nil

@@ -22,6 +22,10 @@ afterEach(() => {
 	vi.resetAllMocks();
 });
 
+// A stand-in for an object's UUID id, which the API now returns on every object.
+const uuid = (n: number) =>
+	`00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
 describe('registerWebMCPTools', () => {
 	it('is a no-op when document.modelContext is undefined', async () => {
 		const { registerWebMCPTools } = await import('./webmcp');
@@ -48,7 +52,7 @@ describe('the list_objects tool', () => {
 		const registerTool = vi.fn().mockResolvedValue(undefined);
 		document.modelContext = { registerTool };
 		const objects: ObjectMetadata[] = [
-			{ slug: 'a', used_by: ['homelab/vps-docker'], tags: [] },
+			{ id: uuid(1), slug: 'a', used_by: ['homelab/vps-docker'], tags: [] },
 		];
 		listObjects.mockResolvedValue(objects);
 
@@ -90,11 +94,12 @@ describe('the get_object_metadata tool', () => {
 		document.modelContext = { registerTool };
 		const objects: ObjectMetadata[] = [
 			{
+				id: uuid(2),
 				slug: 'mattermost_deploy_webhook',
 				description: 'prod deploy webhook',
 				tags: [],
 			},
-			{ slug: 'other', tags: [] },
+			{ id: uuid(3), slug: 'other', tags: [] },
 		];
 		listObjects.mockResolvedValue(objects);
 
