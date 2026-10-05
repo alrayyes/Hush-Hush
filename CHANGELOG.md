@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/alrayyes/Hush-Hush/compare/v2.61.0...v3.0.0) (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** an unpaged list request returns the first 50 rows, not all.
+
+### Features
+
+* **api:** return one page of 50 from the four list endpoints ([#681](https://github.com/alrayyes/Hush-Hush/issues/681)) ([6d95da0](https://github.com/alrayyes/Hush-Hush/commit/6d95da02b2e73149b3359bc8ab2521aa48ef5c61)), closes [#662](https://github.com/alrayyes/Hush-Hush/issues/662)
+
 ## [2.61.0](https://github.com/alrayyes/Hush-Hush/compare/v2.60.0...v2.61.0) (2026-10-05)
 
 
