@@ -103,6 +103,11 @@ and `lighthouse` job (never required — a score below threshold warns, per
 `rules/browser-compat.md`) both run these; neither is in `lefthook.yml`'s
 `pre-push` — see that file's `web-check` comment for the timed decision.
 
+Both use port 4173 for the server and 9222 for Lighthouse's browser by
+default. Two runs on one machine, such as two sessions working side by side,
+would share that server, so set `E2E_PORT` (and `E2E_DEBUG_PORT` for
+Lighthouse) to give each its own. The WebAuthn origin follows the port.
+
 ## Which CI jobs run
 
 A pull request only runs the CI jobs whose files it touched. The first job in

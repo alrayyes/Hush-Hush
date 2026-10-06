@@ -16,8 +16,11 @@
 import { chromium } from '@playwright/test';
 import { playAudit } from 'playwright-lighthouse';
 
-const PORT = 9222;
-const BASE_URL = 'http://localhost:4173';
+// E2E_PORT picks the server's port (e2e/server.sh reads it too) and
+// E2E_DEBUG_PORT the browser's remote-debugging port, so two runs on one
+// machine don't share, or kill, each other's server.
+const PORT = Number(process.env.E2E_DEBUG_PORT ?? 9222);
+const BASE_URL = `http://localhost:${process.env.E2E_PORT ?? '4173'}`;
 const REPORTS_DIR = 'reports/lighthouse';
 
 // Same scores either page could reasonably be held to - a self-hosted,
