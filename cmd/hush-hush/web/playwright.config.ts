@@ -5,6 +5,10 @@ import { defineConfig, devices } from '@playwright/test';
 // every route, since the app has no SSR and every page's own +layout.ts
 // fetches GET /healthz at load, which only the Go binary answers.
 // `bun run build` has to run before this, same as CI's own `web` job order.
+// E2E_PORT picks the server's port (e2e/server.sh reads the same variable),
+// so two runs on one machine don't share, or kill, each other's server.
+const baseURL = `http://localhost:${process.env.E2E_PORT ?? '4173'}`;
+
 export default defineConfig({
 	testDir: 'e2e',
 	fullyParallel: true,
@@ -16,11 +20,11 @@ export default defineConfig({
 		? [['list'], ['junit', { outputFile: 'reports/e2e.xml' }]]
 		: 'list',
 	use: {
-		baseURL: 'http://localhost:4173',
+		baseURL,
 	},
 	webServer: {
 		command: 'bash e2e/server.sh',
-		url: 'http://localhost:4173',
+		url: baseURL,
 		reuseExistingServer: !process.env.CI,
 	},
 	projects: [

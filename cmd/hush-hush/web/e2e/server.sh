@@ -11,8 +11,11 @@ repo_root="$(cd "$script_dir/../../../.." && pwd)"
 bin_dir="$(mktemp -d)"
 go build -C "$repo_root" -o "$bin_dir/hush-hush-e2e" ./cmd/hush-hush
 
-export PUBLIC_URL="http://localhost:4173"
-export ADDR="127.0.0.1:4173"
+# E2E_PORT lets two runs on one machine use different servers. WebAuthn pins
+# the origin, so the public URL follows the port.
+port="${E2E_PORT:-4173}"
+export PUBLIC_URL="http://localhost:$port"
+export ADDR="127.0.0.1:$port"
 export DB_PATH="$(mktemp -u).db"
 # The top bar shows this label (#481/#512); e2e needs one to assert it.
 export INSTANCE_LABEL="e2e / local"
