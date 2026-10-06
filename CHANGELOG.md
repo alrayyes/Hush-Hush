@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/alrayyes/Hush-Hush/compare/v3.2.1...v3.3.0) (2026-10-06)
+
+
+### Features
+
+* **web-ui:** show a name's variants and act on one at a time ([#701](https://github.com/alrayyes/Hush-Hush/issues/701)) ([3fa160d](https://github.com/alrayyes/Hush-Hush/commit/3fa160d4bf9763410244d41a5401bfe7fd226f06))
+
 ## [3.2.1](https://github.com/alrayyes/Hush-Hush/compare/v3.2.0...v3.2.1) (2026-10-06)
 
 
