@@ -44,16 +44,40 @@ async function waitForServer(url: string, timeoutMs = 120_000): Promise<void> {
 	}
 }
 
+// Chrome sometimes refuses a connection to localhost right after a Lighthouse
+// run, although the server is up (it listens on 127.0.0.1 only, and Chrome
+// tries ::1 first). A few attempts get past it, where one used to end the
+// authenticated audit.
+async function gotoWithRetry(
+	page: import('@playwright/test').Page,
+	path: string,
+	attempts = 4,
+): Promise<void> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			await page.goto(path);
+			return;
+		} catch (err) {
+			if (attempt >= attempts) throw err;
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		}
+	}
+}
+
 async function auditPage(
 	page: import('@playwright/test').Page,
 	label: string,
 	reportName: string,
+	options: { expectedPath: string; keepSession?: boolean },
 ): Promise<void> {
 	const results = await playAudit({
 		page,
 		port: PORT,
 		thresholds: THRESHOLDS,
 		ignoreError: true,
+		// Lighthouse clears the origin's storage before a run by default, which
+		// would log the authenticated audit straight back out.
+		opts: options.keepSession ? { disableStorageReset: true } : undefined,
 		// One HTML and JSON pair per audited page, which the pages job
 		// publishes (rules/published-reports.md).
 		reports: {
@@ -62,6 +86,16 @@ async function auditPage(
 			name: reportName,
 		},
 	});
+
+	// An audit that lands somewhere else measured the wrong page, and its
+	// scores would read as the right one's. The authenticated audit used to
+	// do exactly that without anyone noticing (it was redirected to /login).
+	const landed = new URL(results.lhr.finalDisplayedUrl).pathname;
+	if (landed !== options.expectedPath) {
+		throw new Error(
+			`${label}: audited ${landed}, expected ${options.expectedPath}`,
+		);
+	}
 
 	// playAudit only logs the metrics that *passed* - a failing one only
 	// ever reaches `results.comparisonError`, which it never prints itself
@@ -83,40 +117,44 @@ async function main() {
 	try {
 		await waitForServer(`${BASE_URL}/healthz`);
 
-		const browser = await chromium.launch({
+		// A persistent context, not browser.newContext(): that is an isolated
+		// incognito-style context, and the tab Lighthouse opens over the
+		// debugging port lives in the browser's default one, so it never sees
+		// the session this script logs in with and audits /login again.
+		const context = await chromium.launchPersistentContext('', {
 			args: [`--remote-debugging-port=${PORT}`],
+			baseURL: BASE_URL,
 		});
 		try {
-			const context = await browser.newContext({ baseURL: BASE_URL });
 			const page = await context.newPage();
 
 			await page.goto('/login');
-			await auditPage(page, '/login', 'login');
+			await auditPage(page, '/login', 'login', { expectedPath: '/login' });
 
 			// Same CDP virtual-authenticator flow as journey.spec.ts's own
 			// login - a passkey has no username/password form Lighthouse's
 			// usual auth recipes assume, so an authenticated audit has to
 			// drive the actual WebAuthn ceremony rather than skip it.
 			//
-			// This whole block is best-effort, not fatal like the rest of
-			// main(): playAudit opens its own CDP connection over the same
-			// remote-debugging port this browser was launched with, and
-			// that appears to sometimes leave a CDP-registered virtual
-			// authenticator non-functional on whatever page it touches
-			// next - the "Register passkey" click still fires but the
-			// ceremony it starts never completes, hanging until
-			// waitForURL's timeout (found live, reproducible, root cause
-			// not yet pinned down - reordering the CDP setup earlier and
-			// isolating the audited pages onto separate targets each
-			// failed to fix it locally, though the exact same registration
-			// flow passes reliably in journey.spec.ts's own Playwright
-			// suite). This check is documented as warn-only
-			// (rules/browser-compat.md) - a failure to even drive the
-			// authenticated half shouldn't hard-fail the build any more
-			// than a missed threshold does, so it's caught and reported
-			// the same way rather than propagating to main()'s own
-			// process.exit(1).
+			// Three things used to make this block fail in CI, none of them the
+			// CDP connection playAudit opens: Lighthouse leaves the tab blank
+			// after the /login audit; a first registration shows the escrowed
+			// identity's recovery phrase, and the page only navigates to "/"
+			// once "I've saved it" is clicked; and the session lived in an
+			// isolated context Lighthouse's own tab could not see (see the
+			// launchPersistentContext comment above).
+			//
+			// The block stays best-effort, not fatal like the rest of main():
+			// this check is documented as warn-only (rules/browser-compat.md),
+			// so a failure to drive the authenticated half is caught and
+			// reported the same way a missed threshold is, rather than
+			// propagating to main()'s own process.exit(1).
 			try {
+				// Lighthouse drives this same tab and leaves it blank when it
+				// finishes, so the login page has to be loaded again before
+				// anything can be clicked on it.
+				await gotoWithRetry(page, '/login');
+
 				const client = await context.newCDPSession(page);
 				await client.send('WebAuthn.enable');
 				await client.send('WebAuthn.addVirtualAuthenticator', {
@@ -129,9 +167,19 @@ async function main() {
 					},
 				});
 				await page.getByRole('button', { name: 'Register passkey' }).click();
+				await page
+					.getByRole('button', { name: "I've saved it" })
+					.click({ timeout: 10_000 });
 				await page.waitForURL('/');
+				// Let the overview finish loading before Lighthouse starts its own
+				// navigation to it; auditing straight after the redirect failed
+				// intermittently with a refused document request.
+				await page.waitForLoadState('networkidle');
 
-				await auditPage(page, '/ (secrets overview)', 'secrets-overview');
+				await auditPage(page, '/ (secrets overview)', 'secrets-overview', {
+					expectedPath: '/',
+					keepSession: true,
+				});
 			} catch (err) {
 				console.warn(
 					'\n[lighthouse] could not complete the authenticated audit ' +
@@ -142,7 +190,7 @@ async function main() {
 				);
 			}
 		} finally {
-			await browser.close();
+			await context.close();
 		}
 	} finally {
 		serverProc.kill();
