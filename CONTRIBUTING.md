@@ -158,8 +158,8 @@ before anything embeds it for real. Only `cmd/hush-hush/web/build/
 index.html` stays tracked, as a placeholder — it's the one file that
 keeps a bare `go build`/`go test ./...`, with no frontend build step
 first, compiling at all (`go:embed all:web/build` needs at least one
-matching file present), the same shape this repo had before #206
-scaffolded the real SvelteKit app.
+matching file present), the same shape this repo had before the real
+SvelteKit app was scaffolded.
 
 ## The contract
 
