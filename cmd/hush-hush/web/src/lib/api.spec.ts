@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	checkSession,
+	deleteObject,
+	getObjectValue,
 	listConsumerDirectory,
 	listObjects,
 	listTokens,
@@ -166,5 +168,59 @@ describe('the paged list calls', () => {
 		await checkSession();
 
 		expect(urls(fetchMock)).toEqual(['/credentials?limit=1']);
+	});
+});
+
+// alrayyes/hush-hush#670: a name can hold several variants, and a session
+// has to say which one it means with ?id= or the API answers 409.
+describe('variant id', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	function stubFetch() {
+		const fetchMock = vi
+			.fn()
+			.mockImplementation(async () => new Response('{}', { status: 200 }));
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubGlobal('document', { cookie: '' });
+
+		return fetchMock;
+	}
+
+	const calledUrl = (fetchMock: ReturnType<typeof stubFetch>) =>
+		String(fetchMock.mock.calls[0][0]);
+
+	it('reads one variant by id', async () => {
+		const fetchMock = stubFetch();
+
+		await getObjectValue('a b', 'u-1');
+
+		expect(calledUrl(fetchMock)).toMatch(/\/objects\/a%20b\?id=u-1$/);
+	});
+
+	it('updates one variant by id', async () => {
+		const fetchMock = stubFetch();
+
+		await updateObject('a', 'sealed', ['x'], false, undefined, 'u-1');
+
+		expect(calledUrl(fetchMock)).toMatch(/\/objects\/a\?id=u-1$/);
+	});
+
+	it('deletes one variant by id', async () => {
+		const fetchMock = stubFetch();
+
+		await deleteObject('a', 'u-1');
+
+		expect(calledUrl(fetchMock)).toMatch(/\/objects\/a\?id=u-1$/);
+		expect(fetchMock.mock.calls[0][1].method).toBe('DELETE');
+	});
+
+	it('leaves the query off when no id is given', async () => {
+		const fetchMock = stubFetch();
+
+		await getObjectValue('a');
+
+		expect(calledUrl(fetchMock)).toMatch(/\/objects\/a$/);
 	});
 });

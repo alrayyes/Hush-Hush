@@ -376,7 +376,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// The row has to exist before a second page reads it: the Create click
 	// above returns before the request does.
 	await expect(
-		page.getByRole('cell', { name: 'mattermost_deploy_webhook', exact: true }),
+		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
 	).toBeVisible();
 
 	// alrayyes/hush-hush#577: the card list and the table offer the same
@@ -481,7 +481,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// alrayyes/hush-hush#480: Inspect opens a detail page for the secret,
 	// not the dialog the desktop table's View button still uses.
 	await secretCard.getByRole('link', { name: 'Inspect' }).click();
-	await page.waitForURL('/secrets/mattermost_deploy_webhook');
+	await page.waitForURL(
+		/\/secrets\/mattermost_deploy_webhook\?id=[0-9a-f-]{36}$/,
+	);
 	await expect(
 		page.getByRole('heading', { name: 'mattermost_deploy_webhook' }),
 	).toBeVisible();
@@ -744,7 +746,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.waitForURL('/?used_by=homelab');
 	await expect(page.getByText('consumer: homelab')).toBeVisible();
 	await expect(
-		page.getByRole('cell', { name: 'mattermost_deploy_webhook', exact: true }),
+		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
 	).toBeVisible();
 	await page.getByRole('link', { name: 'Clear consumer filter' }).click();
 	await page.waitForURL('/');
@@ -1551,6 +1553,154 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	await tagFilter.getByRole('button', { name: 'All (5)' }).click();
 	await expect(cardList.getByRole('listitem')).toHaveCount(5);
+
+	// alrayyes/hush-hush#670: one name can hold a value per consumer, each
+	// under its own id. Two are made through the API (the create dialog is
+	// exercised for the third below); sealing here only needs a well-formed
+	// age file, which any recipient gives.
+	const sealForVariant = async (text: string) => {
+		const encrypter = new age.Encrypter();
+		encrypter.addRecipient(homelabRecipient);
+		const sealed = await encrypter.encrypt(text);
+
+		return btoa(String.fromCharCode(...sealed));
+	};
+	for (const consumer of ['consumer_a', 'consumer_d']) {
+		const created = await page.request.post('/objects', {
+			headers: { 'X-CSRF-Token': csrfToken },
+			data: {
+				slug: 'release_token',
+				value: await sealForVariant(`token for ${consumer}`),
+				used_by: [consumer],
+			},
+		});
+		expect(created.ok()).toBe(true);
+	}
+
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await page.goto('/');
+	const variantRows = page
+		.getByRole('row')
+		.filter({ has: page.getByRole('cell', { name: 'release_token' }) });
+	await expect(variantRows).toHaveCount(2);
+	const variantA = variantRows.filter({ hasText: 'consumer_a' });
+	const variantD = variantRows.filter({ hasText: 'consumer_d' });
+	await expect(variantA).toHaveCount(1);
+	await expect(variantD).toHaveCount(1);
+
+	// Edit and View act on the variant they were clicked on, not the name.
+	await variantD.getByRole('button', { name: 'Edit' }).click();
+	const variantEdit = page.getByRole('dialog', { name: 'Edit release_token' });
+	await expect(variantEdit).toContainText('Variant for consumer_d');
+	await variantEdit.locator('#edit-value').fill('rotated for consumer_d');
+	await variantEdit.getByLabel('Keep a readable copy for yourself').check();
+	await variantEdit.getByRole('button', { name: 'Save' }).click();
+	await variantEdit.waitFor({ state: 'hidden' });
+	await expect(variantRows).toHaveCount(2);
+	await expect(variantA).toContainText('consumer_a');
+	await expect(variantD).toContainText('consumer_d');
+
+	await variantA.getByRole('button', { name: 'View' }).click();
+	const variantView = page.getByRole('dialog', { name: 'release_token' });
+	await expect(variantView).toContainText('Variant for consumer_a');
+	await expect(variantView.getByRole('listitem')).toHaveText(['consumer_a']);
+	await expect(variantView.getByLabel('Ciphertext (base64)')).not.toHaveValue(
+		'',
+	);
+	await variantView.getByRole('button', { name: 'Close' }).click();
+
+	// Creating a name that already exists adds a variant when no consumer of
+	// it already has one, and says why when one does.
+	const variantConsumersLoaded = page.waitForResponse(
+		(res) =>
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
+	);
+	await page.getByRole('button', { name: 'New secret' }).click();
+	const variantCreate = page.getByRole('dialog', { name: 'Create a secret' });
+	await expect(page.getByLabel('Id')).toBeFocused();
+	await variantCreate.locator('#create-id').fill('release_token');
+	await variantCreate.locator('#create-value').fill('token for consumer_d too');
+	await variantCreate.getByLabel('Keep a readable copy for yourself').check();
+	await variantConsumersLoaded;
+	await variantCreate.locator('#create-used-by').fill('consumer_d');
+	await variantCreate
+		.getByRole('option', { name: 'consumer_d', exact: true })
+		.click();
+	await variantCreate.getByRole('button', { name: 'Create' }).click();
+	await expect(variantCreate.getByRole('alert')).toContainText(
+		/already exists/i,
+	);
+	await variantCreate.getByLabel('Remove consumer_d').click();
+	await variantCreate.locator('#create-used-by').fill('consumer_e');
+	await variantCreate.getByRole('option', { name: 'Add "consumer_e"' }).click();
+	await variantCreate.getByRole('button', { name: 'Create' }).click();
+	await variantCreate.waitFor({ state: 'hidden' });
+	await expect(variantRows).toHaveCount(3);
+
+	// Inspect opens one variant's own page, with its own consumers.
+	await variantD.getByRole('link', { name: 'Inspect' }).click();
+	await page.waitForURL(/\/secrets\/release_token\?id=[0-9a-f-]{36}$/);
+	const variantConsumers = page.getByRole('region', {
+		name: 'Authorized consumers',
+	});
+	await expect(variantConsumers.getByRole('listitem')).toHaveCount(1);
+	await expect(variantConsumers).toContainText('consumer_d');
+	const variantDetailResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(variantDetailResults.violations).toEqual([]);
+
+	// Without an id the name is ambiguous, so the page offers the choice.
+	await page.goto('/secrets/release_token');
+	await expect(
+		page.getByRole('region', { name: 'Variants' }).getByRole('listitem'),
+	).toHaveCount(3);
+	await page.goto('/');
+
+	// Phone width: each variant is its own card, told apart by consumer.
+	await page.setViewportSize({ width: 390, height: 844 });
+	const variantCards = page
+		.getByRole('list', { name: 'Secrets' })
+		.getByRole('listitem')
+		.filter({ hasText: 'release_token' });
+	await expect(variantCards).toHaveCount(3);
+	await expect(variantCards.filter({ hasText: 'consumer_a' })).toHaveCount(1);
+	await expect(variantCards.filter({ hasText: 'consumer_d' })).toHaveCount(1);
+	await page.waitForFunction(() => document.getAnimations().length === 0);
+	const variantCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(variantCardResults.violations).toEqual([]);
+
+	// Delete removes the one variant, and leaves its siblings.
+	await variantCards
+		.filter({ hasText: 'consumer_d' })
+		.getByRole('button', { name: 'Delete' })
+		.click();
+	const variantDelete = page.getByRole('alertdialog', {
+		name: 'Delete release_token?',
+	});
+	await expect(variantDelete).toContainText('Variant for consumer_d');
+	await variantDelete
+		.getByRole('button', { name: 'Delete', exact: true })
+		.click();
+	await expect(variantCards).toHaveCount(2);
+	await expect(variantCards.filter({ hasText: 'consumer_d' })).toHaveCount(0);
+	await expect(variantCards.filter({ hasText: 'consumer_a' })).toHaveCount(1);
+
+	// Clear the rest so nothing after this sees them.
+	for (const consumer of ['consumer_a', 'consumer_e']) {
+		await variantCards
+			.filter({ hasText: consumer })
+			.getByRole('button', { name: 'Delete' })
+			.click();
+		await page
+			.getByRole('alertdialog', { name: 'Delete release_token?' })
+			.getByRole('button', { name: 'Delete', exact: true })
+			.click();
+	}
+	await expect(variantCards).toHaveCount(0);
 
 	await page.setViewportSize({ width: 1280, height: 800 });
 

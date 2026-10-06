@@ -307,8 +307,21 @@ export async function addConsumer(name: string): Promise<ConsumerEntry> {
 	return res.json();
 }
 
-export async function getObjectValue(slug: string): Promise<string> {
-	const res = await request(`/objects/${encodeURIComponent(slug)}`);
+// objectPath addresses one object. A name can hold several variants
+// (alrayyes/hush-hush#668, ADR 33), and a session has to name the one it
+// means with ?id= or the API answers 409; a name with a single variant
+// works without it.
+function objectPath(slug: string, id?: string): string {
+	const path = `/objects/${encodeURIComponent(slug)}`;
+
+	return id ? `${path}?id=${encodeURIComponent(id)}` : path;
+}
+
+export async function getObjectValue(
+	slug: string,
+	id?: string,
+): Promise<string> {
+	const res = await request(objectPath(slug, id));
 	const bytes = new Uint8Array(await res.arrayBuffer());
 
 	return bytesToBase64(bytes);
@@ -333,8 +346,9 @@ export async function updateObject(
 	usedBy?: string[],
 	keepReadableCopy?: boolean,
 	tags?: string[],
+	id?: string,
 ): Promise<ObjectMetadata> {
-	const res = await request(`/objects/${encodeURIComponent(slug)}`, {
+	const res = await request(objectPath(slug, id), {
 		method: 'PUT',
 		// usedBy is omitted entirely (rather than sent as []) when the
 		// caller doesn't pass it - api/openapi.yaml's UpdateObjectRequest
@@ -355,8 +369,8 @@ export async function updateObject(
 	return res.json();
 }
 
-export async function deleteObject(slug: string): Promise<void> {
-	await request(`/objects/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+export async function deleteObject(slug: string, id?: string): Promise<void> {
+	await request(objectPath(slug, id), { method: 'DELETE' });
 }
 
 export type AuditLogEntry = Schemas['AuditLogEntry'];

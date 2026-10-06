@@ -9,6 +9,7 @@ import {
 	createObject,
 	deleteObject,
 	getObjectValue,
+	type ObjectMetadata,
 	updateObject,
 } from '$lib/api';
 import { TAGS_MAX_ITEMS } from '$lib/api-limits';
@@ -64,9 +65,27 @@ const filteredObjects = $derived(filterByTag(searchedObjects, activeTag));
 
 // Which card's copy button is showing its "Copied" state, and the timer
 // that reverts it. One slot, so a newer copy replaces an older one.
-let copiedSlug: string | null = $state(null);
-const copier = createCopier<string>((slug) => (copiedSlug = slug));
+let copiedId: string | null = $state(null);
+const copier = createCopier<string>((id) => (copiedId = id));
 onDestroy(copier.dispose);
+
+// How many variants each name holds. A name with one reads as it always
+// did; with several, each row and dialog says which consumers it is for.
+const variantCounts = $derived(
+	data.objects.reduce((counts, o) => {
+		counts.set(o.slug, (counts.get(o.slug) ?? 0) + 1);
+		return counts;
+	}, new Map<string, number>()),
+);
+
+function variantLabel(object: ObjectMetadata): string {
+	if ((variantCounts.get(object.slug) ?? 0) < 2) return '';
+	const consumers = object.used_by ?? [];
+
+	return consumers.length > 0
+		? `Variant for ${consumers.join(', ')}`
+		: 'Variant with no consumers';
+}
 
 let createOpen = $state(false);
 let createError = $state('');
@@ -155,6 +174,11 @@ async function submitCreate(event: SubmitEvent) {
 
 let editOpen = $state(false);
 let editSlug = $state('');
+// The variant being edited: a name can hold several (ADR 33), and the API
+// only edits one when told which.
+let editId = $state('');
+// Only set when the name has several variants, so the dialog can say which.
+let editVariant = $state('');
 let editValue = $state('');
 let editTags = $state('');
 // What the field opened with, so an untouched field isn't sent at all.
@@ -176,19 +200,19 @@ const editEffectiveRecipients = $derived(
 		: editRecipients.recipients,
 );
 
-function openEdit(slug: string) {
-	editSlug = slug;
+function openEdit(object: ObjectMetadata) {
+	editSlug = object.slug;
+	editId = object.id;
+	editVariant = variantLabel(object);
 	editValue = '';
 	// Copied, not the same array reference data.objects holds - the
 	// combobox mutates this in place as the user picks/adds consumers,
 	// and canceling shouldn't leave that mutation sitting on data the
 	// server never actually received.
-	editUsedBy = [...(data.objects.find((o) => o.slug === slug)?.used_by ?? [])];
+	editUsedBy = [...(object.used_by ?? [])];
 	editKeepReadableCopy = false;
 	editError = '';
-	editInitialTags = [
-		...(data.objects.find((o) => o.slug === slug)?.tags ?? []),
-	];
+	editInitialTags = [...object.tags];
 	editTags = formatTags(editInitialTags);
 	editTagsError = '';
 	editOpen = true;
@@ -220,6 +244,7 @@ async function submitEdit(event: SubmitEvent) {
 			editKeepReadableCopy,
 			// Omitted when the field is as it opened, which leaves the tags alone.
 			tags.join(',') === editInitialTags.join(',') ? undefined : tags,
+			editId,
 		);
 		editOpen = false;
 		await invalidate('app:objects');
@@ -233,19 +258,21 @@ async function submitEdit(event: SubmitEvent) {
 
 let viewOpen = $state(false);
 let viewSlug = $state('');
+let viewVariant = $state('');
 let viewValue = $state('');
 let viewUsedBy: string[] = $state([]);
 let viewError = $state('');
 
-async function openView(slug: string) {
-	viewSlug = slug;
+async function openView(object: ObjectMetadata) {
+	viewSlug = object.slug;
+	viewVariant = variantLabel(object);
 	viewValue = '';
-	viewUsedBy = data.objects.find((o) => o.slug === slug)?.used_by ?? [];
+	viewUsedBy = object.used_by ?? [];
 	viewError = '';
 	viewOpen = true;
 
 	try {
-		viewValue = await getObjectValue(slug);
+		viewValue = await getObjectValue(object.slug, object.id);
 	} catch (err) {
 		viewError = apiErrorMessage(err, 'Failed to fetch the secret.');
 	}
@@ -253,10 +280,14 @@ async function openView(slug: string) {
 
 let deleteOpen = $state(false);
 let deleteSlug = $state('');
+let deleteId = $state('');
+let deleteVariant = $state('');
 let deleteError = $state('');
 
-function openDelete(slug: string) {
-	deleteSlug = slug;
+function openDelete(object: ObjectMetadata) {
+	deleteSlug = object.slug;
+	deleteId = object.id;
+	deleteVariant = variantLabel(object);
 	deleteError = '';
 	deleteOpen = true;
 }
@@ -265,7 +296,7 @@ async function confirmDelete() {
 	deleteError = '';
 
 	try {
-		await deleteObject(deleteSlug);
+		await deleteObject(deleteSlug, deleteId);
 		deleteOpen = false;
 		await invalidate('app:objects');
 		// A delete can remove a consumer's last secret, dropping it from
@@ -450,28 +481,34 @@ async function confirmDelete() {
 		{/if}
 
 		<ul aria-label="Secrets" class="m-0 list-none space-y-3 p-0 md:hidden">
-			{#each filteredObjects as object (object.slug)}
+			{#each filteredObjects as object (object.id)}
 				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
 					<div class="flex items-start justify-between gap-2">
 						<span class="min-w-0 break-all font-mono text-sm font-semibold">{object.slug}</span>
 						<Button
 							variant="outline"
 							class="min-h-11 min-w-11"
-							aria-label={copiedSlug === object.slug
+							aria-label={copiedId === object.id
 								? `Copied ${object.slug}`
 								: `Copy slug ${object.slug}`}
-							onclick={() => copier.copy(object.slug, object.slug)}
+							onclick={() => copier.copy(object.id, object.slug)}
 						>
-							{#if copiedSlug === object.slug}
+							{#if copiedId === object.id}
 								<CheckIcon aria-hidden="true" />
 							{:else}
 								<CopyIcon aria-hidden="true" />
 							{/if}
-							{copiedSlug === object.slug ? 'Copied' : 'Copy'}
+							{copiedId === object.id ? 'Copied' : 'Copy'}
 						</Button>
 					</div>
 					{#if object.description}
 						<p class="m-0 text-sm">{object.description}</p>
+					{/if}
+					{#if object.used_by?.length}
+						<p class="m-0 text-sm">
+							<span class="text-text-muted">Used by</span>
+							<span class="font-mono">{object.used_by.join(', ')}</span>
+						</p>
 					{/if}
 					{#if object.tags.length > 0}
 						<div class="flex flex-wrap gap-1">
@@ -510,23 +547,23 @@ async function confirmDelete() {
 						</p>
 					{/if}
 					<div class="flex flex-wrap gap-2">
-						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openView(object.slug)}>
+						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openView(object)}>
 							View
 						</Button>
 						<Button
-							href={`/secrets/${encodeURIComponent(object.slug)}`}
+							href={`/secrets/${encodeURIComponent(object.slug)}?id=${encodeURIComponent(object.id)}`}
 							variant="outline"
 							class="min-h-11 min-w-11"
 						>
 							Inspect
 						</Button>
-						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openEdit(object.slug)}>
+						<Button variant="outline" class="min-h-11 min-w-11" onclick={() => openEdit(object)}>
 							Edit
 						</Button>
 						<Button
 							variant="destructive"
 							class="min-h-11 min-w-11"
-							onclick={() => openDelete(object.slug)}
+							onclick={() => openDelete(object)}
 						>
 							Delete
 						</Button>
@@ -549,9 +586,16 @@ async function confirmDelete() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each filteredObjects as object (object.slug)}
+				{#each filteredObjects as object (object.id)}
 					<tr>
-						<td data-label="Id">{object.slug}</td>
+						<td data-label="Id">
+							{object.slug}
+							{#if object.used_by?.length}
+								<span class="block max-w-40 break-words font-mono text-xs text-text-muted">
+									{object.used_by.join(', ')}
+								</span>
+							{/if}
+						</td>
 						<td data-label="Description">
 							<span class="block max-w-40 truncate" title={object.description ?? ''}>
 								{object.description ?? ''}
@@ -592,35 +636,35 @@ async function confirmDelete() {
 							<Button
 								variant="outline"
 								size="sm"
-								aria-label={copiedSlug === object.slug
+								aria-label={copiedId === object.id
 									? `Copied ${object.slug}`
 									: `Copy slug ${object.slug}`}
-								onclick={() => copier.copy(object.slug, object.slug)}
+								onclick={() => copier.copy(object.id, object.slug)}
 							>
-								{#if copiedSlug === object.slug}
+								{#if copiedId === object.id}
 									<CheckIcon aria-hidden="true" />
 								{:else}
 									<CopyIcon aria-hidden="true" />
 								{/if}
-								<span class="sr-only">{copiedSlug === object.slug ? 'Copied' : 'Copy'}</span>
+								<span class="sr-only">{copiedId === object.id ? 'Copied' : 'Copy'}</span>
 							</Button>
 							<Button
-								href={`/secrets/${encodeURIComponent(object.slug)}`}
+								href={`/secrets/${encodeURIComponent(object.slug)}?id=${encodeURIComponent(object.id)}`}
 								variant="outline"
 								size="sm"
 							>
 								Inspect
 							</Button>
-							<Button variant="outline" size="sm" onclick={() => openView(object.slug)}>
+							<Button variant="outline" size="sm" onclick={() => openView(object)}>
 								View
 							</Button>
-							<Button variant="outline" size="sm" onclick={() => openEdit(object.slug)}>
+							<Button variant="outline" size="sm" onclick={() => openEdit(object)}>
 								Edit
 							</Button>
 							<Button
 								variant="destructive"
 								size="sm"
-								onclick={() => openDelete(object.slug)}
+								onclick={() => openDelete(object)}
 							>
 								Delete
 							</Button>
@@ -636,7 +680,9 @@ async function confirmDelete() {
 	<Dialog.Content>
 		<Dialog.Header>
 			<Dialog.Title>{viewSlug}</Dialog.Title>
-			<Dialog.Description>Sealed ciphertext, base64-encoded.</Dialog.Description>
+			<Dialog.Description>
+				{viewVariant ? `${viewVariant}. ` : ''}Sealed ciphertext, base64-encoded.
+			</Dialog.Description>
 		</Dialog.Header>
 		<div class="space-y-4">
 			{#if viewError}
@@ -664,6 +710,9 @@ async function confirmDelete() {
 	<Dialog.Content>
 		<Dialog.Header>
 			<Dialog.Title>Edit {editSlug}</Dialog.Title>
+			{#if editVariant}
+				<Dialog.Description>{editVariant}.</Dialog.Description>
+			{/if}
 		</Dialog.Header>
 		<form onsubmit={submitEdit}>
 			<div class="space-y-4">
@@ -752,7 +801,7 @@ async function confirmDelete() {
 		<AlertDialog.Header>
 			<AlertDialog.Title>Delete {deleteSlug}?</AlertDialog.Title>
 			<AlertDialog.Description>
-				This permanently removes the object. Anything still depending on it will start
+				{deleteVariant ? `${deleteVariant}. ` : ''}This permanently removes the object. Anything still depending on it will start
 				failing.
 			</AlertDialog.Description>
 		</AlertDialog.Header>
