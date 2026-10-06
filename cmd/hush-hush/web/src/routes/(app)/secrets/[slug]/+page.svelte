@@ -19,7 +19,9 @@ const copier = createCopier<'sealed' | 'command'>(
 );
 onDestroy(copier.dispose);
 
-const byteSize = $derived(data.notFound ? 0 : atob(data.value).length);
+const byteSize = $derived(
+	data.notFound || data.chooseVariant ? 0 : atob(data.value).length,
+);
 
 const command = $derived(
 	[
@@ -36,6 +38,23 @@ const command = $derived(
 
 	{#if data.notFound}
 		<p role="alert">Secret not found.</p>
+	{:else if data.chooseVariant}
+		<section class="my-6 flex flex-col gap-2" aria-labelledby="variants-heading">
+			<h2 id="variants-heading">Variants</h2>
+			<p>This name holds {data.variants.length} variants, each with its own value. Pick one.</p>
+			<ul class="flex flex-col gap-2">
+				{#each data.variants as variant (variant.id)}
+					<li>
+						<a
+							href={`/secrets/${encodeURIComponent(data.slug)}?id=${encodeURIComponent(variant.id)}`}
+							class="underline"
+						>
+							{variant.used_by?.length ? variant.used_by.join(', ') : 'No consumers'}
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</section>
 	{:else}
 		<section class="my-6 flex flex-col gap-2" aria-labelledby="sealed-heading">
 			<h2 id="sealed-heading">Sealed ciphertext</h2>
