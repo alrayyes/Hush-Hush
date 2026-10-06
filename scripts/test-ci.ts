@@ -106,6 +106,9 @@ const cases: [path: string, expected: string[]][] = [
   // Hook config is yaml, so prettier covers it, and nothing else in ci.yml reads it.
   ['lefthook.yml', ['prose', 'ci-config']],
   ['scripts/test-ci.ts', ['ci-config']],
+  // The reports assembly script and its test run under `bun run test:ci`.
+  ['scripts/build-reports.sh', ['ci-config']],
+  ['scripts/test-build-reports.sh', ['ci-config']],
 ];
 
 for (const [path, expected] of cases) {

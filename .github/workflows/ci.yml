@@ -131,6 +131,8 @@ jobs:
               - '.github/workflows/**'
               - 'lefthook.yml'
               - 'scripts/test-ci.ts'
+              - 'scripts/build-reports.sh'
+              - 'scripts/test-build-reports.sh'
               - 'Dockerfile*'
               - 'go.mod'
               - 'package.json'
@@ -500,28 +502,14 @@ jobs:
           name: lighthouse-reports
           path: _lighthouse-reports
       - name: Stage the artifact
+        env:
+          LIGHTHOUSE_REPORTS: _lighthouse-reports
         run: |
-          mkdir -p _site/docs/api _site/api _site/reports/tests _site/reports/coverage/web _site/reports/lighthouse
+          mkdir -p _site/docs/api _site/api
           cp docs/api/index.html _site/docs/api/index.html
           cp docs/api/llms.txt _site/docs/api/llms.txt
           cp api/openapi.yaml _site/api/openapi.yaml
-          cp _go-reports/junit.xml _site/reports/tests/junit.xml
-          cp _go-reports/coverage.html _site/reports/coverage/index.html
-          cp _go-reports/coverage.xml _go-reports/coverage.out _site/reports/coverage/
-          cp _web-reports/reports/unit.xml _site/reports/tests/web-unit.xml
-          cp _e2e-reports/e2e.xml _site/reports/tests/e2e.xml
-          cp -r _web-reports/coverage/. _site/reports/coverage/web/
-          cp _site/reports/coverage/web/cobertura-coverage.xml _site/reports/coverage/web/coverage.xml
-          cp -r _lighthouse-reports/. _site/reports/lighthouse/
-          # The authenticated Lighthouse audit is warn-only and can time out, so
-          # link only the reports that were actually staged.
-          for f in _site/reports/lighthouse/*.html; do
-            [ -e "$f" ] || continue
-            name=$(basename "$f" .html)
-            printf '        <li><a href="lighthouse/%s.html">Lighthouse: %s</a></li>\n' "$name" "$name"
-          done > lighthouse-links.html
-          sed -e '/<!-- lighthouse-reports -->/{r lighthouse-links.html' -e 'd}' \
-            scripts/reports-index.html > _site/reports/index.html
+          scripts/build-reports.sh _site
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
@@ -567,7 +555,8 @@ jobs:
       image: oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
       options: --entrypoint ""
     steps:
-      - run: apk add --no-cache ca-certificates git nodejs
+      # bash: scripts/test-build-reports.sh runs under `bun run test:ci`.
+      - run: apk add --no-cache ca-certificates git nodejs bash
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: bun install --frozen-lockfile --ignore-scripts
