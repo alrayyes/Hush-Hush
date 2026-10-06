@@ -1706,6 +1706,134 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	}
 	await expect(variantCards).toHaveCount(0);
 
+	// A variant can have a hundred consumers. Its row is as tall as one with
+	// three, the table fits the page at both widths, and the full list opens
+	// in a dialog that filters and scrolls on its own.
+	const manyConsumers = Array.from(
+		{ length: 100 },
+		(_, i) =>
+			`team/${i % 34 === 0 ? 'dotfiles-' : 'svcfiles-'}${String(i).padStart(3, '0')}`,
+	);
+	for (const [slug, usedBy] of [
+		['many_consumers', manyConsumers],
+		['few_consumers', manyConsumers.slice(0, 3)],
+		['some_consumers', manyConsumers.slice(0, 12)],
+	] as const) {
+		const created = await page.request.post('/objects', {
+			headers: { 'X-CSRF-Token': csrfToken },
+			data: {
+				slug,
+				value: await sealForVariant(slug),
+				used_by: usedBy,
+			},
+		});
+		expect(created.ok()).toBe(true);
+	}
+	const rowFor = (slug: string) =>
+		page.getByRole('row').filter({
+			has: page.getByRole('cell', { name: new RegExp(`^${slug}`) }),
+		});
+	for (const width of [1280, 1920]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto('/');
+		await expect(rowFor('many_consumers')).toHaveCount(1);
+		const manyBox = await rowFor('many_consumers').boundingBox();
+		const fewBox = await rowFor('few_consumers').boundingBox();
+		expect(manyBox?.height).toBeLessThanOrEqual((fewBox?.height ?? 0) + 4);
+		expect(
+			await page.evaluate(
+				() =>
+					document.documentElement.scrollWidth <=
+					document.documentElement.clientWidth,
+			),
+		).toBe(true);
+		await expect(
+			rowFor('many_consumers').getByRole('button', { name: 'Delete' }),
+		).toBeInViewport();
+	}
+
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await page.goto('/');
+	await rowFor('many_consumers')
+		.getByRole('button', { name: 'Show all 100 consumers of many_consumers' })
+		.click();
+	const consumersDialog = page.getByRole('dialog', {
+		name: 'Consumers of many_consumers',
+	});
+	await expect(consumersDialog).toContainText('100 consumers');
+	await expect(consumersDialog.getByRole('status')).toHaveText(
+		'100 of 100 shown',
+	);
+	const dialogList = consumersDialog.getByRole('list');
+	expect(
+		await dialogList.evaluate((el) => el.scrollHeight > el.clientHeight),
+	).toBe(true);
+	await consumersDialog.getByLabel('Filter consumers').fill('dotfiles');
+	await expect(consumersDialog.getByRole('status')).toHaveText(
+		'3 of 100 shown',
+	);
+	await expect(consumersDialog.getByRole('listitem')).toHaveCount(3);
+	await consumersDialog
+		.getByLabel('Filter consumers')
+		.fill('nothing-like-this');
+	await expect(consumersDialog).toContainText('No consumers match');
+	await consumersDialog.getByLabel('Filter consumers').fill('dotfiles');
+	const manyDialogResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(manyDialogResults.violations).toEqual([]);
+	await consumersDialog.getByRole('button', { name: 'Close' }).first().click();
+	await expect(consumersDialog).toBeHidden();
+
+	// The detail page filters and scrolls too.
+	await page.goto('/secrets/many_consumers');
+	const detailConsumers = page.getByRole('region', {
+		name: 'Authorized consumers',
+	});
+	await expect(detailConsumers.getByRole('status')).toHaveText(
+		'100 of 100 shown',
+	);
+	await detailConsumers.getByLabel('Filter consumers').fill('dotfiles');
+	await expect(detailConsumers.getByRole('listitem')).toHaveCount(3);
+
+	// Phone width: the card names two consumers and offers the same button
+	// as a 44px target, and the card doesn't grow with the list.
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/');
+	const manyCard = page
+		.getByRole('list', { name: 'Secrets' })
+		.getByRole('listitem')
+		.filter({ hasText: 'many_consumers' });
+	const someCard = page
+		.getByRole('list', { name: 'Secrets' })
+		.getByRole('listitem')
+		.filter({ hasText: 'some_consumers' });
+	const manyCardBox = await manyCard.boundingBox();
+	const someCardBox = await someCard.boundingBox();
+	expect(manyCardBox?.height).toBeLessThanOrEqual(
+		(someCardBox?.height ?? 0) + 8,
+	);
+	const moreButton = manyCard.getByRole('button', {
+		name: 'Show all 100 consumers of many_consumers',
+	});
+	const moreBox = await moreButton.boundingBox();
+	expect(moreBox?.height).toBeGreaterThanOrEqual(44);
+	await page.waitForFunction(() => document.getAnimations().length === 0);
+	const manyCardResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(manyCardResults.violations).toEqual([]);
+
+	for (const slug of ['many_consumers', 'few_consumers', 'some_consumers']) {
+		expect(
+			(
+				await page.request.delete(`/objects/${slug}`, {
+					headers: { 'X-CSRF-Token': csrfToken },
+				})
+			).ok(),
+		).toBe(true);
+	}
+
 	await page.setViewportSize({ width: 1280, height: 800 });
 
 	// Log out lives in .topbar-actions, not <nav> - it's an account
