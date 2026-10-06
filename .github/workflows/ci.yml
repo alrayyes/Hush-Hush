@@ -513,7 +513,15 @@ jobs:
           cp -r _web-reports/coverage/. _site/reports/coverage/web/
           cp _site/reports/coverage/web/cobertura-coverage.xml _site/reports/coverage/web/coverage.xml
           cp -r _lighthouse-reports/. _site/reports/lighthouse/
-          cp scripts/reports-index.html _site/reports/index.html
+          # The authenticated Lighthouse audit is warn-only and can time out, so
+          # link only the reports that were actually staged.
+          for f in _site/reports/lighthouse/*.html; do
+            [ -e "$f" ] || continue
+            name=$(basename "$f" .html)
+            printf '        <li><a href="lighthouse/%s.html">Lighthouse: %s</a></li>\n' "$name" "$name"
+          done > lighthouse-links.html
+          sed -e '/<!-- lighthouse-reports -->/{r lighthouse-links.html' -e 'd}' \
+            scripts/reports-index.html > _site/reports/index.html
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
