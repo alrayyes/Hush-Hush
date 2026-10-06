@@ -44,26 +44,6 @@ async function waitForServer(url: string, timeoutMs = 120_000): Promise<void> {
 	}
 }
 
-// Chrome sometimes refuses a connection to localhost right after a Lighthouse
-// run, although the server is up (it listens on 127.0.0.1 only, and Chrome
-// tries ::1 first). A few attempts get past it, where one used to end the
-// authenticated audit.
-async function gotoWithRetry(
-	page: import('@playwright/test').Page,
-	path: string,
-	attempts = 4,
-): Promise<void> {
-	for (let attempt = 1; ; attempt++) {
-		try {
-			await page.goto(path);
-			return;
-		} catch (err) {
-			if (attempt >= attempts) throw err;
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		}
-	}
-}
-
 async function auditPage(
 	page: import('@playwright/test').Page,
 	label: string,
@@ -83,7 +63,11 @@ async function auditPage(
 		reports: {
 			formats: { html: true, json: true },
 			directory: REPORTS_DIR,
-			name: reportName,
+			// <page>.report.html and .report.json: the names the catalogue
+			// recognises as a Lighthouse run. playwright-lighthouse treats the
+			// last dot of `name` as an extension and drops it, hence the
+			// trailing .html.
+			name: `${reportName}.report.html`,
 		},
 	});
 
@@ -153,7 +137,7 @@ async function main() {
 				// Lighthouse drives this same tab and leaves it blank when it
 				// finishes, so the login page has to be loaded again before
 				// anything can be clicked on it.
-				await gotoWithRetry(page, '/login');
+				await page.goto('/login');
 
 				const client = await context.newCDPSession(page);
 				await client.send('WebAuthn.enable');
@@ -171,10 +155,6 @@ async function main() {
 					.getByRole('button', { name: "I've saved it" })
 					.click({ timeout: 10_000 });
 				await page.waitForURL('/');
-				// Let the overview finish loading before Lighthouse starts its own
-				// navigation to it; auditing straight after the redirect failed
-				// intermittently with a refused document request.
-				await page.waitForLoadState('networkidle');
 
 				await auditPage(page, '/ (secrets overview)', 'secrets-overview', {
 					expectedPath: '/',

@@ -389,6 +389,8 @@ pre-push:
         - ".github/workflows/**"
         - "lefthook.yml"
         - "scripts/test-ci.ts"
+        - "scripts/build-reports.sh"
+        - "scripts/test-build-reports.sh"
         - "Dockerfile*"
         - "go.mod"
         - "package.json"
