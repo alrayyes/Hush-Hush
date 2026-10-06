@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/alrayyes/Hush-Hush/compare/v3.2.0...v3.2.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **deps-dev:** override four packages past their advisories ([#696](https://github.com/alrayyes/Hush-Hush/issues/696)) ([5500289](https://github.com/alrayyes/Hush-Hush/commit/55002891be5b424f9b731303c3f409b84d80491d))
+
 ## [3.2.0](https://github.com/alrayyes/Hush-Hush/compare/v3.1.0...v3.2.0) (2026-10-05)
 
 
