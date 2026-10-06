@@ -18,6 +18,7 @@ import { playAudit } from 'playwright-lighthouse';
 
 const PORT = 9222;
 const BASE_URL = 'http://localhost:4173';
+const REPORTS_DIR = 'reports/lighthouse';
 
 // Same scores either page could reasonably be held to - a self-hosted,
 // mostly-static SvelteKit SPA with no third-party trackers or ads has no
@@ -46,12 +47,20 @@ async function waitForServer(url: string, timeoutMs = 120_000): Promise<void> {
 async function auditPage(
 	page: import('@playwright/test').Page,
 	label: string,
+	reportName: string,
 ): Promise<void> {
 	const results = await playAudit({
 		page,
 		port: PORT,
 		thresholds: THRESHOLDS,
 		ignoreError: true,
+		// One HTML and JSON pair per audited page, which the pages job
+		// publishes (rules/published-reports.md).
+		reports: {
+			formats: { html: true, json: true },
+			directory: REPORTS_DIR,
+			name: reportName,
+		},
 	});
 
 	// playAudit only logs the metrics that *passed* - a failing one only
@@ -82,7 +91,7 @@ async function main() {
 			const page = await context.newPage();
 
 			await page.goto('/login');
-			await auditPage(page, '/login');
+			await auditPage(page, '/login', 'login');
 
 			// Same CDP virtual-authenticator flow as journey.spec.ts's own
 			// login - a passkey has no username/password form Lighthouse's
@@ -122,7 +131,7 @@ async function main() {
 				await page.getByRole('button', { name: 'Register passkey' }).click();
 				await page.waitForURL('/');
 
-				await auditPage(page, '/ (secrets overview)');
+				await auditPage(page, '/ (secrets overview)', 'secrets-overview');
 			} catch (err) {
 				console.warn(
 					'\n[lighthouse] could not complete the authenticated audit ' +
