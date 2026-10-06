@@ -63,7 +63,11 @@ async function auditPage(
 		reports: {
 			formats: { html: true, json: true },
 			directory: REPORTS_DIR,
-			name: reportName,
+			// <page>.report.html and .report.json: the names the catalogue
+			// recognises as a Lighthouse run. playwright-lighthouse treats the
+			// last dot of `name` as an extension and drops it, hence the
+			// trailing .html.
+			name: `${reportName}.report.html`,
 		},
 	});
 

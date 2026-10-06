@@ -63,4 +63,8 @@ exist`. Don't `go install` Vale.
   and coverage reports under `/reports/` (`test`, `web`, `e2e` and `lighthouse`
   run on every push to `main` to build them), including the web unit and
   end-to-end JUnit files, the web coverage under `coverage/web/` and one
-  Lighthouse HTML and JSON pair per audited page.
+  Lighthouse `<page>.report.html` and `.json` pair per audited page.
+  `scripts/build-reports.sh` assembles all of it and writes an index page
+  (`index.html`) in each report directory, since GitHub Pages can't list one
+  and the catalogue reads them. `scripts/test-build-reports.sh` checks that
+  every link on them resolves, and runs under `bun run test:ci`.

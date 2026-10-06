@@ -11,7 +11,7 @@
     "lint:prose": "./scripts/lint-prose.sh",
     "lint:spectral": "spectral lint api/openapi.yaml",
     "prepare": "lefthook install",
-    "test:ci": "bun scripts/test-ci.ts"
+    "test:ci": "bun scripts/test-ci.ts && bash scripts/test-build-reports.sh"
   },
   "overrides": {
     "katex": "0.19.0",
