@@ -1155,6 +1155,48 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	const consumerTokenRow = page.getByRole('row', { name: /ci-runner/ });
 	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Active');
+
+	// alrayyes/hush-hush#710: two tokens for one consumer and description
+	// differ only by id, so the table shows it. A second one is minted
+	// straight through the API, checked, then removed so the rows below see
+	// only the one token they expect.
+	const twin = await page.request.post('/consumer-tokens', {
+		headers: { 'X-CSRF-Token': csrfToken },
+		data: {
+			consumer: 'ci-runner',
+			description: 'deploy read token for ci-runner',
+			ttl_seconds: 30 * 86_400,
+		},
+	});
+	expect(twin.ok()).toBe(true);
+	const twinId = (await twin.json()).id as string;
+	await page.reload();
+	const sameConsumerRows = page.getByRole('row', { name: /ci-runner/ });
+	await expect(sameConsumerRows).toHaveCount(2);
+	const shownIds = (
+		await sameConsumerRows.locator('[data-testid="token-id"]').allTextContents()
+	).map((id) => id.trim());
+	expect(shownIds).toHaveLength(2);
+	expect(shownIds[0]).toMatch(/^[0-9a-f]{16}$/);
+	expect(new Set(shownIds).size).toBe(2);
+	expect(shownIds).toContain(twinId);
+	await expect(sameConsumerRows.first()).toContainText(/ID [0-9a-f]{16}/);
+	expect(
+		(
+			await page.request.delete(`/consumer-tokens/${twinId}`, {
+				headers: { 'X-CSRF-Token': csrfToken },
+			})
+		).ok(),
+	).toBe(true);
+	expect(
+		(
+			await page.request.delete(`/consumer-tokens/${twinId}/purge`, {
+				headers: { 'X-CSRF-Token': csrfToken },
+			})
+		).ok(),
+	).toBe(true);
+	await page.reload();
+	await expect(sameConsumerRows).toHaveCount(1);
 	// Before the clock-skew page below: page.clock is the context's clock, so a
 	// page opened after it would see the skewed time.
 	await expectListParity(page, {
@@ -1167,6 +1209,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			'created and expires': { pattern: TIMESTAMP, times: 2 },
 			'last used': { pattern: /never/ },
 			'time left': { pattern: /\d+d left/ },
+			'token id': { pattern: /ID [0-9a-f]{16}/ },
 		},
 	});
 
