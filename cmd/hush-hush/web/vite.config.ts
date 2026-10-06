@@ -17,6 +17,14 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
+		// Only measured when asked for (`--coverage`), as CI's `web` job does:
+		// cobertura is the format `rules/published-reports.md` wants, html is
+		// the one a person opens.
+		coverage: {
+			provider: 'v8',
+			include: ['src/**/*.{ts,svelte}'],
+			reporter: ['text-summary', 'html', 'cobertura'],
+		},
 		projects: [
 			{
 				extends: './vite.config.ts',

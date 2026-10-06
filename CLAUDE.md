@@ -60,5 +60,7 @@ exist`. Don't `go install` Vale.
   `ci.yml`'s `pages` job deploys it to GitHub Pages on every push to `main`,
   gated on `test` passing, at <https://alrayyes.github.io/Hush-Hush/docs/api/>.
   A deploy replaces the whole site, so the same job also publishes the Go test
-  and coverage reports under `/reports/` (`test` runs on every push to `main`
-  to build them). The web runners' reports are a follow-up.
+  and coverage reports under `/reports/` (`test`, `web`, `e2e` and `lighthouse`
+  run on every push to `main` to build them), including the web unit and
+  end-to-end JUnit files, the web coverage under `coverage/web/` and one
+  Lighthouse HTML and JSON pair per audited page.

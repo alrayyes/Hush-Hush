@@ -487,15 +487,32 @@ jobs:
         with:
           name: go-reports
           path: _go-reports
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-reports
+          path: _web-reports
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: e2e-reports
+          path: _e2e-reports
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lighthouse-reports
+          path: _lighthouse-reports
       - name: Stage the artifact
         run: |
-          mkdir -p _site/docs/api _site/api _site/reports/tests _site/reports/coverage
+          mkdir -p _site/docs/api _site/api _site/reports/tests _site/reports/coverage/web _site/reports/lighthouse
           cp docs/api/index.html _site/docs/api/index.html
           cp docs/api/llms.txt _site/docs/api/llms.txt
           cp api/openapi.yaml _site/api/openapi.yaml
           cp _go-reports/junit.xml _site/reports/tests/junit.xml
           cp _go-reports/coverage.html _site/reports/coverage/index.html
           cp _go-reports/coverage.xml _go-reports/coverage.out _site/reports/coverage/
+          cp _web-reports/reports/unit.xml _site/reports/tests/web-unit.xml
+          cp _e2e-reports/e2e.xml _site/reports/tests/e2e.xml
+          cp -r _web-reports/coverage/. _site/reports/coverage/web/
+          cp _site/reports/coverage/web/cobertura-coverage.xml _site/reports/coverage/web/coverage.xml
+          cp -r _lighthouse-reports/. _site/reports/lighthouse/
           cp scripts/reports-index.html _site/reports/index.html
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -552,9 +569,12 @@ jobs:
   # and bun.lock - none of the bun-container jobs above touch it, they
   # all only ever install and run against this repo's root one. Nothing
   # here proved the frontend even builds until this job existed.
+  # web, e2e and lighthouse run on every push to main, filter or not: `pages`
+  # replaces the whole site on each deploy, and these jobs produce the web
+  # half of its reports.
   web:
     needs: changes
-    if: needs.changes.outputs.web == 'true'
+    if: needs.changes.outputs.web == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
@@ -576,7 +596,20 @@ jobs:
       - name: svelte-check
         run: bun run check
       - name: vitest
-        run: bun run test
+        # JUnit and a cobertura/html coverage report for `pages` to publish.
+        run: >-
+          bun run test --coverage --reporter=default --reporter=junit
+          --outputFile.junit=reports/unit.xml
+      - name: Keep the vitest reports for pages
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-reports
+          path: |
+            cmd/hush-hush/web/reports/unit.xml
+            cmd/hush-hush/web/coverage
+          if-no-files-found: error
+          retention-days: 1
       - name: biome check
         run: bun run lint
       - name: oxlint (@shadcn/lint)
@@ -604,7 +637,7 @@ jobs:
   # branch-protection setting, not something this file decides.
   e2e:
     needs: changes
-    if: needs.changes.outputs.web-tests == 'true'
+    if: needs.changes.outputs.web-tests == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -623,6 +656,14 @@ jobs:
         working-directory: cmd/hush-hush/web
       - run: bun run test:e2e
         working-directory: cmd/hush-hush/web
+      - name: Keep the e2e report for pages
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-reports
+          path: cmd/hush-hush/web/reports/e2e.xml
+          if-no-files-found: error
+          retention-days: 1
 
   # rules/browser-compat.md's "warn, don't fail the build" applied to
   # Lighthouse, per alrayyes/hush-hush#384 - `e2e/lighthouse.ts` never
@@ -634,7 +675,7 @@ jobs:
   # touched the frontend.
   lighthouse:
     needs: changes
-    if: needs.changes.outputs.web-tests == 'true'
+    if: needs.changes.outputs.web-tests == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -654,6 +695,14 @@ jobs:
       - name: Lighthouse audit (login, secrets overview - warns only)
         run: bun run lighthouse
         working-directory: cmd/hush-hush/web
+      - name: Keep the Lighthouse reports for pages
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lighthouse-reports
+          path: cmd/hush-hush/web/reports/lighthouse
+          if-no-files-found: error
+          retention-days: 1
 
   # Same reasoning as govulncheck above, for the bun ecosystem: pinning
   # stops it drifting, not a known CVE in whatever's pinned right now.

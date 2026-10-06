@@ -90,9 +90,9 @@ secret.
 
 [`api/openapi.yaml`](api/openapi.yaml) is the full contract, browsable at
 <https://alrayyes.github.io/Hush-Hush/docs/api/>, including the audit-log
-query endpoint the CLI doesn't wrap. The latest green run's test and
-coverage reports are at <https://apis.ryankes.eu/Hush-Hush/reports/>. Query
-the audit log directly:
+query endpoint the CLI doesn't wrap. The latest green run's test, coverage
+and Lighthouse reports, for both the Go server and the web UI, are at
+<https://apis.ryankes.eu/Hush-Hush/reports/>. Query the audit log directly:
 
 ```sh
 curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"

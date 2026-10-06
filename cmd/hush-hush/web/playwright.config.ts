@@ -10,7 +10,11 @@ export default defineConfig({
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	reporter: 'list',
+	// CI also writes JUnit, which the pages job publishes next to the other
+	// test results (rules/published-reports.md).
+	reporter: process.env.CI
+		? [['list'], ['junit', { outputFile: 'reports/e2e.xml' }]]
+		: 'list',
 	use: {
 		baseURL: 'http://localhost:4173',
 	},
