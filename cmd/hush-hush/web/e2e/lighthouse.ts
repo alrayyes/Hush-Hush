@@ -14,7 +14,9 @@
 // judgment call worth flagging: this is the "or equivalent" in the
 // issue's "@lhci/cli or equivalent", not literally `@lhci/cli`.
 import { chromium } from '@playwright/test';
+import * as age from 'age-encryption';
 import { playAudit } from 'playwright-lighthouse';
+import { AUDITED_PAGES, SEEDED_SLUG } from './lighthouse-pages';
 
 // E2E_PORT picks the server's port (e2e/server.sh reads it too) and
 // E2E_DEBUG_PORT the browser's remote-debugging port, so two runs on one
@@ -95,6 +97,72 @@ async function auditPage(
 	}
 }
 
+// Fills the instance so the signed-in pages are audited as people use them,
+// not empty: a few secrets (one the detail page is audited on), their
+// consumers, an audit trail, and one bearer and one consumer token.
+async function seed(
+	context: import('@playwright/test').BrowserContext,
+	page: import('@playwright/test').Page,
+): Promise<void> {
+	const csrf =
+		(await context.cookies()).find((c) => c.name === 'csrf_token')?.value ?? '';
+	const headers = { 'X-CSRF-Token': csrf };
+	const identity = await age.generateIdentity();
+	const recipient = await age.identityToRecipient(identity);
+	const seal = async (text: string) => {
+		const encrypter = new age.Encrypter();
+		encrypter.addRecipient(recipient);
+
+		return btoa(String.fromCharCode(...(await encrypter.encrypt(text))));
+	};
+
+	for (const consumer of ['homelab', 'ci-runner']) {
+		await page.request.patch(`/consumers/${consumer}`, {
+			headers,
+			data: { public_key: recipient },
+		});
+	}
+	const secrets = [
+		[SEEDED_SLUG, 'prod deploy webhook', ['homelab', 'ci-runner'], ['prod']],
+		[
+			'grafana_admin_password',
+			'admin console, rotated quarterly',
+			['homelab'],
+			[],
+		],
+		[
+			'backup_encryption_key',
+			'nightly offsite backup',
+			['ci-runner'],
+			['backup'],
+		],
+	] as const;
+	for (const [slug, description, usedBy, tags] of secrets) {
+		await page.request.post('/objects', {
+			headers,
+			data: {
+				slug,
+				value: await seal(slug),
+				description,
+				used_by: usedBy,
+				tags,
+			},
+		});
+	}
+	await page.request.post('/tokens', {
+		headers,
+		data: { description: 'deploy token', ttl_seconds: 30 * 86_400 },
+	});
+	await page.request.post('/consumer-tokens', {
+		headers,
+		data: {
+			consumer: 'ci-runner',
+			description: 'deploy read token for ci-runner',
+			ttl_seconds: 30 * 86_400,
+		},
+	});
+}
+
 async function main() {
 	const serverProc = Bun.spawn(['bash', 'e2e/server.sh'], {
 		stdout: 'inherit',
@@ -115,8 +183,18 @@ async function main() {
 		try {
 			const page = await context.newPage();
 
-			await page.goto('/login');
-			await auditPage(page, '/login', 'login', { expectedPath: '/login' });
+			// Lighthouse leaves the tab blank after each audit, so every page
+			// is loaded again before anything is clicked on it.
+			const [publicPages, sessionPages] = [
+				AUDITED_PAGES.filter((p) => !p.session),
+				AUDITED_PAGES.filter((p) => p.session),
+			];
+			for (const target of publicPages) {
+				await page.goto(target.path);
+				await auditPage(page, target.path, target.report, {
+					expectedPath: target.path,
+				});
+			}
 
 			// Same CDP virtual-authenticator flow as journey.spec.ts's own
 			// login - a passkey has no username/password form Lighthouse's
@@ -135,11 +213,9 @@ async function main() {
 			// this check is documented as warn-only (rules/browser-compat.md),
 			// so a failure to drive the authenticated half is caught and
 			// reported the same way a missed threshold is, rather than
-			// propagating to main()'s own process.exit(1).
+			// propagating to main()'s own process.exit(1). Each page is caught
+			// on its own, so one that fails doesn't skip the rest.
 			try {
-				// Lighthouse drives this same tab and leaves it blank when it
-				// finishes, so the login page has to be loaded again before
-				// anything can be clicked on it.
 				await page.goto('/login');
 
 				const client = await context.newCDPSession(page);
@@ -159,15 +235,28 @@ async function main() {
 					.click({ timeout: 10_000 });
 				await page.waitForURL('/');
 
-				await auditPage(page, '/ (secrets overview)', 'secrets-overview', {
-					expectedPath: '/',
-					keepSession: true,
-				});
+				await seed(context, page);
+
+				for (const target of sessionPages) {
+					try {
+						await page.goto(target.path);
+						await auditPage(page, target.path, target.report, {
+							expectedPath: target.path,
+							keepSession: true,
+						});
+					} catch (err) {
+						console.warn(
+							`\n[lighthouse] could not audit ${target.path} - ` +
+								'treating as a warning, not a build failure:',
+							err,
+							'\n',
+						);
+					}
+				}
 			} catch (err) {
 				console.warn(
-					'\n[lighthouse] could not complete the authenticated audit ' +
-						'(/, secrets overview) - treating as a warning, not a ' +
-						'build failure:',
+					'\n[lighthouse] could not complete the authenticated audits - ' +
+						'treating as a warning, not a build failure:',
 					err,
 					'\n',
 				);
