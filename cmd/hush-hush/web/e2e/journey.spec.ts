@@ -185,6 +185,19 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.goto('/changelog');
 	await expect(nav.getByRole('link', { name: 'Secrets' })).toBeVisible();
 
+	// alrayyes/hush-hush#718: the footer links to the repository, and says it
+	// leaves the app.
+	const sourceLink = page
+		.getByRole('contentinfo')
+		.getByRole('link', { name: /^Source/ });
+	await expect(sourceLink).toHaveAttribute(
+		'href',
+		'https://github.com/alrayyes/Hush-Hush',
+	);
+	await expect(sourceLink).toHaveAttribute('rel', /noopener/);
+	await expect(sourceLink).toHaveAttribute('rel', /noreferrer/);
+	await expect(sourceLink).toHaveAccessibleName(/external site/i);
+
 	// Scanned back on the secrets overview - the one authenticated page
 	// with real interactive structure (a table, dialogs), not the mostly
 	// static changelog.
@@ -231,6 +244,22 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		expect(box?.width).toBeGreaterThanOrEqual(44);
 		expect(box?.height).toBeGreaterThanOrEqual(44);
 	}
+
+	// The footer's repository link is a 44px target on a phone, and the footer
+	// doesn't scroll the page sideways.
+	await page.locator('footer').scrollIntoViewIfNeeded();
+	const phoneSource = await page
+		.getByRole('contentinfo')
+		.getByRole('link', { name: /^Source/ })
+		.boundingBox();
+	expect(phoneSource?.height).toBeGreaterThanOrEqual(44);
+	expect(
+		await page.evaluate(
+			() =>
+				document.documentElement.scrollWidth <=
+				document.documentElement.clientWidth,
+		),
+	).toBe(true);
 
 	// Fixed to the bottom edge, and never covering the footer.
 	const barBox = await tabBar.boundingBox();
