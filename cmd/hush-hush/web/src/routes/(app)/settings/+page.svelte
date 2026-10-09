@@ -812,6 +812,7 @@ async function confirmPurgeConsumerToken() {
 				<TokenCard
 					{token}
 					subtitle={token.consumer}
+					showId
 					onrotate={() => openRotateConsumerToken(token.id)}
 					onrevoke={() => openRevokeConsumerToken(token.id)}
 					onpurge={() => openPurgeConsumerToken(token.id)}
@@ -835,7 +836,12 @@ async function confirmPurgeConsumerToken() {
 				{#each filteredConsumerTokens as token (token.id)}
 					<tr>
 						<td data-label="Consumer">{token.consumer}</td>
-						<td data-label="Description">{token.description}</td>
+						<td data-label="Description">
+							{token.description}
+							<span class="block text-xs text-text-muted">
+								ID <code data-testid="token-id" class="font-mono select-all">{token.id}</code>
+							</span>
+						</td>
 						<td data-label="Created">
 							<time datetime={token.created_at} title={token.created_at}>
 								{formatTimestamp(token.created_at)}
