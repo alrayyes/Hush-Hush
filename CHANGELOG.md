@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.1](https://github.com/alrayyes/Hush-Hush/compare/v3.4.0...v3.4.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **web-ui:** keep the secrets table readable when a name has many consumers ([#735](https://github.com/alrayyes/Hush-Hush/issues/735)) ([7792def](https://github.com/alrayyes/Hush-Hush/commit/7792deff9f7763414f92322c7c60c9e89727d68c))
+
 ## [3.4.0](https://github.com/alrayyes/Hush-Hush/compare/v3.3.1...v3.4.0) (2026-10-09)
 
 
