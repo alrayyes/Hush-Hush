@@ -7,6 +7,7 @@ require (
 	github.com/descope/virtualwebauthn v1.0.5
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/go-webauthn/webauthn v0.18.2
+	github.com/klauspost/compress v1.18.7
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pact-foundation/pact-go/v2 v2.8.0
 	github.com/spf13/cobra v1.10.2
@@ -56,7 +57,6 @@ require (
 	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

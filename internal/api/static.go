@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/klauspost/compress/gzhttp"
 )
 
 // inlineScript finds a script element's attributes and body. The index.html
@@ -61,7 +63,7 @@ func handleStatic(build fs.FS) http.Handler {
 	fileServer := http.FileServerFS(build)
 	policy := contentSecurityPolicy(build)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", policy)
 
 		path := r.URL.Path[1:] // ServeMux guarantees a leading "/"
@@ -69,14 +71,43 @@ func handleStatic(build fs.FS) http.Handler {
 			path = "index.html"
 		}
 
+		w.Header().Set("Cache-Control", cacheControl(path))
+
 		if info, err := fs.Stat(build, path); err == nil && !info.IsDir() {
 			fileServer.ServeHTTP(w, r)
 
 			return
 		}
 
+		// The SPA fallback is HTML whatever path asked for it.
+		w.Header().Set("Cache-Control", cacheControlRevalidate)
 		http.ServeFileFS(w, r, build, "index.html")
 	})
+
+	// Text is compressed here because this is the server that ships it
+	// (alrayyes/hush-hush#721). gzhttp skips anything already encoded or too
+	// small to be worth it, and adds Vary: Accept-Encoding.
+	return gzhttp.GzipHandler(handler)
+}
+
+const (
+	// immutablePrefix is where SvelteKit writes content-hashed files: the name
+	// changes when the content does, so a copy never goes stale.
+	immutablePrefix = "_app/immutable/"
+
+	cacheControlImmutable  = "public, max-age=31536000, immutable"
+	cacheControlRevalidate = "no-cache"
+)
+
+// cacheControl is the header for a static path: a year for a hashed file, and
+// revalidation for everything else, HTML included, since an HTML URL can't be
+// cache-busted.
+func cacheControl(path string) string {
+	if strings.HasPrefix(path, immutablePrefix) {
+		return cacheControlImmutable
+	}
+
+	return cacheControlRevalidate
 }
 
 // handleHardNavRoute resolves a path's dual identity as both a SvelteKit
