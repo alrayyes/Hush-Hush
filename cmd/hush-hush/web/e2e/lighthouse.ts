@@ -16,6 +16,7 @@
 import { chromium } from '@playwright/test';
 import * as age from 'age-encryption';
 import { playAudit } from 'playwright-lighthouse';
+import { missedInsights } from './lighthouse-insights';
 import { AUDITED_PAGES, SEEDED_SLUG } from './lighthouse-pages';
 
 // E2E_PORT picks the server's port (e2e/server.sh reads it too) and
@@ -90,6 +91,13 @@ async function auditPage(
 	// ever reaches `results.comparisonError`, which it never prints itself
 	// when `ignoreError: true` tells it not to throw. Surface it here, or
 	// a regression warns nobody.
+	const missed = missedInsights(results.lhr.audits);
+	if (missed.length > 0) {
+		console.warn(
+			`\n[lighthouse] ${label}: insights not passing: ${missed.join(', ')}\n`,
+		);
+	}
+
 	if (results.comparisonError) {
 		console.warn(`\n[lighthouse] ${label}: ${results.comparisonError}\n`);
 	} else {
