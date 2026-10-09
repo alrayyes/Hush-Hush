@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.0](https://github.com/alrayyes/Hush-Hush/compare/v3.3.1...v3.4.0) (2026-10-09)
+
+
+### Features
+
+* **web-ui:** show each consumer token's id in the Settings table ([#733](https://github.com/alrayyes/Hush-Hush/issues/733)) ([71758ee](https://github.com/alrayyes/Hush-Hush/commit/71758ee5575771ccf71510407202af0b7627a95d)), closes [#710](https://github.com/alrayyes/Hush-Hush/issues/710)
+
 ## [3.3.1](https://github.com/alrayyes/Hush-Hush/compare/v3.3.0...v3.3.1) (2026-10-09)
 
 
