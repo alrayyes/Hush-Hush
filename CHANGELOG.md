@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.1](https://github.com/alrayyes/Hush-Hush/compare/v3.3.0...v3.3.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* bump the minor-and-patch group across 1 directory with 6 updates ([#727](https://github.com/alrayyes/Hush-Hush/issues/727)) ([f2401a2](https://github.com/alrayyes/Hush-Hush/commit/f2401a2d654e6479b25715649969260c474ac987))
+* **deps:** migrate the web UI to SvelteKit 3 ([#730](https://github.com/alrayyes/Hush-Hush/issues/730)) ([56391d1](https://github.com/alrayyes/Hush-Hush/commit/56391d156acdbb0fba199311eece2eb85d7e285e))
+
 ## [3.3.0](https://github.com/alrayyes/Hush-Hush/compare/v3.2.1...v3.3.0) (2026-10-06)
 
 
