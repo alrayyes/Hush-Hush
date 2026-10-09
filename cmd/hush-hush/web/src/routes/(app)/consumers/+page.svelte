@@ -37,10 +37,7 @@ let { data }: { data: PageData } = $props();
 let filterInput = $state(data.q);
 
 function applyFilter() {
-	void goto(consumersHref(1, filterInput.trim()), {
-		keepFocus: true,
-		noScroll: true,
-	});
+	void goto(consumersHref(1, filterInput.trim()), { reset: false });
 }
 
 // Which card's copy button is showing its "Copied" state, and the timer
