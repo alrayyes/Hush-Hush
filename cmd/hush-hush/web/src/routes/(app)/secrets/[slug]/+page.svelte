@@ -1,12 +1,18 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
+import { actorLabel } from '#lib/attribution.js';
+import { createCopier } from '#lib/clipboard.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Textarea } from '#lib/components/ui/textarea/index.js';
+import {
+	CONSUMER_LIST_FILTER_MIN,
+	consumersHref,
+	filterConsumers,
+	truncateKey,
+} from '#lib/consumers.js';
+import { formatTimestamp } from '#lib/datetime.js';
 import { page } from '$app/state';
-import { actorLabel } from '$lib/attribution';
-import { createCopier } from '$lib/clipboard';
-import { Button } from '$lib/components/ui/button/index.js';
-import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { consumersHref, truncateKey } from '$lib/consumers';
-import { formatTimestamp } from '$lib/datetime';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -18,6 +24,21 @@ const copier = createCopier<'sealed' | 'command'>(
 	(kind) => (copied = kind ?? ''),
 );
 onDestroy(copier.dispose);
+
+// A variant can have a hundred consumers: past a handful the section gets
+// a filter box and scrolls in its own box instead of lengthening the page.
+let consumerQuery = $state('');
+const visibleConsumers = $derived.by(() => {
+	if (data.notFound || data.chooseVariant) return [];
+	const names = new Set(
+		filterConsumers(
+			data.consumers.map((c) => c.name),
+			consumerQuery,
+		),
+	);
+
+	return data.consumers.filter((c) => names.has(c.name));
+});
 
 const byteSize = $derived(
 	data.notFound || data.chooseVariant ? 0 : atob(data.value).length,
@@ -98,8 +119,20 @@ const command = $derived(
 			{#if data.consumers.length === 0}
 				<p>No recorded consumers.</p>
 			{:else}
-				<ul class="flex flex-col gap-2">
-					{#each data.consumers as consumer (consumer.name)}
+				{#if data.consumers.length > CONSUMER_LIST_FILTER_MIN}
+					<Input
+						type="search"
+						class="w-full"
+						placeholder="Filter consumers"
+						aria-label="Filter consumers"
+						bind:value={consumerQuery}
+					/>
+					<p class="m-0 text-sm text-text-muted" role="status">
+						{visibleConsumers.length} of {data.consumers.length} shown
+					</p>
+				{/if}
+				<ul class="flex max-h-96 flex-col gap-2 overflow-y-auto">
+					{#each visibleConsumers as consumer (consumer.name)}
 						<li class="flex flex-wrap items-center gap-2">
 							<a href={consumersHref(1, consumer.name)} class="underline">{consumer.name}</a>
 							{#if consumer.publicKey}

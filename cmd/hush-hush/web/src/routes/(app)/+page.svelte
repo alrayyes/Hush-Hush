@@ -2,7 +2,6 @@
 import CheckIcon from '@lucide/svelte/icons/check';
 import CopyIcon from '@lucide/svelte/icons/copy';
 import { onDestroy } from 'svelte';
-import { invalidate } from '$app/navigation';
 import {
 	ApiError,
 	type ConsumerEntry,
@@ -11,29 +10,32 @@ import {
 	getObjectValue,
 	type ObjectMetadata,
 	updateObject,
-} from '$lib/api';
-import { TAGS_MAX_ITEMS } from '$lib/api-limits';
-import { actorName } from '$lib/attribution';
-import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
-import { createCopier } from '$lib/clipboard';
-import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
-import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-import * as Dialog from '$lib/components/ui/dialog/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
-import { Label } from '$lib/components/ui/label/index.js';
-import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { consumersHref } from '$lib/consumers';
-import { formatTimestamp } from '$lib/datetime';
-import { resolveRecipients, sealValue } from '$lib/sealing';
+} from '#lib/api.js';
+import { TAGS_MAX_ITEMS } from '#lib/api-limits.js';
+import { actorName } from '#lib/attribution.js';
+import ConsumerCombobox from '#lib/ConsumerCombobox.svelte';
+import ConsumerList from '#lib/ConsumerList.svelte';
+import ConsumerSummary from '#lib/ConsumerSummary.svelte';
+import { createCopier } from '#lib/clipboard.js';
+import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Label } from '#lib/components/ui/label/index.js';
+import { Textarea } from '#lib/components/ui/textarea/index.js';
+import { variantLabel } from '#lib/consumers.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import { resolveRecipients, sealValue } from '#lib/sealing.js';
 import {
 	filterByTag,
 	formatTags,
 	parseTags,
 	tagCounts,
 	validateTags,
-} from '$lib/tags';
-import { valueFieldAttributes } from '$lib/value-field';
+} from '#lib/tags.js';
+import { valueFieldAttributes } from '#lib/value-field.js';
+import { invalidate } from '$app/navigation';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -78,13 +80,8 @@ const variantCounts = $derived(
 	}, new Map<string, number>()),
 );
 
-function variantLabel(object: ObjectMetadata): string {
-	if ((variantCounts.get(object.slug) ?? 0) < 2) return '';
-	const consumers = object.used_by ?? [];
-
-	return consumers.length > 0
-		? `Variant for ${consumers.join(', ')}`
-		: 'Variant with no consumers';
+function variantLabelFor(object: ObjectMetadata): string {
+	return variantLabel(object.used_by, variantCounts.get(object.slug) ?? 0);
 }
 
 let createOpen = $state(false);
@@ -203,7 +200,7 @@ const editEffectiveRecipients = $derived(
 function openEdit(object: ObjectMetadata) {
 	editSlug = object.slug;
 	editId = object.id;
-	editVariant = variantLabel(object);
+	editVariant = variantLabelFor(object);
 	editValue = '';
 	// Copied, not the same array reference data.objects holds - the
 	// combobox mutates this in place as the user picks/adds consumers,
@@ -265,7 +262,7 @@ let viewError = $state('');
 
 async function openView(object: ObjectMetadata) {
 	viewSlug = object.slug;
-	viewVariant = variantLabel(object);
+	viewVariant = variantLabelFor(object);
 	viewValue = '';
 	viewUsedBy = object.used_by ?? [];
 	viewError = '';
@@ -278,6 +275,14 @@ async function openView(object: ObjectMetadata) {
 	}
 }
 
+let consumersOpen = $state(false);
+let consumersObject: ObjectMetadata | null = $state(null);
+
+function openConsumers(object: ObjectMetadata) {
+	consumersObject = object;
+	consumersOpen = true;
+}
+
 let deleteOpen = $state(false);
 let deleteSlug = $state('');
 let deleteId = $state('');
@@ -287,7 +292,7 @@ let deleteError = $state('');
 function openDelete(object: ObjectMetadata) {
 	deleteSlug = object.slug;
 	deleteId = object.id;
-	deleteVariant = variantLabel(object);
+	deleteVariant = variantLabelFor(object);
 	deleteError = '';
 	deleteOpen = true;
 }
@@ -504,12 +509,14 @@ async function confirmDelete() {
 					{#if object.description}
 						<p class="m-0 text-sm">{object.description}</p>
 					{/if}
-					{#if object.used_by?.length}
-						<p class="m-0 text-sm">
-							<span class="text-text-muted">Used by</span>
-							<span class="font-mono">{object.used_by.join(', ')}</span>
-						</p>
-					{/if}
+					<p class="m-0">
+						<ConsumerSummary
+							consumers={object.used_by}
+							name={object.slug}
+							onmore={() => openConsumers(object)}
+							touch
+						/>
+					</p>
 					{#if object.tags.length > 0}
 						<div class="flex flex-wrap gap-1">
 							{#each object.tags as tag (tag)}
@@ -590,11 +597,11 @@ async function confirmDelete() {
 					<tr>
 						<td data-label="Id">
 							{object.slug}
-							{#if object.used_by?.length}
-								<span class="block max-w-40 break-words font-mono text-xs text-text-muted">
-									{object.used_by.join(', ')}
-								</span>
-							{/if}
+							<ConsumerSummary
+								consumers={object.used_by}
+								name={object.slug}
+								onmore={() => openConsumers(object)}
+							/>
 						</td>
 						<td data-label="Description">
 							<span class="block max-w-40 truncate" title={object.description ?? ''}>
@@ -693,16 +700,32 @@ async function confirmDelete() {
 			<div class="space-y-1">
 				<p class="font-bold">Used by</p>
 				{#if viewUsedBy.length > 0}
-					<ul class="m-0 space-y-1 pl-5">
-						{#each viewUsedBy as consumer (consumer)}
-							<li><a href={consumersHref(1, consumer)}>{consumer}</a></li>
-						{/each}
-					</ul>
+					<ConsumerList consumers={viewUsedBy} id="view-consumers" />
 				{:else}
 					<p>No recorded consumers.</p>
 				{/if}
 			</div>
 		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={consumersOpen}>
+	<Dialog.Content>
+		{#if consumersObject}
+			{@const total = consumersObject.used_by?.length ?? 0}
+			<Dialog.Header>
+				<Dialog.Title>Consumers of {consumersObject.slug}</Dialog.Title>
+				<Dialog.Description>
+					{total} {total === 1 ? 'consumer' : 'consumers'}{variantLabelFor(consumersObject)
+						? `. ${variantLabelFor(consumersObject)}`
+						: ''}
+				</Dialog.Description>
+			</Dialog.Header>
+			<ConsumerList consumers={consumersObject.used_by ?? []} id="all-consumers" />
+			<Dialog.Footer>
+				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>Close</Dialog.Close>
+			</Dialog.Footer>
+		{/if}
 	</Dialog.Content>
 </Dialog.Root>
 

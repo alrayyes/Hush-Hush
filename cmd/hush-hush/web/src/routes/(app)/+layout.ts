@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { checkSession } from '$lib/api';
+import { checkSession } from '#lib/api.js';
 import type { LayoutLoad } from './$types';
 
 // web-ui/spec.md's "Unauthenticated access is blocked" requirement: every

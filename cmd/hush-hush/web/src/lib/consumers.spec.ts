@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+	CONSUMER_LIST_FILTER_MIN,
 	consumersHref,
+	filterConsumers,
 	parseConsumersQuery,
 	secretsOverviewHref,
+	summariseConsumers,
 	tokensHref,
 	totalPages,
 	truncateKey,
+	variantLabel,
 } from './consumers';
 
 describe('parseConsumersQuery', () => {
@@ -96,5 +100,77 @@ describe('truncateKey', () => {
 
 	it('truncates a 17 character key', () => {
 		expect(truncateKey('0123456789abcdefg')).toBe('0123456789…bcdefg');
+	});
+});
+
+describe('summariseConsumers', () => {
+	it('shows every consumer when there are two or fewer', () => {
+		expect(summariseConsumers([])).toEqual({ shown: [], more: 0 });
+		expect(summariseConsumers(['a', 'b'])).toEqual({
+			shown: ['a', 'b'],
+			more: 0,
+		});
+	});
+
+	it('shows the first two and counts the rest, however many there are', () => {
+		const hundred = Array.from({ length: 100 }, (_, i) => `c${i}`);
+
+		expect(summariseConsumers(hundred)).toEqual({
+			shown: ['c0', 'c1'],
+			more: 98,
+		});
+	});
+
+	it('treats a missing list as none', () => {
+		expect(summariseConsumers(undefined)).toEqual({ shown: [], more: 0 });
+	});
+});
+
+describe('filterConsumers', () => {
+	const all = [
+		'alrayyes/dotfiles',
+		'alrayyes/resume',
+		'alrayyes/server-dotfiles',
+	];
+
+	it('keeps everything for an empty or blank filter', () => {
+		expect(filterConsumers(all, '')).toEqual(all);
+		expect(filterConsumers(all, '  ')).toEqual(all);
+	});
+
+	it('matches a substring, ignoring case and surrounding space', () => {
+		expect(filterConsumers(all, ' DOT ')).toEqual([
+			'alrayyes/dotfiles',
+			'alrayyes/server-dotfiles',
+		]);
+	});
+
+	it('returns nothing when nothing matches', () => {
+		expect(filterConsumers(all, 'zzz')).toEqual([]);
+	});
+});
+
+describe('CONSUMER_LIST_FILTER_MIN', () => {
+	it('is the length above which a list gets a filter box', () => {
+		expect(CONSUMER_LIST_FILTER_MIN).toBe(10);
+	});
+});
+
+describe('variantLabel', () => {
+	it('says nothing for a name with one variant', () => {
+		expect(variantLabel(['a', 'b'], 1)).toBe('');
+	});
+
+	it('names the consumers of one of several variants', () => {
+		expect(variantLabel(['consumer_d'], 2)).toBe('Variant for consumer_d');
+		expect(variantLabel([], 2)).toBe('Variant with no consumers');
+	});
+
+	it('names two and counts the rest, however many there are', () => {
+		const hundred = Array.from({ length: 100 }, (_, i) => `c${i}`);
+		const label = variantLabel(hundred, 2);
+
+		expect(label).toBe('Variant for c0, c1 and 98 more');
+		expect(label).not.toContain('c50');
 	});
 });

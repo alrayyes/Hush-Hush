@@ -1,6 +1,4 @@
 <script lang="ts">
-import { goto, invalidate } from '$app/navigation';
-import { page } from '$app/state';
 import {
 	ApiError,
 	type ConsumerTokenWithValue,
@@ -15,23 +13,25 @@ import {
 	rotateConsumerToken,
 	rotateToken,
 	type TokenWithValue,
-} from '$lib/api';
-import { registerPasskey } from '$lib/auth';
-import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
-import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
-import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-import * as Dialog from '$lib/components/ui/dialog/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
-import { Label } from '$lib/components/ui/label/index.js';
-import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { formatTimestamp } from '$lib/datetime';
-import TokenCard from '$lib/TokenCard.svelte';
+} from '#lib/api.js';
+import { registerPasskey } from '#lib/auth.js';
+import ConsumerCombobox from '#lib/ConsumerCombobox.svelte';
+import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Label } from '#lib/components/ui/label/index.js';
+import { Textarea } from '#lib/components/ui/textarea/index.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import TokenCard from '#lib/TokenCard.svelte';
 import {
 	TTL_DAYS,
 	tokenRemaining,
 	tokenStatusLabel,
 	ttlDaysToSeconds,
-} from '$lib/tokens';
+} from '#lib/tokens.js';
+import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/state';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -224,9 +224,9 @@ const filteredConsumerTokens = $derived(
 );
 
 function clearConsumerFilter() {
-	const url = new URL(page.url);
+	const url = new URL(page.url.href);
 	url.searchParams.delete('consumer');
-	void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+	void goto(url, { replace: true, reset: false });
 }
 
 $effect(() => {
@@ -812,6 +812,7 @@ async function confirmPurgeConsumerToken() {
 				<TokenCard
 					{token}
 					subtitle={token.consumer}
+					showId
 					onrotate={() => openRotateConsumerToken(token.id)}
 					onrevoke={() => openRevokeConsumerToken(token.id)}
 					onpurge={() => openPurgeConsumerToken(token.id)}
@@ -835,7 +836,12 @@ async function confirmPurgeConsumerToken() {
 				{#each filteredConsumerTokens as token (token.id)}
 					<tr>
 						<td data-label="Consumer">{token.consumer}</td>
-						<td data-label="Description">{token.description}</td>
+						<td data-label="Description">
+							{token.description}
+							<span class="block text-xs text-text-muted">
+								ID <code data-testid="token-id" class="font-mono select-all">{token.id}</code>
+							</span>
+						</td>
 						<td data-label="Created">
 							<time datetime={token.created_at} title={token.created_at}>
 								{formatTimestamp(token.created_at)}

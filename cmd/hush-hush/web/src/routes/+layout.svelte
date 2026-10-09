@@ -6,13 +6,13 @@ import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import SettingsIcon from '@lucide/svelte/icons/settings';
 import TerminalIcon from '@lucide/svelte/icons/terminal';
 import UserIcon from '@lucide/svelte/icons/user';
+import { logout } from '#lib/api.js';
+import favicon from '#lib/assets/favicon.svg';
+import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
+import Footer from '#lib/Footer.svelte';
+import ThemeToggle from '#lib/ThemeToggle.svelte';
 import { goto, invalidate } from '$app/navigation';
-import { logout } from '$lib/api';
-import favicon from '$lib/assets/favicon.svg';
-import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-import * as Dialog from '$lib/components/ui/dialog/index.js';
-import Footer from '$lib/Footer.svelte';
-import ThemeToggle from '$lib/ThemeToggle.svelte';
 import type { LayoutData } from './$types';
 
 let {

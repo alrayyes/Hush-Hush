@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.5.0](https://github.com/alrayyes/Hush-Hush/compare/v3.4.2...v3.5.0) (2026-10-09)
+
+
+### Features
+
+* **web-ui:** link to the repository in the footer ([#736](https://github.com/alrayyes/Hush-Hush/issues/736)) ([9e4a6af](https://github.com/alrayyes/Hush-Hush/commit/9e4a6af4d26606551784f7962c46043f209d94dd))
+
+## [3.4.2](https://github.com/alrayyes/Hush-Hush/compare/v3.4.1...v3.4.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **deps:** build with Go 1.27.2 ([#732](https://github.com/alrayyes/Hush-Hush/issues/732)) ([d2d4f50](https://github.com/alrayyes/Hush-Hush/commit/d2d4f507670aa3a6082023fed63252de00d66e26))
+
+## [3.4.1](https://github.com/alrayyes/Hush-Hush/compare/v3.4.0...v3.4.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **web-ui:** keep the secrets table readable when a name has many consumers ([#735](https://github.com/alrayyes/Hush-Hush/issues/735)) ([7792def](https://github.com/alrayyes/Hush-Hush/commit/7792deff9f7763414f92322c7c60c9e89727d68c))
+
+## [3.4.0](https://github.com/alrayyes/Hush-Hush/compare/v3.3.1...v3.4.0) (2026-10-09)
+
+
+### Features
+
+* **web-ui:** show each consumer token's id in the Settings table ([#733](https://github.com/alrayyes/Hush-Hush/issues/733)) ([71758ee](https://github.com/alrayyes/Hush-Hush/commit/71758ee5575771ccf71510407202af0b7627a95d)), closes [#710](https://github.com/alrayyes/Hush-Hush/issues/710)
+
+## [3.3.1](https://github.com/alrayyes/Hush-Hush/compare/v3.3.0...v3.3.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* bump the minor-and-patch group across 1 directory with 6 updates ([#727](https://github.com/alrayyes/Hush-Hush/issues/727)) ([f2401a2](https://github.com/alrayyes/Hush-Hush/commit/f2401a2d654e6479b25715649969260c474ac987))
+* **deps:** migrate the web UI to SvelteKit 3 ([#730](https://github.com/alrayyes/Hush-Hush/issues/730)) ([56391d1](https://github.com/alrayyes/Hush-Hush/commit/56391d156acdbb0fba199311eece2eb85d7e285e))
+
 ## [3.3.0](https://github.com/alrayyes/Hush-Hush/compare/v3.2.1...v3.3.0) (2026-10-06)
 
 

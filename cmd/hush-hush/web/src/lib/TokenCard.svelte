@@ -1,8 +1,8 @@
 <script lang="ts">
-import type { TokenAction, TokenStatus } from '$lib/api';
-import { Button } from '$lib/components/ui/button/index.js';
-import { formatTimestamp } from '$lib/datetime';
-import { tokenRemaining, tokenStatusLabel } from '$lib/tokens';
+import type { TokenAction, TokenStatus } from '#lib/api.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import { tokenRemaining, tokenStatusLabel } from '#lib/tokens.js';
 
 // One token as a card, for the below-md list on the Settings page
 // (alrayyes/hush-hush#484). Bearer and consumer tokens share the shape
@@ -11,11 +11,13 @@ import { tokenRemaining, tokenStatusLabel } from '$lib/tokens';
 let {
 	token,
 	subtitle,
+	showId = false,
 	onrotate,
 	onrevoke,
 	onpurge,
 }: {
 	token: {
+		id?: string;
 		description: string;
 		created_at: string;
 		expires_at: string;
@@ -25,6 +27,9 @@ let {
 		last_used_at?: string;
 	};
 	subtitle: string;
+	// Consumer tokens show their id: two for one consumer and description
+	// differ in nothing else a reader can see.
+	showId?: boolean;
 	onrotate: () => void;
 	onrevoke: () => void;
 	onpurge: () => void;
@@ -52,6 +57,11 @@ const badgeClass = $derived(
 		</span>
 	</div>
 	<p class="m-0 text-sm text-text-muted">{subtitle}</p>
+	{#if showId && token.id}
+		<p class="m-0 text-xs text-text-muted">
+			ID <code data-testid="token-id" class="font-mono select-all">{token.id}</code>
+		</p>
+	{/if}
 	<p class="m-0 text-sm">{statusLabel}</p>
 	<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
 		<dt class="text-text-muted">Created</dt>

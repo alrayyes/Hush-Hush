@@ -1,4 +1,4 @@
-import { listConsumerTokens, listCredentials, listTokens } from '$lib/api';
+import { listConsumerTokens, listCredentials, listTokens } from '#lib/api.js';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ depends }) => {
