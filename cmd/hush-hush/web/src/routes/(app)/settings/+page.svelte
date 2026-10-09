@@ -27,6 +27,7 @@ import { Textarea } from '$lib/components/ui/textarea/index.js';
 import { formatTimestamp } from '$lib/datetime';
 import TokenCard from '$lib/TokenCard.svelte';
 import {
+	findActiveDuplicate,
 	TTL_DAYS,
 	tokenRemaining,
 	tokenStatusLabel,
@@ -242,17 +243,51 @@ let consumerTokenTTLDays = $state(TTL_DAYS.default);
 let consumerTokenError = $state('');
 let createdConsumerToken: ConsumerTokenWithValue | null = $state(null);
 
+// An active token for this consumer with this description already exists. The
+// server can't tell a double-submit from a second token on purpose, so the
+// first Create shows this and the second goes ahead (a second token is
+// sometimes meant, e.g. during a rotation overlap). Editing either field
+// takes the warning back.
+const duplicateConsumerToken = $derived(
+	findActiveDuplicate(
+		data.consumerTokens,
+		consumerTokenConsumer[0] ?? '',
+		consumerTokenDescription,
+	),
+);
+const consumerTokenFormKey = $derived(
+	`${consumerTokenConsumer[0] ?? ''}\n${consumerTokenDescription.trim()}`,
+);
+let warnedConsumerTokenKey = $state('');
+// Any edit to either field withdraws the warning, even one that puts the
+// original text back: the next Create asks again.
+$effect(() => {
+	void consumerTokenFormKey;
+	warnedConsumerTokenKey = '';
+});
+const showDuplicateWarning = $derived(
+	duplicateConsumerToken !== undefined &&
+		warnedConsumerTokenKey === consumerTokenFormKey,
+);
+
 function resetConsumerTokenForm() {
 	consumerTokenConsumer = [];
 	consumerTokenDescription = '';
 	consumerTokenTTLDays = TTL_DAYS.default;
 	consumerTokenError = '';
 	createdConsumerToken = null;
+	warnedConsumerTokenKey = '';
 }
 
 async function submitCreateConsumerToken(event: SubmitEvent) {
 	event.preventDefault();
 	consumerTokenError = '';
+
+	if (duplicateConsumerToken && !showDuplicateWarning) {
+		warnedConsumerTokenKey = consumerTokenFormKey;
+
+		return;
+	}
 
 	try {
 		createdConsumerToken = await createConsumerToken(
@@ -771,6 +806,18 @@ async function confirmPurgeConsumerToken() {
 								</p>
 								</div>
 
+								{#if showDuplicateWarning && duplicateConsumerToken}
+									<p role="alert" class="font-bold text-warning">
+										An active token for {duplicateConsumerToken.consumer} with this
+										description already exists: ID
+										<code class="font-mono">{duplicateConsumerToken.id}</code>, created
+										<time datetime={duplicateConsumerToken.created_at}>
+											{formatTimestamp(duplicateConsumerToken.created_at)}
+										</time>. Create another only if you mean to, for example while
+										rotating.
+									</p>
+								{/if}
+
 								{#if consumerTokenError}
 									<p role="alert" class="text-error">{consumerTokenError}</p>
 								{/if}
@@ -781,7 +828,7 @@ async function confirmPurgeConsumerToken() {
 									Cancel
 								</Dialog.Close>
 								<Button type="submit" disabled={consumerTokenConsumer.length === 0}>
-									Create
+									{showDuplicateWarning ? 'Create anyway' : 'Create'}
 								</Button>
 							</Dialog.Footer>
 						</form>

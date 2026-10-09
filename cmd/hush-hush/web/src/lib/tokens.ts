@@ -45,3 +45,29 @@ export function tokenRemaining(
 
 	return formatRemaining(token.expires_at, now) ?? token.status ?? '';
 }
+
+// findActiveDuplicate is the active token a new one would repeat: same
+// consumer, same description. The server creates a row per request and can't
+// tell a double-submit or a retried job from a second token on purpose, so
+// the form checks the list it already holds and asks first. A revoked or
+// expired token isn't a duplicate. With several, the newest is the one named.
+export function findActiveDuplicate<
+	T extends {
+		consumer: string;
+		description: string;
+		created_at: string;
+		status?: TokenStatus;
+	},
+>(tokens: T[], consumer: string, description: string): T | undefined {
+	const wanted = description.trim();
+	if (consumer === '' || wanted === '') return undefined;
+
+	return tokens
+		.filter(
+			(t) =>
+				t.status === 'active' &&
+				t.consumer === consumer &&
+				t.description.trim() === wanted,
+		)
+		.sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+}

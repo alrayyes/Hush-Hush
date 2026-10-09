@@ -5,6 +5,7 @@ import {
 	TOKEN_TTL_SECONDS_MIN,
 } from './api-limits';
 import {
+	findActiveDuplicate,
 	TTL_DAYS,
 	tokenRemaining,
 	tokenStatusLabel,
@@ -72,5 +73,81 @@ describe('tokenRemaining', () => {
 		expect(tokenRemaining({ expires_at: '2026-01-01T00:00:00Z' }, now)).toBe(
 			'',
 		);
+	});
+});
+
+describe('findActiveDuplicate', () => {
+	const token = (over: Record<string, unknown> = {}) => ({
+		id: 'aaaaaaaaaaaaaaaa',
+		consumer: 'release-job',
+		description: 'release job consumer read token',
+		created_at: '2026-10-06T10:00:00Z',
+		status: 'active' as const,
+		...over,
+	});
+
+	it('finds an active token for the same consumer and description', () => {
+		const tokens = [token()];
+
+		expect(
+			findActiveDuplicate(
+				tokens,
+				'release-job',
+				'release job consumer read token',
+			),
+		).toBe(tokens[0]);
+	});
+
+	it('ignores spaces around the description', () => {
+		expect(
+			findActiveDuplicate(
+				[token()],
+				'release-job',
+				'  release job consumer read token ',
+			),
+		).toBeDefined();
+	});
+
+	it('ignores a revoked or expired token', () => {
+		for (const status of ['revoked', 'expired'] as const) {
+			expect(
+				findActiveDuplicate(
+					[token({ status })],
+					'release-job',
+					'release job consumer read token',
+				),
+			).toBeUndefined();
+		}
+	});
+
+	it('ignores another consumer or another description', () => {
+		expect(
+			findActiveDuplicate(
+				[token()],
+				'ci-runner',
+				'release job consumer read token',
+			),
+		).toBeUndefined();
+		expect(
+			findActiveDuplicate([token()], 'release-job', 'other'),
+		).toBeUndefined();
+	});
+
+	it('returns the newest when several match', () => {
+		const older = token({ id: 'o', created_at: '2026-10-05T10:00:00Z' });
+		const newer = token({ id: 'n', created_at: '2026-10-06T10:00:00Z' });
+
+		expect(
+			findActiveDuplicate(
+				[older, newer],
+				'release-job',
+				'release job consumer read token',
+			)?.id,
+		).toBe('n');
+	});
+
+	it('finds nothing without a consumer or description', () => {
+		expect(findActiveDuplicate([token()], '', 'x')).toBeUndefined();
+		expect(findActiveDuplicate([token()], 'release-job', '  ')).toBeUndefined();
 	});
 });

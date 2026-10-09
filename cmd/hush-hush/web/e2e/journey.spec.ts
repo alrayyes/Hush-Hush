@@ -1155,6 +1155,90 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	const consumerTokenRow = page.getByRole('row', { name: /ci-runner/ });
 	await expect(consumerTokenRow.getByRole('cell').nth(5)).toHaveText('Active');
+
+	// alrayyes/hush-hush#711: creating a token that repeats an active one for
+	// the same consumer and description asks first, naming the existing token,
+	// and goes ahead on a second click. Editing the form takes the warning back.
+	const existing = (
+		(await (await page.request.get('/consumer-tokens?limit=500')).json()) as {
+			id: string;
+			consumer: string;
+		}[]
+	).find((t) => t.consumer === 'ci-runner');
+	expect(existing).toBeDefined();
+	const duplicateConsumersLoaded = page.waitForResponse(
+		(res) =>
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
+	);
+	await page.getByRole('button', { name: 'New consumer token' }).click();
+	const duplicateDialog = page.getByRole('dialog', {
+		name: 'Create a consumer token',
+	});
+	await duplicateConsumersLoaded;
+	await duplicateDialog.locator('#consumer-token-consumer').fill('ci-runner');
+	await duplicateDialog.getByRole('option', { name: /ci-runner/ }).click();
+	await duplicateDialog
+		.locator('#consumer-token-description')
+		.fill('deploy read token for ci-runner');
+	await expect(
+		duplicateDialog.getByRole('button', { name: 'Create', exact: true }),
+	).toHaveCSS('opacity', '1');
+	await duplicateDialog
+		.getByRole('button', { name: 'Create', exact: true })
+		.click();
+	const duplicateWarning = duplicateDialog.getByRole('alert').filter({
+		hasText: 'already exists',
+	});
+	await expect(duplicateWarning).toContainText(existing?.id ?? 'missing');
+	await expect(duplicateWarning).toContainText(/\d{4}/);
+	await expect(duplicateDialog.getByLabel('Token value')).toHaveCount(0);
+	const duplicateResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(duplicateResults.violations).toEqual([]);
+	// Changing the description takes the warning back.
+	await duplicateDialog
+		.locator('#consumer-token-description')
+		.fill('deploy read token for ci-runner, second');
+	await expect(duplicateWarning).toHaveCount(0);
+	await duplicateDialog
+		.locator('#consumer-token-description')
+		.fill('deploy read token for ci-runner');
+	await expect(duplicateWarning).toHaveCount(0);
+	// Back on the repeat: ask again, then confirm.
+	await duplicateDialog
+		.getByRole('button', { name: 'Create', exact: true })
+		.click();
+	await expect(duplicateWarning).toBeVisible();
+	await duplicateDialog.getByRole('button', { name: 'Create anyway' }).click();
+	await expect(page.getByLabel('Token value')).not.toHaveValue('');
+	await page
+		.getByRole('dialog', { name: 'Token created' })
+		.getByRole('button', { name: 'Done' })
+		.click();
+	// Remove the second token so the rows below see only the one they expect.
+	const both = (await (
+		await page.request.get('/consumer-tokens?limit=500')
+	).json()) as { id: string; consumer: string }[];
+	const second = both.find(
+		(t) => t.consumer === 'ci-runner' && t.id !== existing?.id,
+	);
+	expect(second).toBeDefined();
+	for (const path of [
+		`/consumer-tokens/${second?.id}`,
+		`/consumer-tokens/${second?.id}/purge`,
+	]) {
+		expect(
+			(
+				await page.request.delete(path, {
+					headers: { 'X-CSRF-Token': csrfToken },
+				})
+			).ok(),
+		).toBe(true);
+	}
+	await page.reload();
+	await expect(consumerTokenRow).toHaveCount(1);
 	// Before the clock-skew page below: page.clock is the context's clock, so a
 	// page opened after it would see the skewed time.
 	await expectListParity(page, {
