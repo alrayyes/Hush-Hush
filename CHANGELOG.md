@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.1](https://github.com/alrayyes/Hush-Hush/compare/v3.5.0...v3.5.1) (2026-10-09)
+
+
+### Performance Improvements
+
+* **web-ui:** cache hashed assets, revalidate HTML, compress text ([#747](https://github.com/alrayyes/Hush-Hush/issues/747)) ([cc406c6](https://github.com/alrayyes/Hush-Hush/commit/cc406c6dc61fe42e92969d3d93c40c8c753dad5b)), closes [#721](https://github.com/alrayyes/Hush-Hush/issues/721)
+
 ## [3.5.0](https://github.com/alrayyes/Hush-Hush/compare/v3.4.2...v3.5.0) (2026-10-09)
 
 
