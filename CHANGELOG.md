@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.0](https://github.com/alrayyes/Hush-Hush/compare/v3.4.2...v3.5.0) (2026-10-09)
+
+
+### Features
+
+* **web-ui:** link to the repository in the footer ([#736](https://github.com/alrayyes/Hush-Hush/issues/736)) ([9e4a6af](https://github.com/alrayyes/Hush-Hush/commit/9e4a6af4d26606551784f7962c46043f209d94dd))
+
 ## [3.4.2](https://github.com/alrayyes/Hush-Hush/compare/v3.4.1...v3.4.2) (2026-10-09)
 
 
