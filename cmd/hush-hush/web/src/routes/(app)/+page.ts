@@ -1,4 +1,4 @@
-import { getOwnerIdentity, listObjects } from '$lib/api';
+import { getOwnerIdentity, listObjects } from '#lib/api.js';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ depends, url }) => {

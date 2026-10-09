@@ -16,7 +16,7 @@
 	// build/ is generated output: checking it only reports on minified code.
 	"exclude": ["build", "src/service-worker"]
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
+	// and #lib, which is the "imports" field in package.json
 	//
 	// To make changes to top-level options such as include and exclude, we recommend extending
 	// the generated config; see https://svelte.dev/docs/kit/configuration#typescript

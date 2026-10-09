@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Card, CardContent } from '$lib/components/ui/card/index.js';
+import { Card, CardContent } from '#lib/components/ui/card/index.js';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();

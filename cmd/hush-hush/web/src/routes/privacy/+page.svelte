@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Card, CardContent } from '$lib/components/ui/card/index.js';
+import { Card, CardContent } from '#lib/components/ui/card/index.js';
 </script>
 
 <svelte:head>

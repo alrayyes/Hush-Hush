@@ -1,8 +1,8 @@
 <script lang="ts">
-import type { TokenAction, TokenStatus } from '$lib/api';
-import { Button } from '$lib/components/ui/button/index.js';
-import { formatTimestamp } from '$lib/datetime';
-import { tokenRemaining, tokenStatusLabel } from '$lib/tokens';
+import type { TokenAction, TokenStatus } from '#lib/api.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import { tokenRemaining, tokenStatusLabel } from '#lib/tokens.js';
 
 // One token as a card, for the below-md list on the Settings page
 // (alrayyes/hush-hush#484). Bearer and consumer tokens share the shape
