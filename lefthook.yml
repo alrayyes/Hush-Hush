@@ -48,7 +48,7 @@ pre-commit:
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+        golang:1.27.2-bookworm@sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61
         go mod edit -fmt go.mod
       stage_fixed: true
 
@@ -179,7 +179,7 @@ commit-msg:
 #   scan on every push and pull request; a local clone may not have it.
 # - e2e and lighthouse: see web-check below.
 #
-# The toolchain pins below (golang:1.27.1-bookworm@sha256:69a7...) are the same
+# The toolchain pins below (golang:1.27.2-bookworm@sha256:5cf2...) are the same
 # image as the Dockerfile's and CI's. Dependabot bumps the Dockerfile only, so
 # change them together.
 pre-push:
@@ -237,7 +237,7 @@ pre-push:
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+        golang:1.27.2-bookworm@sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61
         go test -race ./...
 
     # No check-only flag on `go mod edit -fmt`, so the gate is running it
@@ -257,14 +257,14 @@ pre-push:
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+        golang:1.27.2-bookworm@sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61
         go mod edit -fmt go.mod
         && git diff --exit-code go.mod
         && docker run --rm --user "$(id -u):$(id -g)"
         -v "$(pwd):/src" -w /src
         -e GOCACHE=/gocache -v "$HOME/.cache/go-build-docker:/gocache"
         -e GOMODCACHE=/gomod -v "$HOME/.cache/go-mod-docker:/gomod"
-        golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+        golang:1.27.2-bookworm@sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61
         go mod tidy -diff
 
     # cmd/hush-hush/web is its own bun project (CONTRIBUTING.md), so its
