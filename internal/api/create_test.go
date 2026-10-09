@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -39,8 +40,16 @@ func testWebBuild() fstest.MapFS {
 	return fstest.MapFS{
 		"index.html":       {Data: []byte(testIndexHTML)},
 		"_app/version.txt": {Data: []byte("test")},
+		// A content-hashed chunk, as SvelteKit writes it, long enough that
+		// compressing it is worth doing.
+		"_app/immutable/chunks/app.Ab12Cd34.js": {Data: []byte(testHashedScript)},
+		"robots.txt":                            {Data: []byte("User-agent: *\n")},
 	}
 }
+
+// testHashedScript is plain repetitive text, over the size where a server
+// bothers to compress.
+var testHashedScript = strings.Repeat("export const answer = 42;\n", 200)
 
 // newTestMux and its backing store are shared by every handler test in this
 // package - each test gets its own in-memory database.

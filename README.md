@@ -147,6 +147,12 @@ endpoint answers with a configuration error instead of the server
 refusing to start - the API (and the CLI/SDKs that call it) work exactly
 the same either way.
 
+The server sets the caching and compression headers itself, so it needs
+no reverse proxy for them. Content-hashed files under `/_app/immutable/`
+get `Cache-Control: public, max-age=31536000, immutable`, every other
+file and the HTML pages get `no-cache`, and text responses are compressed
+for clients that accept `gzip`.
+
 The first successful passkey registration creates the single account
 this service has today - there's no sign-up flow or invitation to send,
 and no separate default credential to rotate away from. That same
