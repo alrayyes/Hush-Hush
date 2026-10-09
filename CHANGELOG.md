@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.2](https://github.com/alrayyes/Hush-Hush/compare/v3.4.1...v3.4.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **deps:** build with Go 1.27.2 ([#732](https://github.com/alrayyes/Hush-Hush/issues/732)) ([d2d4f50](https://github.com/alrayyes/Hush-Hush/commit/d2d4f507670aa3a6082023fed63252de00d66e26))
+
 ## [3.4.1](https://github.com/alrayyes/Hush-Hush/compare/v3.4.0...v3.4.1) (2026-10-09)
 
 
