@@ -2,20 +2,19 @@
 import CheckIcon from '@lucide/svelte/icons/check';
 import CopyIcon from '@lucide/svelte/icons/copy';
 import { onDestroy } from 'svelte';
-import { goto, invalidate } from '$app/navigation';
 import {
 	ApiError,
 	addConsumer,
 	type ConsumerEntry,
 	deleteConsumer,
 	renameConsumer,
-} from '$lib/api';
-import { createCopier } from '$lib/clipboard';
-import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
-import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-import * as Dialog from '$lib/components/ui/dialog/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
-import { Label } from '$lib/components/ui/label/index.js';
+} from '#lib/api.js';
+import { createCopier } from '#lib/clipboard.js';
+import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Label } from '#lib/components/ui/label/index.js';
 import {
 	CONSUMERS_PAGE_SIZE,
 	consumersHref,
@@ -23,7 +22,8 @@ import {
 	tokensHref,
 	totalPages,
 	truncateKey,
-} from '$lib/consumers';
+} from '#lib/consumers.js';
+import { goto, invalidate } from '$app/navigation';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();

@@ -1,8 +1,8 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
-import { imageTag, parseChangelog, releaseUrl } from '$lib/changelog';
-import { createCopier } from '$lib/clipboard';
-import { Button } from '$lib/components/ui/button/index.js';
+import { imageTag, parseChangelog, releaseUrl } from '#lib/changelog.js';
+import { createCopier } from '#lib/clipboard.js';
+import { Button } from '#lib/components/ui/button/index.js';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();

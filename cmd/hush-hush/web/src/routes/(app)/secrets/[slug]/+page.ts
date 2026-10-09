@@ -4,7 +4,7 @@ import {
 	listConsumerDirectory,
 	listObjects,
 	queryAuditLog,
-} from '$lib/api';
+} from '#lib/api.js';
 import type { PageLoad } from './$types';
 
 // app:objects is invalidated by the secrets mutations, so this page

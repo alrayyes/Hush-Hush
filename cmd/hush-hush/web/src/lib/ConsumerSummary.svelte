@@ -1,6 +1,6 @@
 <script lang="ts">
-import { Button } from '$lib/components/ui/button/index.js';
-import { summariseConsumers } from '$lib/consumers';
+import { Button } from '#lib/components/ui/button/index.js';
+import { summariseConsumers } from '#lib/consumers.js';
 
 // What a secret's row or card says about its consumers: the first two, then
 // a button for the rest. Its height doesn't depend on how many there are.

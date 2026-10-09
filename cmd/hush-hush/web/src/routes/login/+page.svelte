@@ -1,11 +1,11 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { getAuthStatus } from '#lib/api.js';
+import { login, registerPasskey } from '#lib/auth.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
+import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { goto, invalidate } from '$app/navigation';
-import { getAuthStatus } from '$lib/api';
-import { login, registerPasskey } from '$lib/auth';
-import { Button } from '$lib/components/ui/button/index.js';
-import * as Dialog from '$lib/components/ui/dialog/index.js';
-import { Textarea } from '$lib/components/ui/textarea/index.js';
 
 let pending = $state(false);
 let error = $state('');

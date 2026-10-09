@@ -1,18 +1,18 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
-import { page } from '$app/state';
-import { actorLabel } from '$lib/attribution';
-import { createCopier } from '$lib/clipboard';
-import { Button } from '$lib/components/ui/button/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
-import { Textarea } from '$lib/components/ui/textarea/index.js';
+import { actorLabel } from '#lib/attribution.js';
+import { createCopier } from '#lib/clipboard.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Textarea } from '#lib/components/ui/textarea/index.js';
 import {
 	CONSUMER_LIST_FILTER_MIN,
 	consumersHref,
 	filterConsumers,
 	truncateKey,
-} from '$lib/consumers';
-import { formatTimestamp } from '$lib/datetime';
+} from '#lib/consumers.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import { page } from '$app/state';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();

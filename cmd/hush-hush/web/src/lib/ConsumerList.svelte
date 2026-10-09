@@ -1,10 +1,10 @@
 <script lang="ts">
-import { Input } from '$lib/components/ui/input/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
 import {
 	CONSUMER_LIST_FILTER_MIN,
 	consumersHref,
 	filterConsumers,
-} from '$lib/consumers';
+} from '#lib/consumers.js';
 
 // Every consumer of one variant, as links to the consumers directory. A
 // list past CONSUMER_LIST_FILTER_MIN gets a filter box and a count, and the

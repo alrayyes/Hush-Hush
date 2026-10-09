@@ -2,20 +2,20 @@
 import CheckIcon from '@lucide/svelte/icons/check';
 import CopyIcon from '@lucide/svelte/icons/copy';
 import { onDestroy } from 'svelte';
-import { page } from '$app/state';
 import {
 	ApiError,
 	type AuditLogEntry,
 	type AuditLogQuery,
 	queryAuditLog,
-} from '$lib/api';
-import { auditActorLabel, toCSV, toJSON } from '$lib/audit-export';
-import { createCopier } from '$lib/clipboard';
-import { Button } from '$lib/components/ui/button/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
-import { Label } from '$lib/components/ui/label/index.js';
-import * as Select from '$lib/components/ui/select/index.js';
-import { formatTimestamp } from '$lib/datetime';
+} from '#lib/api.js';
+import { auditActorLabel, toCSV, toJSON } from '#lib/audit-export.js';
+import { createCopier } from '#lib/clipboard.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Label } from '#lib/components/ui/label/index.js';
+import * as Select from '#lib/components/ui/select/index.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import { page } from '$app/state';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
