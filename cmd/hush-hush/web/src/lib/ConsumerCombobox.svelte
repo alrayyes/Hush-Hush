@@ -18,8 +18,8 @@
 // can resolve each selected consumer's registered public key into a real
 // age sealing recipient without a second, duplicate fetch of its own
 // (openspec/changes/client-side-encryption, task group 4).
-import { Button } from '$lib/components/ui/button/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
+import { Button } from '#lib/components/ui/button/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
 import { type ConsumerEntry, listConsumerDirectory } from './api';
 
 let {

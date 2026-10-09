@@ -1,5 +1,5 @@
-import { checkSession, getHealth } from '$lib/api';
-import { healthSummary } from '$lib/health';
+import { checkSession, getHealth } from '#lib/api.js';
+import { healthSummary } from '#lib/health.js';
 import type { LayoutLoad } from './$types';
 
 // "own backend, static frontend, no SSR" - design.md's "Frontend:

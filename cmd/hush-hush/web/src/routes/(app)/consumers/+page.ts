@@ -1,5 +1,5 @@
-import { listConsumersPage, listConsumerTokens } from '$lib/api';
-import { CONSUMERS_PAGE_SIZE, parseConsumersQuery } from '$lib/consumers';
+import { listConsumersPage, listConsumerTokens } from '#lib/api.js';
+import { CONSUMERS_PAGE_SIZE, parseConsumersQuery } from '#lib/consumers.js';
 import type { PageLoad } from './$types';
 
 // app:consumers is invalidated after a secret create adds a new

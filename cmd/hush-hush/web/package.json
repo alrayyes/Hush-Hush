@@ -3,6 +3,10 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
+	"imports": {
+		"#lib": "./src/lib",
+		"#lib/*": "./src/lib/*"
+	},
 	"scripts": {
 		"build": "bun run copy-changelog && bun run copy-license && vite build",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

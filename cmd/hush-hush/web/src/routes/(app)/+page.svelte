@@ -2,7 +2,6 @@
 import CheckIcon from '@lucide/svelte/icons/check';
 import CopyIcon from '@lucide/svelte/icons/copy';
 import { onDestroy } from 'svelte';
-import { invalidate } from '$app/navigation';
 import {
 	ApiError,
 	type ConsumerEntry,
@@ -11,31 +10,32 @@ import {
 	getObjectValue,
 	type ObjectMetadata,
 	updateObject,
-} from '$lib/api';
-import { TAGS_MAX_ITEMS } from '$lib/api-limits';
-import { actorName } from '$lib/attribution';
-import ConsumerCombobox from '$lib/ConsumerCombobox.svelte';
-import ConsumerList from '$lib/ConsumerList.svelte';
-import ConsumerSummary from '$lib/ConsumerSummary.svelte';
-import { createCopier } from '$lib/clipboard';
-import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
-import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-import * as Dialog from '$lib/components/ui/dialog/index.js';
-import { Input } from '$lib/components/ui/input/index.js';
-import { Label } from '$lib/components/ui/label/index.js';
-import { Textarea } from '$lib/components/ui/textarea/index.js';
-import { variantLabel } from '$lib/consumers';
-import { formatTimestamp } from '$lib/datetime';
-import { resolveRecipients, sealValue } from '$lib/sealing';
+} from '#lib/api.js';
+import { TAGS_MAX_ITEMS } from '#lib/api-limits.js';
+import { actorName } from '#lib/attribution.js';
+import ConsumerCombobox from '#lib/ConsumerCombobox.svelte';
+import ConsumerList from '#lib/ConsumerList.svelte';
+import ConsumerSummary from '#lib/ConsumerSummary.svelte';
+import { createCopier } from '#lib/clipboard.js';
+import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
+import { Input } from '#lib/components/ui/input/index.js';
+import { Label } from '#lib/components/ui/label/index.js';
+import { Textarea } from '#lib/components/ui/textarea/index.js';
+import { variantLabel } from '#lib/consumers.js';
+import { formatTimestamp } from '#lib/datetime.js';
+import { resolveRecipients, sealValue } from '#lib/sealing.js';
 import {
 	filterByTag,
 	formatTags,
 	parseTags,
 	tagCounts,
 	validateTags,
-} from '$lib/tags';
-import { valueFieldAttributes } from '$lib/value-field';
+} from '#lib/tags.js';
+import { valueFieldAttributes } from '#lib/value-field.js';
+import { invalidate } from '$app/navigation';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();

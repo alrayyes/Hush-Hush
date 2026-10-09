@@ -1,5 +1,5 @@
 <script lang="ts">
-import GithubIcon from '$lib/GithubIcon.svelte';
+import GithubIcon from '#lib/GithubIcon.svelte';
 
 let { version }: { version: string } = $props();
 

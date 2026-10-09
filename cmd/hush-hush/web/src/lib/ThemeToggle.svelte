@@ -1,13 +1,13 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { Button } from '$lib/components/ui/button/index.js';
+import { Button } from '#lib/components/ui/button/index.js';
 import {
 	applyTheme,
 	readStoredTheme,
 	resolveTheme,
 	storeTheme,
 	type Theme,
-} from '$lib/theme';
+} from '#lib/theme.js';
 
 let theme = $state<Theme>('light');
 

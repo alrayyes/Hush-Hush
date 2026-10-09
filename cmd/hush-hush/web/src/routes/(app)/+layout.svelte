@@ -3,7 +3,7 @@
 // (web-ui-design-system/tasks.md #2.1) - +layout.ts's redirect-when-
 // unauthenticated guard is the only thing this layout still owns.
 import { onMount } from 'svelte';
-import { registerWebMCPTools } from '$lib/webmcp';
+import { registerWebMCPTools } from '#lib/webmcp.js';
 
 let { children } = $props();
 
