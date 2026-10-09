@@ -93,18 +93,10 @@ pre-commit:
       # this only changes what blocks a commit.
       run: ./scripts/vale.sh --minAlertLevel=error {staged_files}
 
-    # Reads only, so it changes nothing to restage. Invoked bare rather than
-    # on {staged_files}: what gets linted is the `apis` list in redocly.yaml,
-    # and naming a path here is how the hook and CI end up checking different
-    # files. The glob only decides whether it's worth running at all.
-    - name: redocly
-      glob:
-        - "api/*.yaml"
-        - "api/*.yml"
-        - "api/**/*.yaml"
-        - "api/**/*.yml"
-        - "redocly.yaml"
-      run: bunx redocly lint
+    # No redocly here. It lints the `apis` list in redocly.yaml, not the staged
+    # files, so a commit would be judged on a spec it doesn't contain
+    # (rules/linting.md, "pre-commit judges only what the commit contains").
+    # pre-push (`bun run lint:api`) and CI's `api` job lint the whole spec.
 
     # Pinned by digest rather than `latest`, like any other container image —
     # dependencies.md's rule applies to an image named in a hook command just
