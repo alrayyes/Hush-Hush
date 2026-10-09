@@ -132,7 +132,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// part of this exact request) - never by reaching into the page's own
 	// in-memory state, which the app never exposes past this request
 	// either.
-	let registerFinishBody: { recovery_wrapped_identity?: string } | null = null;
+	// Assigned in the request handler below, so declare it un-narrowed: a bare
+	// `= null` makes TypeScript treat every later read as `null`.
+	let registerFinishBody = null as {
+		recovery_wrapped_identity?: string;
+	} | null;
 	page.on('request', (request) => {
 		if (
 			request.method() === 'POST' &&

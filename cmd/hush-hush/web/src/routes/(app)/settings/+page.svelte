@@ -224,9 +224,9 @@ const filteredConsumerTokens = $derived(
 );
 
 function clearConsumerFilter() {
-	const url = new URL(page.url);
+	const url = new URL(page.url.href);
 	url.searchParams.delete('consumer');
-	void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+	void goto(url, { replace: true, reset: false });
 }
 
 $effect(() => {
