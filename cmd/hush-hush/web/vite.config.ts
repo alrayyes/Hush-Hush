@@ -13,6 +13,11 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
 			},
 			adapter: adapter({ fallback: 'index.html' }),
+			// The stylesheet is 46 KB, so it ships inside the HTML and the first
+			// paint waits on no CSS request (alrayyes/hush-hush#762). The cap
+			// is finite on purpose: a stylesheet that outgrows it goes back to
+			// a cached file, and Lighthouse's render-blocking insight says so.
+			inlineStyleThreshold: 65_536,
 		}),
 	],
 	test: {
