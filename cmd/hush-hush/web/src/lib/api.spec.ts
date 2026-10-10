@@ -161,13 +161,46 @@ describe('the paged list calls', () => {
 			`/objects?used_by=homelab&limit=${PAGE_LIMIT_MAX}&offset=0`,
 		]);
 	});
+});
 
-	it('probes the session with one row, not the whole passkey list', async () => {
-		const fetchMock = stubPages([{ rows: rows(1), total: 9 }]);
+// alrayyes/hush-hush#761: a session-gated probe answers 401 to an anonymous
+// visitor, and the browser logs every 401 to the console whether or not the
+// code catches it. /auth/status answers 200 either way.
+describe('checkSession', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	function stubStatus(body: { bootstrapped: boolean; authenticated: boolean }) {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubGlobal('document', { cookie: '' });
+
+		return fetchMock;
+	}
+
+	it('asks /auth/status, which never answers 401, instead of a gated list', async () => {
+		const fetchMock = stubStatus({ bootstrapped: true, authenticated: true });
 
 		await checkSession();
 
-		expect(urls(fetchMock)).toEqual(['/credentials?limit=1']);
+		expect(fetchMock.mock.calls.map((call) => String(call[0]))).toEqual([
+			'/auth/status',
+		]);
+	});
+
+	it('is true when the server says the visitor has a session', async () => {
+		stubStatus({ bootstrapped: true, authenticated: true });
+
+		expect(await checkSession()).toBe(true);
+	});
+
+	it('is false, without throwing, when the server says there is none', async () => {
+		stubStatus({ bootstrapped: true, authenticated: false });
+
+		expect(await checkSession()).toBe(false);
 	});
 });
 

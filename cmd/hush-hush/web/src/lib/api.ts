@@ -126,10 +126,17 @@ export async function logout(): Promise<void> {
 // passkey or logging in with one
 // (openspec/changes/gate-passkey-registration-ui/design.md).
 export async function getAuthStatus(): Promise<boolean> {
-	const res = await request('/auth/status');
-	const body = (await res.json()) as { bootstrapped: boolean };
+	return (await fetchAuthStatus()).bootstrapped;
+}
 
-	return body.bootstrapped;
+type AuthStatus = Schemas['AuthStatus'];
+
+// GET /auth/status needs no session and answers 200 for an anonymous visitor
+// too, so asking it never puts a 401 in the console.
+async function fetchAuthStatus(): Promise<AuthStatus> {
+	const res = await request('/auth/status');
+
+	return (await res.json()) as AuthStatus;
 }
 
 // getOwnerIdentity returns the calling session's own escrowed identity
@@ -145,22 +152,13 @@ export async function getOwnerIdentity(): Promise<string | undefined> {
 	return body.public_key;
 }
 
-// checkSession reports whether the current visitor holds a valid session,
-// via a session-gated endpoint that carries no secret data of its own -
-// there's no dedicated "who am I" endpoint to call instead.
+// checkSession reports whether the current visitor holds a valid session.
+// It reads it from /auth/status rather than probing a session-gated endpoint
+// and treating its 401 as "no": the browser logs every 401 to the console
+// whether or not the code catches it, and an anonymous visit to a public page
+// logged one (alrayyes/hush-hush#761).
 export async function checkSession(): Promise<boolean> {
-	try {
-		// One row is enough to prove the session; the list itself isn't wanted.
-		await request('/credentials?limit=1');
-
-		return true;
-	} catch (err) {
-		if (err instanceof ApiError && err.status === 401) {
-			return false;
-		}
-
-		throw err;
-	}
+	return (await fetchAuthStatus()).authenticated;
 }
 
 export type ObjectMetadata = Schemas['ObjectMetadata'];
