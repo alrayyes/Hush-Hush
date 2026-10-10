@@ -5,6 +5,7 @@ import {
 	TOKEN_TTL_SECONDS_MIN,
 } from './api-limits';
 import {
+	findDuplicateToken,
 	TTL_DAYS,
 	tokenRemaining,
 	tokenStatusLabel,
@@ -71,6 +72,73 @@ describe('tokenRemaining', () => {
 	it('is empty when the server sent no status and the clock gives no time left', () => {
 		expect(tokenRemaining({ expires_at: '2026-01-01T00:00:00Z' }, now)).toBe(
 			'',
+		);
+	});
+});
+
+describe('findDuplicateToken', () => {
+	const token = (
+		overrides: Partial<{
+			id: string;
+			consumer: string;
+			description: string;
+			status: 'active' | 'expired' | 'revoked';
+		}> = {},
+	) => ({
+		id: 'tok-1',
+		consumer: 'homelab/vps-docker',
+		description: 'deploy read token',
+		created_at: '2026-10-01T10:00:00Z',
+		status: 'active' as const,
+		...overrides,
+	});
+
+	it('finds an active token for the same consumer and description', () => {
+		const existing = token();
+
+		expect(
+			findDuplicateToken([existing], 'homelab/vps-docker', 'deploy read token'),
+		).toBe(existing);
+	});
+
+	it('ignores a revoked or expired token', () => {
+		expect(
+			findDuplicateToken(
+				[token({ status: 'revoked' }), token({ id: 'b', status: 'expired' })],
+				'homelab/vps-docker',
+				'deploy read token',
+			),
+		).toBeUndefined();
+	});
+
+	it('ignores another consumer or another description', () => {
+		expect(
+			findDuplicateToken(
+				[token({ consumer: 'other' }), token({ description: 'other' })],
+				'homelab/vps-docker',
+				'deploy read token',
+			),
+		).toBeUndefined();
+	});
+
+	it('ignores surrounding whitespace in the description', () => {
+		const existing = token();
+
+		expect(
+			findDuplicateToken(
+				[existing],
+				'homelab/vps-docker',
+				'  deploy read token ',
+			),
+		).toBe(existing);
+	});
+
+	it('finds nothing before a consumer or description is entered', () => {
+		expect(findDuplicateToken([token()], '', 'deploy read token')).toBe(
+			undefined,
+		);
+		expect(findDuplicateToken([token()], 'homelab/vps-docker', ' ')).toBe(
+			undefined,
 		);
 	});
 });

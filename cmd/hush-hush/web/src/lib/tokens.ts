@@ -45,3 +45,23 @@ export function tokenRemaining(
 
 	return formatRemaining(token.expires_at, now) ?? token.status ?? '';
 }
+
+// findDuplicateToken is the active token the form is about to repeat: same
+// consumer, same description. The server makes one row per request and
+// can't tell a retry from a second token on purpose (a rotation overlap),
+// so the form only warns (alrayyes/hush-hush#711). A token the server calls
+// revoked or expired doesn't count (#536), and nothing matches until both
+// fields have a value.
+export function findDuplicateToken<
+	T extends { consumer: string; description: string; status?: TokenStatus },
+>(tokens: T[], consumer: string, description: string): T | undefined {
+	const wanted = description.trim();
+	if (consumer === '' || wanted === '') return undefined;
+
+	return tokens.find(
+		(token) =>
+			token.status === 'active' &&
+			token.consumer === consumer &&
+			token.description.trim() === wanted,
+	);
+}

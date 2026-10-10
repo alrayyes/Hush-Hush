@@ -25,6 +25,7 @@ import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { formatTimestamp } from '#lib/datetime.js';
 import TokenCard from '#lib/TokenCard.svelte';
 import {
+	findDuplicateToken,
 	TTL_DAYS,
 	tokenRemaining,
 	tokenStatusLabel,
@@ -240,6 +241,16 @@ let consumerTokenConsumer: string[] = $state([]);
 let consumerTokenDescription = $state('');
 let consumerTokenTTLDays = $state(TTL_DAYS.default);
 let consumerTokenError = $state('');
+// The active token this form would repeat, if any (#711). Only a warning:
+// a second token with one description is sometimes meant, as in a rotation
+// overlap, so the button changes its label and the form still submits.
+const duplicateConsumerToken = $derived(
+	findDuplicateToken(
+		data.consumerTokens,
+		consumerTokenConsumer[0] ?? '',
+		consumerTokenDescription,
+	),
+);
 let createdConsumerToken: ConsumerTokenWithValue | null = $state(null);
 
 function resetConsumerTokenForm() {
@@ -771,6 +782,19 @@ async function confirmPurgeConsumerToken() {
 								</p>
 								</div>
 
+								{#if duplicateConsumerToken}
+									<p role="alert" class="text-warning">
+										{duplicateConsumerToken.consumer} already has an active token with
+										this description: ID {duplicateConsumerToken.id}, created
+										<time
+											datetime={duplicateConsumerToken.created_at}
+											title={duplicateConsumerToken.created_at}
+										>
+											{formatTimestamp(duplicateConsumerToken.created_at)}
+										</time>. Create another only if you mean to have two.
+									</p>
+								{/if}
+
 								{#if consumerTokenError}
 									<p role="alert" class="text-error">{consumerTokenError}</p>
 								{/if}
@@ -781,7 +805,7 @@ async function confirmPurgeConsumerToken() {
 									Cancel
 								</Dialog.Close>
 								<Button type="submit" disabled={consumerTokenConsumer.length === 0}>
-									Create
+									{duplicateConsumerToken ? 'Create anyway' : 'Create'}
 								</Button>
 							</Dialog.Footer>
 						</form>

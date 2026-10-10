@@ -1272,6 +1272,75 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	).toBe(true);
 	await page.reload();
 	await expect(sameConsumerRows).toHaveCount(1);
+
+	// alrayyes/hush-hush#711: repeating an active token's consumer and
+	// description warns, naming that token, and lets the user go ahead.
+	const existingTokenId = (
+		await sameConsumerRows.locator('[data-testid="token-id"]').textContent()
+	)?.trim();
+	await page.getByRole('button', { name: 'New consumer token' }).click();
+	const repeatDialog = page.getByRole('dialog', {
+		name: 'Create a consumer token',
+	});
+	await page.locator('#consumer-token-consumer').fill('ci-runner');
+	await page.getByRole('listbox').waitFor();
+	await page.getByRole('option', { name: 'Add "ci-runner"' }).click();
+	await expect(repeatDialog.getByRole('alert')).toHaveCount(0);
+	await repeatDialog
+		.locator('#consumer-token-description')
+		.fill('deploy read token for ci-runner');
+	const repeatWarning = repeatDialog.getByRole('alert');
+	await expect(repeatWarning).toContainText('already has an active token');
+	await expect(repeatWarning).toContainText(existingTokenId ?? 'missing id');
+	await expect(repeatWarning).toContainText(TIMESTAMP);
+	await expect(
+		repeatDialog.getByRole('button', { name: 'Create anyway' }),
+	).toBeVisible();
+	// The submit button fades in once the form is valid; scan after it has.
+	await expect(
+		repeatDialog.getByRole('button', { name: 'Create anyway' }),
+	).toHaveCSS('opacity', '1');
+	const repeatWarningResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(repeatWarningResults.violations).toEqual([]);
+	await repeatDialog
+		.locator('#consumer-token-description')
+		.fill('another description');
+	await expect(repeatDialog.getByRole('alert')).toHaveCount(0);
+	await expect(
+		repeatDialog.getByRole('button', { name: 'Create', exact: true }),
+	).toBeVisible();
+	await repeatDialog
+		.locator('#consumer-token-description')
+		.fill('deploy read token for ci-runner');
+	await repeatDialog.getByRole('button', { name: 'Create anyway' }).click();
+	await page
+		.getByRole('dialog', { name: 'Token created' })
+		.getByRole('button', { name: 'Done' })
+		.click();
+	await page.reload();
+	await expect(sameConsumerRows).toHaveCount(2);
+	// Remove the one just made, so the rows below see the one they expect.
+	const repeated = (
+		(await (await page.request.get('/consumer-tokens')).json()) as {
+			id: string;
+			consumer: string;
+		}[]
+	).filter((t) => t.consumer === 'ci-runner' && t.id !== existingTokenId);
+	expect(repeated).toHaveLength(1);
+	for (const suffix of ['', '/purge']) {
+		expect(
+			(
+				await page.request.delete(
+					`/consumer-tokens/${repeated[0].id}${suffix}`,
+					{ headers: { 'X-CSRF-Token': csrfToken } },
+				)
+			).ok(),
+		).toBe(true);
+	}
+	await page.reload();
+	await expect(sameConsumerRows).toHaveCount(1);
 	// Before the clock-skew page below: page.clock is the context's clock, so a
 	// page opened after it would see the skewed time.
 	await expectListParity(page, {
