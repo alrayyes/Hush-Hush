@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.6.0](https://github.com/alrayyes/Hush-Hush/compare/v3.5.1...v3.6.0) (2026-10-10)
+
+
+### Features
+
+* **api:** add a before cursor to GET /audit-log ([#757](https://github.com/alrayyes/Hush-Hush/issues/757)) ([bfb7f34](https://github.com/alrayyes/Hush-Hush/commit/bfb7f3452a41cd82a6fde982ed1aa6dcd59bda0c)), closes [#756](https://github.com/alrayyes/Hush-Hush/issues/756)
+
 ## [3.5.1](https://github.com/alrayyes/Hush-Hush/compare/v3.5.0...v3.5.1) (2026-10-09)
 
 
