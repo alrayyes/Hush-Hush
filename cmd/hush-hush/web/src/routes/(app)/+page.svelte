@@ -317,7 +317,7 @@ async function confirmDelete() {
 	<title>Secrets - hush-hush</title>
 </svelte:head>
 
-<main class="mx-auto my-8 max-w-240 px-4">
+<main class="mx-auto my-8 max-w-280 px-4">
 	<header class="flex flex-wrap items-center justify-between gap-2">
 		<h1>Secrets</h1>
 		<Dialog.Root bind:open={createOpen}>
@@ -585,9 +585,7 @@ async function confirmDelete() {
 					<th scope="col" class="px-4 py-3">Id</th>
 					<th scope="col" class="px-4 py-3">Description</th>
 					<th scope="col" class="px-4 py-3">Tags</th>
-					<th scope="col" class="px-4 py-3">Created by</th>
 					<th scope="col" class="px-4 py-3">Created</th>
-					<th scope="col" class="px-4 py-3">Updated by</th>
 					<th scope="col" class="px-4 py-3">Updated</th>
 					<th scope="col" class="px-4 py-3">Actions</th>
 				</tr>
@@ -596,7 +594,9 @@ async function confirmDelete() {
 				{#each filteredObjects as object (object.id)}
 					<tr>
 						<td data-label="Id">
-							{object.slug}
+							<span class="block max-w-56 truncate" title={object.slug}>
+								{object.slug}
+							</span>
 							<ConsumerSummary
 								consumers={object.used_by}
 								name={object.slug}
@@ -604,7 +604,7 @@ async function confirmDelete() {
 							/>
 						</td>
 						<td data-label="Description">
-							<span class="block max-w-40 truncate" title={object.description ?? ''}>
+							<span class="block max-w-32 truncate" title={object.description ?? ''}>
 								{object.description ?? ''}
 							</span>
 						</td>
@@ -614,32 +614,37 @@ async function confirmDelete() {
 									{#each object.tags as tag (tag)}
 										<span
 											data-testid="tag"
-											class="rounded-full border border-border px-2 py-0.5 text-xs text-text-muted"
+											title={tag}
+											class="max-w-full truncate rounded-full border border-border px-2 py-0.5 text-xs text-text-muted"
 											>{tag}</span
 										>
 									{/each}
 								</div>
 							{/if}
 						</td>
-						<td data-label="Created by">{object.created_by ? actorName(object.created_by) : ''}</td>
 						<td data-label="Created">
 							{#if object.created_at}
 								<time datetime={object.created_at} title={object.created_at}>
 									{formatTimestamp(object.created_at)}
 								</time>
 							{/if}
+							{#if object.created_by}
+								<span class="block text-xs text-text-muted">by {actorName(object.created_by)}</span>
+							{/if}
 						</td>
-						<td data-label="Updated by">{object.updated_by ? actorName(object.updated_by) : ''}</td>
 						<td data-label="Updated">
 							{#if object.updated_at}
 								<time datetime={object.updated_at} title={object.updated_at}>
 									{formatTimestamp(object.updated_at)}
 								</time>
 							{/if}
+							{#if object.updated_by}
+								<span class="block text-xs text-text-muted">by {actorName(object.updated_by)}</span>
+							{/if}
 						</td>
 						<!-- The card list above offers the same actions; e2e/layout-parity.ts
 							fails if the two drift (alrayyes/hush-hush#577). -->
-						<td data-label="Actions" class="row-actions min-w-44 gap-3">
+						<td data-label="Actions" class="row-actions min-w-44 gap-3 md:flex-nowrap">
 							<Button
 								variant="outline"
 								size="sm"
