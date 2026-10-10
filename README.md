@@ -133,8 +133,48 @@ schemas come from a running server's own `tools/list` call, not the spec.
 
 ### Web UI
 
-![Secrets overview, light mode](docs/screenshots/secrets-light.png)
-![Secrets overview, dark mode](docs/screenshots/secrets-dark.png)
+#### Login
+
+Sign in with a passkey, or register the first one.
+
+![Login, light mode](docs/screenshots/login-light.png)
+![Login, dark mode](docs/screenshots/login-dark.png)
+
+#### Secrets
+
+Every secret, who last touched it and when.
+
+![Secrets, light mode](docs/screenshots/secrets-light.png)
+![Secrets, dark mode](docs/screenshots/secrets-dark.png)
+
+#### Secret detail
+
+The sealed ciphertext, the CLI command to fetch it, its authorised
+consumers and recent activity.
+
+![Secret detail, light mode](docs/screenshots/secret-light.png)
+![Secret detail, dark mode](docs/screenshots/secret-dark.png)
+
+#### Consumers
+
+The age public keys that can read secrets.
+
+![Consumers, light mode](docs/screenshots/consumers-light.png)
+![Consumers, dark mode](docs/screenshots/consumers-dark.png)
+
+#### Audit log
+
+Every create, read and delete, filterable and exportable.
+
+![Audit log, light mode](docs/screenshots/audit-log-light.png)
+![Audit log, dark mode](docs/screenshots/audit-log-dark.png)
+
+#### Settings
+
+Passkeys, bearer tokens and consumer tokens.
+
+![Settings, light mode](docs/screenshots/settings-light.png)
+![Settings, dark mode](docs/screenshots/settings-dark.png)
 
 Set `PUBLIC_URL` (the URL you'll actually reach the server at - for
 example `https://hush-hush.example.com`, or `http://localhost:8080` for
