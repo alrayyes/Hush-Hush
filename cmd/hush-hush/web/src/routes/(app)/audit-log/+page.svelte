@@ -1,4 +1,6 @@
 <script lang="ts">
+import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
 import CheckIcon from '@lucide/svelte/icons/check';
 import CopyIcon from '@lucide/svelte/icons/copy';
 import { onDestroy } from 'svelte';
@@ -9,6 +11,7 @@ import {
 	queryAuditLog,
 } from '#lib/api.js';
 import { auditActorLabel, toCSV, toJSON } from '#lib/audit-export.js';
+import { type AuditOrder, cursorParams, flipOrder } from '#lib/audit-paging.js';
 import { createCopier } from '#lib/clipboard.js';
 import { Button } from '#lib/components/ui/button/index.js';
 import { Input } from '#lib/components/ui/input/index.js';
@@ -51,6 +54,11 @@ let toFilter = $state('');
 let cursorStack: (number | undefined)[] = $state([]);
 let currentAfter: number | undefined = $state(undefined);
 
+// Newest first, like the load function's own first page: an operator reads
+// an audit log for what just happened (alrayyes/hush-hush#753). The cursor
+// that pages onward depends on it, see cursorParams.
+let order: AuditOrder = $state('desc');
+
 function currentQuery(after: number | undefined): AuditLogQuery {
 	return {
 		object_id: objectFilter || undefined,
@@ -58,7 +66,8 @@ function currentQuery(after: number | undefined): AuditLogQuery {
 		caller: callerFilter || undefined,
 		from: fromFilter ? new Date(fromFilter).toISOString() : undefined,
 		to: toFilter ? new Date(toFilter).toISOString() : undefined,
-		after,
+		order,
+		...cursorParams(order, after),
 	};
 }
 
@@ -93,6 +102,11 @@ function previousPage() {
 	const prev = cursorStack[cursorStack.length - 1];
 	cursorStack = cursorStack.slice(0, -1);
 	void fetchPage(prev);
+}
+
+function toggleOrder() {
+	order = flipOrder(order);
+	resetToFirstPage();
 }
 
 function clearFilter(name: 'object' | 'actor' | 'caller' | 'from' | 'to') {
@@ -381,7 +395,24 @@ function exportCSV() {
 				<th scope="col" class="px-4 py-3">Actor</th>
 				<th scope="col" class="px-4 py-3">Caller</th>
 				<th scope="col" class="px-4 py-3">IP</th>
-				<th scope="col" class="px-4 py-3">Timestamp</th>
+				<th
+					scope="col"
+					class="px-4 py-3"
+					aria-sort={order === 'desc' ? 'descending' : 'ascending'}
+				>
+					<button
+						type="button"
+						class="inline-flex min-h-11 cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-semibold text-inherit"
+						onclick={toggleOrder}
+					>
+						Timestamp
+						{#if order === 'desc'}
+							<ArrowDownIcon aria-hidden="true" class="size-4" />
+						{:else}
+							<ArrowUpIcon aria-hidden="true" class="size-4" />
+						{/if}
+					</button>
+				</th>
 			</tr>
 		</thead>
 		<tbody>

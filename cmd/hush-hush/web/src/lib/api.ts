@@ -380,6 +380,9 @@ export interface AuditLogQuery {
 	from?: string;
 	to?: string;
 	after?: number;
+	// The cursor for the next page of a newest-first log: `after` would
+	// return newer entries there.
+	before?: number;
 	limit?: number;
 	// 'desc' is newest first, so with limit it returns the newest entries.
 	order?: 'asc' | 'desc';
