@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.0](https://github.com/alrayyes/Hush-Hush/compare/v3.6.0...v3.7.0) (2026-10-10)
+
+
+### Features
+
+* **auth:** report whether the caller has a session on GET /auth/status ([#763](https://github.com/alrayyes/Hush-Hush/issues/763)) ([20f7d2e](https://github.com/alrayyes/Hush-Hush/commit/20f7d2eb46cd2d4af73e18a718effe652cb96c99)), closes [#760](https://github.com/alrayyes/Hush-Hush/issues/760)
+
 ## [3.6.0](https://github.com/alrayyes/Hush-Hush/compare/v3.5.1...v3.6.0) (2026-10-10)
 
 
