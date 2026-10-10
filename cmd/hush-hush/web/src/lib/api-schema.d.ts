@@ -2126,6 +2126,14 @@ export interface operations {
                  */
                 after?: number;
                 /**
+                 * @description Cursor: restrict to entries recorded before this entry's own
+                 *     id. The counterpart of `after` for `order=desc` - pass the
+                 *     last id of the page you have to get the next, older one.
+                 *     Combine with `after` to bound an id window. Id-based for the
+                 *     same reason as `after`.
+                 */
+                before?: number;
+                /**
                  * @description Sort direction by entry id. `asc` (the default) is oldest
                  *     first; `desc` is newest first, so combined with limit it
                  *     returns the newest entries - `?object_id=x&order=desc&limit=3`

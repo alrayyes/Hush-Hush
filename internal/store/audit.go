@@ -119,7 +119,11 @@ type AuditLogFilter struct {
 	From  time.Time
 	To    time.Time
 	After int64
-	Limit int
+	// Before is After's counterpart for Desc: the previous page's last
+	// (lowest) entry ID, so the next page continues with older entries.
+	// Zero means unset; both may be set to bound an ID window.
+	Before int64
+	Limit  int
 	// Desc returns newest first, so Limit keeps the newest rows rather
 	// than the oldest.
 	Desc bool
@@ -179,6 +183,11 @@ func buildAuditLogQuery(filter AuditLogFilter) (string, []any) {
 	if filter.After != 0 {
 		clauses = append(clauses, "id > ?")
 		args = append(args, filter.After)
+	}
+
+	if filter.Before != 0 {
+		clauses = append(clauses, "id < ?")
+		args = append(args, filter.Before)
 	}
 
 	query := `SELECT id, object_id, action, caller, ip, timestamp, actor_type, actor_id, variant_id FROM audit_log`

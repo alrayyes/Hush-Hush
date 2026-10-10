@@ -225,3 +225,51 @@ func TestQueryAuditLogFilterOptionsOnAFreshStoreIsEmpty(t *testing.T) {
 	require.Empty(t, options.Callers)
 	require.Empty(t, options.Actors)
 }
+
+func TestQueryAuditLogBeforeCursorPagesNewestFirstPastTheFirstPage(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	for _, id := range []string{"a", "b", "c", "d", "e"} {
+		require.NoError(t, s.RecordAuditLog(ctx, id, store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	}
+
+	first, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Desc: true, Limit: 2})
+	require.NoError(t, err)
+	require.Equal(t, []string{"e", "d"}, objectIDs(first))
+
+	second, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Desc: true, Limit: 2, Before: first[1].ID})
+	require.NoError(t, err)
+	require.Equal(t, []string{"c", "b"}, objectIDs(second))
+
+	last, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Desc: true, Limit: 2, Before: second[1].ID})
+	require.NoError(t, err)
+	require.Equal(t, []string{"a"}, objectIDs(last))
+}
+
+func TestQueryAuditLogAfterAndBeforeBoundAnIDWindow(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	for _, id := range []string{"a", "b", "c", "d"} {
+		require.NoError(t, s.RecordAuditLog(ctx, id, store.AuditActionCreate, "", "203.0.113.1", "", ""))
+	}
+
+	all, err := s.QueryAuditLog(ctx, store.AuditLogFilter{})
+	require.NoError(t, err)
+
+	window, err := s.QueryAuditLog(ctx, store.AuditLogFilter{After: all[0].ID, Before: all[3].ID})
+	require.NoError(t, err)
+	require.Equal(t, []string{"b", "c"}, objectIDs(window))
+}
+
+func objectIDs(entries []store.AuditLogEntry) []string {
+	ids := make([]string, 0, len(entries))
+	for _, e := range entries {
+		ids = append(ids, e.ObjectID)
+	}
+
+	return ids
+}
