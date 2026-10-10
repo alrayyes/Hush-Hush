@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.2](https://github.com/alrayyes/Hush-Hush/compare/v3.7.1...v3.7.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* **web-ui:** read the session from /auth/status so public pages log no 401 ([#769](https://github.com/alrayyes/Hush-Hush/issues/769)) ([3d6cd0d](https://github.com/alrayyes/Hush-Hush/commit/3d6cd0dcca9ed735f1a5f5e7692cad1a1e64a7bc)), closes [#761](https://github.com/alrayyes/Hush-Hush/issues/761)
+
 ## [3.7.1](https://github.com/alrayyes/Hush-Hush/compare/v3.7.0...v3.7.1) (2026-10-10)
 
 
