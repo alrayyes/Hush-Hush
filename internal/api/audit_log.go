@@ -11,11 +11,12 @@ import (
 
 // Sentinels for GET /audit-log's own query-parameter validation.
 var (
-	errFromMustBeRFC3339  = errors.New("from must be RFC 3339")
-	errToMustBeRFC3339    = errors.New("to must be RFC 3339")
-	errAfterMustBeInteger = errors.New("after must be a non-negative integer")
-	errInvalidOrder       = errors.New("order must be asc or desc")
-	errInvalidLimit       = errors.New("limit must be an integer between 1 and 500")
+	errFromMustBeRFC3339   = errors.New("from must be RFC 3339")
+	errToMustBeRFC3339     = errors.New("to must be RFC 3339")
+	errAfterMustBeInteger  = errors.New("after must be a non-negative integer")
+	errBeforeMustBeInteger = errors.New("before must be a positive integer")
+	errInvalidOrder        = errors.New("order must be asc or desc")
+	errInvalidLimit        = errors.New("limit must be an integer between 1 and 500")
 )
 
 // AuditLogEntry is one entry in a queryAuditLog response. Matches
@@ -95,13 +96,14 @@ func auditLogFilterFrom(r *http.Request) (store.AuditLogFilter, error) {
 		filter.To = t
 	}
 
-	if after := q.Get("after"); after != "" {
-		id, err := strconv.ParseInt(after, 10, 64)
-		if err != nil || id < 0 {
-			return store.AuditLogFilter{}, errAfterMustBeInteger
-		}
+	var err error
 
-		filter.After = id
+	if filter.After, err = parseAuditLogCursor(q.Get("after"), 0, errAfterMustBeInteger); err != nil {
+		return store.AuditLogFilter{}, err
+	}
+
+	if filter.Before, err = parseAuditLogCursor(q.Get("before"), 1, errBeforeMustBeInteger); err != nil {
+		return store.AuditLogFilter{}, err
 	}
 
 	switch q.Get("order") {
@@ -122,6 +124,21 @@ func auditLogFilterFrom(r *http.Request) (store.AuditLogFilter, error) {
 	}
 
 	return filter, nil
+}
+
+// parseAuditLogCursor parses an `after` or `before` value: empty means unset
+// (zero), otherwise an integer of at least min, or errInvalid.
+func parseAuditLogCursor(raw string, minimum int64, errInvalid error) (int64, error) {
+	if raw == "" {
+		return 0, nil
+	}
+
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || id < minimum {
+		return 0, errInvalid
+	}
+
+	return id, nil
 }
 
 // AuditActorOption is one selectable actor value in a

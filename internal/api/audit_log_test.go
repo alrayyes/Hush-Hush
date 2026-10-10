@@ -237,3 +237,48 @@ func TestQueryAuditLogWithActorNoneMatchesUnauthenticatedReads(t *testing.T) {
 	require.Len(t, entries, 1)
 	require.Equal(t, "a", entries[0].ObjectID)
 }
+
+func TestQueryAuditLogBeforePagesNewestFirstPastTheFirstPage(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	ctx := context.Background()
+	for range 5 {
+		require.NoError(t, s.RecordAuditLog(ctx, "x", "read", "", "203.0.113.1", "", ""))
+	}
+
+	ids := func(target string) []int64 {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+		var entries []hushhush.AuditLogEntry
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &entries))
+
+		out := make([]int64, 0, len(entries))
+		for _, e := range entries {
+			out = append(out, e.ID)
+		}
+
+		return out
+	}
+
+	require.Equal(t, []int64{5, 4}, ids("/audit-log?order=desc&limit=2"))
+	require.Equal(t, []int64{3, 2}, ids("/audit-log?order=desc&limit=2&before=4"))
+	require.Equal(t, []int64{1}, ids("/audit-log?order=desc&limit=2&before=2"))
+	require.Equal(t, []int64{2, 3}, ids("/audit-log?after=1&before=4"))
+}
+
+func TestQueryAuditLogMalformedBeforeIsRejected(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	for _, before := range []string{"0", "-1", "not-a-number"} {
+		req := httptest.NewRequest(http.MethodGet, "/audit-log?before="+before, nil)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusBadRequest, rec.Code, before)
+	}
+}
