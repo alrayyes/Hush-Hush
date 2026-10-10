@@ -945,6 +945,45 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.setViewportSize({ width: 1280, height: 720 });
 	await expect(page.getByRole('table')).toBeVisible();
 	await expect(eventList).toBeHidden();
+
+	// alrayyes/hush-hush#753: the log opens newest first, the Timestamp header
+	// flips it, and paging onward uses the cursor that matches the order.
+	const timestampHeader = page.getByRole('columnheader', { name: 'Timestamp' });
+	const orderButton = timestampHeader.getByRole('button', {
+		name: /Timestamp/,
+	});
+	const rowTexts = async () =>
+		(await page.locator('tbody tr').allTextContents()).map((text) =>
+			text.replace(/\s+/g, ' ').trim(),
+		);
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
+	await expect(curlSnippet).toContainText('order=desc');
+	const newestFirst = await rowTexts();
+	expect(newestFirst.length).toBeGreaterThan(2);
+
+	const nextPageRequest = page.waitForRequest(
+		(request) =>
+			request.url().includes('/audit-log?') &&
+			request.url().includes('order=desc') &&
+			/[?&]before=\d+/.test(request.url()) &&
+			!request.url().includes('after='),
+	);
+	await page.getByRole('button', { name: 'Next' }).click();
+	await nextPageRequest;
+	await page.getByRole('button', { name: 'Previous' }).click();
+	await expect.poll(rowTexts).toEqual(newestFirst);
+
+	await orderButton.click();
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'ascending');
+	await expect(curlSnippet).toContainText('order=asc');
+	await expect.poll(rowTexts).toEqual([...newestFirst].reverse());
+	await orderButton.click();
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
+	await expect.poll(rowTexts).toEqual(newestFirst);
+	const orderResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(orderResults.violations).toEqual([]);
 	const actorTrigger = page.getByRole('button', { name: 'Actor', exact: true });
 	const objectTrigger = page.getByRole('button', {
 		name: 'Object id',
