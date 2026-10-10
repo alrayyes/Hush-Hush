@@ -1831,6 +1831,43 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		).toBeInViewport();
 	}
 
+	// alrayyes/hush-hush#752: a secret with the longest slug, ten of the
+	// longest tags and a long description still fits the page at desktop
+	// widths. Long values truncate rather than push the table wider.
+	const widestSlug = `wide_${'x'.repeat(123)}`;
+	const widest = await page.request.post('/objects', {
+		headers: { 'X-CSRF-Token': csrfToken },
+		data: {
+			slug: widestSlug,
+			value: await sealForVariant(widestSlug),
+			used_by: manyConsumers.slice(0, 3),
+			description: 'a description that keeps going '.repeat(8).trim(),
+			tags: Array.from(
+				{ length: 10 },
+				(_, i) => `${String(i)}${'t'.repeat(31)}`,
+			),
+		},
+	});
+	expect(widest.ok()).toBe(true);
+	for (const width of [1280, 1440]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto('/');
+		await expect(rowFor(widestSlug)).toHaveCount(1);
+		expect(
+			await page.evaluate(
+				() =>
+					document.documentElement.scrollWidth <=
+					document.documentElement.clientWidth,
+			),
+			`no horizontal scroll at ${String(width)}px`,
+		).toBe(true);
+		const widestDelete = rowFor(widestSlug).getByRole('button', {
+			name: 'Delete',
+		});
+		await widestDelete.scrollIntoViewIfNeeded();
+		await expect(widestDelete).toBeInViewport({ ratio: 1 });
+	}
+
 	await page.setViewportSize({ width: 1280, height: 800 });
 	await page.goto('/');
 	await rowFor('many_consumers')
