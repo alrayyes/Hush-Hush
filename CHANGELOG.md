@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.1](https://github.com/alrayyes/Hush-Hush/compare/v3.7.0...v3.7.1) (2026-10-10)
+
+
+### Performance Improvements
+
+* **web-ui:** inline the stylesheet to clear two Lighthouse insights ([#764](https://github.com/alrayyes/Hush-Hush/issues/764)) ([6a05f78](https://github.com/alrayyes/Hush-Hush/commit/6a05f785c86a98f5afa7923007a27ffb9d559007)), closes [#762](https://github.com/alrayyes/Hush-Hush/issues/762)
+
 ## [3.7.0](https://github.com/alrayyes/Hush-Hush/compare/v3.6.0...v3.7.0) (2026-10-10)
 
 
