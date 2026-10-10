@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.3](https://github.com/alrayyes/Hush-Hush/compare/v3.7.2...v3.7.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* **web-ui:** fit the secrets table to the page on desktop ([#772](https://github.com/alrayyes/Hush-Hush/issues/772)) ([9c41ebc](https://github.com/alrayyes/Hush-Hush/commit/9c41ebcc4ac31cbec319ae4b7a3116ed8736246b)), closes [#752](https://github.com/alrayyes/Hush-Hush/issues/752)
+
 ## [3.7.2](https://github.com/alrayyes/Hush-Hush/compare/v3.7.1...v3.7.2) (2026-10-10)
 
 
