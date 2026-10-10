@@ -475,13 +475,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Report whether an admin account exists yet
+         * Report whether an admin account exists and whether the caller has a session
          * @description A read-only, side-effect-free check the login page uses to decide
          *     whether to offer registering the first passkey or logging in with
          *     one - no cookie set, no ceremony started. Leaks nothing new:
          *     `POST /auth/login/begin` already reveals this same boolean today
          *     via its 400 error body
          *     (openspec/changes/gate-passkey-registration-ui/design.md).
+         *     `authenticated` reports only the caller's own state, so the web UI
+         *     can tell whether to show the signed-in navigation without probing
+         *     a credentialed endpoint and being answered with a 401.
          */
         get: operations["getAuthStatus"];
         put?: never;
@@ -1112,6 +1115,13 @@ export interface components {
         AuthStatus: {
             /** @description Whether an admin account has been created yet. */
             bootstrapped: boolean;
+            /**
+             * @description Whether the request carries a valid, unexpired session cookie.
+             *     False for no cookie, an expired one or one that doesn't match a
+             *     session - still a 200, so a client can ask without being
+             *     answered with a 401.
+             */
+            authenticated: boolean;
         };
         OwnerIdentity: {
             /**
@@ -2384,7 +2394,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Whether an admin account has been created yet. */
+            /** @description Whether an admin account exists, and whether the caller has a session. */
             200: {
                 headers: {
                     [name: string]: unknown;

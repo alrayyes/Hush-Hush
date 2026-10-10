@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
+	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,6 +44,57 @@ func TestAuthStatusReportsAnAdminAccountOnceOneExists(t *testing.T) {
 	var status hushhush.AuthStatus
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
 	require.True(t, status.Bootstrapped)
+}
+
+func authStatusWith(t *testing.T, mux *http.ServeMux, cookie *http.Cookie) hushhush.AuthStatus {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/status", nil)
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var status hushhush.AuthStatus
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &status))
+
+	return status
+}
+
+func TestAuthStatusIsNotAuthenticatedWithoutASessionCookie(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	require.False(t, authStatusWith(t, mux, nil).Authenticated)
+}
+
+func TestAuthStatusIsAuthenticatedWithAValidSession(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	require.True(t, authStatusWith(t, mux, seedSession(t, s)).Authenticated)
+}
+
+func TestAuthStatusIsNotAuthenticatedWithAnExpiredOrUnknownSession(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	now := time.Now().UTC()
+	require.NoError(t, s.CreateSession(t.Context(), store.Session{
+		ID: "expired-session", CSRFToken: "csrf",
+		CreatedAt: now.Add(-2 * time.Hour).Format(time.RFC3339), ExpiresAt: now.Add(-time.Hour).Format(time.RFC3339),
+	}))
+
+	for _, value := range []string{"expired-session", "tampered-value"} {
+		cookie := &http.Cookie{Name: "session", Value: value} //nolint:gosec // a request-side Cookie header carries no Secure/HttpOnly/SameSite attributes to set
+		require.False(t, authStatusWith(t, mux, cookie).Authenticated, value)
+	}
 }
 
 func TestAuthStatusSetsNoCookies(t *testing.T) {
