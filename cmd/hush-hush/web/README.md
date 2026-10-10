@@ -107,6 +107,14 @@ checks only the `performance` and `best-practices` categories
   build" default for a judgment-call check) - it never fails the command or
   the pipeline.
 
+The build puts the style sheet inside the HTML (`inlineStyleThreshold` in
+`vite.config.ts`), so the first paint waits on no CSS request and Lighthouse's
+render-blocking and request-chain insights pass. The cost is that every
+document load carries the style sheet, since the browser checks the HTML on
+each visit while it caches the hashed CSS file. The threshold is finite on
+purpose: if the style sheet outgrows it, the build links a file again and
+those insights say so.
+
 Both commands need a native Go toolchain on `PATH` (`e2e/server.sh` runs
 `go build` directly, not through Docker) - that's also why neither is
 part of the `pre-push` git hook, which otherwise never assumes one; see
