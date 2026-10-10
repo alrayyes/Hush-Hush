@@ -36,6 +36,27 @@ for (const path of PUBLIC_PAGES) {
 		await expect(page.locator('main')).toBeVisible();
 	});
 
+	// alrayyes/hush-hush#761: an anonymous visit used to probe a session-gated
+	// endpoint, and the browser logs every 401 to the console, which Lighthouse
+	// scores as a best-practices error. Nothing on a public page asks for a 401.
+	test(`${path} logs no console error and gets no 401`, async ({ page }) => {
+		const consoleErrors: string[] = [];
+		const unauthorized: string[] = [];
+		page.on('console', (message) => {
+			if (message.type() === 'error') consoleErrors.push(message.text());
+		});
+		page.on('response', (response) => {
+			if (response.status() === 401) unauthorized.push(response.url());
+		});
+
+		await page.goto(path);
+		await expect(page.locator('main')).toBeVisible();
+		await page.waitForLoadState('networkidle');
+
+		expect(unauthorized).toEqual([]);
+		expect(consoleErrors).toEqual([]);
+	});
+
 	// rules/a11y.md: every page a journey test covers gets its own scan.
 	// /changelog, /disclaimer, and /privacy have no session-gated flow of
 	// their own to fold this into, unlike the authenticated pages the big
