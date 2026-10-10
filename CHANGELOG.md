@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.8.0](https://github.com/alrayyes/Hush-Hush/compare/v3.7.3...v3.8.0) (2026-10-10)
+
+
+### Features
+
+* **web-ui:** show the audit log newest first and let the Timestamp header flip it ([#774](https://github.com/alrayyes/Hush-Hush/issues/774)) ([39c338e](https://github.com/alrayyes/Hush-Hush/commit/39c338e6aa065129e735613840eda9cc42263024)), closes [#753](https://github.com/alrayyes/Hush-Hush/issues/753)
+* **web-ui:** warn when a new consumer token repeats an active one ([#773](https://github.com/alrayyes/Hush-Hush/issues/773)) ([00fa3c9](https://github.com/alrayyes/Hush-Hush/commit/00fa3c92abdf51ee60cd43fa3e98525a76be3245)), closes [#711](https://github.com/alrayyes/Hush-Hush/issues/711)
+
 ## [3.7.3](https://github.com/alrayyes/Hush-Hush/compare/v3.7.2...v3.7.3) (2026-10-10)
 
 
