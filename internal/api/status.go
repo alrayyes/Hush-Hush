@@ -6,6 +6,10 @@ import "net/http"
 // components.schemas.AuthStatus in api/openapi.yaml.
 type AuthStatus struct {
 	Bootstrapped bool `json:"bootstrapped"`
+	// Authenticated is whether the request carries a valid session. It
+	// reports the caller's own state only, and an expired or unknown
+	// cookie is false, not a 401.
+	Authenticated bool `json:"authenticated"`
 }
 
 // handleAuthStatus reports whether an admin account exists yet, with no
@@ -22,7 +26,10 @@ func handleAuthStatus(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, AuthStatus{Bootstrapped: len(user.credentials) > 0})
+		writeJSON(w, http.StatusOK, AuthStatus{
+			Bootstrapped:  len(user.credentials) > 0,
+			Authenticated: hasValidSession(r, s),
+		})
 	}
 }
 

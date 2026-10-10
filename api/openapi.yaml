@@ -999,7 +999,7 @@ paths:
   /auth/status:
     get:
       operationId: getAuthStatus
-      summary: Report whether an admin account exists yet
+      summary: Report whether an admin account exists and whether the caller has a session
       description: |
         A read-only, side-effect-free check the login page uses to decide
         whether to offer registering the first passkey or logging in with
@@ -1007,11 +1007,14 @@ paths:
         `POST /auth/login/begin` already reveals this same boolean today
         via its 400 error body
         (openspec/changes/gate-passkey-registration-ui/design.md).
+        `authenticated` reports only the caller's own state, so the web UI
+        can tell whether to show the signed-in navigation without probing
+        a credentialed endpoint and being answered with a 401.
       tags: [auth]
       security: []
       responses:
         "200":
-          description: Whether an admin account has been created yet.
+          description: Whether an admin account exists, and whether the caller has a session.
           content:
             application/json:
               schema:
@@ -2201,11 +2204,18 @@ components:
 
     AuthStatus:
       type: object
-      required: [bootstrapped]
+      required: [bootstrapped, authenticated]
       properties:
         bootstrapped:
           type: boolean
           description: Whether an admin account has been created yet.
+        authenticated:
+          type: boolean
+          description: |
+            Whether the request carries a valid, unexpired session cookie.
+            False for no cookie, an expired one or one that doesn't match a
+            session - still a 200, so a client can ask without being
+            answered with a 401.
 
     OwnerIdentity:
       type: object
