@@ -27,7 +27,7 @@ func handleGetObject(s objectStore) http.HandlerFunc {
 		// A consumer token has a consumer, so a name with several variants
 		// resolves to the one that names it.
 		if auth, ok := r.Context().Value(consumerTokenContextKey{}).(consumerTokenAuth); ok {
-			opts = append([]store.ObjectOption{store.ForConsumer(auth.consumer)}, opts...)
+			opts = append(opts, store.ForConsumer(auth.consumer))
 		}
 
 		obj, err := s.GetObject(r.Context(), slug, opts...)

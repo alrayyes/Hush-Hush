@@ -11,32 +11,44 @@ import (
 // One name can hold a different value per consumer (alrayyes/hush-hush#668,
 // ADR 33). Objects that share a name are variants, each under its own UUID id.
 // A consumer token reads the variant that names its consumer; a write token or
-// a session says which one with ?id=.
+// a session says which one with ?id= or ?consumer=.
 
 var (
 	errAmbiguousName   = errors.New("name has several variants; pass id to say which")
 	errVariantConflict = errors.New("a consumer can be in only one variant of a name")
 	errInvalidObjectID = errors.New("id must be a UUID")
+	errIDAndConsumer   = errors.New("pass id or consumer to pick a variant, not both")
 )
 
 var objectIDPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
-// selectorFrom reads the optional id query parameter into the store option
-// that picks a variant. No id is no option: a name with one variant is
-// addressed as it always was. It has already answered a malformed id.
+// selectorFrom reads the optional id and consumer query parameters into the
+// store option that picks a variant. Neither is no option: a name with one
+// variant is addressed as it always was. Naming both is a 400, since they say
+// the same thing two ways and could disagree. It has already answered a
+// malformed id. The consumer's length is already checked for every route.
 func selectorFrom(w http.ResponseWriter, r *http.Request) ([]store.ObjectOption, bool) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		return nil, true
-	}
+	query := r.URL.Query()
+	id, consumer := query.Get("id"), query.Get("consumer")
 
-	if !objectIDPattern.MatchString(id) {
-		writeError(w, r, http.StatusBadRequest, errInvalidObjectID.Error())
+	switch {
+	case id != "" && consumer != "":
+		writeError(w, r, http.StatusBadRequest, errIDAndConsumer.Error())
 
 		return nil, false
+	case id != "":
+		if !objectIDPattern.MatchString(id) {
+			writeError(w, r, http.StatusBadRequest, errInvalidObjectID.Error())
+
+			return nil, false
+		}
+
+		return []store.ObjectOption{store.WithID(id)}, true
+	case consumer != "":
+		return []store.ObjectOption{store.ForConsumer(consumer)}, true
 	}
 
-	return []store.ObjectOption{store.WithID(id)}, true
+	return nil, true
 }
 
 // objectLookupFailed answers for the errors a lookup or write by name can
