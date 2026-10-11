@@ -71,6 +71,11 @@ bunx playwright install --with-deps chromium  # once, or after a Playwright vers
 bun run test:e2e
 ```
 
+`e2e/error-pages.spec.ts` checks that a path no route matches answers 404 and
+shows the app's own error page. `src/routes/+error.svelte` draws that page and
+the 500 one; `src/error.html` is the bare fallback for an error outside the
+layout.
+
 `e2e/journey.spec.ts` and `e2e/viewport.spec.ts` drive real Playwright
 journeys through the login page and every authenticated page area
 (secrets overview, consumers, audit log, settings) against
