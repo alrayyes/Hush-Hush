@@ -1090,7 +1090,7 @@ export interface components {
              *     never self-reported.
              * @enum {string}
              */
-            actor_type?: "token" | "session";
+            actor_type?: "token" | "session" | "consumer_token";
             /**
              * @description The specific token id or admin account this call was
              *     authenticated as - absent for an unauthenticated read.

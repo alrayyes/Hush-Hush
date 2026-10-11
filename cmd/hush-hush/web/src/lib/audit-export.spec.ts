@@ -24,6 +24,14 @@ describe('auditActorLabel', () => {
 		).toBe('token:a1b2c3d4');
 	});
 
+	it('labels a consumer token actor by its id, not as none', () => {
+		expect(
+			auditActorLabel(
+				entry({ actor_type: 'consumer_token', actor_id: 'c9d8e7f6' }),
+			),
+		).toBe('consumer-token:c9d8e7f6');
+	});
+
 	// web-ui/spec.md's "an entry with no actor... renders as 'none'"
 	// requirement - unlike attribution.ts's actorLabel, this never falls
 	// back to the caller, which has its own column in this table.
