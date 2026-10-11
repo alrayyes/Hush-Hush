@@ -55,7 +55,9 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   ([ADR 33](docs/adr/0033-one-name-many-variants.md)). `PATCH` edits a
   secret's description, tags and slug without re-sealing it, and a rename moves
   every variant of the name
-  ([ADR 35](docs/adr/0035-patch-edits-an-objects-metadata.md)).
+  ([ADR 35](docs/adr/0035-patch-edits-an-objects-metadata.md)). A variant is
+  picked with `?id=` or `?consumer=`
+  ([ADR 37](docs/adr/0037-a-variant-can-be-picked-by-its-consumer.md)).
 - **Web UI**: SvelteKit, built static and embedded into the Go binary with
   `go:embed`; passkey (WebAuthn) authentication. A path that isn't a page or a
   build file answers 404 with the app

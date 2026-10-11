@@ -282,6 +282,7 @@ paths:
         - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/objectId"
+        - $ref: "#/components/parameters/objectConsumer"
       responses:
         "200":
           description: The sealed object.
@@ -325,6 +326,7 @@ paths:
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
         - $ref: "#/components/parameters/objectId"
+        - $ref: "#/components/parameters/objectConsumer"
       requestBody:
         required: true
         content:
@@ -384,6 +386,7 @@ paths:
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
         - $ref: "#/components/parameters/objectId"
+        - $ref: "#/components/parameters/objectConsumer"
       requestBody:
         required: true
         content:
@@ -434,6 +437,7 @@ paths:
         - $ref: "#/components/parameters/caller"
         - $ref: "#/components/parameters/csrfTokenOptional"
         - $ref: "#/components/parameters/objectId"
+        - $ref: "#/components/parameters/objectConsumer"
       responses:
         "204":
           description: The object was removed.
@@ -460,6 +464,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/slug"
         - $ref: "#/components/parameters/objectId"
+        - $ref: "#/components/parameters/objectConsumer"
       responses:
         "200":
           description: The object's recorded consumers.
@@ -1717,6 +1722,16 @@ components:
         type: string
         format: uuid
         maxLength: 36
+
+    objectConsumer:
+      name: consumer
+      in: query
+      required: false
+      description: The name of a consumer, to pick the one variant whose consumers include it, when the name has several. Use it instead of `id` when you know who reads the value and not its UUID. Sending both is a 400. A consumer that is in none of the name's variants is a 404. A consumer token's own consumer always wins over this.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
 
     pageLimit:
       name: limit

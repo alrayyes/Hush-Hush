@@ -161,6 +161,69 @@ func TestAnIDSelectsOneVariant(t *testing.T) {
 	require.Equal(t, sealedFixture, rec.Body.Bytes())
 }
 
+// alrayyes/hush-hush#806: a caller who knows who reads the value, and not its
+// UUID, names the consumer.
+
+func TestAConsumerSelectsTheVariantThatNamesIt(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	rec := f.do(t, http.MethodGet, "/objects/release_token?consumer=d", f.write, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Equal(t, sealedFixtureNew, rec.Body.Bytes())
+
+	rec = f.do(t, http.MethodGet, "/objects/release_token/used-by?consumer=b", f.write, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.JSONEq(t, `{"used_by":["a","b","c"]}`, rec.Body.String())
+}
+
+func TestAConsumerSelectsTheVariantToUpdateAndDelete(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	usedBy := []string{"a", "b", "c", "e"}
+	put, err := json.Marshal(hushhush.UpdateObjectRequest{Value: sealedFixtureNew, UsedBy: &usedBy})
+	require.NoError(t, err)
+
+	rec := f.do(t, http.MethodPut, "/objects/release_token?consumer=a", f.write, put)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var meta hushhush.ObjectMetadata
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &meta))
+	require.Equal(t, f.idABC, meta.ID)
+
+	require.Equal(t, http.StatusNoContent, f.do(t, http.MethodDelete, "/objects/release_token?consumer=d", f.write, nil).Code)
+}
+
+func TestAnIDAndAConsumerTogetherAreABadRequest(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	rec := f.do(t, http.MethodGet, "/objects/release_token?id="+f.idD+"&consumer=d", f.write, nil)
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+}
+
+func TestAConsumerInNoVariantIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	require.Equal(t, http.StatusNotFound, f.do(t, http.MethodGet, "/objects/release_token?consumer=nobody", f.write, nil).Code)
+}
+
+func TestAConsumerTokenCannotUseTheQueryToReadAnotherVariant(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	rec := f.do(t, http.MethodGet, "/objects/release_token?consumer=d", f.consumerToken(t, "a"), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Equal(t, sealedFixture, rec.Body.Bytes(), "its own consumer wins over the query")
+}
+
 func TestAnIDFromAnotherNameIsNotFound(t *testing.T) {
 	t.Parallel()
 
@@ -278,7 +341,19 @@ func TestSpecDocumentsTheIDAndTheSelector(t *testing.T) {
 			}
 
 			require.True(t, found, "%s %s takes an id", method, path)
+			require.True(t, takesQuery(op, "consumer"), "%s %s takes a consumer", method, path)
 			require.NotNil(t, op.Responses.Value("409"), "%s %s can be a 409 when the name has several variants", method, path)
 		}
 	}
+}
+
+// takesQuery reports whether op declares a query parameter called name.
+func takesQuery(op *openapi3.Operation, name string) bool {
+	for _, p := range op.Parameters {
+		if p.Value.Name == name && p.Value.In == "query" {
+			return true
+		}
+	}
+
+	return false
 }
