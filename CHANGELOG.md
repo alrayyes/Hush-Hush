@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.14.0](https://github.com/alrayyes/Hush-Hush/compare/v3.13.0...v3.14.0) (2026-10-11)
+
+
+### Features
+
+* **web:** trim a secret's value before sealing it ([#812](https://github.com/alrayyes/Hush-Hush/issues/812)) ([c6e47fa](https://github.com/alrayyes/Hush-Hush/commit/c6e47fab44785c899de2b49c98d2e06081135080)), closes [#804](https://github.com/alrayyes/Hush-Hush/issues/804)
+
 ## [3.13.0](https://github.com/alrayyes/Hush-Hush/compare/v3.12.1...v3.13.0) (2026-10-11)
 
 
