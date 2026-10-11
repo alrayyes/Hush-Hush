@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Something went wrong - hush-hush</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				font-family: system-ui, sans-serif;
+			}
+			body {
+				margin: 0;
+				display: grid;
+				min-height: 100vh;
+				place-items: center;
+				padding: 1rem;
+			}
+			main {
+				max-width: 32rem;
+			}
+			.status {
+				display: inline-block;
+				border: 1px solid currentColor;
+				border-radius: 0.25rem;
+				padding: 0 0.5rem;
+				font-family: ui-monospace, monospace;
+				font-weight: 700;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<p class="status">%sveltekit.status%</p>
+			<h1>Something went wrong</h1>
+			<p>
+				That did not work, and it was not something you did. Try again in a
+				moment.
+			</p>
+			<p><a href="/">Back to hush-hush</a></p>
+		</main>
+	</body>
+</html>
