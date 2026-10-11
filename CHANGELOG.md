@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.13.0](https://github.com/alrayyes/Hush-Hush/compare/v3.12.1...v3.13.0) (2026-10-11)
+
+
+### Features
+
+* **objects:** pick a variant by consumer with ?consumer= ([#808](https://github.com/alrayyes/Hush-Hush/issues/808)) ([120197e](https://github.com/alrayyes/Hush-Hush/commit/120197ee713a19dbb4060da81b11cfbc43ef4777))
+
 ## [3.12.1](https://github.com/alrayyes/Hush-Hush/compare/v3.12.0...v3.12.1) (2026-10-11)
 
 
