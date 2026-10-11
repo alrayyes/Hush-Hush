@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.1](https://github.com/alrayyes/Hush-Hush/compare/v3.11.0...v3.11.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **audit:** give each consumer token its own actor option ([#795](https://github.com/alrayyes/Hush-Hush/issues/795)) ([9435db2](https://github.com/alrayyes/Hush-Hush/commit/9435db204548b9f6a959ef548e4b3ca59fc59bb5)), closes [#792](https://github.com/alrayyes/Hush-Hush/issues/792)
+
 ## [3.11.0](https://github.com/alrayyes/Hush-Hush/compare/v3.10.0...v3.11.0) (2026-10-11)
 
 
