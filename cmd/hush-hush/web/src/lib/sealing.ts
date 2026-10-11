@@ -7,7 +7,7 @@
 // it's maintained by age's own author, needs no separate wasm asset for
 // this SPA to serve, and its multi-recipient `Encrypter.addRecipient`
 // matches ADR 0001's per-object, multi-recipient sealing model exactly.
-import { Encrypter } from 'age-encryption';
+import { Decrypter, Encrypter } from 'age-encryption';
 import type { ConsumerEntry } from './api';
 import { bytesToBase64 } from './encoding';
 
@@ -64,4 +64,29 @@ export async function sealValue(
 	const ciphertext = await encrypter.encrypt(plaintext);
 
 	return bytesToBase64(ciphertext);
+}
+
+// resealValue opens an already-sealed value with identity and seals the
+// same bytes to recipients, so the recipient set can change without anyone
+// typing the value again. The plaintext lives only in this function's
+// memory: it is never returned, shown or logged. Rejects when identity is
+// not one of the value's recipients (no readable copy was kept), which the
+// caller treats as "ask for the value".
+export async function resealValue(
+	sealedBase64: string,
+	identity: string,
+	recipients: string[],
+): Promise<string> {
+	const decrypter = new Decrypter();
+	decrypter.addIdentity(identity);
+	const plaintext = await decrypter.decrypt(
+		Uint8Array.from(atob(sealedBase64), (c) => c.charCodeAt(0)),
+	);
+
+	const encrypter = new Encrypter();
+	for (const recipient of recipients) {
+		encrypter.addRecipient(recipient);
+	}
+
+	return bytesToBase64(await encrypter.encrypt(plaintext));
 }

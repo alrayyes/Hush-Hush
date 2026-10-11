@@ -1,7 +1,7 @@
 import * as age from 'age-encryption';
 import { describe, expect, it } from 'vitest';
 import type { ConsumerEntry } from './api';
-import { resolveRecipients, sealValue } from './sealing';
+import { resealValue, resolveRecipients, sealValue } from './sealing';
 
 describe('resolveRecipients', () => {
 	const entries: ConsumerEntry[] = [
@@ -92,5 +92,67 @@ describe('sealValue', () => {
 		const decrypter = new age.Decrypter();
 		decrypter.addIdentity(stranger);
 		await expect(decrypter.decrypt(ciphertext, 'text')).rejects.toThrow();
+	});
+});
+
+describe('resealValue', () => {
+	async function keypair() {
+		const identity = await age.generateIdentity();
+
+		return { identity, recipient: await age.identityToRecipient(identity) };
+	}
+
+	async function open(sealedBase64: string, identity: string) {
+		const decrypter = new age.Decrypter();
+		decrypter.addIdentity(identity);
+
+		return decrypter.decrypt(
+			Uint8Array.from(atob(sealedBase64), (c) => c.charCodeAt(0)),
+			'text',
+		);
+	}
+
+	it('re-seals to the new recipients, and the removed one can no longer read it', async () => {
+		const owner = await keypair();
+		const kept = await keypair();
+		const removed = await keypair();
+		const added = await keypair();
+		const sealed = await sealValue('s3cret', [
+			owner.recipient,
+			kept.recipient,
+			removed.recipient,
+		]);
+
+		const resealed = await resealValue(sealed, owner.identity, [
+			owner.recipient,
+			kept.recipient,
+			added.recipient,
+		]);
+
+		for (const who of [owner, kept, added]) {
+			expect(await open(resealed, who.identity)).toBe('s3cret');
+		}
+		await expect(open(resealed, removed.identity)).rejects.toThrow();
+	});
+
+	it('keeps the value byte for byte, including whitespace', async () => {
+		const owner = await keypair();
+		const sealed = await sealValue('  two  spaces\n', [owner.recipient]);
+
+		const resealed = await resealValue(sealed, owner.identity, [
+			owner.recipient,
+		]);
+
+		expect(await open(resealed, owner.identity)).toBe('  two  spaces\n');
+	});
+
+	it('fails when the identity is not a recipient, which is a secret with no readable copy', async () => {
+		const owner = await keypair();
+		const other = await keypair();
+		const sealed = await sealValue('s3cret', [other.recipient]);
+
+		await expect(
+			resealValue(sealed, owner.identity, [owner.recipient]),
+		).rejects.toThrow();
 	});
 });
