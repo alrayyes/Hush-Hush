@@ -334,6 +334,8 @@ func queryDistinctActors(ctx context.Context, db *sql.DB) ([]AuditActorOption, e
 			actors = append(actors, AuditActorOption{Value: actorID.String, Label: "admin"})
 		case "token":
 			actors = append(actors, AuditActorOption{Value: actorID.String, Label: "token:" + actorID.String})
+		case "consumer_token":
+			actors = append(actors, AuditActorOption{Value: actorID.String, Label: "consumer-token:" + actorID.String})
 		default:
 			actors = append(actors, AuditActorOption{Value: actorFilterNone, Label: actorFilterNone})
 		}
