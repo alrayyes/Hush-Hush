@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"filippo.io/age"
 	hushhush "github.com/alrayyes/hush-hush/internal/api"
 	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/stretchr/testify/require"
@@ -498,13 +500,13 @@ func TestRegisterConsumerPublicKeyReturnsItAlongsideNameAndCount(t *testing.T) {
 	token := issueToken(t, s)
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1exampleplaceholderpublickey"}`, token))
+	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c0"}`, token))
 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	var body hushhush.ConsumerEntry
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1exampleplaceholderpublickey"}, body)
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c0"}, body)
 
 	req := httptest.NewRequest(http.MethodGet, "/consumers?q=homelab/vps-docker", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -516,7 +518,7 @@ func TestRegisterConsumerPublicKeyReturnsItAlongsideNameAndCount(t *testing.T) {
 	var page hushhush.ConsumersPage
 	require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &page))
 	require.Equal(t, []hushhush.ConsumerEntry{
-		{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1exampleplaceholderpublickey"},
+		{Name: "homelab/vps-docker", SecretCount: 1, PublicKey: "age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c0"},
 	}, page.Consumers)
 }
 
@@ -532,13 +534,13 @@ func TestRegisterConsumerPublicKeyForANameNeverSeenBefore(t *testing.T) {
 	token := issueToken(t, s)
 
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/pre-registered", `{"public_key":"age1preregistered"}`, token))
+	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/pre-registered", `{"public_key":"age1rl48fde34aq8m4hsa73wzraa2enevmzqexxd6rfn25vewxvuspas2cs0l4"}`, token))
 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	var body hushhush.ConsumerEntry
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/pre-registered", SecretCount: 0, PublicKey: "age1preregistered"}, body)
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/pre-registered", SecretCount: 0, PublicKey: "age1rl48fde34aq8m4hsa73wzraa2enevmzqexxd6rfn25vewxvuspas2cs0l4"}, body)
 }
 
 // TestConsumerWithNoRegisteredPublicKeyOmitsTheField covers
@@ -569,13 +571,13 @@ func TestUpdateConsumerRenameAndPublicKeyTogether(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker",
-		`{"name":"homelab/vps-docker-2","public_key":"age1renamedandkeyed"}`, token))
+		`{"name":"homelab/vps-docker-2","public_key":"age12vgujjyk2cc59whutam7d7xxgd4avmq09jrtyhw6g46dg5txdc6qmenvhy"}`, token))
 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	var body hushhush.ConsumerEntry
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker-2", SecretCount: 1, PublicKey: "age1renamedandkeyed"}, body)
+	require.Equal(t, hushhush.ConsumerEntry{Name: "homelab/vps-docker-2", SecretCount: 1, PublicKey: "age12vgujjyk2cc59whutam7d7xxgd4avmq09jrtyhw6g46dg5txdc6qmenvhy"}, body)
 }
 
 func TestSessionRegistersConsumerPublicKeyWithItsCSRFToken(t *testing.T) {
@@ -587,7 +589,7 @@ func TestSessionRegistersConsumerPublicKeyWithItsCSRFToken(t *testing.T) {
 	sess, err := s.GetSession(t.Context(), sessionCookie.Value)
 	require.NoError(t, err)
 
-	req := updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1session"}`, "")
+	req := updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1ak6pxq5vahftyf04ctc4fqfesaksvc0lua6yf3zdlwwp9hs7zursuhpl9w"}`, "")
 	req.AddCookie(sessionCookie)
 	req.Header.Set("X-CSRF-Token", sess.CSRFToken)
 	rec := httptest.NewRecorder()
@@ -603,10 +605,63 @@ func TestSessionRegistersConsumerPublicKeyWithoutCSRFTokenIsRejected(t *testing.
 	seedConsumersFixture(t, s)
 	sessionCookie := seedSession(t, s)
 
-	req := updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1session"}`, "")
+	req := updateConsumerRequest(t, "homelab/vps-docker", `{"public_key":"age1ak6pxq5vahftyf04ctc4fqfesaksvc0lua6yf3zdlwwp9hs7zursuhpl9w"}`, "")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// A public key is stored as the consumer's sealing recipient, so one that
+// isn't a valid age recipient is refused rather than found out when the
+// first secret is sealed to it.
+func TestUpdateConsumerRejectsAPublicKeyThatIsNotAnAgeRecipient(t *testing.T) {
+	t.Parallel()
+
+	secretKey, err := age.GenerateX25519Identity()
+	require.NoError(t, err)
+
+	for name, key := range map[string]string{
+		"random text":     "not-a-key",
+		"truncated":       "age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jf",
+		"bad checksum":    "age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c1",
+		"a private key":   secretKey.String(),
+		"whitespace only": "   ",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mux, s := newTestMux(t)
+			token := issueToken(t, s)
+			require.NoError(t, s.CreateObject(context.Background(), "keyed_secret", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
+
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker", fmt.Sprintf(`{"public_key":%q}`, key), token))
+
+			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+			require.NotContains(t, rec.Body.String(), key)
+
+			page, err := s.ListConsumersPage(t.Context(), store.ConsumerFilter{Page: 1, PageSize: 10})
+			require.NoError(t, err)
+			require.Empty(t, page.Consumers[0].PublicKey)
+		})
+	}
+}
+
+func TestUpdateConsumerRejectingTheKeyAlsoSkipsTheRename(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	require.NoError(t, s.CreateObject(context.Background(), "keyed_secret", []byte("v"), []string{"homelab/vps-docker"}, "", ""))
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, updateConsumerRequest(t, "homelab/vps-docker", `{"name":"homelab/renamed","public_key":"not-a-key"}`, token))
+
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+
+	page, err := s.ListConsumersPage(t.Context(), store.ConsumerFilter{Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, "homelab/vps-docker", page.Consumers[0].Name)
 }

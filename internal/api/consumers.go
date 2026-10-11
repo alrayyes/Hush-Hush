@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"filippo.io/age"
 	"github.com/alrayyes/hush-hush/internal/store"
 )
 
@@ -21,6 +22,9 @@ const (
 var (
 	errInvalidConsumerPage     = errors.New("page must be a positive integer")
 	errInvalidConsumerPageSize = errors.New("page_size must be an integer between 1 and 100")
+	// errPublicKeyNotAgeRecipient never carries the rejected value: it may
+	// be a private key somebody pasted into the wrong field.
+	errPublicKeyNotAgeRecipient = errors.New("public_key must be an age public key (age1...)")
 )
 
 // ConsumerEntry is one entry in a paginated listConsumers response.
@@ -203,8 +207,9 @@ func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		if req.Name == "" && req.PublicKey == "" {
-			writeError(w, r, http.StatusBadRequest, "name or public_key is required")
+		// Checked before anything is applied, so a bad key also skips the rename.
+		if msg := validateUpdateConsumer(req); msg != "" {
+			writeError(w, r, http.StatusBadRequest, msg)
 
 			return
 		}
@@ -213,20 +218,8 @@ func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 		var entry store.ConsumerEntry
 
 		if req.Name != "" {
-			renamed, err := s.RenameConsumer(r.Context(), name, req.Name)
-			switch {
-			case err == nil:
-			case errors.Is(err, store.ErrUnknownConsumer):
-				writeError(w, r, http.StatusNotFound, "unknown consumer")
-
-				return
-			case errors.Is(err, store.ErrVariantConflict):
-				writeError(w, r, http.StatusConflict, errVariantConflict.Error())
-
-				return
-			default:
-				writeInternalError(w, r, err)
-
+			renamed, ok := renameConsumerOrWriteError(w, r, s, name, req.Name)
+			if !ok {
 				return
 			}
 
@@ -247,6 +240,40 @@ func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 
 		writeJSON(w, http.StatusOK, ConsumerEntry{Name: entry.Name, SecretCount: entry.SecretCount, PublicKey: entry.PublicKey})
 	}
+}
+
+// validateUpdateConsumer returns the 400 message for a request that can't be
+// applied, or "" for one that can.
+func validateUpdateConsumer(req UpdateConsumerRequest) string {
+	if req.Name == "" && req.PublicKey == "" {
+		return "name or public_key is required"
+	}
+
+	if req.PublicKey != "" {
+		if _, err := age.ParseX25519Recipient(req.PublicKey); err != nil {
+			return errPublicKeyNotAgeRecipient.Error()
+		}
+	}
+
+	return ""
+}
+
+// renameConsumerOrWriteError renames a consumer, answering the request itself
+// (and returning false) when the rename can't happen.
+func renameConsumerOrWriteError(w http.ResponseWriter, r *http.Request, s objectStore, oldName, newName string) (store.ConsumerEntry, bool) {
+	renamed, err := s.RenameConsumer(r.Context(), oldName, newName)
+	switch {
+	case err == nil:
+		return renamed, true
+	case errors.Is(err, store.ErrUnknownConsumer):
+		writeError(w, r, http.StatusNotFound, "unknown consumer")
+	case errors.Is(err, store.ErrVariantConflict):
+		writeError(w, r, http.StatusConflict, errVariantConflict.Error())
+	default:
+		writeInternalError(w, r, err)
+	}
+
+	return store.ConsumerEntry{}, false
 }
 
 // handleDeleteConsumer strips name from the used_by list of every stored
