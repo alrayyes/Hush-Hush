@@ -34,7 +34,7 @@ import {
 	tagCounts,
 	validateTags,
 } from '#lib/tags.js';
-import { valueFieldAttributes } from '#lib/value-field.js';
+import { normalizeValue, valueFieldAttributes } from '#lib/value-field.js';
 import { invalidate } from '$app/navigation';
 import type { PageData } from './$types';
 
@@ -148,8 +148,14 @@ async function submitCreate(event: SubmitEvent) {
 		return;
 	}
 
+	const plaintext = normalizeValue(createValue);
+	if (plaintext === '') {
+		createError = 'Enter a value.';
+		return;
+	}
+
 	try {
-		const value = await sealValue(createValue, createEffectiveRecipients);
+		const value = await sealValue(plaintext, createEffectiveRecipients);
 		await createObject({
 			slug: createSlug,
 			value,
@@ -232,8 +238,14 @@ async function submitEdit(event: SubmitEvent) {
 		return;
 	}
 
+	const plaintext = normalizeValue(editValue);
+	if (plaintext === '') {
+		editError = 'Enter a value.';
+		return;
+	}
+
 	try {
-		const value = await sealValue(editValue, editEffectiveRecipients);
+		const value = await sealValue(plaintext, editEffectiveRecipients);
 		await updateObject(
 			editSlug,
 			value,
