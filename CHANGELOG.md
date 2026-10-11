@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.0](https://github.com/alrayyes/Hush-Hush/compare/v3.17.0...v3.18.0) (2026-10-11)
+
+
+### Features
+
+* **web:** filter secrets by several consumers, creator and dates ([#822](https://github.com/alrayyes/Hush-Hush/issues/822)) ([e230a4d](https://github.com/alrayyes/Hush-Hush/commit/e230a4d33d7f1ee7f2fd8898038e98c295ced0cb))
+
 ## [3.17.0](https://github.com/alrayyes/Hush-Hush/compare/v3.16.0...v3.17.0) (2026-10-11)
 
 
