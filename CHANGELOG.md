@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.12.1](https://github.com/alrayyes/Hush-Hush/compare/v3.12.0...v3.12.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **web:** label a consumer token's audit entries as that token ([#807](https://github.com/alrayyes/Hush-Hush/issues/807)) ([0309ed6](https://github.com/alrayyes/Hush-Hush/commit/0309ed602f1683b20420bbf1a97b7fb08326977e)), closes [#794](https://github.com/alrayyes/Hush-Hush/issues/794)
+
 ## [3.12.0](https://github.com/alrayyes/Hush-Hush/compare/v3.11.1...v3.12.0) (2026-10-11)
 
 
