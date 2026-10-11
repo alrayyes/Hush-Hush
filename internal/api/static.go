@@ -79,8 +79,25 @@ func handleStatic(build fs.FS) http.Handler {
 			return
 		}
 
-		// The SPA fallback is HTML whatever path asked for it.
+		// A missing build file is a 404, not the app: a script or stylesheet
+		// that isn't there must fail, not parse as HTML.
+		if strings.HasPrefix(path, "_app/") {
+			http.NotFound(w, r)
+
+			return
+		}
+
+		// The SPA fallback is HTML whatever path asked for it. A client route
+		// is a 200. Anything else is a 404 carrying the same app, which
+		// renders its own not-found page (alrayyes/hush-hush#789).
 		w.Header().Set("Cache-Control", cacheControlRevalidate)
+
+		if !isPageRoute(r.URL.Path) {
+			serveIndexWithStatus(w, build, http.StatusNotFound)
+
+			return
+		}
+
 		http.ServeFileFS(w, r, build, "index.html")
 	})
 
@@ -88,6 +105,67 @@ func handleStatic(build fs.FS) http.Handler {
 	// (alrayyes/hush-hush#721). gzhttp skips anything already encoded or too
 	// small to be worth it, and adds Vary: Accept-Encoding.
 	return gzhttp.GzipHandler(handler)
+}
+
+// pageRoutes are the web UI's client routes: one per +page.svelte under
+// cmd/hush-hush/web/src/routes, {name} standing for a [name] segment.
+// TestPageRoutesMatchTheWebUIRoutes keeps it in step with that tree, so a new
+// page can't be left off and answer 404 (docs/adr/0036).
+var pageRoutes = []string{
+	"/",
+	"/audit-log",
+	"/changelog",
+	"/consumers",
+	"/disclaimer",
+	"/license",
+	"/login",
+	"/privacy",
+	"/secrets/{slug}",
+	"/settings",
+}
+
+// isPageRoute reports whether path is a client route. A trailing slash is
+// ignored, as SvelteKit does by default.
+func isPageRoute(path string) bool {
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+
+	for _, route := range pageRoutes {
+		pattern := strings.Split(strings.Trim(route, "/"), "/")
+		if len(pattern) != len(segments) {
+			continue
+		}
+
+		matched := true
+
+		for i, part := range pattern {
+			if segments[i] == "" || (!strings.HasPrefix(part, "{") && part != segments[i]) {
+				matched = false
+
+				break
+			}
+		}
+
+		if matched {
+			return true
+		}
+	}
+
+	return false
+}
+
+// serveIndexWithStatus writes the build's index.html under a status
+// http.ServeFileFS wouldn't use.
+func serveIndexWithStatus(w http.ResponseWriter, build fs.FS, status int) {
+	body, err := fs.ReadFile(build, "index.html")
+	if err != nil {
+		http.NotFound(w, nil)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
 }
 
 const (

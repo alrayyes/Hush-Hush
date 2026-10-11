@@ -19,7 +19,7 @@ func TestUnmatchedPathServesIndexHTML(t *testing.T) {
 
 	mux, _ := newTestMux(t)
 
-	for _, path := range []string{"/", "/settings", "/login", "/audit-log-page"} {
+	for _, path := range []string{"/", "/settings", "/login", "/secrets/any_slug", "/secrets/any_slug/"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, req)
@@ -27,6 +27,41 @@ func TestUnmatchedPathServesIndexHTML(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, path)
 		require.Equal(t, testIndexHTML, rec.Body.String(), path)
 	}
+}
+
+// alrayyes/hush-hush#789: a path that is neither a build file nor a client
+// route answers 404, so a dead link isn't a soft 404. The body is still the
+// app, which renders its own not-found page.
+
+func TestUnknownPathAnswers404WithTheApp(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	for _, path := range []string{"/does-not-exist", "/settings/nope", "/secrets", "/secrets/a/b", "/index"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("Sec-Fetch-Dest", "document")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusNotFound, rec.Code, path)
+		require.Equal(t, testIndexHTML, rec.Body.String(), path)
+		require.Equal(t, "no-cache", rec.Header().Get("Cache-Control"), path)
+		require.NotEmpty(t, rec.Header().Get("Content-Security-Policy"), path)
+	}
+}
+
+func TestMissingHashedAssetIs404NotTheApp(t *testing.T) {
+	t.Parallel()
+
+	mux, _ := newTestMux(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/_app/immutable/chunks/gone.js", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	require.NotEqual(t, testIndexHTML, rec.Body.String())
 }
 
 func TestRealStaticAssetIsServedAsItself(t *testing.T) {
