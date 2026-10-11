@@ -2215,7 +2215,7 @@ components:
           maxLength: 45
         actor_type:
           type: string
-          enum: [token, session]
+          enum: [token, session, consumer_token]
           description: |
             The kind of verified credential that authenticated this call -
             absent for an unauthenticated read. Unlike caller, this is
