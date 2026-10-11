@@ -9,3 +9,11 @@ export const valueFieldAttributes = {
 	autocapitalize: 'off',
 	autocorrect: 'off',
 } as const;
+
+// normalizeValue is what gets sealed: the typed text without the spaces,
+// tabs and newlines a paste tends to carry at either end. Whitespace inside
+// the value is part of it and stays. The server only ever sees ciphertext,
+// so this can only happen in the browser, before sealing.
+export function normalizeValue(value: string): string {
+	return value.trim();
+}

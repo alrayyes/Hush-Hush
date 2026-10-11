@@ -383,7 +383,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const plaintextValue = 'prod deploy webhook secret, sealed client-side';
 	await expectValueFieldIsPrivate(page.locator('#create-value'));
 	await page.locator('#create-id').fill('mattermost_deploy_webhook');
-	await page.locator('#create-value').fill(plaintextValue);
+	// #804: stray whitespace at either end is trimmed before sealing, the
+	// whitespace inside the value stays.
+	await page.locator('#create-value').fill(`  \n${plaintextValue}\t \n`);
 	await page
 		.locator('#create-description')
 		.fill('prod deploy webhook for homelab/vps-docker');
@@ -409,7 +411,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		createDialog.getByText('"bad tag" is not a valid tag.'),
 	).toBeVisible();
 	await expect(createDialog).toBeVisible();
+	// A value that is only whitespace counts as empty.
+	await page.locator('#create-value').fill(' \n\t ');
 	await page.locator('#create-tags').fill('Prod, homelab, prod');
+	await page.getByRole('button', { name: 'Create' }).click();
+	await expect(createDialog.getByRole('alert')).toHaveText('Enter a value.');
+	await page.locator('#create-value').fill(`  \n${plaintextValue}\t \n`);
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
 
