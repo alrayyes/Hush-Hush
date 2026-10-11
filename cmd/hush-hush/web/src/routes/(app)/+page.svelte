@@ -27,6 +27,12 @@ import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { variantLabel } from '#lib/consumers.js';
 import { formatTimestamp } from '#lib/datetime.js';
 import { recoverEscrowedIdentity } from '#lib/identity.js';
+import {
+	hasActiveFilters,
+	matchesFilters,
+	type ObjectFilters,
+	objectFiltersToSearch,
+} from '#lib/object-filters.js';
 import { resealValue, resolveRecipients, sealValue } from '#lib/sealing.js';
 import {
 	filterByTag,
@@ -36,7 +42,7 @@ import {
 	validateTags,
 } from '#lib/tags.js';
 import { normalizeValue, valueFieldAttributes } from '#lib/value-field.js';
-import { invalidate } from '$app/navigation';
+import { goto, invalidate } from '$app/navigation';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -64,7 +70,51 @@ const searchedObjects = $derived.by(() => {
 			(o.description ?? '').toLowerCase().includes(needle),
 	);
 });
-const filteredObjects = $derived(filterByTag(searchedObjects, activeTag));
+const filteredObjects = $derived(
+	filterByTag(searchedObjects, activeTag).filter((o) =>
+		matchesFilters(o, data.filters),
+	),
+);
+
+// The filter form, seeded once from the URL's filters. Apply writes them
+// back to the URL, which reloads the list; the URL, not this state, is what
+// survives a reload.
+let filterUsedBy: string[] = $state([...data.filters.usedBy]);
+let filterCreatedBy = $state(data.filters.createdBy ?? '');
+let filterCreatedSince = $state(data.filters.createdSince ?? '');
+let filterUpdatedSince = $state(data.filters.updatedSince ?? '');
+const creators = $derived(
+	[
+		...new Set([
+			...data.objects.flatMap((o) =>
+				o.created_by ? [actorName(o.created_by)] : [],
+			),
+			...(data.filters.createdBy ? [data.filters.createdBy] : []),
+		]),
+	].sort(),
+);
+const filtersActive = $derived(hasActiveFilters(data.filters));
+
+function applyFilters(event: SubmitEvent) {
+	event.preventDefault();
+	const next: ObjectFilters = { usedBy: filterUsedBy };
+	if (filterCreatedBy) next.createdBy = filterCreatedBy;
+	if (filterCreatedSince) next.createdSince = filterCreatedSince;
+	if (filterUpdatedSince) next.updatedSince = filterUpdatedSince;
+	void goto(`/${objectFiltersToSearch(next)}`, { reset: false });
+}
+
+// clearFilters resets the form and the URL, and the text and tag filters
+// with them, so "no match" always has one way out.
+function clearFilters() {
+	filterUsedBy = [];
+	filterCreatedBy = '';
+	filterCreatedSince = '';
+	filterUpdatedSince = '';
+	query = '';
+	selectedTag = null;
+	void goto('/', { reset: false });
+}
 
 // Which card's copy button is showing its "Copied" state, and the timer
 // that reverts it. One slot, so a newer copy replaces an older one.
@@ -469,22 +519,46 @@ async function confirmDelete() {
 		</Dialog.Root>
 	</header>
 
-	{#if data.usedByFilter}
-		<ul class="mb-4 flex list-none flex-wrap gap-2 p-0">
-			<li class="rounded-2xl bg-border-subtle px-2 py-1 text-sm">
-				consumer: {data.usedByFilter}
-				<Button
-					variant="ghost"
-					size="icon-xs"
-					class="ml-1 h-auto w-auto p-0"
-					href="/"
-					aria-label="Clear consumer filter"
-				>
-					&times;
+	<details class="mb-4 rounded-lg border border-border p-3" open={filtersActive}>
+		<summary class="cursor-pointer font-semibold">
+			Filters{filtersActive ? ' (active)' : ''}
+		</summary>
+		<form class="mt-3 space-y-4" onsubmit={applyFilters}>
+			<div class="space-y-1">
+				<Label for="filter-used-by">Used by any of</Label>
+				<ConsumerCombobox id="filter-used-by" bind:value={filterUsedBy} />
+			</div>
+			<div class="grid gap-4 md:grid-cols-3">
+				<div class="space-y-1">
+					<Label for="filter-created-by">Created by</Label>
+					<select
+						id="filter-created-by"
+						class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+						bind:value={filterCreatedBy}
+					>
+						<option value="">Anyone</option>
+						{#each creators as creator (creator)}
+							<option value={creator}>{creator}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="space-y-1">
+					<Label for="filter-created-since">Created since</Label>
+					<Input id="filter-created-since" type="date" class="w-full" bind:value={filterCreatedSince} />
+				</div>
+				<div class="space-y-1">
+					<Label for="filter-updated-since">Updated since</Label>
+					<Input id="filter-updated-since" type="date" class="w-full" bind:value={filterUpdatedSince} />
+				</div>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				<Button type="submit" class="min-h-11">Apply filters</Button>
+				<Button type="button" variant="outline" class="min-h-11" onclick={clearFilters}>
+					Clear filters
 				</Button>
-			</li>
-		</ul>
-	{/if}
+			</div>
+		</form>
+	</details>
 
 	{#if data.objects.length === 0}
 		<p>No secrets stored yet.</p>
@@ -527,7 +601,14 @@ async function confirmDelete() {
 		</div>
 
 		{#if filteredObjects.length === 0}
-			<p>No secrets match &ldquo;{query}&rdquo;.</p>
+			<p>
+				No secrets match{query ? ` “${query}”` : ' these filters'}.
+				{#if query || activeTag || filtersActive}
+					<Button type="button" variant="outline" class="ml-2 min-h-11" onclick={clearFilters}>
+						Clear filters
+					</Button>
+				{/if}
+			</p>
 		{/if}
 
 		<ul aria-label="Secrets" class="m-0 list-none space-y-3 p-0 md:hidden">
