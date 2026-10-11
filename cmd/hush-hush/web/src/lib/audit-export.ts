@@ -11,6 +11,9 @@ import type { AuditLogEntry } from './api';
 export function auditActorLabel(entry: AuditLogEntry): string {
 	if (entry.actor_type === 'session') return 'admin';
 	if (entry.actor_type === 'token') return `token:${entry.actor_id}`;
+	if (entry.actor_type === 'consumer_token') {
+		return `consumer-token:${entry.actor_id}`;
+	}
 
 	return 'none';
 }
