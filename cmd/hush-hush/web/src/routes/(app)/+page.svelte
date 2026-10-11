@@ -606,7 +606,7 @@ async function confirmDelete() {
 				{#each filteredObjects as object (object.id)}
 					<tr>
 						<td data-label="Id">
-							<span class="block max-w-56 truncate" title={object.slug}>
+							<span class="block max-w-28 xl:max-w-56 truncate" title={object.slug}>
 								{object.slug}
 							</span>
 							<ConsumerSummary
@@ -616,13 +616,13 @@ async function confirmDelete() {
 							/>
 						</td>
 						<td data-label="Description">
-							<span class="block max-w-32 truncate" title={object.description ?? ''}>
+							<span class="block max-w-16 xl:max-w-32 truncate" title={object.description ?? ''}>
 								{object.description ?? ''}
 							</span>
 						</td>
 						<td data-label="Tags">
 							{#if object.tags.length > 0}
-								<div class="flex max-w-28 flex-wrap gap-1">
+								<div class="flex max-w-20 flex-wrap xl:max-w-28 gap-1">
 									{#each object.tags as tag (tag)}
 										<span
 											data-testid="tag"
@@ -656,7 +656,7 @@ async function confirmDelete() {
 						</td>
 						<!-- The card list above offers the same actions; e2e/layout-parity.ts
 							fails if the two drift (alrayyes/hush-hush#577). -->
-						<td data-label="Actions" class="row-actions min-w-44 gap-3 md:flex-nowrap">
+						<td data-label="Actions" class="row-actions min-w-36 xl:min-w-44 gap-3 md:flex-wrap xl:flex-nowrap">
 							<Button
 								variant="outline"
 								size="sm"
