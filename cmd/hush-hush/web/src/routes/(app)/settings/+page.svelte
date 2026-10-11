@@ -16,12 +16,12 @@ import {
 } from '#lib/api.js';
 import { registerPasskey } from '#lib/auth.js';
 import ConsumerCombobox from '#lib/ConsumerCombobox.svelte';
+import CopyableValue from '#lib/CopyableValue.svelte';
 import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
 import * as Dialog from '#lib/components/ui/dialog/index.js';
 import { Input } from '#lib/components/ui/input/index.js';
 import { Label } from '#lib/components/ui/label/index.js';
-import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { formatTimestamp } from '#lib/datetime.js';
 import TokenCard from '#lib/TokenCard.svelte';
 import {
@@ -566,13 +566,7 @@ async function confirmPurgeConsumerToken() {
 							<p role="alert" class="font-bold text-warning">
 								This value is shown once. It will not be shown again - store it now.
 							</p>
-							<Textarea
-								readonly
-								rows={3}
-								value={createdToken.value}
-								aria-label="Token value"
-								class="w-full"
-							/>
+							<CopyableValue value={createdToken.value} label="Token value" noun="token" />
 						</div>
 						<Dialog.Footer>
 							<Button onclick={closeCreateToken}>Done</Button>
@@ -728,13 +722,7 @@ async function confirmPurgeConsumerToken() {
 							<p role="alert" class="font-bold text-warning">
 								This value is shown once. It will not be shown again - store it now.
 							</p>
-							<Textarea
-								readonly
-								rows={3}
-								value={createdConsumerToken.value}
-								aria-label="Token value"
-								class="w-full"
-							/>
+							<CopyableValue value={createdConsumerToken.value} label="Token value" noun="token" />
 						</div>
 						<Dialog.Footer>
 							<Button onclick={closeCreateConsumerToken}>Done</Button>
@@ -1010,13 +998,7 @@ async function confirmPurgeConsumerToken() {
 				<p role="alert" class="font-bold text-warning">
 					This value is shown once. It will not be shown again - store it now.
 				</p>
-				<Textarea
-					readonly
-					rows={3}
-					value={rotatedToken.value}
-					aria-label="Token value"
-					class="w-full"
-				/>
+				<CopyableValue value={rotatedToken.value} label="Token value" noun="token" />
 			</div>
 			<Dialog.Footer>
 				<Button onclick={closeRotate}>Done</Button>
@@ -1095,13 +1077,7 @@ async function confirmPurgeConsumerToken() {
 				<p role="alert" class="font-bold text-warning">
 					This value is shown once. It will not be shown again - store it now.
 				</p>
-				<Textarea
-					readonly
-					rows={3}
-					value={rotatedConsumerToken.value}
-					aria-label="Token value"
-					class="w-full"
-				/>
+				<CopyableValue value={rotatedConsumerToken.value} label="Token value" noun="token" />
 			</div>
 			<Dialog.Footer>
 				<Button onclick={closeRotateConsumerToken}>Done</Button>

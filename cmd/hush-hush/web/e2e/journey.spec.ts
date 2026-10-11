@@ -161,6 +161,15 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	});
 	await expect(recoveryPhraseField).not.toHaveValue('');
 	const recoveryPhrase = await recoveryPhraseField.inputValue();
+	// #817: the phrase, shown once, has a Copy button that copies it exactly.
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.getByRole('button', { name: 'Copy recovery phrase' }).click();
+	await expect(
+		page.getByRole('button', { name: 'Copied recovery phrase' }),
+	).toBeVisible();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		recoveryPhrase,
+	);
 
 	await page
 		.getByRole('button', { name: "I've saved it" })
@@ -1428,6 +1437,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const consumerTokenValueField = page.getByLabel('Token value');
 	await expect(consumerTokenValueField).not.toHaveValue('');
 	const firstConsumerTokenValue = await consumerTokenValueField.inputValue();
+	await page.getByRole('button', { name: 'Copy token' }).click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		firstConsumerTokenValue,
+	);
 	await page
 		.getByRole('dialog', { name: 'Token created' })
 		.getByRole('button', { name: 'Done' })
@@ -1628,6 +1641,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(consumerTokenValueField).not.toHaveValue('');
 	const rotatedConsumerTokenValue = await consumerTokenValueField.inputValue();
 	expect(rotatedConsumerTokenValue).not.toBe(firstConsumerTokenValue);
+	await page.getByRole('button', { name: 'Copy token' }).click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		rotatedConsumerTokenValue,
+	);
+	const rotatedCopyResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(rotatedCopyResults.violations).toEqual([]);
 	await page
 		.getByRole('dialog', { name: 'Token rotated' })
 		.getByRole('button', { name: 'Done' })
