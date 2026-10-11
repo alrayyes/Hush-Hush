@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.17.0](https://github.com/alrayyes/Hush-Hush/compare/v3.16.0...v3.17.0) (2026-10-11)
+
+
+### Features
+
+* **web:** copy button for a token or phrase shown once ([#823](https://github.com/alrayyes/Hush-Hush/issues/823)) ([0944b42](https://github.com/alrayyes/Hush-Hush/commit/0944b42555ff108b4490da5902bce04731ad852a))
+
 ## [3.16.0](https://github.com/alrayyes/Hush-Hush/compare/v3.15.0...v3.16.0) (2026-10-11)
 
 
