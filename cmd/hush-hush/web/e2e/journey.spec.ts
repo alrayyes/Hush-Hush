@@ -122,6 +122,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			hasResidentKey: true,
 			hasUserVerification: true,
 			isUserVerified: true,
+			// The escrowed key is wrapped with the passkey's PRF output, which
+			// the edit dialog's re-seal-without-the-value path reads back.
+			hasPrf: true,
 		},
 	});
 
@@ -1170,6 +1173,105 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	);
 	expect(grafanaDecrypted).toBe(ownerOptInValue);
 	await grafanaViewDialog.getByRole('button', { name: 'Close' }).click();
+
+	// #805: a consumer is added to a secret with a readable copy without
+	// typing its value. The browser opens the stored value with the owner's
+	// escrowed key and seals it again, so the new consumer can read it, the
+	// owner still can, and the plaintext is never shown.
+	const newConsumerIdentity = await age.generateIdentity();
+	const reseal = await page.request.patch('/consumers/reseal-target', {
+		headers: { 'X-CSRF-Token': csrfToken },
+		data: { public_key: await age.identityToRecipient(newConsumerIdentity) },
+	});
+	expect(reseal.ok()).toBe(true);
+	const grafanaConsumersLoaded = page.waitForResponse(
+		(res) =>
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
+	);
+	await grafanaRow.getByRole('button', { name: 'Edit' }).click();
+	const grafanaEditDialog = page.getByRole('dialog', {
+		name: 'Edit grafana_admin_password',
+	});
+	await grafanaConsumersLoaded;
+	await expect(grafanaEditDialog.locator('#edit-value')).toHaveValue('');
+	await grafanaEditDialog.locator('#edit-used-by').fill('reseal-target');
+	await grafanaEditDialog.getByRole('listbox').waitFor();
+	await grafanaEditDialog
+		.getByRole('option', { name: /reseal-target/ })
+		.first()
+		.click();
+	await grafanaEditDialog.getByRole('button', { name: 'Save' }).click();
+	await grafanaEditDialog.waitFor({ state: 'hidden' });
+
+	await grafanaRow.getByRole('button', { name: 'View' }).click();
+	await expect(grafanaCiphertextField).not.toHaveValue('');
+	const resealedBytes = Uint8Array.from(
+		atob(await grafanaCiphertextField.inputValue()),
+		(c) => c.charCodeAt(0),
+	);
+	for (const identity of [ownerIdentity, newConsumerIdentity]) {
+		const reader = new age.Decrypter();
+		reader.addIdentity(identity);
+		expect(await reader.decrypt(resealedBytes, 'text')).toBe(ownerOptInValue);
+	}
+	await expect(page.getByText(ownerOptInValue)).toHaveCount(0);
+	await grafanaViewDialog.getByRole('button', { name: 'Close' }).click();
+
+	// Removing it the same way takes its read access away again.
+	await grafanaRow.getByRole('button', { name: 'Edit' }).click();
+	await expect(
+		grafanaEditDialog.getByLabel('Remove reseal-target'),
+	).toBeVisible();
+	await grafanaEditDialog.getByLabel('Remove reseal-target').click();
+	await grafanaEditDialog.getByRole('button', { name: 'Save' }).click();
+	await grafanaEditDialog.waitFor({ state: 'hidden' });
+	await grafanaRow.getByRole('button', { name: 'View' }).click();
+	await expect(grafanaCiphertextField).not.toHaveValue('');
+	const droppedBytes = Uint8Array.from(
+		atob(await grafanaCiphertextField.inputValue()),
+		(c) => c.charCodeAt(0),
+	);
+	const droppedReader = new age.Decrypter();
+	droppedReader.addIdentity(newConsumerIdentity);
+	await expect(droppedReader.decrypt(droppedBytes, 'text')).rejects.toThrow();
+	const ownerReader = new age.Decrypter();
+	ownerReader.addIdentity(ownerIdentity);
+	expect(await ownerReader.decrypt(droppedBytes, 'text')).toBe(ownerOptInValue);
+	await grafanaViewDialog.getByRole('button', { name: 'Close' }).click();
+
+	// A secret with no readable copy can't be re-sealed without its value:
+	// the dialog says so, and the stored secret is unchanged.
+	const noCopyBefore = await page.request.get(
+		'/objects/mattermost_deploy_webhook',
+	);
+	const noCopyConsumersLoaded = page.waitForResponse(
+		(res) =>
+			new URL(res.url()).pathname === '/consumers' &&
+			res.request().method() === 'GET',
+	);
+	await page
+		.getByRole('row', { name: /mattermost_deploy_webhook/ })
+		.getByRole('button', { name: 'Edit' })
+		.click();
+	const noCopyDialog = page.getByRole('dialog', {
+		name: 'Edit mattermost_deploy_webhook',
+	});
+	await noCopyConsumersLoaded;
+	await noCopyDialog.locator('#edit-tags').fill('touched');
+	await noCopyDialog.getByRole('button', { name: 'Save' }).click();
+	await expect(noCopyDialog.getByRole('alert')).toContainText(
+		'no readable copy',
+	);
+	const noCopyResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(noCopyResults.violations).toEqual([]);
+	await noCopyDialog.getByRole('button', { name: 'Cancel' }).click();
+	const noCopyAfter = await page.request.get(
+		'/objects/mattermost_deploy_webhook',
+	);
+	expect(await noCopyAfter.body()).toEqual(await noCopyBefore.body());
 
 	// The owner never opted into mattermost_deploy_webhook - the same
 	// escrowed identity must not be able to decrypt it
