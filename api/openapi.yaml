@@ -311,7 +311,7 @@ paths:
         well-formed age file, or no recipient in its header, is a 422
         and the stored value is left alone. The
         object's slug and description metadata are always preserved
-        unchanged. used_by is preserved too, unless the request body
+        unchanged; `PATCH` is what edits them. used_by is preserved too, unless the request body
         includes it - in which case it fully replaces the object's
         recorded consumers, the same way creating an object sets it. A
         session-authenticated call needs its CSRF token too; a
@@ -353,6 +353,71 @@ paths:
           $ref: "#/components/responses/VariantConflict"
         "400":
           $ref: "#/components/responses/BadRequest"
+    patch:
+      operationId: patchObject
+      summary: Edit an object's description, tags or slug
+      description: |
+        Changes metadata without touching the sealed value, so fixing a
+        typo or reorganising names never needs the plaintext again. Send
+        any of `description`, `tags` and `slug`; a field left out stays as
+        it is, and at least one is required. The change is applied whole
+        or not at all, so a refused rename applies none of the request.
+
+        `slug` renames the name: every variant of it moves, each keeps its
+        id, value and `used_by`, and the old slug is a 404 afterwards. A
+        slug that already has objects is a 409, and one that doesn't match
+        the slug pattern is a 400. `description` and `tags` change the one
+        variant `id` names, the same as `PUT`; a name with several
+        variants and no `id` is a 409. The response describes that variant
+        under its (possibly new) slug.
+
+        The call is recorded in the audit log as an update of the object
+        under its new slug; entries written before a rename keep the name
+        they were written under. A session-authenticated call needs its
+        CSRF token too; a bearer-token-authenticated one doesn't.
+      tags: [objects]
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/slug"
+        - $ref: "#/components/parameters/caller"
+        - $ref: "#/components/parameters/csrfTokenOptional"
+        - $ref: "#/components/parameters/objectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchObjectRequest"
+            examples:
+              description:
+                summary: Fix a description
+                value:
+                  description: prod deploy webhook, rotated on incident
+              rename:
+                summary: Rename
+                value:
+                  slug: deploy_webhook
+      responses:
+        "200":
+          description: The metadata was updated; the object as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectMetadata"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/VariantConflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteObject
       summary: Remove an object
@@ -1831,6 +1896,33 @@ components:
             them untouched. An empty array clears them.
         keep_readable_copy:
           $ref: "#/components/schemas/KeepReadableCopy"
+
+    PatchObjectRequest:
+      type: object
+      minProperties: 1
+      description: |
+        At least one of `description`, `slug` or `tags` is required; a field
+        left out leaves that aspect of the object unchanged.
+      properties:
+        description:
+          type: string
+          maxLength: 1000
+          description: |
+            Replaces the description. An empty string clears it.
+        slug:
+          type: string
+          maxLength: 128
+          pattern: "^[a-z0-9][a-z0-9_-]*$"
+          examples: [deploy_webhook]
+          description: |
+            Renames the object, in the same shape as `ObjectSlug`. Every
+            variant of the name moves to the new slug. It must not already
+            have objects.
+        tags:
+          allOf:
+            - $ref: "#/components/schemas/Tags"
+          description: |
+            Replaces the object's tags. An empty array clears them.
 
     KeepReadableCopy:
       type: boolean

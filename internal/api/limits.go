@@ -26,6 +26,7 @@ import (
 var requestTypes = map[string]any{
 	"CreateObjectRequest":        CreateObjectRequest{},
 	"UpdateObjectRequest":        UpdateObjectRequest{},
+	"PatchObjectRequest":         PatchObjectRequest{},
 	"AddConsumerRequest":         AddConsumerRequest{},
 	"UpdateConsumerRequest":      UpdateConsumerRequest{},
 	"CreateTokenRequest":         createTokenBody{},
