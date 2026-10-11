@@ -8,6 +8,7 @@ import {
 	type ConsumerEntry,
 	deleteConsumer,
 	renameConsumer,
+	setConsumerPublicKey,
 } from '#lib/api.js';
 import { createCopier } from '#lib/clipboard.js';
 import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
@@ -60,10 +61,12 @@ function apiErrorMessage(err: unknown, fallback: string): string {
 
 let addOpen = $state(false);
 let addName = $state('');
+let addKey = $state('');
 let addError = $state('');
 
 function resetAddForm() {
 	addName = '';
+	addKey = '';
 	addError = '';
 }
 
@@ -73,11 +76,58 @@ async function submitAdd(event: SubmitEvent) {
 
 	try {
 		await addConsumer(addName);
-		addOpen = false;
-		resetAddForm();
-		await invalidate('app:consumers');
 	} catch (err) {
 		addError = apiErrorMessage(err, 'Failed to add the consumer.');
+
+		return;
+	}
+
+	const name = addName;
+	const key = addKey.trim();
+	addOpen = false;
+	resetAddForm();
+
+	if (key) {
+		// The consumer exists now, so a key the server refuses is retried in
+		// the set-key dialog rather than by adding the name again (a 409).
+		try {
+			await setConsumerPublicKey(name, key);
+		} catch (err) {
+			openKey({ name }, key, apiErrorMessage(err, 'Failed to set the key.'));
+		}
+	}
+
+	await invalidate('app:consumers');
+}
+
+let keyOpen = $state(false);
+let keyName = $state('');
+let keyReplacing = $state(false);
+let keyInput = $state('');
+let keyError = $state('');
+
+function openKey(
+	consumer: Pick<ConsumerEntry, 'name'> & { public_key?: string },
+	draft = '',
+	error = '',
+) {
+	keyName = consumer.name;
+	keyReplacing = Boolean(consumer.public_key);
+	keyInput = draft;
+	keyError = error;
+	keyOpen = true;
+}
+
+async function submitKey(event: SubmitEvent) {
+	event.preventDefault();
+	keyError = '';
+
+	try {
+		await setConsumerPublicKey(keyName, keyInput.trim());
+		keyOpen = false;
+		await invalidate('app:consumers');
+	} catch (err) {
+		keyError = apiErrorMessage(err, 'Failed to set the key.');
 	}
 }
 
@@ -157,9 +207,21 @@ async function confirmDelete() {
 						<div class="space-y-1">
 							<Label for="add-consumer-name">Name</Label>
 							<Input id="add-consumer-name" class="w-full" bind:value={addName} required />
+						</div>
+
+						<div class="space-y-1">
+							<Label for="add-consumer-key">Public key (optional)</Label>
+							<Input
+								id="add-consumer-key"
+								class="w-full font-mono"
+								bind:value={addKey}
+								placeholder="age1..."
+								autocomplete="off"
+								spellcheck={false}
+							/>
 							<p class="text-sm text-text-muted">
-								The consumer registers its own public key separately - secrets
-								can't be sealed to it until then.
+								Secrets can't be sealed to a consumer until it has a public key.
+								You can also set one later.
 							</p>
 						</div>
 
@@ -243,6 +305,14 @@ async function confirmDelete() {
 							Rename
 						</Button>
 						<Button
+							variant="outline"
+							class="min-h-11 min-w-11"
+							aria-label="{consumer.public_key ? 'Replace' : 'Set'} key for {consumer.name}"
+							onclick={() => openKey(consumer)}
+						>
+							{consumer.public_key ? 'Replace key' : 'Set key'}
+						</Button>
+						<Button
 							variant="destructive"
 							class="min-h-11 min-w-11"
 							onclick={() => openDelete(consumer)}
@@ -310,6 +380,14 @@ async function confirmDelete() {
 							<Button variant="outline" size="sm" onclick={() => openRename(consumer)}>
 								Rename
 							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								aria-label="{consumer.public_key ? 'Replace' : 'Set'} key for {consumer.name}"
+								onclick={() => openKey(consumer)}
+							>
+								{consumer.public_key ? 'Replace key' : 'Set key'}
+							</Button>
 							<Button variant="destructive" size="sm" onclick={() => openDelete(consumer)}>
 								Delete
 							</Button>
@@ -355,6 +433,42 @@ async function confirmDelete() {
 
 				{#if renameError}
 					<p role="alert" class="text-error">{renameError}</p>
+				{/if}
+			</div>
+
+			<Dialog.Footer>
+				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>Cancel</Dialog.Close>
+				<Button type="submit">Save</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={keyOpen}>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>{keyReplacing ? 'Replace' : 'Set'} public key</Dialog.Title>
+			<Dialog.Description>
+				The age public key for "{keyName}". Only a public key belongs here.
+			</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={submitKey}>
+			<div class="space-y-4">
+				<div class="space-y-1">
+					<Label for="consumer-key-input">Public key</Label>
+					<Input
+						id="consumer-key-input"
+						class="w-full font-mono"
+						bind:value={keyInput}
+						placeholder="age1..."
+						autocomplete="off"
+						spellcheck={false}
+						required
+					/>
+				</div>
+
+				{#if keyError}
+					<p role="alert" class="text-error">{keyError}</p>
 				{/if}
 			</div>
 

@@ -157,7 +157,8 @@ consumers and recent activity.
 
 #### Consumers
 
-The age public keys that can read secrets.
+The age public keys that can read secrets. Register or replace a
+consumer's key here.
 
 ![Consumers, light mode](docs/screenshots/consumers-light.png)
 ![Consumers, dark mode](docs/screenshots/consumers-dark.png)

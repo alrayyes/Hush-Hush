@@ -6,6 +6,7 @@ import {
 	listConsumerDirectory,
 	listObjects,
 	listTokens,
+	setConsumerPublicKey,
 	updateObject,
 } from './api';
 import { CONSUMERS_PAGE_SIZE_MAX, PAGE_LIMIT_MAX } from './api-limits';
@@ -255,5 +256,28 @@ describe('variant id', () => {
 		await getObjectValue('a');
 
 		expect(calledUrl(fetchMock)).toMatch(/\/objects\/a$/);
+	});
+});
+
+describe('setConsumerPublicKey', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('PATCHes only public_key to the consumer', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				new Response(JSON.stringify({ name: 'ci/a' }), { status: 200 }),
+			);
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubGlobal('document', { cookie: '' });
+
+		await setConsumerPublicKey('ci/a', 'age1abc');
+
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toMatch(/\/consumers\/ci\/a$/);
+		expect(init.method).toBe('PATCH');
+		expect(JSON.parse(init.body)).toEqual({ public_key: 'age1abc' });
 	});
 });

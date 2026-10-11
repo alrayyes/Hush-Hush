@@ -291,6 +291,21 @@ export async function deleteConsumer(name: string): Promise<void> {
 	await request(`/consumers/${name}`, { method: 'DELETE' });
 }
 
+// setConsumerPublicKey registers or replaces a consumer's age public key.
+// The server validates it and answers 400 with its own message for one
+// that isn't an age recipient, which the caller shows as returned.
+export async function setConsumerPublicKey(
+	name: string,
+	publicKey: string,
+): Promise<ConsumerEntry> {
+	const res = await request(`/consumers/${name}`, {
+		method: 'PATCH',
+		body: JSON.stringify({ public_key: publicKey }),
+	});
+
+	return res.json();
+}
+
 // addConsumer adds name to the directory with no secret referencing it
 // yet (alrayyes/hush-hush#324) - POST /consumers, distinct from every
 // other consumer above which only ever exists because some object's
