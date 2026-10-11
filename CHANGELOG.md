@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.0](https://github.com/alrayyes/Hush-Hush/compare/v3.14.1...v3.15.0) (2026-10-11)
+
+
+### Features
+
+* **web:** add or remove a secret's consumers without retyping its value ([#819](https://github.com/alrayyes/Hush-Hush/issues/819)) ([ef63c55](https://github.com/alrayyes/Hush-Hush/commit/ef63c55e606db8eb02439007f26c028455f72358))
+
 ## [3.14.1](https://github.com/alrayyes/Hush-Hush/compare/v3.14.0...v3.14.1) (2026-10-11)
 
 
