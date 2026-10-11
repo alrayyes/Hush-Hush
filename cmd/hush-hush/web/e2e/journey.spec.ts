@@ -707,6 +707,39 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await editDialog.waitFor({ state: 'hidden' });
 	await expect(page.locator('[data-testid="tag"]:visible')).toHaveCount(0);
 
+	// #790: a path no route matches shows the 404 page inside the signed-in
+	// shell, and a load that fails shows the 500 page with no internals.
+	await page.goto('/no/such/page');
+	await expect(
+		page.getByRole('heading', { level: 1, name: 'Page not found' }),
+	).toBeVisible();
+	await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+	await expect(
+		page.getByRole('link', { name: 'Open secrets' }),
+	).toHaveAttribute('href', '/');
+	const notFoundResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(notFoundResults.violations).toEqual([]);
+
+	await page.route('**/objects?*', (route) => route.abort());
+	await page.goto('/');
+	await expect(
+		page.getByRole('heading', { level: 1, name: 'Something went wrong' }),
+	).toBeVisible();
+	await expect(page.getByText('500', { exact: true })).toBeVisible();
+	await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+	expect(await page.content()).not.toMatch(
+		/\bat \S+\.(js|ts|svelte)|node_modules/,
+	);
+	const failedResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(failedResults.violations).toEqual([]);
+	await page.unroute('**/objects?*');
+	await page.goto('/');
+	await expect(page.getByRole('button', { name: 'New secret' })).toBeVisible();
+
 	// The secret just created recorded "homelab" as a consumer - the
 	// directory's own filtering and select-to-filter navigation
 	// (alrayyes/hush-hush#252), plus its own axe-core scan.
