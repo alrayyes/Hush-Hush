@@ -1106,13 +1106,21 @@ export interface components {
         AuditActorOption: {
             /** @description What to send back as the `actor` query parameter to select this actor. */
             value: string;
-            /** @description What to show the user - "admin", "token:<id>", or "none". */
+            /**
+             * @description What to show the user - "admin", "token:<id>" for a write token,
+             *     "consumer-token:<id>" for a consumer token, or "none" for an
+             *     unauthenticated read.
+             */
             label: string;
         };
         AuditLogFilterOptions: {
             /** @description Every distinct object id currently recorded in the audit log. */
             object_ids: components["schemas"]["ObjectSlug"][];
-            /** @description Every distinct actor currently recorded in the audit log. */
+            /**
+             * @description Every distinct actor currently recorded in the audit log, one
+             *     option each. Each `value` is unique, so a client can key a list by
+             *     it. `none` appears at most once and means an unauthenticated read.
+             */
             actors: components["schemas"]["AuditActorOption"][];
             /** @description Every distinct caller currently recorded in the audit log. */
             callers: string[];

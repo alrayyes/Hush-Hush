@@ -214,6 +214,36 @@ func TestQueryAuditLogFilterOptionsReturnsDistinctValuesThatActuallyAppear(t *te
 	}, options.Actors)
 }
 
+// A read by a consumer token is recorded with its own actor type. It used to
+// fall into the "none" branch, once per token, which the web UI keys its
+// options by: two of them crashed the page.
+func TestQueryAuditLogFilterOptionsGivesEachConsumerTokenItsOwnOption(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "", "203.0.113.1", "", ""))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "", "203.0.113.2", "consumer_token", "c0ffee0000000001"))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionRead, "", "203.0.113.3", "consumer_token", "c0ffee0000000002"))
+	require.NoError(t, s.RecordAuditLog(ctx, "b", store.AuditActionRead, "", "203.0.113.4", "consumer_token", "c0ffee0000000002"))
+
+	options, err := s.QueryAuditLogFilterOptions(ctx)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []store.AuditActorOption{
+		{Value: "none", Label: "none"},
+		{Value: "c0ffee0000000001", Label: "consumer-token:c0ffee0000000001"},
+		{Value: "c0ffee0000000002", Label: "consumer-token:c0ffee0000000002"},
+	}, options.Actors)
+
+	picked, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Actor: "c0ffee0000000002"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"b", "b"}, objectIDs(picked), "choosing a consumer token returns only its entries")
+
+	anonymous, err := s.QueryAuditLog(ctx, store.AuditLogFilter{Actor: "none"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"a"}, objectIDs(anonymous), "none still means an unauthenticated read")
+}
+
 func TestQueryAuditLogFilterOptionsOnAFreshStoreIsEmpty(t *testing.T) {
 	t.Parallel()
 

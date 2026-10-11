@@ -2222,7 +2222,10 @@ components:
           maxLength: 128
         label:
           type: string
-          description: What to show the user - "admin", "token:<id>", or "none".
+          description: |
+            What to show the user - "admin", "token:<id>" for a write token,
+            "consumer-token:<id>" for a consumer token, or "none" for an
+            unauthenticated read.
           maxLength: 256
       example:
         value: a1b2c3d4e5f6a7b8
@@ -2241,7 +2244,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuditActorOption"
-          description: Every distinct actor currently recorded in the audit log.
+          description: |
+            Every distinct actor currently recorded in the audit log, one
+            option each. Each `value` is unique, so a client can key a list by
+            it. `none` appears at most once and means an unauthenticated read.
         callers:
           type: array
           items:
