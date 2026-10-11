@@ -2,9 +2,9 @@
 import { onMount } from 'svelte';
 import { getAuthStatus } from '#lib/api.js';
 import { login, registerPasskey } from '#lib/auth.js';
+import CopyableValue from '#lib/CopyableValue.svelte';
 import { Button } from '#lib/components/ui/button/index.js';
 import * as Dialog from '#lib/components/ui/dialog/index.js';
-import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { goto, invalidate } from '$app/navigation';
 
 let pending = $state(false);
@@ -141,12 +141,10 @@ async function handleRegister() {
 			This phrase is shown once. It will not be shown again, and the server
 			never stores a copy - write it down and keep it somewhere safe.
 		</p>
-		<Textarea
-			readonly
-			rows={3}
+		<CopyableValue
 			value={recoveryPhrase ?? ''}
-			aria-label="Recovery phrase"
-			class="w-full"
+			label="Recovery phrase"
+			noun="recovery phrase"
 		/>
 		<Dialog.Footer>
 			<Button onclick={closeRecoveryPhrase}>I've saved it</Button>

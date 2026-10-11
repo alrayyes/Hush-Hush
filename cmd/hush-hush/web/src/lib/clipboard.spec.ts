@@ -39,6 +39,20 @@ describe('createCopier', () => {
 		expect(onChange).not.toHaveBeenCalled();
 	});
 
+	it('reports a rejected write through onFailure, then clears it like a copy', async () => {
+		writeText.mockRejectedValue(new Error('blocked'));
+		const onChange = vi.fn();
+		const onFailure = vi.fn();
+		const copier = createCopier<string>(onChange, onFailure);
+
+		await copier.copy('a', 'x');
+
+		expect(onFailure).toHaveBeenLastCalledWith('a');
+		vi.advanceTimersByTime(1500);
+		expect(onFailure).toHaveBeenLastCalledWith(null);
+		expect(onChange).not.toHaveBeenCalled();
+	});
+
 	it('cancels the first timer when a second copy lands in the window', async () => {
 		const onChange = vi.fn();
 		const copier = createCopier<string>(onChange);
