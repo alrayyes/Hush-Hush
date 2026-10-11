@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.0](https://github.com/alrayyes/Hush-Hush/compare/v3.9.0...v3.10.0) (2026-10-11)
+
+
+### Features
+
+* **objects:** edit a secret's description, tags and slug with PATCH ([#786](https://github.com/alrayyes/Hush-Hush/issues/786)) ([4a3a0d2](https://github.com/alrayyes/Hush-Hush/commit/4a3a0d20d7bc549cf4d45e3b0ec8f1208888bd53)), closes [#783](https://github.com/alrayyes/Hush-Hush/issues/783)
+
 ## [3.9.0](https://github.com/alrayyes/Hush-Hush/compare/v3.8.0...v3.9.0) (2026-10-11)
 
 
