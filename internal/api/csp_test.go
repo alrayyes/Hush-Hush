@@ -73,7 +73,7 @@ func TestTheWebUIIsServedUnderAContentSecurityPolicy(t *testing.T) {
 <script type="module">` + inlineBootScript + `</script>
 </div></body></html>`
 
-	for _, path := range []string{"/", "/login", "/some/spa/route", "/_app/entry.js"} {
+	for _, path := range []string{"/", "/login", "/secrets/some_slug", "/_app/entry.js"} {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 
