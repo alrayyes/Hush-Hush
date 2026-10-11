@@ -26,7 +26,8 @@ import { Label } from '#lib/components/ui/label/index.js';
 import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { variantLabel } from '#lib/consumers.js';
 import { formatTimestamp } from '#lib/datetime.js';
-import { resolveRecipients, sealValue } from '#lib/sealing.js';
+import { recoverEscrowedIdentity } from '#lib/identity.js';
+import { resealValue, resolveRecipients, sealValue } from '#lib/sealing.js';
 import {
 	filterByTag,
 	formatTags,
@@ -197,8 +198,12 @@ let editError = $state('');
 let editKeepReadableCopy = $state(false);
 
 const editRecipients = $derived(resolveRecipients(editUsedBy, editEntries));
+// No new value typed: the stored one is opened in the browser with the
+// owner's own key and sealed again, so the owner key is always a
+// recipient, whatever the checkbox says.
+const editResealing = $derived(normalizeValue(editValue) === '');
 const editEffectiveRecipients = $derived(
-	editKeepReadableCopy && data.ownerPublicKey
+	(editKeepReadableCopy || editResealing) && data.ownerPublicKey
 		? [...editRecipients.recipients, data.ownerPublicKey]
 		: editRecipients.recipients,
 );
@@ -221,6 +226,29 @@ function openEdit(object: ObjectMetadata) {
 	editOpen = true;
 }
 
+// resealStoredValue opens the stored value with the owner's escrowed key
+// (a passkey touch) and seals it to the edited recipients, so a consumer can
+// be added or removed without anyone typing the value. The plaintext stays
+// inside resealValue: it is never shown, put in a field or logged. Returns
+// undefined, with editError set, when the browser can't do it.
+async function resealStoredValue(): Promise<string | undefined> {
+	const identity = await recoverEscrowedIdentity();
+	if (!identity) {
+		editError =
+			"Your passkey couldn't unlock your key here. Type the value to re-seal this secret.";
+		return undefined;
+	}
+
+	const stored = await getObjectValue(editSlug, editId);
+	try {
+		return await resealValue(stored, identity, editEffectiveRecipients);
+	} catch {
+		editError =
+			"This secret has no readable copy, so it can't be re-sealed without its value. Type the value.";
+		return undefined;
+	}
+}
+
 async function submitEdit(event: SubmitEvent) {
 	event.preventDefault();
 	editError = '';
@@ -239,13 +267,18 @@ async function submitEdit(event: SubmitEvent) {
 	}
 
 	const plaintext = normalizeValue(editValue);
-	if (plaintext === '') {
-		editError = 'Enter a value.';
-		return;
-	}
 
 	try {
-		const value = await sealValue(plaintext, editEffectiveRecipients);
+		let value: string;
+		if (editResealing) {
+			const resealed = await resealStoredValue();
+			if (resealed === undefined) {
+				return;
+			}
+			value = resealed;
+		} else {
+			value = await sealValue(plaintext, editEffectiveRecipients);
+		}
 		await updateObject(
 			editSlug,
 			value,
@@ -757,15 +790,20 @@ async function confirmDelete() {
 		<form onsubmit={submitEdit}>
 			<div class="space-y-4">
 				<div class="space-y-1">
-					<Label for="edit-value">New value</Label>
+					<Label for="edit-value">New value (optional)</Label>
 					<Textarea
 						id="edit-value"
 						class="w-full"
 						bind:value={editValue}
-						required
 						rows={6}
 						{...valueFieldAttributes}
 					/>
+					<p class="text-sm text-text-muted">
+						Leave empty to keep the current value. Your browser then opens it
+						with your own key (a passkey touch) and seals it again to the
+						consumers below, which only works for a secret saved with a
+						readable copy.
+					</p>
 				</div>
 
 				<div class="space-y-1">
