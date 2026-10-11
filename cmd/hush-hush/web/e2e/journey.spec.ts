@@ -836,11 +836,44 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByLabel('Filter by name').blur();
 	await page.getByRole('link', { name: 'homelab' }).click();
 	await page.waitForURL('/?used_by=homelab');
-	await expect(page.getByText('consumer: homelab')).toBeVisible();
+	await expect(page.getByText('Filters (active)')).toBeVisible();
 	await expect(
 		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
 	).toBeVisible();
-	await page.getByRole('link', { name: 'Clear consumer filter' }).click();
+	await page.getByRole('button', { name: 'Clear filters' }).click();
+	await page.waitForURL('/');
+
+	// #816: several consumers at once (any of them), who created a secret,
+	// and created/updated since a day. All live in the URL.
+	await page.goto('/?used_by=homelab&used_by=no-such-consumer');
+	await expect(
+		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
+	).toBeVisible();
+	await page.goto('/?created_by=admin&created_since=2000-01-01');
+	await expect(
+		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
+	).toBeVisible();
+	await page.goto('/?created_by=token:nobody');
+	await expect(page.getByText('No secrets match these filters.')).toBeVisible();
+	await page.getByRole('button', { name: 'Clear filters' }).first().click();
+	await page.waitForURL('/');
+	await expect(
+		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
+	).toBeVisible();
+
+	// The form writes the same parameters, and survives a reload.
+	await page.getByText('Filters', { exact: true }).click();
+	await page.getByLabel('Updated since').fill('2999-01-01');
+	await page.getByRole('button', { name: 'Apply filters' }).click();
+	await page.waitForURL('/?updated_since=2999-01-01');
+	await expect(page.getByText('No secrets match these filters.')).toBeVisible();
+	const filtersResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(filtersResults.violations).toEqual([]);
+	await page.reload();
+	await expect(page.getByLabel('Updated since')).toHaveValue('2999-01-01');
+	await page.getByRole('button', { name: 'Clear filters' }).first().click();
 	await page.waitForURL('/');
 
 	// #282: rename and delete are bulk used_by rewrites across every
