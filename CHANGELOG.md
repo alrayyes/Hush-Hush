@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.0](https://github.com/alrayyes/Hush-Hush/compare/v3.10.0...v3.11.0) (2026-10-11)
+
+
+### Features
+
+* **web:** register or replace a consumer's public key ([#787](https://github.com/alrayyes/Hush-Hush/issues/787)) ([75f3b28](https://github.com/alrayyes/Hush-Hush/commit/75f3b28d0176c735919ee95ec295f40f53b16762))
+
 ## [3.10.0](https://github.com/alrayyes/Hush-Hush/compare/v3.9.0...v3.10.0) (2026-10-11)
 
 
