@@ -871,6 +871,69 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page.getByRole('alert')).toHaveText('consumer already exists');
 	await addDialog.getByRole('button', { name: 'Cancel' }).click();
 
+	// #780: a consumer's public key is registered from the UI. The server
+	// validates it, so a bad key shows the server's own message and
+	// changes nothing; a valid one shows up truncated, with Copy.
+	const keyed = await age.identityToRecipient(await age.generateIdentity());
+	const keyedTruncated = `${keyed.slice(0, 10)}…${keyed.slice(-6)}`;
+	const keyedRow = page
+		.getByRole('row')
+		.filter({ has: page.getByRole('link', { name: 'keyed-consumer' }) });
+	await page.getByRole('button', { name: 'Add consumer' }).click();
+	await addDialog.getByLabel('Name', { exact: true }).fill('keyed-consumer');
+	await addDialog.getByLabel('Public key (optional)').fill(keyed);
+	await addDialog.getByRole('button', { name: 'Add' }).click();
+	await expect(addDialog).toBeHidden();
+	await expect(keyedRow).toContainText(keyedTruncated);
+	await expect(
+		keyedRow.getByRole('button', { name: 'Replace key for keyed-consumer' }),
+	).toBeVisible();
+
+	const noKeyRow = page
+		.getByRole('row')
+		.filter({ has: page.getByRole('link', { name: 'homelab-new' }) });
+	await noKeyRow
+		.getByRole('button', { name: 'Set key for homelab-new' })
+		.click();
+	const keyDialog = page.getByRole('dialog', { name: 'Set public key' });
+	await expect(keyDialog).toBeVisible();
+	await keyDialog.getByLabel('Public key', { exact: true }).fill('not-a-key');
+	await keyDialog.getByRole('button', { name: 'Save' }).click();
+	await expect(keyDialog.getByRole('alert')).toContainText(
+		'public_key must be an age public key',
+	);
+	await expect(keyDialog.getByRole('alert')).not.toContainText('not-a-key');
+	const keyDialogResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(keyDialogResults.violations).toEqual([]);
+	await keyDialog.getByLabel('Public key', { exact: true }).fill(keyed);
+	await keyDialog.getByRole('button', { name: 'Save' }).click();
+	await expect(keyDialog).toBeHidden();
+	await expect(noKeyRow).toContainText(keyedTruncated);
+	await expect(
+		noKeyRow.getByRole('button', { name: 'Replace key for homelab-new' }),
+	).toBeVisible();
+
+	// A phone card offers the same action.
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(
+		page
+			.getByRole('list', { name: 'Consumers' })
+			.getByRole('listitem')
+			.filter({ hasText: 'homelab-new' })
+			.getByRole('button', { name: 'Replace key for homelab-new' }),
+	).toBeVisible();
+	await page.setViewportSize({ width: 1280, height: 720 });
+
+	// Put the directory back the way later steps expect it.
+	await keyedRow.getByRole('button', { name: 'Delete' }).click();
+	await page
+		.getByRole('alertdialog')
+		.getByRole('button', { name: 'Delete', exact: true })
+		.click();
+	await expect(keyedRow).toHaveCount(0);
+
 	// #323: the object-id and actor filters are select boxes populated
 	// from what actually appears in the log, not free text - this
 	// exercises both against the real entries the flow above already
