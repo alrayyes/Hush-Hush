@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.0](https://github.com/alrayyes/Hush-Hush/compare/v3.8.0...v3.9.0) (2026-10-11)
+
+
+### Features
+
+* **consumers:** refuse a public_key that isn't an age recipient ([#781](https://github.com/alrayyes/Hush-Hush/issues/781)) ([147b6f0](https://github.com/alrayyes/Hush-Hush/commit/147b6f0bb12e8d726478f00646c755af70c78c0f)), closes [#779](https://github.com/alrayyes/Hush-Hush/issues/779)
+
 ## [3.8.0](https://github.com/alrayyes/Hush-Hush/compare/v3.7.3...v3.8.0) (2026-10-10)
 
 
