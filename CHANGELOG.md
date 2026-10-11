@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.14.1](https://github.com/alrayyes/Hush-Hush/compare/v3.14.0...v3.14.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **web:** keep the secrets table inside the viewport between 768 and 1279px ([#818](https://github.com/alrayyes/Hush-Hush/issues/818)) ([0a16365](https://github.com/alrayyes/Hush-Hush/commit/0a1636543b670df6079974dded3d412dc4de0fd8)), closes [#801](https://github.com/alrayyes/Hush-Hush/issues/801)
+
 ## [3.14.0](https://github.com/alrayyes/Hush-Hush/compare/v3.13.0...v3.14.0) (2026-10-11)
 
 
