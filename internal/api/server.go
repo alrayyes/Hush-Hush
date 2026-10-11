@@ -51,6 +51,7 @@ type objectStore interface {
 	SetConsumerPublicKey(ctx context.Context, name, publicKey string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...store.ObjectOption) error
+	PatchObject(ctx context.Context, slug string, patch store.ObjectPatch, opts ...store.ObjectOption) (id, newSlug string, err error)
 	DeleteObject(ctx context.Context, slug string, opts ...store.ObjectOption) error
 	Ready(ctx context.Context) error
 	RecordAuditLog(ctx context.Context, objectID string, action store.AuditAction, caller, ip, actorType, actorID string, opts ...store.AuditOption) error
@@ -148,6 +149,7 @@ func NewMux(s objectStore, publicURL string, webBuild fs.FS, version string, opt
 	mux.HandleFunc("GET /objects/{slug}", requireReadAccess(s, handleGetObject(s)))
 	mux.HandleFunc("GET /objects/{slug}/used-by", handleGetObjectUsedBy(s))
 	mux.HandleFunc("PUT /objects/{slug}", requireWriteAccess(s, true, handleUpdateObject(s)))
+	mux.HandleFunc("PATCH /objects/{slug}", requireWriteAccess(s, true, handlePatchObject(s)))
 	mux.HandleFunc("DELETE /objects/{slug}", requireWriteAccess(s, true, handleDeleteObject(s)))
 
 	mux.HandleFunc("GET /audit-log", handleHardNavRoute(handleQueryAuditLog(s), staticHandler))

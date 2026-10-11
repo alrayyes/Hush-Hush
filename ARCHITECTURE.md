@@ -52,7 +52,10 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   them, so `consumer_a` and `consumer_d` can ask for `release_token` and get
   different values. A consumer token resolves to its variant itself; a write
   token or session names one with `?id=`
-  ([ADR 33](docs/adr/0033-one-name-many-variants.md)).
+  ([ADR 33](docs/adr/0033-one-name-many-variants.md)). `PATCH` edits a
+  secret's description, tags and slug without re-sealing it, and a rename moves
+  every variant of the name
+  ([ADR 35](docs/adr/0035-patch-edits-an-objects-metadata.md)).
 - **Web UI**: SvelteKit, built static and embedded into the Go binary with
   `go:embed`; passkey (WebAuthn) authentication.
 - **Operations**: one structured JSON log line per request, never carrying a
