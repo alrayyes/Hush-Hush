@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.16.0](https://github.com/alrayyes/Hush-Hush/compare/v3.15.0...v3.16.0) (2026-10-11)
+
+
+### Features
+
+* **web:** 404 and 500 pages in the app's layout ([#821](https://github.com/alrayyes/Hush-Hush/issues/821)) ([5340c8a](https://github.com/alrayyes/Hush-Hush/commit/5340c8a6c2efdf31943f895cc7959440b387a08b))
+
 ## [3.15.0](https://github.com/alrayyes/Hush-Hush/compare/v3.14.1...v3.15.0) (2026-10-11)
 
 
