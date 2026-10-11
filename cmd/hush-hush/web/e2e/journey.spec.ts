@@ -2027,7 +2027,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		},
 	});
 	expect(widest.ok()).toBe(true);
-	for (const width of [1280, 1440]) {
+	for (const width of [768, 900, 1024, 1280, 1440]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('/');
 		await expect(rowFor(widestSlug)).toHaveCount(1);
