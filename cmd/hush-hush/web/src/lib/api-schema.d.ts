@@ -255,7 +255,9 @@ export interface paths {
          *     A `public_key` in the request body registers or replaces that age
          *     public key on the (possibly just-renamed) consumer, upserting a
          *     directory entry for it even if it had none before - unlike a bare
-         *     rename, this never 404s on an unrecognized name. Sending both
+         *     rename, this never 404s on an unrecognized name. It must be a valid
+         *     age X25519 recipient (`age1...`); anything else, a private key
+         *     included, is a 400 and nothing in the request is applied. Sending both
          *     fields in the same call renames first, then sets the key on the
          *     resulting name.
          *
@@ -1011,7 +1013,7 @@ export interface components {
              *     doesn't require the consumer to already be recorded anywhere;
              *     a name never referenced by any object's `used_by` list yet is
              *     accepted the same as an existing one.
-             * @example age1exampleplaceholderpublickey
+             * @example age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c0
              */
             public_key?: string;
         };
@@ -2092,7 +2094,7 @@ export interface operations {
                      * @example {
                      *       "name": "homelab/vps-docker-2",
                      *       "secret_count": 3,
-                     *       "public_key": "age1exampleplaceholderpublickey"
+                     *       "public_key": "age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c0"
                      *     }
                      */
                     "application/json": components["schemas"]["ConsumerEntry"];

@@ -320,7 +320,7 @@ func contractCases() []contractCase {
 				t.Helper()
 				seedObjectWithConsumer(t, s, "contract_register_public_key", "contract-keyed-consumer")
 
-				b := []byte(`{"public_key":"age1exampleplaceholderpublickey"}`)
+				b := []byte(`{"public_key":"age1xl8amwv0vaxfk3gkrsgfv8l9nwkfuyqf448jwauhkn4vsw9jfqzq5290c0"}`)
 				req := httptest.NewRequest(http.MethodPatch, "/consumers/contract-keyed-consumer", bytes.NewReader(b))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
