@@ -28,6 +28,7 @@ import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { variantLabel } from '#lib/consumers.js';
 import { formatTimestamp } from '#lib/datetime.js';
 import { recoverEscrowedIdentity } from '#lib/identity.js';
+import { detailChanges } from '#lib/object-details.js';
 import {
 	hasActiveFilters,
 	matchesFilters,
@@ -235,8 +236,9 @@ let editId = $state('');
 // Only set when the name has several variants, so the dialog can say which.
 let editVariant = $state('');
 let editValue = $state('');
+let editNewSlug = $state('');
 let editDescription = $state('');
-// What the field opened with, so an unchanged description isn't sent.
+// What the fields opened with, so an unchanged one isn't sent.
 let editInitialDescription = '';
 let editTags = $state('');
 // What the field opened with, so an untouched field isn't sent at all.
@@ -275,6 +277,7 @@ function openEdit(object: ObjectMetadata) {
 	editUsedBy = [...(object.used_by ?? [])];
 	editKeepReadableCopy = false;
 	editError = '';
+	editNewSlug = object.slug;
 	editInitialDescription = object.description ?? '';
 	editDescription = editInitialDescription;
 	editInitialUsedBy = [...editUsedBy];
@@ -318,17 +321,22 @@ async function submitEdit(event: SubmitEvent) {
 		return;
 	}
 
-	const tagsChanged = tags.join(',') !== editInitialTags.join(',');
-	const descriptionChanged = editDescription !== editInitialDescription;
 	const plaintext = normalizeValue(editValue);
-	// Only a typed value, a changed consumer list, a readable copy or new tags
-	// go through the update, which seals again. A description alone is a PATCH
-	// and leaves the ciphertext, and so the passkey touch, out of it.
+	// Only a typed value, a changed consumer list or a readable copy go
+	// through the update, which seals again. The id, description and tags are
+	// a PATCH and leave the ciphertext, and so the passkey touch, out of it.
 	const sealing =
 		plaintext !== '' ||
-		tagsChanged ||
 		editKeepReadableCopy ||
 		editUsedBy.join(',') !== editInitialUsedBy.join(',');
+	const changes = detailChanges(
+		{
+			slug: editSlug,
+			description: editInitialDescription,
+			tags: editInitialTags,
+		},
+		{ slug: editNewSlug, description: editDescription, tags },
+	);
 
 	if (sealing && editEffectiveRecipients.length === 0) {
 		editError =
@@ -353,13 +361,12 @@ async function submitEdit(event: SubmitEvent) {
 				value,
 				editUsedBy,
 				editKeepReadableCopy,
-				// Omitted when the field is as it opened, which leaves the tags alone.
-				tagsChanged ? tags : undefined,
+				undefined,
 				editId,
 			);
 		}
-		if (descriptionChanged) {
-			await patchObject(editSlug, editId, { description: editDescription });
+		if (changes) {
+			await patchObject(editSlug, editId, changes);
 		}
 		editOpen = false;
 		await invalidate('app:objects');
@@ -903,12 +910,22 @@ async function confirmDelete() {
 						{...valueFieldAttributes}
 					/>
 					<p class="text-sm text-text-muted">
-						Leave empty to keep the current value. Changing only the
-						description needs nothing more. Changing tags or consumers makes
+						Leave empty to keep the current value. Changing only the id,
+						description or tags needs nothing more. Changing consumers makes
 						your browser open the value with your own key (a passkey touch)
 						and seal it again, which only works for a secret saved with a
 						readable copy.
 					</p>
+				</div>
+
+				<div class="space-y-1">
+					<Label for="edit-slug">Id</Label>
+					<Input id="edit-slug" class="w-full" bind:value={editNewSlug} required />
+					{#if editVariant}
+						<p class="text-sm text-text-muted">
+							Renaming moves every variant of this name.
+						</p>
+					{/if}
 				</div>
 
 				<div class="space-y-1">
