@@ -245,7 +245,7 @@ func serve() error {
 	readiness := hushhush.NewReadiness(s)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           hushhush.AccessLog(slog.Default(), hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel), hushhush.WithReadiness(readiness))),
+		Handler:           hushhush.AccessLog(slog.Default(), hushhush.NoIndex(hushhush.NewMux(s, cfg.PublicURL, build, version, hushhush.WithInstanceLabel(cfg.InstanceLabel), hushhush.WithReadiness(readiness)))),
 		ReadHeaderTimeout: 5 * time.Second,
 		// A body is at most hushhush.MaxBodyBytes, so a caller that takes
 		// longer than this to send one is holding the connection, not sending.
