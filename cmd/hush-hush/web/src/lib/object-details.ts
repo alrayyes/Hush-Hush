@@ -30,3 +30,20 @@ export function detailChanges(
 
 	return Object.keys(changes).length > 0 ? changes : undefined;
 }
+
+// needsReseal is whether an edit has to seal the value again: a typed value,
+// a changed consumer list or a readable copy. Id, description and tags alone
+// are a PATCH, which leaves the ciphertext (and the passkey touch) out of it.
+// The value is the already-normalised text, '' when none was typed.
+export function needsReseal(edit: {
+	value: string;
+	keepReadableCopy: boolean;
+	usedBy: string[];
+	initialUsedBy: string[];
+}): boolean {
+	return (
+		edit.value !== '' ||
+		edit.keepReadableCopy ||
+		edit.usedBy.join(',') !== edit.initialUsedBy.join(',')
+	);
+}

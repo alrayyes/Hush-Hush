@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detailChanges } from './object-details';
+import { detailChanges, needsReseal } from './object-details';
 
 const initial = { slug: 'a', description: 'old', tags: ['x', 'y'] };
 
@@ -36,5 +36,25 @@ describe('detailChanges', () => {
 		expect(detailChanges(initial, { ...initial, tags: ['y', 'x'] })).toEqual({
 			tags: ['y', 'x'],
 		});
+	});
+});
+
+describe('needsReseal', () => {
+	const none = {
+		value: '',
+		keepReadableCopy: false,
+		usedBy: ['a', 'b'],
+		initialUsedBy: ['a', 'b'],
+	};
+
+	it('is false when only details change, which is a PATCH', () => {
+		expect(needsReseal(none)).toBe(false);
+	});
+
+	it('is true for a typed value, a readable copy or a changed consumer list', () => {
+		expect(needsReseal({ ...none, value: 'x' })).toBe(true);
+		expect(needsReseal({ ...none, keepReadableCopy: true })).toBe(true);
+		expect(needsReseal({ ...none, usedBy: ['a'] })).toBe(true);
+		expect(needsReseal({ ...none, usedBy: ['a', 'b', 'c'] })).toBe(true);
 	});
 });

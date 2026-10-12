@@ -28,7 +28,7 @@ import { Textarea } from '#lib/components/ui/textarea/index.js';
 import { variantLabel } from '#lib/consumers.js';
 import { formatTimestamp } from '#lib/datetime.js';
 import { recoverEscrowedIdentity } from '#lib/identity.js';
-import { detailChanges } from '#lib/object-details.js';
+import { detailChanges, needsReseal } from '#lib/object-details.js';
 import {
 	hasActiveFilters,
 	matchesFilters,
@@ -325,10 +325,12 @@ async function submitEdit(event: SubmitEvent) {
 	// Only a typed value, a changed consumer list or a readable copy go
 	// through the update, which seals again. The id, description and tags are
 	// a PATCH and leave the ciphertext, and so the passkey touch, out of it.
-	const sealing =
-		plaintext !== '' ||
-		editKeepReadableCopy ||
-		editUsedBy.join(',') !== editInitialUsedBy.join(',');
+	const sealing = needsReseal({
+		value: plaintext,
+		keepReadableCopy: editKeepReadableCopy,
+		usedBy: editUsedBy,
+		initialUsedBy: editInitialUsedBy,
+	});
 	const changes = detailChanges(
 		{
 			slug: editSlug,
@@ -364,6 +366,11 @@ async function submitEdit(event: SubmitEvent) {
 				undefined,
 				editId,
 			);
+			// Saved. If the PATCH below fails, a retry mustn't seal (and ask for a
+			// passkey touch) a second time.
+			editValue = '';
+			editKeepReadableCopy = false;
+			editInitialUsedBy = [...editUsedBy];
 		}
 		if (changes) {
 			await patchObject(editSlug, editId, changes);
