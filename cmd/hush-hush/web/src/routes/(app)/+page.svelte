@@ -903,9 +903,10 @@ async function confirmDelete() {
 						{...valueFieldAttributes}
 					/>
 					<p class="text-sm text-text-muted">
-						Leave empty to keep the current value. Your browser then opens it
-						with your own key (a passkey touch) and seals it again to the
-						consumers below, which only works for a secret saved with a
+						Leave empty to keep the current value. Changing only the
+						description needs nothing more. Changing tags or consumers makes
+						your browser open the value with your own key (a passkey touch)
+						and seal it again, which only works for a secret saved with a
 						readable copy.
 					</p>
 				</div>
