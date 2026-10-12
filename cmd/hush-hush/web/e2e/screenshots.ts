@@ -113,8 +113,8 @@ for (const secret of SAMPLE_SECRETS) {
 	await page.locator('#create-description').fill(secret.description);
 	await consumersLoaded;
 	await page.locator('#create-used-by').fill(CONSUMER);
-	await page.getByRole('listbox').waitFor();
-	await page.getByRole('option').first().click();
+	await page.getByRole('dialog').getByRole('listbox').waitFor();
+	await page.getByRole('dialog').getByRole('option').first().click();
 	await page.getByRole('button', { name: 'Create' }).click();
 	// "New secret" is on screen the whole time, so it can't say the create
 	// finished - the new row can. Without this the last secret was dropped
