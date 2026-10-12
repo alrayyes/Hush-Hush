@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 
 	// Registers the "sqlite" driver with database/sql; nothing here calls
 	// it by name.
@@ -24,22 +25,27 @@ type Store struct {
 	db *sql.DB
 }
 
+// withForeignKeys adds the foreign_keys pragma to path's DSN. SQLite ignores
+// foreign keys (so ON DELETE CASCADE never fires) unless each connection
+// turns them on for itself - it's a per-connection pragma, not a database
+// setting, and a database/sql pool opens connections whenever it likes. A
+// one-off PRAGMA Exec after Open only reached whichever connection ran it
+// (alrayyes/hush-hush#800).
+func withForeignKeys(path string) string {
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+
+	return path + sep + "_pragma=foreign_keys(1)"
+}
+
 // Open opens (creating if necessary) a SQLite database at path and applies
 // the schema. path may be ":memory:" for an in-memory database.
 func Open(path string) (*Store, error) {
-	db, err := sql.Open("sqlite", path)
+	db, err := sql.Open("sqlite", withForeignKeys(path))
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
-	}
-
-	// objects.id -> used_by.object_id is declared ON DELETE CASCADE in the
-	// schema, but SQLite ignores foreign keys unless a connection turns
-	// them on for itself - it's a per-connection pragma, not a database
-	// setting.
-	if _, err := db.Exec(`PRAGMA foreign_keys = ON`); err != nil {
-		_ = db.Close()
-
-		return nil, fmt.Errorf("enable foreign keys: %w", err)
 	}
 
 	if _, err := db.Exec(schema); err != nil {
@@ -49,6 +55,12 @@ func Open(path string) (*Store, error) {
 	}
 
 	if err := migrateColumns(db); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
+	if err := deleteOrphanRelations(db); err != nil {
 		_ = db.Close()
 
 		return nil, err
@@ -425,6 +437,22 @@ func (s *Store) Ready(ctx context.Context) error {
 func (s *Store) Close() error {
 	if err := s.db.Close(); err != nil {
 		return fmt.Errorf("close database: %w", err)
+	}
+
+	return nil
+}
+
+// deleteOrphanRelations removes used_by and tags rows whose object no longer
+// exists. Before foreign keys were enforced on every pooled connection, a
+// delete on an unenforced one skipped the cascade and left them behind,
+// inflating a consumer's secret count (alrayyes/hush-hush#800). Idempotent.
+func deleteOrphanRelations(db *sql.DB) error {
+	if _, err := db.Exec(`DELETE FROM used_by WHERE object_id NOT IN (SELECT id FROM objects)`); err != nil {
+		return fmt.Errorf("delete orphan used_by rows: %w", err)
+	}
+
+	if _, err := db.Exec(`DELETE FROM tags WHERE object_id NOT IN (SELECT id FROM objects)`); err != nil {
+		return fmt.Errorf("delete orphan tags rows: %w", err)
 	}
 
 	return nil
