@@ -748,6 +748,56 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	]);
 	expect(putsBefore).toEqual([]);
 
+	// #843: tags change with no value typed, as a PATCH of just the tags,
+	// so no passkey touch and no PUT either.
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await editDialog.locator('#edit-tags').fill('ops, rotated');
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await editDialog.waitFor({ state: 'hidden' });
+	await expect(page.locator('[data-testid="tag"]:visible')).toHaveText([
+		'ops',
+		'rotated',
+	]);
+	expect(patches.map((body) => JSON.parse(body)).at(-1)).toEqual({
+		tags: ['ops', 'rotated'],
+	});
+	expect(putsBefore).toEqual([]);
+
+	// A rename the server refuses shows its message and changes nothing.
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await editDialog.getByLabel('Id', { exact: true }).fill('Not A Slug');
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await expect(editDialog.getByRole('alert')).toBeVisible();
+	const editRenameResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(editRenameResults.violations).toEqual([]);
+
+	// A valid rename moves the row; rename back so later steps find it.
+	await editDialog
+		.getByLabel('Id', { exact: true })
+		.fill('mattermost_deploy_hook');
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await editDialog.waitFor({ state: 'hidden' });
+	await expect(
+		page.getByRole('cell', { name: /^mattermost_deploy_hook/ }),
+	).toBeVisible();
+	await expect(
+		page.getByRole('cell', { name: /^mattermost_deploy_webhook/ }),
+	).toHaveCount(0);
+	await page.getByRole('button', { name: 'Edit' }).click();
+	const renamedDialog = page.getByRole('dialog', {
+		name: 'Edit mattermost_deploy_hook',
+	});
+	await renamedDialog
+		.getByLabel('Id', { exact: true })
+		.fill('mattermost_deploy_webhook');
+	await renamedDialog.locator('#edit-tags').fill('');
+	await renamedDialog.getByRole('button', { name: 'Save' }).click();
+	await renamedDialog.waitFor({ state: 'hidden' });
+	await expect(page.locator('[data-testid="tag"]:visible')).toHaveCount(0);
+	expect(putsBefore).toEqual([]);
+
 	// #790: a path no route matches shows the 404 page inside the signed-in
 	// shell, and a load that fails shows the 500 page with no internals.
 	await page.goto('/no/such/page');
@@ -1187,7 +1237,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// just the chip, which updates synchronously before the refetch
 	// resolves) avoids asserting against the table's still-unfiltered
 	// content.
-	await expect(rows).toHaveCount(8);
+	await expect(rows).toHaveCount(13);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').nth(2)).toHaveText('admin');
 	}
@@ -1195,14 +1245,15 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await actorTrigger.click();
 	await page.getByRole('option', { name: 'Any actor' }).click();
 	await expect(page.getByText('actor: admin')).toHaveCount(0);
-	await expect(rows).toHaveCount(8);
+	await expect(rows).toHaveCount(13);
 
 	await objectTrigger.click();
 	await page.getByRole('option', { name: 'mattermost_deploy_webhook' }).click();
 	await expect(
 		page.getByText('object: mattermost_deploy_webhook'),
 	).toBeVisible();
-	await expect(rows).toHaveCount(8);
+	// One of the two renames is logged under the temporary name, so it drops out here.
+	await expect(rows).toHaveCount(12);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').first()).toHaveText(
 			'mattermost_deploy_webhook',
@@ -1356,7 +1407,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		name: 'Edit mattermost_deploy_webhook',
 	});
 	await noCopyConsumersLoaded;
-	await noCopyDialog.locator('#edit-tags').fill('touched');
+	await noCopyDialog.locator('#edit-used-by').fill('reseal-target');
+	await noCopyDialog.getByRole('listbox').waitFor();
+	await noCopyDialog
+		.getByRole('option', { name: /reseal-target/ })
+		.first()
+		.click();
 	await noCopyDialog.getByRole('button', { name: 'Save' }).click();
 	await expect(noCopyDialog.getByRole('alert')).toContainText(
 		'no readable copy',
