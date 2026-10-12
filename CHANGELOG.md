@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.22.0](https://github.com/alrayyes/Hush-Hush/compare/v3.21.0...v3.22.0) (2026-10-12)
+
+
+### Features
+
+* **web:** rename a secret and change its tags without re-sealing ([#844](https://github.com/alrayyes/Hush-Hush/issues/844)) ([dae6430](https://github.com/alrayyes/Hush-Hush/commit/dae643027b05fade5f417b47a06212976db0ddb7)), closes [#843](https://github.com/alrayyes/Hush-Hush/issues/843)
+
 ## [3.21.0](https://github.com/alrayyes/Hush-Hush/compare/v3.20.0...v3.21.0) (2026-10-12)
 
 
