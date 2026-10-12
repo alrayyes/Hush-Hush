@@ -188,6 +188,11 @@ endpoint answers with a configuration error instead of the server
 refusing to start - the API (and the CLI/SDKs that call it) work exactly
 the same either way.
 
+Hush-Hush is an internal tool, not a public site. Every response carries
+`X-Robots-Tag: noindex, nofollow` so search engines leave it out of their
+results, and `robots.txt` allows crawling so they can read that header.
+Access is gated by the passkey login and bearer tokens described above.
+
 The server sets the caching and compression headers itself, so it needs
 no reverse proxy for them. Content-hashed files under `/_app/immutable/`
 get `Cache-Control: public, max-age=31536000, immutable`, every other
