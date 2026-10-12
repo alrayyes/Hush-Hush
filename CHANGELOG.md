@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.21.0](https://github.com/alrayyes/Hush-Hush/compare/v3.20.0...v3.21.0) (2026-10-12)
+
+
+### Features
+
+* **web:** edit a secret's description without a new value ([#839](https://github.com/alrayyes/Hush-Hush/issues/839)) ([ce5ace6](https://github.com/alrayyes/Hush-Hush/commit/ce5ace6e5b0a696fae187c801f9414b7db0ce2fd)), closes [#784](https://github.com/alrayyes/Hush-Hush/issues/784)
+
 ## [3.20.0](https://github.com/alrayyes/Hush-Hush/compare/v3.19.0...v3.20.0) (2026-10-12)
 
 
