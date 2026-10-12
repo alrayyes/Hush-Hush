@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.20.0](https://github.com/alrayyes/Hush-Hush/compare/v3.19.0...v3.20.0) (2026-10-12)
+
+
+### Features
+
+* **web:** tell search engines not to index the UI ([#836](https://github.com/alrayyes/Hush-Hush/issues/836)) ([bda964e](https://github.com/alrayyes/Hush-Hush/commit/bda964e9f1c5cde91140b5758aa283db9f53c292)), closes [#834](https://github.com/alrayyes/Hush-Hush/issues/834)
+
 ## [3.19.0](https://github.com/alrayyes/Hush-Hush/compare/v3.18.1...v3.19.0) (2026-10-12)
 
 
