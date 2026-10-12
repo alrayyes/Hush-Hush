@@ -716,6 +716,38 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await editDialog.waitFor({ state: 'hidden' });
 	await expect(page.locator('[data-testid="tag"]:visible')).toHaveCount(0);
 
+	// #784: the description changes with no value typed, and without the
+	// passkey re-seal a blank value otherwise triggers. A PATCH carries
+	// only the description.
+	const patches: string[] = [];
+	page.on('request', (req) => {
+		if (req.method() === 'PATCH' && req.url().includes('/objects/')) {
+			patches.push(req.postData() ?? '');
+		}
+	});
+	const putsBefore: string[] = [];
+	page.on('request', (req) => {
+		if (req.method() === 'PUT' && req.url().includes('/objects/')) {
+			putsBefore.push(req.url());
+		}
+	});
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await expect(editDialog.getByLabel('Description')).toBeVisible();
+	await editDialog
+		.getByLabel('Description')
+		.fill('rotated by the on-call, see runbook');
+	await editDialog.getByRole('button', { name: 'Save' }).click();
+	await editDialog.waitFor({ state: 'hidden' });
+	await expect(
+		page
+			.getByText('rotated by the on-call, see runbook')
+			.locator('visible=true'),
+	).toBeVisible();
+	expect(patches.map((body) => JSON.parse(body))).toEqual([
+		{ description: 'rotated by the on-call, see runbook' },
+	]);
+	expect(putsBefore).toEqual([]);
+
 	// #790: a path no route matches shows the 404 page inside the signed-in
 	// shell, and a load that fails shows the 500 page with no internals.
 	await page.goto('/no/such/page');
@@ -1155,7 +1187,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// just the chip, which updates synchronously before the refetch
 	// resolves) avoids asserting against the table's still-unfiltered
 	// content.
-	await expect(rows).toHaveCount(7);
+	await expect(rows).toHaveCount(8);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').nth(2)).toHaveText('admin');
 	}
@@ -1163,14 +1195,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await actorTrigger.click();
 	await page.getByRole('option', { name: 'Any actor' }).click();
 	await expect(page.getByText('actor: admin')).toHaveCount(0);
-	await expect(rows).toHaveCount(7);
+	await expect(rows).toHaveCount(8);
 
 	await objectTrigger.click();
 	await page.getByRole('option', { name: 'mattermost_deploy_webhook' }).click();
 	await expect(
 		page.getByText('object: mattermost_deploy_webhook'),
 	).toBeVisible();
-	await expect(rows).toHaveCount(7);
+	await expect(rows).toHaveCount(8);
 	for (const row of await rows.all()) {
 		await expect(row.getByRole('cell').first()).toHaveText(
 			'mattermost_deploy_webhook',

@@ -382,6 +382,25 @@ export async function updateObject(
 	return res.json();
 }
 
+export type PatchObjectRequest = Schemas['PatchObjectRequest'];
+
+// patchObject changes a secret's description, slug (a rename, which moves
+// every variant of the name) and tags without touching the ciphertext.
+// Only the fields passed are sent, so an absent one stays as it is; ''
+// and [] clear the description and tags.
+export async function patchObject(
+	slug: string,
+	id: string,
+	changes: PatchObjectRequest,
+): Promise<ObjectMetadata> {
+	const res = await request(objectPath(slug, id), {
+		method: 'PATCH',
+		body: JSON.stringify(changes),
+	});
+
+	return res.json();
+}
+
 export async function deleteObject(slug: string, id?: string): Promise<void> {
 	await request(objectPath(slug, id), { method: 'DELETE' });
 }

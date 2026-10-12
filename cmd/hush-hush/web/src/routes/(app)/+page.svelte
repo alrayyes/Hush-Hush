@@ -9,6 +9,7 @@ import {
 	deleteObject,
 	getObjectValue,
 	type ObjectMetadata,
+	patchObject,
 	updateObject,
 } from '#lib/api.js';
 import { TAGS_MAX_ITEMS } from '#lib/api-limits.js';
@@ -234,12 +235,16 @@ let editId = $state('');
 // Only set when the name has several variants, so the dialog can say which.
 let editVariant = $state('');
 let editValue = $state('');
+let editDescription = $state('');
+// What the field opened with, so an unchanged description isn't sent.
+let editInitialDescription = '';
 let editTags = $state('');
 // What the field opened with, so an untouched field isn't sent at all.
 let editInitialTags: string[] = [];
 let editTagsError = $state('');
 let editUsedBy: string[] = $state([]);
 let editEntries: ConsumerEntry[] = $state([]);
+let editInitialUsedBy: string[] = [];
 let editError = $state('');
 // Independent of whatever a previous create or update on this same
 // object requested - an update reseals the whole value from scratch, and
@@ -270,6 +275,9 @@ function openEdit(object: ObjectMetadata) {
 	editUsedBy = [...(object.used_by ?? [])];
 	editKeepReadableCopy = false;
 	editError = '';
+	editInitialDescription = object.description ?? '';
+	editDescription = editInitialDescription;
+	editInitialUsedBy = [...editUsedBy];
 	editInitialTags = [...object.tags];
 	editTags = formatTags(editInitialTags);
 	editTagsError = '';
@@ -310,34 +318,49 @@ async function submitEdit(event: SubmitEvent) {
 		return;
 	}
 
-	if (editEffectiveRecipients.length === 0) {
+	const tagsChanged = tags.join(',') !== editInitialTags.join(',');
+	const descriptionChanged = editDescription !== editInitialDescription;
+	const plaintext = normalizeValue(editValue);
+	// Only a typed value, a changed consumer list, a readable copy or new tags
+	// go through the update, which seals again. A description alone is a PATCH
+	// and leaves the ciphertext, and so the passkey touch, out of it.
+	const sealing =
+		plaintext !== '' ||
+		tagsChanged ||
+		editKeepReadableCopy ||
+		editUsedBy.join(',') !== editInitialUsedBy.join(',');
+
+	if (sealing && editEffectiveRecipients.length === 0) {
 		editError =
 			'Add at least one consumer with a registered public key, or keep a readable copy for yourself, before saving this secret.';
 		return;
 	}
 
-	const plaintext = normalizeValue(editValue);
-
 	try {
-		let value: string;
-		if (editResealing) {
-			const resealed = await resealStoredValue();
-			if (resealed === undefined) {
-				return;
+		if (sealing) {
+			let value: string;
+			if (editResealing) {
+				const resealed = await resealStoredValue();
+				if (resealed === undefined) {
+					return;
+				}
+				value = resealed;
+			} else {
+				value = await sealValue(plaintext, editEffectiveRecipients);
 			}
-			value = resealed;
-		} else {
-			value = await sealValue(plaintext, editEffectiveRecipients);
+			await updateObject(
+				editSlug,
+				value,
+				editUsedBy,
+				editKeepReadableCopy,
+				// Omitted when the field is as it opened, which leaves the tags alone.
+				tagsChanged ? tags : undefined,
+				editId,
+			);
 		}
-		await updateObject(
-			editSlug,
-			value,
-			editUsedBy,
-			editKeepReadableCopy,
-			// Omitted when the field is as it opened, which leaves the tags alone.
-			tags.join(',') === editInitialTags.join(',') ? undefined : tags,
-			editId,
-		);
+		if (descriptionChanged) {
+			await patchObject(editSlug, editId, { description: editDescription });
+		}
 		editOpen = false;
 		await invalidate('app:objects');
 		// An edit can introduce a consumer the directory page hasn't seen
@@ -880,11 +903,17 @@ async function confirmDelete() {
 						{...valueFieldAttributes}
 					/>
 					<p class="text-sm text-text-muted">
-						Leave empty to keep the current value. Your browser then opens it
-						with your own key (a passkey touch) and seals it again to the
-						consumers below, which only works for a secret saved with a
+						Leave empty to keep the current value. Changing only the
+						description needs nothing more. Changing tags or consumers makes
+						your browser open the value with your own key (a passkey touch)
+						and seal it again, which only works for a secret saved with a
 						readable copy.
 					</p>
+				</div>
+
+				<div class="space-y-1">
+					<Label for="edit-description">Description</Label>
+					<Input id="edit-description" class="w-full" bind:value={editDescription} />
 				</div>
 
 				<div class="space-y-1">
