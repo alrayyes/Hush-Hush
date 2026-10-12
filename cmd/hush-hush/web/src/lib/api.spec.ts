@@ -6,6 +6,7 @@ import {
 	listConsumerDirectory,
 	listObjects,
 	listTokens,
+	patchObject,
 	setConsumerPublicKey,
 	updateObject,
 } from './api';
@@ -279,5 +280,46 @@ describe('setConsumerPublicKey', () => {
 		expect(url).toMatch(/\/consumers\/ci\/a$/);
 		expect(init.method).toBe('PATCH');
 		expect(JSON.parse(init.body)).toEqual({ public_key: 'age1abc' });
+	});
+});
+
+describe('patchObject', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	function stubFetch() {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				new Response(JSON.stringify({ slug: 'b' }), { status: 200 }),
+			);
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubGlobal('document', { cookie: '' });
+
+		return fetchMock;
+	}
+
+	it('PATCHes only the fields it is given, to the variant it names', async () => {
+		const fetchMock = stubFetch();
+
+		await patchObject('a', 'variant-1', { description: 'new' });
+
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toMatch(/\/objects\/a\?id=variant-1$/);
+		expect(init.method).toBe('PATCH');
+		expect(JSON.parse(init.body)).toEqual({ description: 'new' });
+	});
+
+	it('sends an empty description and empty tags, which clear them', async () => {
+		const fetchMock = stubFetch();
+
+		await patchObject('a', 'v', { description: '', tags: [], slug: 'b' });
+
+		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+			description: '',
+			tags: [],
+			slug: 'b',
+		});
 	});
 });
