@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.19.0](https://github.com/alrayyes/Hush-Hush/compare/v3.18.1...v3.19.0) (2026-10-12)
+
+
+### Features
+
+* **api:** send X-Robots-Tag noindex on every response ([#835](https://github.com/alrayyes/Hush-Hush/issues/835)) ([2ad89d5](https://github.com/alrayyes/Hush-Hush/commit/2ad89d562ff86d76e8ed48ef8a3d61baae0a574d)), closes [#834](https://github.com/alrayyes/Hush-Hush/issues/834)
+
 ## [3.18.1](https://github.com/alrayyes/Hush-Hush/compare/v3.18.0...v3.18.1) (2026-10-12)
 
 
