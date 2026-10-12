@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.1](https://github.com/alrayyes/Hush-Hush/compare/v3.18.0...v3.18.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **store:** enforce foreign keys on every pooled connection ([#832](https://github.com/alrayyes/Hush-Hush/issues/832)) ([4fa7a82](https://github.com/alrayyes/Hush-Hush/commit/4fa7a8265c33a47822ef04e433bddef409fedb43))
+
 ## [3.18.0](https://github.com/alrayyes/Hush-Hush/compare/v3.17.0...v3.18.0) (2026-10-11)
 
 
