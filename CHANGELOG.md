@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.29.3](https://github.com/alrayyes/Hush-Hush/compare/v3.29.2...v3.29.3) (2026-10-13)
+
+
+### Bug Fixes
+
+* **web:** drop an audit-log response that a newer request has overtaken ([#923](https://github.com/alrayyes/Hush-Hush/issues/923)) ([1eaf6d9](https://github.com/alrayyes/Hush-Hush/commit/1eaf6d9a9d8f251e91b35a4bf17ab302bf4c49b8)), closes [#922](https://github.com/alrayyes/Hush-Hush/issues/922)
+
 ## [3.29.2](https://github.com/alrayyes/Hush-Hush/compare/v3.29.1...v3.29.2) (2026-10-13)
 
 
