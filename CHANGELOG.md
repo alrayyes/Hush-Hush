@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.30.0](https://github.com/alrayyes/Hush-Hush/compare/v3.29.4...v3.30.0) (2026-10-13)
+
+
+### Features
+
+* **web:** offer a rows-per-page choice on Secrets and the audit log ([#916](https://github.com/alrayyes/Hush-Hush/issues/916)) ([48e5290](https://github.com/alrayyes/Hush-Hush/commit/48e529046cf393960a055e98487ff501c97f8c51))
+
 ## [3.29.4](https://github.com/alrayyes/Hush-Hush/compare/v3.29.3...v3.29.4) (2026-10-13)
 
 
