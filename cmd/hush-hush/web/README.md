@@ -134,7 +134,7 @@ size and a short list shows no pager at all. `Pager` takes `page`, `total`,
 `pageSize` and `href`, a function from a page number to its URL: each page is a
 link, so it survives a reload and can be shared. The numbers to show, the
 "Showing 21–40 of 137" range and the clamp for a page past the end are plain
-functions in `src/lib/pager.ts`.
+functions in `src/lib/pageMath.ts`.
 
 Below 640px the page numbers collapse to Previous, "Page 2 of 7" and Next, with
 44px targets. While `loading`, every control stays in place, dimmed.

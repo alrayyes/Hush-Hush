@@ -2,7 +2,7 @@
 import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 import { Button } from '#lib/components/ui/button/index.js';
-import { pageRange, showPager, summaryRange, totalPages } from '#lib/pager.js';
+import { pageRange, showPager, summaryRange, totalPages } from '#lib/pageMath.js';
 
 // The numbered pager for a list that knows its total (alrayyes/Hush-Hush#892).
 // It renders nothing when the list fits on one page. Links, not buttons, so a

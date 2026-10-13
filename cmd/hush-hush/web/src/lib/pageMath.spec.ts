@@ -5,7 +5,7 @@ import {
 	showPager,
 	summaryRange,
 	totalPages,
-} from './pager';
+} from './pageMath';
 
 // alrayyes/Hush-Hush#892: the logic behind the shared pager. The component
 // itself is in Pager.spec.ts; this is what needs no rendering.
