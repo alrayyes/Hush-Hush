@@ -2506,6 +2506,112 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		).toBe(true);
 	}
 
+	// alrayyes/Hush-Hush#893: the Secrets table pages 20 at a time, the page is
+	// in the URL, and a short list shows no pager. Seeded on top of whatever
+	// the journey left behind, so the totals are worked out, not assumed.
+	const before = await (await page.request.get('/objects')).json();
+	const existing = (before.objects ?? before).length as number;
+	const pagingSlugs = Array.from(
+		{ length: 21 },
+		(_, i) => `paging_${String(i).padStart(2, '0')}`,
+	);
+	for (const slug of pagingSlugs) {
+		const created = await page.request.post('/objects', {
+			headers: { 'X-CSRF-Token': csrfToken },
+			data: {
+				slug,
+				value: await sealForVariant(slug),
+				used_by: [],
+				tags: ['paging'],
+			},
+		});
+		expect(created.ok()).toBe(true);
+	}
+	const total = existing + pagingSlugs.length;
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto('/');
+	const secretsPager = page.getByRole('navigation', {
+		name: 'Secrets pages',
+	});
+	await expect(secretsPager).toContainText(`Showing 1–20 of ${total}`);
+	await expect(page.getByRole('row')).toHaveCount(20 + 1);
+	await page.waitForFunction(() => document.getAnimations().length === 0);
+	for (const theme of ['light', 'dark']) {
+		await page.evaluate(
+			(t) => document.documentElement.setAttribute('data-theme', t),
+			theme,
+		);
+		await page.waitForFunction(() => document.getAnimations().length === 0);
+		const pagerResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+			.analyze();
+		expect(pagerResults.violations).toEqual([]);
+	}
+
+	await secretsPager.getByRole('link', { name: 'Next' }).click();
+	await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+	await expect(secretsPager).toContainText(
+		`Showing 21–${Math.min(40, total)} of ${total}`,
+	);
+
+	// Page 2 at desktop, and the collapsed "Page 2 of n" pager at 390px, are
+	// scanned too: they are different markup from page 1.
+	await page.evaluate(() =>
+		document.documentElement.setAttribute('data-theme', 'light'),
+	);
+	await page.mouse.move(0, 0);
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.waitForFunction(() => document.getAnimations().length === 0);
+		const pageTwoResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+			.analyze();
+		expect(pageTwoResults.violations).toEqual([]);
+	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+
+	// The page is the URL's: a reload shows the same page, and a page past
+	// the end shows the last one.
+	await page.reload();
+	await expect(secretsPager).toContainText('Showing 21');
+	await page.goto('/?page=99');
+	await expect(secretsPager).toContainText(`of ${total}`);
+	const lastFrom = Math.floor((total - 1) / 20) * 20 + 1;
+	await expect(secretsPager).toContainText(
+		`Showing ${lastFrom}–${total} of ${total}`,
+	);
+
+	// Narrowing the list sends the reader back to page 1.
+	await page.goto('/?page=2');
+	// Loading ?page=2 keeps page 2: the reset only follows a change.
+	await expect(secretsPager).toContainText('Showing 21');
+	await page.waitForTimeout(500);
+	await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('paging_');
+	await expect(page).not.toHaveURL(/page=/);
+	await expect(page.getByRole('row')).toHaveCount(20 + 1);
+	await expect(secretsPager).toContainText('Showing 1–20 of 21');
+	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('');
+
+	// So does picking a tag.
+	await page.goto('/?page=2');
+	await page
+		.getByRole('group', { name: 'Filter by tag' })
+		.getByRole('button', { name: 'paging (21)' })
+		.click();
+	await expect(page).not.toHaveURL(/page=/);
+	await expect(secretsPager).toContainText('Showing 1–20 of 21');
+
+	for (const slug of pagingSlugs) {
+		expect(
+			(
+				await page.request.delete(`/objects/${slug}`, {
+					headers: { 'X-CSRF-Token': csrfToken },
+				})
+			).ok(),
+		).toBe(true);
+	}
+
 	await page.setViewportSize({ width: 1280, height: 800 });
 
 	// Log out lives in .topbar-actions, not <nav> - it's an account
