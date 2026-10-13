@@ -898,7 +898,7 @@ async function confirmDelete() {
 </Dialog.Root>
 
 <Dialog.Root bind:open={editOpen}>
-	<Dialog.Content class="flex flex-col gap-0 overflow-hidden p-0">
+	<Dialog.Content scroll={false}>
 		<Dialog.Header class="shrink-0 border-b p-4">
 			<Dialog.Title>Edit {editSlug}</Dialog.Title>
 			{#if editVariant}

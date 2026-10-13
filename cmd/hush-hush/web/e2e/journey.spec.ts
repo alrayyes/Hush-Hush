@@ -390,6 +390,26 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// legitimately describes the stored value as "Sealed ciphertext".
 	const createDialog = page.getByRole('dialog', { name: 'Create a secret' });
 	await expect(createDialog.getByLabel('Value', { exact: true })).toBeVisible();
+	// #865: a dialog taller than the viewport scrolls, and its close button
+	// stays put instead of scrolling away with the content.
+	const createViewport = page.viewportSize();
+	await page.setViewportSize({ width: 1280, height: 400 });
+	const createClose = createDialog.getByRole('button', { name: 'Close' });
+	await expect(createClose).toBeInViewport({ ratio: 1 });
+	const createBox = await createDialog.boundingBox();
+	await page.mouse.move(
+		(createBox?.x ?? 0) + (createBox?.width ?? 0) / 2,
+		(createBox?.y ?? 0) + (createBox?.height ?? 0) / 2,
+	);
+	await page.mouse.wheel(0, 2000);
+	await expect(
+		createDialog.getByRole('button', { name: 'Create' }),
+	).toBeInViewport();
+	await expect(createClose).toBeInViewport({ ratio: 1 });
+	await createDialog.evaluate((dialog) => {
+		dialog.scrollTop = 0;
+	});
+	if (createViewport) await page.setViewportSize(createViewport);
 	await expect(createDialog.getByText(/plain text/i)).toHaveCount(0);
 	await expect(createDialog.getByText(/ciphertext/i)).toHaveCount(0);
 	const plaintextValue = 'prod deploy webhook secret, sealed client-side';
