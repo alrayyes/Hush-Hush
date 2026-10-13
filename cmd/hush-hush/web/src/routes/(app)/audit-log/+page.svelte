@@ -16,9 +16,10 @@ import {
 	type AuditOrder,
 	cursorParams,
 	flipOrder,
+	type PageMove,
 	type PageStep,
 	pagerState,
-	splitPage,
+	turnPage,
 } from '#lib/audit-paging.js';
 import CursorPager from '#lib/CursorPager.svelte';
 import { createCopier } from '#lib/clipboard.js';
@@ -82,20 +83,29 @@ function currentQuery(after: number | undefined): AuditLogQuery {
 	};
 }
 
-async function fetchPage(after: number | undefined) {
+// Turns to another page. The cursor stack, the entries and the flag only change
+// together, after the load succeeds (alrayyes/Hush-Hush#906): a failed load
+// shows the error and leaves Newer and Older where they were.
+async function go(move: PageMove) {
 	loading = true;
 	loadError = '';
 
 	try {
-		// One row more than a page, to learn whether another page follows.
-		const rows = await queryAuditLog({
-			...currentQuery(after),
-			limit: AUDIT_PAGE_SIZE + 1,
-		});
-		const split = splitPage(rows, AUDIT_PAGE_SIZE);
-		entries = split.entries;
-		hasMore = split.hasMore;
-		currentAfter = after;
+		const next = await turnPage(
+			{ entries, hasMore, after: currentAfter, stack: cursorStack },
+			move,
+			// One row more than a page, to learn whether another page follows.
+			(after) =>
+				queryAuditLog({
+					...currentQuery(after),
+					limit: AUDIT_PAGE_SIZE + 1,
+				}),
+			AUDIT_PAGE_SIZE,
+		);
+		entries = next.entries;
+		hasMore = next.hasMore;
+		currentAfter = next.after;
+		cursorStack = next.stack;
 	} catch (err) {
 		loadError =
 			err instanceof ApiError ? err.message : 'Failed to load the audit log.';
@@ -105,26 +115,11 @@ async function fetchPage(after: number | undefined) {
 }
 
 function resetToFirstPage() {
-	cursorStack = [];
-	void fetchPage(undefined);
-}
-
-function nextPage() {
-	if (!hasMore || entries.length === 0) return;
-	cursorStack = [...cursorStack, currentAfter];
-	void fetchPage(entries[entries.length - 1].id);
-}
-
-function previousPage() {
-	if (cursorStack.length === 0) return;
-	const prev = cursorStack[cursorStack.length - 1];
-	cursorStack = cursorStack.slice(0, -1);
-	void fetchPage(prev);
+	void go('first');
 }
 
 function step(direction: PageStep) {
-	if (direction === 'next') nextPage();
-	else previousPage();
+	void go(direction);
 }
 
 const pager = $derived(pagerState(order, cursorStack.length > 0, hasMore));
