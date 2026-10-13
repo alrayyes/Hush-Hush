@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.2](https://github.com/alrayyes/Hush-Hush/compare/v3.23.1...v3.23.2) (2026-10-13)
+
+
+### Bug Fixes
+
+* **store:** queue concurrent writers instead of failing with SQLITE_BUSY ([#861](https://github.com/alrayyes/Hush-Hush/issues/861)) ([715a7fc](https://github.com/alrayyes/Hush-Hush/commit/715a7fc0c91563d4b29ee42d265049f57f7d64dc))
+
 ## [3.23.1](https://github.com/alrayyes/Hush-Hush/compare/v3.23.0...v3.23.1) (2026-10-13)
 
 
