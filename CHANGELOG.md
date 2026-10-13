@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.25.0](https://github.com/alrayyes/Hush-Hush/compare/v3.24.0...v3.25.0) (2026-10-13)
+
+
+### Features
+
+* **web:** make the window color follow the in-app theme ([#886](https://github.com/alrayyes/Hush-Hush/issues/886)) ([7995f11](https://github.com/alrayyes/Hush-Hush/commit/7995f118a69bf2543a0feac1d801ade990a269e3))
+
 ## [3.24.0](https://github.com/alrayyes/Hush-Hush/compare/v3.23.5...v3.24.0) (2026-10-13)
 
 
