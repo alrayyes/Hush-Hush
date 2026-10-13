@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -142,25 +143,36 @@ func TestAnEndedContextNeverWinsAFreeLock(t *testing.T) {
 
 // Nothing in the store may write straight through s.db: every write goes
 // through beginWrite or execWrite so it queues on the lock and honours the
-// request context (alrayyes/hush-hush#863). A helper that accepts either a
-// database or a transaction is the way one slipped past a search for
-// ExecContext, so passing s.db to such a helper is flagged too.
+// request context (alrayyes/hush-hush#863). This is an allowlist, so a new
+// way to reach the database fails by default: outside write_lock.go the
+// store may use s.db only to read, ping and close. A helper that accepts
+// either a database or a transaction is how one write slipped past a search
+// for ExecContext, so passing s.db to such a helper is flagged too.
 func TestNoWriteBypassesTheWriteLock(t *testing.T) {
 	t.Parallel()
 
-	bypass := regexp.MustCompile(`s\.db\.(Exec|ExecContext)\(|(upsertConsumerRow|resolveRenamedPublicKey|rewriteUsedByForRename)\([^)]*\bs\.db\b`)
+	use := regexp.MustCompile(`s\.db\.(\w+)|s\.db\b[^.]`)
+	helper := regexp.MustCompile(`(upsertConsumerRow|resolveRenamedPublicKey|rewriteUsedByForRename)\([^)]*\bs\.db\b`)
+	allowed := map[string]bool{"QueryContext": true, "QueryRowContext": true, "PingContext": true, "Close": true}
+	// These take a querier, which can only read, so s.db may be passed to
+	// them; DB() hands the handle to tests.
+	readOnly := regexp.MustCompile(`(queryDistinctColumn|queryDistinctActors|resolveObjectID)\(ctx, s\.db\b|return s\.db\n`)
 
 	files, err := filepath.Glob("*.go")
 	require.NoError(t, err)
 
 	for _, file := range files {
-		if filepath.Ext(file) != ".go" || len(file) > 8 && file[len(file)-8:] == "_test.go" || file == "write_lock.go" {
+		if strings.HasSuffix(file, "_test.go") || file == "write_lock.go" {
 			continue
 		}
 
 		src, err := fs.ReadFile(os.DirFS("."), file)
 		require.NoError(t, err)
 
-		require.Empty(t, bypass.FindAllString(string(src), -1), "%s writes outside the write lock", file)
+		require.Empty(t, helper.FindAllString(string(src), -1), "%s passes s.db to a helper that writes", file)
+
+		for _, m := range use.FindAllStringSubmatch(readOnly.ReplaceAllString(string(src), ""), -1) {
+			require.True(t, m[1] != "" && allowed[m[1]], "%s uses s.db as %q; only reads, ping and close may bypass the write lock", file, m[0])
+		}
 	}
 }
