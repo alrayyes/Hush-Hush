@@ -9,11 +9,16 @@ import {
 	summaryRange,
 	totalPages,
 } from '#lib/pageMath.js';
+import { showSizeSelector } from '#lib/pageSize.js';
+import RowsPerPage from '#lib/RowsPerPage.svelte';
 
 // The numbered pager for a list that knows its total (alrayyes/Hush-Hush#892).
 // It renders nothing when the list fits on one page. Links, not buttons, so a
 // page is a URL: it survives a reload, can be shared and opens in a new tab.
-// While `loading`, every control stays where it is but can't be used.
+// While `loading`, every control stays where it is but can't be used. A list
+// that offers a choice of page size passes `sizeOptions` and `onSizeChange`: the
+// bar then shows once the list outgrows the smallest option, and the page
+// controls only while one page can't hold everything.
 let {
 	page,
 	total,
@@ -21,6 +26,8 @@ let {
 	href,
 	label = 'Pagination',
 	loading = false,
+	sizeOptions,
+	onSizeChange,
 }: {
 	page: number;
 	total: number;
@@ -28,10 +35,18 @@ let {
 	href: (page: number) => string;
 	label?: string;
 	loading?: boolean;
+	sizeOptions?: readonly number[];
+	onSizeChange?: (size: number) => void;
 } = $props();
 
 // A page past the end (a stale link, or rows deleted since) shows the last
 // page, not an impossible range like "Showing 381–137".
+const bar = $derived(
+	sizeOptions
+		? showSizeSelector(total, sizeOptions)
+		: showPager(total, pageSize),
+);
+const controls = $derived(showPager(total, pageSize));
 const current = $derived(clampPage(page, total, pageSize));
 const pages = $derived(totalPages(total, pageSize));
 const range = $derived(summaryRange(current, pageSize, total));
@@ -42,17 +57,24 @@ const items = $derived(pageRange(current, pages));
 const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 </script>
 
-{#if showPager(total, pageSize)}
+{#if bar}
 	<nav
 		aria-label={label}
 		aria-busy={loading}
 		class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
 	>
-		<p class="text-center text-sm text-muted-foreground sm:text-left">
-			Showing <span class="font-medium text-foreground">{range.from}–{range.to}</span>
-			of <span class="font-medium text-foreground">{total}</span>
-		</p>
+		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+			<p class="text-center text-sm text-muted-foreground sm:text-left">
+				Showing <span class="font-medium text-foreground">{range.from}–{range.to}</span>
+				of <span class="font-medium text-foreground">{total}</span>
+			</p>
 
+			{#if sizeOptions && onSizeChange}
+				<RowsPerPage options={sizeOptions} size={pageSize} onchange={onSizeChange} disabled={loading} />
+			{/if}
+		</div>
+
+		{#if controls}
 		<div class="flex items-center justify-between gap-2 sm:justify-end">
 			<Button
 				variant="outline"
@@ -95,5 +117,6 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 				Next <ChevronRightIcon aria-hidden="true" />
 			</Button>
 		</div>
+		{/if}
 	</nav>
 {/if}
