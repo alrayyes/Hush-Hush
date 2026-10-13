@@ -139,6 +139,14 @@ functions in `src/lib/pageMath.ts`.
 A page past the end shows the last page, so a stale link never reads
 "Showing 381–137".
 
+Secrets and the audit log also let the reader pick how many rows a page holds.
+They pass `sizeOptions` and `onSizeChange` (and, for `CursorPager`, `size`), and
+the bar then shows a labelled "Rows per page" select. The choice is kept in
+the address as `?size=`, and only an offered size counts (`parsePageSize`). The
+bar appears once the list outgrows the smallest option, and stays when one page
+holds everything, so a size picked too big can be undone. The other lists offer
+no choice.
+
 The three Settings lists (passkeys, bearer tokens, consumer tokens) page 10 at
 a time and each keeps its own page in the address (`passkey_page`, `token_page`,
 `consumer_token_page`), so paging one leaves the others where they are. They

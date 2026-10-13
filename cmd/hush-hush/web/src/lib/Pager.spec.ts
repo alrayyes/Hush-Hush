@@ -208,3 +208,96 @@ describe('CursorPager', () => {
 		);
 	});
 });
+
+// alrayyes/Hush-Hush#897: the rows-per-page selector, where a list offers one.
+describe('Pager with a rows-per-page selector', () => {
+	const sized = (props: { page?: number; total: number; size: number }) =>
+		render(Pager, {
+			props: {
+				page: 1,
+				pageSize: props.size,
+				href,
+				label: 'Secrets pages',
+				sizeOptions: [20, 50, 100],
+				onSizeChange: () => {},
+				...props,
+			},
+		}).body;
+
+	it('shows the labelled selector with the current size', () => {
+		const html = sized({ total: 137, size: 20 });
+
+		expect(html).toContain('Rows per page');
+		expect(html).toContain('data-slot="select-trigger"');
+		expect(html).toContain('role="combobox"');
+		expect(html).toMatch(/aria-labelledby="[^"]*rows-per-page"/);
+		expect(html).toMatch(/>\s*20\s*</);
+	});
+
+	it('renders nothing when no size could change what is on screen', () => {
+		const html = sized({ total: 18, size: 20 });
+
+		expect(html).not.toContain('<nav');
+		expect(html).not.toContain('Rows per page');
+	});
+
+	it('keeps the selector but drops the page controls when one page holds everything', () => {
+		const html = sized({ total: 45, size: 50 });
+
+		expect(html).toContain('Rows per page');
+		expect(html).toContain('1–45');
+		expect(html).not.toContain('Previous');
+		expect(html).not.toContain('Next');
+	});
+
+	it('shows the page controls too when there is more than one page', () => {
+		const html = sized({ total: 137, size: 20 });
+
+		expect(html).toContain('Previous');
+		expect(html).toContain('Next');
+	});
+
+	it('is unchanged for a list that offers no selector', () => {
+		expect(numbered({ page: 2, total: 137 })).not.toContain('Rows per page');
+	});
+});
+
+describe('CursorPager with a rows-per-page selector', () => {
+	const sizedCursor = (props: {
+		size: number;
+		canNewer: boolean;
+		canOlder: boolean;
+	}) =>
+		render(CursorPager, {
+			props: {
+				count: props.size,
+				label: 'Audit log pages',
+				onNewer: () => {},
+				onOlder: () => {},
+				sizeOptions: [25, 50, 100],
+				onSizeChange: () => {},
+				...props,
+			},
+		}).body;
+
+	it('shows the selector when an older page exists', () => {
+		const html = sizedCursor({ size: 25, canNewer: false, canOlder: true });
+
+		expect(html).toContain('Rows per page');
+		expect(html).toContain('data-slot="select-trigger"');
+		expect(html).toMatch(/aria-labelledby="[^"]*rows-per-page"/);
+	});
+
+	it('renders nothing for one page at the smallest size', () => {
+		expect(
+			sizedCursor({ size: 25, canNewer: false, canOlder: false }),
+		).not.toContain('<nav');
+	});
+
+	it('keeps the selector for one page at a larger size, so it can be undone', () => {
+		const html = sizedCursor({ size: 100, canNewer: false, canOlder: false });
+
+		expect(html).toContain('Rows per page');
+		expect(html).toContain('Showing');
+	});
+});

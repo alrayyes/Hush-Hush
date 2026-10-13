@@ -1,3 +1,5 @@
+import { AUDIT_SIZES } from './pageSize';
+
 export type AuditOrder = 'asc' | 'desc';
 
 // cursorParams is the cursor for the page after the one whose last entry has
@@ -17,8 +19,9 @@ export function flipOrder(order: AuditOrder): AuditOrder {
 	return order === 'desc' ? 'asc' : 'desc';
 }
 
-// The audit log shows 25 entries at a time (alrayyes/Hush-Hush#895).
-export const AUDIT_PAGE_SIZE = 25;
+// The audit log shows 25 entries at a time unless the reader picks another
+// size (alrayyes/Hush-Hush#895, #897).
+export const AUDIT_PAGE_SIZE = AUDIT_SIZES[0];
 
 // splitPage turns the rows a request returned into one page and a flag for
 // whether another page follows. The log has no total, so a request asks for
