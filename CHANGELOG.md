@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.24.0](https://github.com/alrayyes/Hush-Hush/compare/v3.23.5...v3.24.0) (2026-10-13)
+
+
+### Features
+
+* **web:** make the web UI installable ([#884](https://github.com/alrayyes/Hush-Hush/issues/884)) ([7ee11d1](https://github.com/alrayyes/Hush-Hush/commit/7ee11d12784ec2b39c429005f3a88f870fc117cf))
+
 ## [3.23.5](https://github.com/alrayyes/Hush-Hush/compare/v3.23.4...v3.23.5) (2026-10-13)
 
 
