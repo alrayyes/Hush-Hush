@@ -60,7 +60,7 @@ func (s *Store) RecordAuditLog(ctx context.Context, objectID string, action Audi
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO audit_log (object_id, action, caller, ip, timestamp, actor_type, actor_id, variant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		objectID, string(action), callerValue, ip, now, actorTypeValue, actorIDValue, nullableString(o.variantID),
 	); err != nil {

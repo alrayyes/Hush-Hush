@@ -48,7 +48,7 @@ func (s *Store) CreateConsumerToken(ctx context.Context, consumer, description s
 		ExpiresAt:   now.Add(ttl).Format(time.RFC3339),
 	}
 
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO consumer_tokens (id, consumer, token_hash, description, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		ct.ID, ct.Consumer, hashToken(token), ct.Description, ct.CreatedAt, ct.ExpiresAt,
 	); err != nil {
@@ -126,7 +126,7 @@ func (s *Store) ListConsumerTokens(ctx context.Context) ([]ConsumerToken, error)
 // revoked, so an audit log entry attributed to it stays resolvable. It
 // returns ErrTokenNotFound if no unrevoked token exists under that id.
 func (s *Store) RevokeConsumerToken(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE consumer_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL`,
 		time.Now().UTC().Format(time.RFC3339), id,
 	)
@@ -160,7 +160,7 @@ func (s *Store) RotateConsumerToken(ctx context.Context, id string, ttl time.Dur
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl).Format(time.RFC3339)
 
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE consumer_tokens SET token_hash = ?, expires_at = ?, last_used_at = NULL
 		 WHERE id = ? AND revoked_at IS NULL AND expires_at > ?`,
 		hashToken(token), expiresAt, id, now.Format(time.RFC3339),
@@ -192,7 +192,7 @@ func (s *Store) RotateConsumerToken(ctx context.Context, id string, ttl time.Dur
 // UpdateConsumerTokenUsage records a successful authentication's
 // timestamp, same as UpdateWriteTokenUsage.
 func (s *Store) UpdateConsumerTokenUsage(ctx context.Context, id, usedAt string) error {
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE consumer_tokens SET last_used_at = ? WHERE id = ?`, usedAt, id,
 	)
 	if err != nil {
@@ -234,7 +234,7 @@ func (s *Store) PurgeConsumerToken(ctx context.Context, id string) error {
 		return ErrTokenStillActive
 	}
 
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM consumer_tokens WHERE id = ?`, id); err != nil {
+	if _, err := s.execWrite(ctx, `DELETE FROM consumer_tokens WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("purge consumer token: %w", err)
 	}
 

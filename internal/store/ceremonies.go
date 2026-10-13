@@ -19,7 +19,7 @@ var ErrCeremonyNotFound = errors.New("ceremony not found")
 // GetAndDeleteCeremony, or it expires unconsumed. data is the go-webauthn
 // SessionData, opaque to this package.
 func (s *Store) SaveCeremony(ctx context.Context, id, kind string, data []byte, createdAt, expiresAt string) error {
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO webauthn_ceremonies (id, kind, data, created_at, expires_at) VALUES (?, ?, ?, ?, ?)`,
 		id, kind, data, createdAt, expiresAt,
 	); err != nil {
@@ -36,7 +36,7 @@ func (s *Store) SaveCeremony(ctx context.Context, id, kind string, data []byte, 
 // design.md's "WebAuthn ceremony state" decision settled on rather than a
 // separate background job.
 func (s *Store) GetAndDeleteCeremony(ctx context.Context, id, kind string) ([]byte, error) {
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`DELETE FROM webauthn_ceremonies WHERE expires_at < ?`, time.Now().UTC().Format(time.RFC3339),
 	); err != nil {
 		return nil, fmt.Errorf("clean up expired ceremonies: %w", err)
@@ -55,7 +55,7 @@ func (s *Store) GetAndDeleteCeremony(ctx context.Context, id, kind string) ([]by
 		return nil, fmt.Errorf("get ceremony: %w", err)
 	}
 
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`DELETE FROM webauthn_ceremonies WHERE id = ? AND kind = ?`, id, kind,
 	); err != nil {
 		return nil, fmt.Errorf("delete consumed ceremony: %w", err)
