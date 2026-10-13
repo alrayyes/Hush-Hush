@@ -5,6 +5,7 @@ import {
 	matchesFilters,
 	objectFiltersToSearch,
 	parseObjectFilters,
+	parsePage,
 	unionObjects,
 } from './object-filters';
 
@@ -133,5 +134,25 @@ describe('unionObjects', () => {
 				[b, c],
 			]).map((o) => o.id),
 		).toEqual(['1', '2', '3']);
+	});
+});
+
+describe('objectFiltersToSearch with a page', () => {
+	it('adds page after the filters, from the second page on', () => {
+		expect(objectFiltersToSearch({ usedBy: ['a'] }, 3)).toBe(
+			'?used_by=a&page=3',
+		);
+	});
+
+	it('leaves page out for the first page, so page 1 has one URL', () => {
+		expect(objectFiltersToSearch({ usedBy: [] }, 1)).toBe('');
+	});
+});
+
+describe('parsePage', () => {
+	it('reads the page, and treats anything unusable as the first', () => {
+		expect(parsePage(new URLSearchParams('page=4'))).toBe(4);
+		expect(parsePage(new URLSearchParams('page=abc'))).toBe(1);
+		expect(parsePage(new URLSearchParams(''))).toBe(1);
 	});
 });

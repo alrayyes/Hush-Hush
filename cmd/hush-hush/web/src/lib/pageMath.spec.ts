@@ -3,6 +3,7 @@ import {
 	clampPage,
 	pageRange,
 	showPager,
+	slicePage,
 	summaryRange,
 	totalPages,
 } from './pageMath';
@@ -76,5 +77,25 @@ describe('clampPage', () => {
 		[5, 0, 20, 1],
 	])('page %s of %i rows at %i a page is page %i', (page, total, size, out) => {
 		expect(clampPage(page, total, size)).toBe(out);
+	});
+});
+
+describe('slicePage', () => {
+	const rows = Array.from({ length: 45 }, (_, i) => i + 1);
+
+	it('returns the rows of the asked-for page', () => {
+		expect(slicePage(rows, 2, 20)).toEqual(rows.slice(20, 40));
+	});
+
+	it('returns the short last page', () => {
+		expect(slicePage(rows, 3, 20)).toEqual([41, 42, 43, 44, 45]);
+	});
+
+	it('shows the last page for a page past the end', () => {
+		expect(slicePage(rows, 9, 20)).toEqual([41, 42, 43, 44, 45]);
+	});
+
+	it('returns nothing for an empty list', () => {
+		expect(slicePage([], 1, 20)).toEqual([]);
 	});
 });
