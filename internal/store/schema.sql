@@ -25,7 +25,8 @@
 -- "Internal id decoupled from user-facing slug" requirement). Splitting
 -- them means a future "rename a secret's slug" operation only has to
 -- update this column - used_by.object_id below keys off the stable
--- internal id, so it never needs touching for a rename.
+-- internal id. used_by also keeps a copy of the slug (see below), which a
+-- trigger rewrites on a rename.
 -- store.go's migrateObjectSlugs backfills slug (and generates a fresh
 -- internal id) for every pre-existing row, whose current id becomes its
 -- slug verbatim.
@@ -42,6 +43,10 @@ CREATE TABLE IF NOT EXISTS used_by (
     consumer TEXT NOT NULL,
     PRIMARY KEY (object_id, consumer)
 );
+-- used_by.slug, its unique index and the two triggers that keep it in step
+-- with objects.slug are added by store.go's enforceOneVariantPerConsumer
+-- (alrayyes/hush-hush#848): a consumer is in at most one object per slug,
+-- and (object_id, consumer) alone can't say so.
 
 -- Free-form labels on an object (alrayyes/hush-hush#500), for grouping and
 -- filtering the overview. Metadata only - never part of the sealed value.
