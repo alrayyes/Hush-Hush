@@ -2509,6 +2509,22 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		`Showing 21–${Math.min(40, total)} of ${total}`,
 	);
 
+	// Page 2 at desktop, and the collapsed "Page 2 of n" pager at 390px, are
+	// scanned too: they are different markup from page 1.
+	await page.evaluate(() =>
+		document.documentElement.setAttribute('data-theme', 'light'),
+	);
+	await page.mouse.move(0, 0);
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.waitForFunction(() => document.getAnimations().length === 0);
+		const pageTwoResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+			.analyze();
+		expect(pageTwoResults.violations).toEqual([]);
+	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+
 	// The page is the URL's: a reload shows the same page, and a page past
 	// the end shows the last one.
 	await page.reload();
