@@ -181,7 +181,7 @@ func TestPatchObjectRenameToAMalformedSlugIsRejected(t *testing.T) {
 	seedPatchable(t, s)
 	token := issueToken(t, s)
 
-	for _, slug := range []string{"Has Space", "UPPER", "-leading", "a/b", ""} {
+	for _, slug := range []string{"Has Space", "-leading", "a/b", "dot.ted", ""} {
 		body, err := json.Marshal(map[string]string{"slug": slug})
 		require.NoError(t, err)
 
@@ -256,4 +256,33 @@ func TestPatchObjectWithoutACredentialIsUnauthorized(t *testing.T) {
 	rec := patchObject(t, mux, "/objects/webhook", `{"description":"x"}`, "")
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestPatchObjectRenameToAnUppercaseSlugIsAccepted(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	seedPatchable(t, s)
+	token := issueToken(t, s)
+
+	rec := patchObject(t, mux, "/objects/webhook", `{"slug":"CF_DNS_API_TOKEN_SECRET"}`, token)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	_, err := s.GetObject(t.Context(), "CF_DNS_API_TOKEN_SECRET")
+	require.NoError(t, err)
+}
+
+func TestPatchOfALegacyNameThatEchoesItBackIsNotARename(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	// Stored before the naming rule, so the rule must not block editing it.
+	require.NoError(t, s.CreateObject(t.Context(), "legacy.name", sealedFixture, nil, "old", ""))
+
+	rec := patchObject(t, mux, "/objects/legacy.name", `{"slug":"legacy.name","description":"new"}`, token)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
