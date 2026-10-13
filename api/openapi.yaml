@@ -1863,11 +1863,14 @@ components:
     ObjectSlug:
       type: string
       maxLength: 128
-      pattern: "^[a-z0-9][a-z0-9_-]*$"
+      pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       examples: [mattermost_deploy_webhook]
       description: |
         A caller-chosen, unique identifier for an object - what every
-        documented request path (URL, CLI, API) addresses it by. The
+        documented request path (URL, CLI, API) addresses it by. Letters of
+        either case, digits, `_` and `-`, starting with a letter or digit;
+        names are case-sensitive, so `Api_Token` and `api_token` are two
+        secrets. Create and rename follow the same rule. The
         object's internal id is a separate, opaque value never exposed to
         or accepted from a caller (specs/secret-objects/spec.md's
         "Internal id decoupled from user-facing slug" requirement).
@@ -1941,7 +1944,7 @@ components:
         slug:
           type: string
           maxLength: 128
-          pattern: "^[a-z0-9][a-z0-9_-]*$"
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
           examples: [deploy_webhook]
           description: |
             Renames the object, in the same shape as `ObjectSlug`. Every

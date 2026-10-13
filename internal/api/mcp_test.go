@@ -371,3 +371,19 @@ func TestMCPUpdateClashNamesTheConsumerAndTheSecret(t *testing.T) {
 	require.True(t, clash.IsError)
 	require.Equal(t, `consumer "a" is already in the secret named "mcp_up" (id `+created.ID+`)`, clash.Content[0].Text)
 }
+
+func TestMCPInjectFollowsTheNamingRule(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	for _, slug := range []string{"dot.ted", "a/b", "-lead", "Has Space"} {
+		result := callTool(t, mux, token, "inject", map[string]any{"slug": slug, "value": sealedFixture})
+		require.True(t, result.IsError, slug)
+		require.Contains(t, result.Content[0].Text, "letter", slug)
+	}
+
+	ok := callTool(t, mux, token, "inject", map[string]any{"slug": "CF_DNS_API_TOKEN_SECRET", "value": sealedFixture})
+	require.False(t, ok.IsError, "content: %+v", ok.Content)
+}

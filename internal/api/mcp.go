@@ -92,7 +92,7 @@ func checkMCPInput(in any, text string) ([]byte, error) {
 // them - a real base64 argument fails that validation outright. A plain
 // string field, decoded by hand, sidesteps the mismatch.
 type mcpInjectInput struct {
-	Slug        string   `json:"slug" maxLength:"128" jsonschema:"the object's new caller-facing slug"`
+	Slug        string   `json:"slug" maxLength:"128" jsonschema:"the object's new caller-facing slug: letters, digits, _ and -, starting with a letter or digit"`
 	Value       string   `json:"value" jsonschema:"the sealed (age) ciphertext, base64-encoded"`
 	UsedBy      []string `json:"used_by,omitempty" maxItems:"100" maxLength:"128" jsonschema:"consumers to record against the object"`
 	Description string   `json:"description,omitempty" maxLength:"1000" jsonschema:"a human-readable note about the object"`
@@ -227,20 +227,35 @@ func mcpInternalError(ctx context.Context, tool string, err error) error {
 	return errMCPInternal
 }
 
+// injectValue checks an inject call's slug and sealed value and returns the
+// decoded ciphertext: the same checks handleCreateObject makes over HTTP.
+func injectValue(in mcpInjectInput) ([]byte, error) {
+	if in.Slug == "" || in.Value == "" {
+		return nil, errMCPSlugAndValueRequired
+	}
+
+	if !validSlug(in.Slug) {
+		return nil, errInvalidSlug
+	}
+
+	value, err := checkMCPInput(in, in.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateAgeCiphertext(value); err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
 // mcpInject is the "inject" tool's handler - the same create operation
 // handleCreateObject (create.go) performs over HTTP.
 func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpInjectInput, ObjectMetadata] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpInjectInput) (*mcp.CallToolResult, ObjectMetadata, error) {
-		if in.Slug == "" || in.Value == "" {
-			return nil, ObjectMetadata{}, errMCPSlugAndValueRequired
-		}
-
-		value, err := checkMCPInput(in, in.Value)
+		value, err := injectValue(in)
 		if err != nil {
-			return nil, ObjectMetadata{}, err
-		}
-
-		if err := validateAgeCiphertext(value); err != nil {
 			return nil, ObjectMetadata{}, err
 		}
 
