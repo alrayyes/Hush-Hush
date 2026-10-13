@@ -4,10 +4,8 @@ import * as Select from '#lib/components/ui/select/index.js';
 // The "Rows per page" choice at the left of a pager bar
 // (alrayyes/Hush-Hush#897). The trigger shows the current size itself, so the
 // closed select reads correctly without the menu mounted. The label is a real
-// element the trigger and the open list point at, not a placeholder. The trigger
-// is a combobox: while the list is open it carries aria-activedescendant, which
-// a plain button isn't allowed to have, and an open combobox must say which
-// list it controls.
+// element the trigger points at, not a placeholder; the shared Select makes the
+// trigger a combobox that controls and names its list.
 let {
 	options,
 	size,
@@ -22,7 +20,6 @@ let {
 
 const uid = $props.id();
 const labelId = `${uid}-rows-per-page`;
-const listId = `${uid}-rows-listbox`;
 </script>
 
 <div class="flex items-center gap-2 text-sm text-muted-foreground">
@@ -34,14 +31,12 @@ const listId = `${uid}-rows-listbox`;
 		{disabled}
 	>
 		<Select.Trigger
-			role="combobox"
 			aria-labelledby={labelId}
-			aria-controls={listId}
 			class="h-11 min-w-20 text-foreground sm:h-8 sm:min-w-16"
 		>
 			{size}
 		</Select.Trigger>
-		<Select.Content id={listId} aria-labelledby={labelId}>
+		<Select.Content>
 			{#each options as option (option)}
 				<Select.Item value={String(option)} label={String(option)} />
 			{/each}

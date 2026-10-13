@@ -230,6 +230,7 @@ describe('Pager with a rows-per-page selector', () => {
 		expect(html).toContain('Rows per page');
 		expect(html).toContain('data-slot="select-trigger"');
 		expect(html).toContain('role="combobox"');
+		expect(html).toMatch(/aria-controls="[^"]+"/);
 		expect(html).toMatch(/aria-labelledby="[^"]*rows-per-page"/);
 		expect(html).toMatch(/>\s*20\s*</);
 	});
