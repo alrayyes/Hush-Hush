@@ -137,6 +137,10 @@ else. An API response never reaches a cache, because it can carry a secret's
 sealed value or a token's metadata. So an installed app still needs the server,
 and there is no offline mode.
 
+The browser's window chrome takes its color from the `theme-color` tag, which
+the theme script and the toggle keep in step with the theme the page shows.
+The manifest's colors are fixed, so an installed app's splash screen is light.
+
 The PNG icons are rendered from the SVG files beside them. After you edit one,
 run `scripts/generate-icons.sh` (it needs `rsvg-convert`) and commit the PNG
 files. The build doesn't render them. `e2e/installable.spec.ts` checks the
