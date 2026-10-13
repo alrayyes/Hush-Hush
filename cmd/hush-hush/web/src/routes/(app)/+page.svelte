@@ -898,15 +898,15 @@ async function confirmDelete() {
 </Dialog.Root>
 
 <Dialog.Root bind:open={editOpen}>
-	<Dialog.Content>
-		<Dialog.Header>
+	<Dialog.Content class="flex flex-col gap-0 overflow-hidden p-0">
+		<Dialog.Header class="shrink-0 border-b p-4">
 			<Dialog.Title>Edit {editSlug}</Dialog.Title>
 			{#if editVariant}
 				<Dialog.Description>{editVariant}.</Dialog.Description>
 			{/if}
 		</Dialog.Header>
-		<form onsubmit={submitEdit}>
-			<div class="space-y-4">
+		<form onsubmit={submitEdit} class="flex min-h-0 flex-1 flex-col">
+			<div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
 				<div class="space-y-1">
 					<Label for="edit-value">New value (optional)</Label>
 					<Textarea
@@ -923,6 +923,9 @@ async function confirmDelete() {
 						and seal it again, which only works for a secret saved with a
 						readable copy.
 					</p>
+					{#if editError}
+						<p role="alert" class="text-error">{editError}</p>
+					{/if}
 				</div>
 
 				<div class="space-y-1">
@@ -990,13 +993,9 @@ async function confirmDelete() {
 						be decrypted.
 					</p>
 				{/if}
-
-				{#if editError}
-					<p role="alert" class="text-error">{editError}</p>
-				{/if}
 			</div>
 
-			<Dialog.Footer>
+			<Dialog.Footer class="mx-0 mb-0 shrink-0">
 				<Dialog.Close class={buttonVariants({ variant: 'outline' })}>
 					Cancel
 				</Dialog.Close>
