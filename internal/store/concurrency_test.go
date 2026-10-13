@@ -13,7 +13,7 @@ import (
 
 // Concurrent creates on a file database must queue behind one another
 // (alrayyes/hush-hush#852) instead of failing with SQLITE_BUSY: the
-// derby for one slug leaves exactly one winner, and every loser sees the
+// race for one slug leaves exactly one winner, and every loser sees the
 // duplicate as ErrAlreadyExists, never a raw "database is locked".
 func TestConcurrentCreatesOfOneSlugReturnAlreadyExists(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "concurrent.db")
@@ -29,12 +29,11 @@ func TestConcurrentCreatesOfOneSlugReturnAlreadyExists(t *testing.T) {
 	start := make(chan struct{})
 
 	for i := range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
+
 			errs[i] = s.CreateObject(context.Background(), "release_token", []byte("v"), []string{"a"}, "", "")
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
@@ -43,8 +42,10 @@ func TestConcurrentCreatesOfOneSlugReturnAlreadyExists(t *testing.T) {
 	for i, err := range errs {
 		if err != nil {
 			require.ErrorIs(t, err, store.ErrAlreadyExists, "worker %d: %v", i, err)
+
 			continue
 		}
+
 		successes++
 	}
 	require.Equal(t, 1, successes, "exactly one create must succeed")
@@ -66,13 +67,12 @@ func TestConcurrentCreatesOfDifferentSlugsAllSucceed(t *testing.T) {
 	start := make(chan struct{})
 
 	for i := range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
+
 			errs[i] = s.CreateObject(context.Background(),
 				fmt.Sprintf("slug-%d", i), []byte("v"), []string{fmt.Sprintf("c%d", i)}, "", "")
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
