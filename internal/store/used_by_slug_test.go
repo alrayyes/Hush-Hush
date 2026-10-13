@@ -39,6 +39,7 @@ func TestTheSchemaRefusesAConsumerInTwoVariantsOfOneSlug(t *testing.T) {
 
 	_, err := s.DB().Exec(`INSERT INTO used_by (object_id, consumer) VALUES ('id-2', 'a')`)
 	require.Error(t, err)
+	// asSlugConflict matches on this text; keep the two in step.
 	require.Contains(t, err.Error(), "used_by.slug")
 }
 
