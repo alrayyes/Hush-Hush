@@ -53,9 +53,9 @@ wanted, they get their own decision, with a story for logout and revocation.
   committing the PNG files.
 - A new release's worker takes over open tabs at once and deletes the old
   cache. A tab still running the previous release's JavaScript that then loads a
-  chunk it hadn't fetched yet gets a 404 and reloads. A redeploy already does
-  this, since the old hashed files are gone from the server, so the worker
-  doesn't add a new failure.
+  chunk it hadn't fetched yet gets a 404, and the person has to reload the page.
+  A redeploy already does this, since the old hashed files are gone from the
+  server, so the worker doesn't add a new failure.
 - `theme-color` and the manifest colors follow the OS color scheme, not the
   in-app theme toggle. Someone who picks dark on a light OS sees light window
   chrome and a light splash screen.
