@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.27.0](https://github.com/alrayyes/Hush-Hush/compare/v3.26.0...v3.27.0) (2026-10-13)
+
+
+### Features
+
+* **web:** use the shared pager on the Consumers directory ([#901](https://github.com/alrayyes/Hush-Hush/issues/901)) ([b76f4c7](https://github.com/alrayyes/Hush-Hush/commit/b76f4c7393d93e0595af2da04e38b465debf9377))
+
 ## [3.26.0](https://github.com/alrayyes/Hush-Hush/compare/v3.25.0...v3.26.0) (2026-10-13)
 
 
