@@ -2,6 +2,7 @@
 import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 import { Select as SelectPrimitive } from 'bits-ui';
 import { cn, type WithoutChild } from '#lib/utils.js';
+import { useSelectContext } from './select-context.svelte.js';
 
 let {
 	ref = $bindable(null),
@@ -12,12 +13,24 @@ let {
 }: WithoutChild<SelectPrimitive.TriggerProps> & {
 	size?: 'sm' | 'default';
 } = $props();
+
+// A select is a combobox: while it's open the trigger carries
+// aria-activedescendant, which a plain button may not have, and an open
+// combobox has to say which list it controls. The trigger's own label is
+// what names that list.
+const context = useSelectContext();
+
+$effect(() => {
+	if (context) context.labelledby = restProps['aria-labelledby'] ?? undefined;
+});
 </script>
 
 <SelectPrimitive.Trigger
 	bind:ref
 	data-slot="select-trigger"
 	data-size={size}
+	role="combobox"
+	aria-controls={context?.listId}
 	class={cn(
 		"border-input data-placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-lg border bg-transparent py-2 pr-2 pl-2.5 text-sm transition-colors select-none focus-visible:ring-3 aria-invalid:ring-3 data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:flex *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 flex w-fit items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		className
