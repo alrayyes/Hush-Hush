@@ -58,6 +58,38 @@ let callerFilter = $state('');
 let fromFilter = $state('');
 let toFilter = $state('');
 
+// The filters and order the table on screen was fetched with. A change whose
+// fetch fails puts the controls back to these, so the controls, the table and
+// the curl command always describe the same query (alrayyes/Hush-Hush#921).
+let applied = {
+	object: '',
+	actor: '',
+	caller: '',
+	from: '',
+	to: '',
+	order: 'desc' as AuditOrder,
+};
+
+function snapshotControls() {
+	applied = {
+		object: objectFilter,
+		actor: actorFilter,
+		caller: callerFilter,
+		from: fromFilter,
+		to: toFilter,
+		order,
+	};
+}
+
+function restoreControls() {
+	objectFilter = applied.object;
+	actorFilter = applied.actor;
+	callerFilter = applied.caller;
+	fromFilter = applied.from;
+	toFilter = applied.to;
+	order = applied.order;
+}
+
 // cursorStack holds the `after` value that produced each earlier page,
 // so "Previous" can pop back to it - the API itself only ever pages
 // forward (design.md's "Audit log UI" decision: id-based cursor, no
@@ -111,8 +143,10 @@ async function go(move: PageMove) {
 		hasMore = next.hasMore;
 		currentAfter = next.after;
 		cursorStack = next.stack;
+		snapshotControls();
 	} catch (err) {
 		if (!isCurrent()) return;
+		restoreControls();
 		loadError =
 			err instanceof ApiError ? err.message : 'Failed to load the audit log.';
 	} finally {
