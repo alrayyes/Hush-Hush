@@ -704,6 +704,23 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		editDialog.getByRole('heading', { name: 'Edit mattermost_deploy_webhook' }),
 	).toBeInViewport({ ratio: 1 });
+	// The body is what scrolls: a field below the fold is off screen until the
+	// body is scrolled, then reachable.
+	const usedBy = editDialog.locator('#edit-used-by');
+	const editBody = editDialog.getByTestId('edit-dialog-body');
+	await expect(usedBy).not.toBeInViewport();
+	// A wheel over the body, as a user would, not a scripted scrollTop: that
+	// still works under overflow-hidden and would hide a lost scrollbar.
+	const bodyBox = await editBody.boundingBox();
+	await page.mouse.move(
+		(bodyBox?.x ?? 0) + (bodyBox?.width ?? 0) / 2,
+		(bodyBox?.y ?? 0) + (bodyBox?.height ?? 0) / 2,
+	);
+	await page.mouse.wheel(0, 2000);
+	await expect(usedBy).toBeInViewport();
+	await editBody.evaluate((body) => {
+		body.scrollTop = 0;
+	});
 	if (originalViewport) await page.setViewportSize(originalViewport);
 	await expectValueFieldIsPrivate(editDialog.locator('#edit-value'));
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
