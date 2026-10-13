@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
 )
@@ -231,4 +232,19 @@ func TestCompressedResponseVariesOnAcceptEncoding(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 
 	require.Contains(t, rec.Header().Values("Vary"), "Accept-Encoding")
+}
+
+// alrayyes/hush-hush#881: the web UI is installable. A browser only treats the
+// manifest as one when it arrives as application/manifest+json, and it checks
+// a service worker script for a new version on every load.
+
+func TestWebManifestIsServedAsManifestJSON(t *testing.T) {
+	t.Parallel()
+
+	build := spaWith(testIndexHTML)
+	build["manifest.webmanifest"] = &fstest.MapFile{Data: []byte(`{"name":"hush-hush"}`)}
+
+	rec := serveSPA(t, build, "/manifest.webmanifest")
+
+	require.Equal(t, "application/manifest+json", rec.Header().Get("Content-Type"))
 }
