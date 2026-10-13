@@ -2379,6 +2379,23 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		await expect(widestDelete).toBeInViewport({ ratio: 1 });
 	}
 
+	// alrayyes/Hush-Hush#905: a hovered Delete button stays readable in both
+	// themes. The scans above never hover, which is how the dark hover colour
+	// slipped under 4.5:1.
+	for (const theme of ['dark', 'light']) {
+		await page.evaluate(
+			(t) => document.documentElement.setAttribute('data-theme', t),
+			theme,
+		);
+		await rowFor(widestSlug).getByRole('button', { name: 'Delete' }).hover();
+		await page.waitForFunction(() => document.getAnimations().length === 0);
+		const hoverResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+			.analyze();
+		expect(hoverResults.violations, `hovered Delete in ${theme}`).toEqual([]);
+	}
+	await page.mouse.move(0, 0);
+
 	await page.setViewportSize({ width: 1280, height: 800 });
 	await page.goto('/');
 	await rowFor('many_consumers')
