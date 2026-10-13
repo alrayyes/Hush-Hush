@@ -139,6 +139,11 @@ functions in `src/lib/pageMath.ts`.
 A page past the end shows the last page, so a stale link never reads
 "Showing 381–137".
 
+The three Settings lists (passkeys, bearer tokens, consumer tokens) page 10 at
+a time and each keeps its own page in the address (`passkey_page`, `token_page`,
+`consumer_token_page`), so paging one leaves the others where they are. They
+offer no size choice, and a list of 10 or fewer shows no pager.
+
 From 640px up the page numbers show. Below that they collapse to Previous,
 "Page 2 of 7" and Next, with 44px targets. While `loading`, every control stays
 in place, dimmed.
