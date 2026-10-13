@@ -235,8 +235,7 @@ func TestCompressedResponseVariesOnAcceptEncoding(t *testing.T) {
 }
 
 // alrayyes/hush-hush#881: the web UI is installable. A browser only treats the
-// manifest as one when it arrives as application/manifest+json, and it checks
-// a service worker script for a new version on every load.
+// manifest as one when it arrives as application/manifest+json.
 
 func TestWebManifestIsServedAsManifestJSON(t *testing.T) {
 	t.Parallel()

@@ -103,6 +103,10 @@ test('the service worker caches the app shell and never an API response', async 
 	await page.reload();
 	// A same-origin API call made under the worker's control.
 	await page.evaluate(() => fetch('/healthz'));
+	// The worker writes to its cache after the page has its response, so give
+	// a worker that does cache API responses time to do it. Without this the
+	// check below could read first and pass for the wrong reason.
+	await page.waitForTimeout(500);
 
 	const cached = await page.evaluate(async () => {
 		const urls: string[] = [];
