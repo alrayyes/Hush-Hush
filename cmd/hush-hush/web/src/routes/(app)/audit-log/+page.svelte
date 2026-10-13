@@ -26,8 +26,8 @@ import { Input } from '#lib/components/ui/input/index.js';
 import { Label } from '#lib/components/ui/label/index.js';
 import * as Select from '#lib/components/ui/select/index.js';
 import { formatTimestamp } from '#lib/datetime.js';
-import { AUDIT_SIZES } from '#lib/pageSize.js';
-import { replaceState } from '$app/navigation';
+import { AUDIT_SIZES, parsePageSize } from '#lib/pageSize.js';
+import { afterNavigate, replaceState } from '$app/navigation';
 import { page } from '$app/state';
 import type { PageData } from './$types';
 
@@ -41,8 +41,9 @@ let { data }: { data: PageData } = $props();
 // intentional one-time seed, not a sync bug.
 let entries: AuditLogEntry[] = $state(data.entries);
 let hasMore = $state(data.hasMore);
-// Rows per page, from ?size= (the loader read it). A change rewrites the URL in
-// place and starts again at the first page.
+// Rows per page, seeded from ?size= (the loader read it). Picking a size
+// rewrites the address in place; a real navigation that lands on another size,
+// the nav link or going back, is caught in afterNavigate below.
 let size = $state(data.size);
 let loading = $state(false);
 let loadError = $state('');
@@ -134,6 +135,18 @@ function changeSize(next: number) {
 	replaceState(url, page.state);
 	resetToFirstPage();
 }
+
+// replaceState is shallow, so it isn't a navigation and doesn't land here. A
+// link or back/forward is: if the address now asks for another size, follow it.
+afterNavigate((navigation) => {
+	const fromAddress = parsePageSize(
+		(navigation.to?.url ?? page.url).searchParams,
+		AUDIT_SIZES,
+	);
+	if (fromAddress === size) return;
+	size = fromAddress;
+	resetToFirstPage();
+});
 
 function step(direction: PageStep) {
 	if (direction === 'next') nextPage();

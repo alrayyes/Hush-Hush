@@ -60,24 +60,24 @@ const bar = $derived(
 		</div>
 
 		{#if controls}
-		<div class="flex items-center justify-between gap-2 sm:justify-end">
-			<Button
-				variant="outline"
-				class="h-11 min-w-11 sm:h-8 sm:min-w-0"
-				onclick={onNewer}
-				disabled={loading || !canNewer}
-			>
-				<ArrowUpIcon aria-hidden="true" /> Newer
-			</Button>
-			<Button
-				variant="outline"
-				class="h-11 min-w-11 sm:h-8 sm:min-w-0"
-				onclick={onOlder}
-				disabled={loading || !canOlder}
-			>
-				Older <ArrowDownIcon aria-hidden="true" />
-			</Button>
-		</div>
+			<div class="flex items-center justify-between gap-2 sm:justify-end">
+				<Button
+					variant="outline"
+					class="h-11 min-w-11 sm:h-8 sm:min-w-0"
+					onclick={onNewer}
+					disabled={loading || !canNewer}
+				>
+					<ArrowUpIcon aria-hidden="true" /> Newer
+				</Button>
+				<Button
+					variant="outline"
+					class="h-11 min-w-11 sm:h-8 sm:min-w-0"
+					onclick={onOlder}
+					disabled={loading || !canOlder}
+				>
+					Older <ArrowDownIcon aria-hidden="true" />
+				</Button>
+			</div>
 		{/if}
 	</nav>
 {/if}

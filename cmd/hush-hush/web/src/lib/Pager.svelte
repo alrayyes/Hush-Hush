@@ -75,48 +75,48 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 		</div>
 
 		{#if controls}
-		<div class="flex items-center justify-between gap-2 sm:justify-end">
-			<Button
-				variant="outline"
-				class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
-				href={href(Math.max(1, current - 1))}
-				disabled={loading || current <= 1}
-			>
-				<ChevronLeftIcon aria-hidden="true" /> Previous
-			</Button>
+			<div class="flex items-center justify-between gap-2 sm:justify-end">
+				<Button
+					variant="outline"
+					class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
+					href={href(Math.max(1, current - 1))}
+					disabled={loading || current <= 1}
+				>
+					<ChevronLeftIcon aria-hidden="true" /> Previous
+				</Button>
 
-			<span class="text-sm sm:hidden">Page {current} of {pages}</span>
+				<span class="text-sm sm:hidden">Page {current} of {pages}</span>
 
-			<ol class="m-0 hidden list-none items-center gap-1 p-0 sm:flex">
-				{#each items as item, i (i)}
-					<li>
-						{#if item === 'gap'}
-							<span class="px-1 text-muted-foreground" aria-hidden="true">…</span>
-						{:else}
-							<Button
-								variant={item === current ? 'default' : 'outline'}
-								class="min-w-8 {dim}"
-								href={href(item)}
-								disabled={loading}
-								aria-current={item === current ? 'page' : undefined}
-								aria-label="Page {item}"
-							>
-								{item}
-							</Button>
-						{/if}
-					</li>
-				{/each}
-			</ol>
+				<ol class="m-0 hidden list-none items-center gap-1 p-0 sm:flex">
+					{#each items as item, i (i)}
+						<li>
+							{#if item === 'gap'}
+								<span class="px-1 text-muted-foreground" aria-hidden="true">…</span>
+							{:else}
+								<Button
+									variant={item === current ? 'default' : 'outline'}
+									class="min-w-8 {dim}"
+									href={href(item)}
+									disabled={loading}
+									aria-current={item === current ? 'page' : undefined}
+									aria-label="Page {item}"
+								>
+									{item}
+								</Button>
+							{/if}
+						</li>
+					{/each}
+				</ol>
 
-			<Button
-				variant="outline"
-				class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
-				href={href(Math.min(pages, current + 1))}
-				disabled={loading || current >= pages}
-			>
-				Next <ChevronRightIcon aria-hidden="true" />
-			</Button>
-		</div>
+				<Button
+					variant="outline"
+					class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
+					href={href(Math.min(pages, current + 1))}
+					disabled={loading || current >= pages}
+				>
+					Next <ChevronRightIcon aria-hidden="true" />
+				</Button>
+			</div>
 		{/if}
 	</nav>
 {/if}
