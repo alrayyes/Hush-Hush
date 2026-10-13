@@ -320,3 +320,54 @@ func TestMCPInjectWithInvalidTagIsAToolError(t *testing.T) {
 	})
 	require.True(t, result.IsError)
 }
+
+func TestMCPInjectClashNamesTheConsumerAndTheSecret(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	first := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_clash", "value": sealedFixture, "used_by": []string{"a"}})
+	require.False(t, first.IsError)
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	require.NoError(t, json.Unmarshal(first.StructuredContent, &created))
+
+	second := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_clash", "value": sealedFixtureNew, "used_by": []string{"b", "a"}})
+	require.True(t, second.IsError)
+	require.Len(t, second.Content, 1)
+	require.Equal(t, `consumer "a" is already in the secret named "mcp_clash" (id `+created.ID+`)`, second.Content[0].Text)
+
+	third := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_clash", "value": sealedFixtureNew})
+	require.True(t, third.IsError)
+	require.Equal(t, `a secret named "mcp_clash" already exists and this one names no consumer`, third.Content[0].Text)
+}
+
+func TestMCPUpdateClashNamesTheConsumerAndTheSecret(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	first := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_up", "value": sealedFixture, "used_by": []string{"a"}})
+	require.False(t, first.IsError)
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	require.NoError(t, json.Unmarshal(first.StructuredContent, &created))
+
+	second := callTool(t, mux, token, "inject", map[string]any{"slug": "mcp_up", "value": sealedFixtureNew, "used_by": []string{"b"}})
+	require.False(t, second.IsError)
+
+	var other struct {
+		ID string `json:"id"`
+	}
+	require.NoError(t, json.Unmarshal(second.StructuredContent, &other))
+
+	clash := callTool(t, mux, token, "update", map[string]any{"slug": "mcp_up", "id": other.ID, "value": sealedFixture, "used_by": []string{"b", "a"}})
+	require.True(t, clash.IsError)
+	require.Equal(t, `consumer "a" is already in the secret named "mcp_up" (id `+created.ID+`)`, clash.Content[0].Text)
+}

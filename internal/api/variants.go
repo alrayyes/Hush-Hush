@@ -15,6 +15,7 @@ import (
 
 var (
 	errAmbiguousName   = errors.New("name has several variants; pass id to say which")
+	errObjectExists    = errors.New("object already exists")
 	errVariantConflict = errors.New("a consumer can be in only one variant of a name")
 	errInvalidObjectID = errors.New("id must be a UUID")
 	errIDAndConsumer   = errors.New("pass id or consumer to pick a variant, not both")
@@ -60,10 +61,26 @@ func objectLookupFailed(w http.ResponseWriter, r *http.Request, err error) bool 
 	case errors.Is(err, store.ErrAmbiguousSlug):
 		writeError(w, r, http.StatusConflict, errAmbiguousName.Error())
 	case errors.Is(err, store.ErrVariantConflict):
-		writeError(w, r, http.StatusConflict, errVariantConflict.Error())
+		writeError(w, r, http.StatusConflict, conflictText(err, errVariantConflict))
 	default:
 		return false
 	}
 
 	return true
+}
+
+// conflictErr is the error for a refused consumer: the store's own account of
+// which consumer clashed with which secret when it has one, else fallback
+// (alrayyes/hush-hush#851).
+func conflictErr(err, fallback error) error {
+	if conflict, ok := errors.AsType[*store.ConflictError](err); ok {
+		return conflict
+	}
+
+	return fallback
+}
+
+// conflictText is conflictErr's message, for the HTTP error body.
+func conflictText(err, fallback error) string {
+	return conflictErr(err, fallback).Error()
 }

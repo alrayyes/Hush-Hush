@@ -2167,7 +2167,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	await variantCreate.getByRole('button', { name: 'Create' }).click();
 	await expect(variantCreate.getByRole('alert')).toContainText(
-		/already exists/i,
+		/consumer "consumer_d" is already in the secret named "release_token"/,
 	);
 	await variantCreate.getByLabel('Remove consumer_d').click();
 	await variantCreate.locator('#create-used-by').fill('consumer_e');
