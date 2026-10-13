@@ -13,6 +13,11 @@ import (
 // under the given id.
 var ErrAlreadyExists = errors.New("object already exists")
 
+// ErrDuplicateVariants is returned by Open when the database already holds a
+// consumer in two objects that share a slug. Nothing guesses which one keeps
+// it; the operator removes the consumer from one.
+var ErrDuplicateVariants = errors.New("a consumer is in more than one secret with the same name")
+
 // ErrNotFound is returned when no object exists under the given id.
 var ErrNotFound = errors.New("object not found")
 
@@ -164,7 +169,7 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 			`INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`,
 			id, consumer,
 		); err != nil {
-			return fmt.Errorf("insert used_by: %w", err)
+			return fmt.Errorf("insert used_by: %w", asSlugConflict(err, ErrAlreadyExists))
 		}
 	}
 
@@ -532,7 +537,7 @@ func replaceObjectRelations(ctx context.Context, tx *sql.Tx, id string, usedBy, 
 
 		for _, consumer := range *usedBy {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`, id, consumer); err != nil {
-				return fmt.Errorf("insert used_by: %w", err)
+				return fmt.Errorf("insert used_by: %w", asSlugConflict(err, ErrVariantConflict))
 			}
 		}
 	}
@@ -816,7 +821,7 @@ func rewriteUsedByForRename(ctx context.Context, tx renameSQLTx, oldName, newNam
 	}
 
 	if _, err := tx.ExecContext(ctx, `UPDATE used_by SET consumer = ? WHERE consumer = ?`, newName, oldName); err != nil {
-		return fmt.Errorf("rename used_by rows: %w", err)
+		return fmt.Errorf("rename used_by rows: %w", asSlugConflict(err, ErrVariantConflict))
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM consumers WHERE name = ?`, oldName); err != nil {
