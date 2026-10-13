@@ -2439,6 +2439,33 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			.analyze();
 		expect(hoverResults.violations, `hovered Delete in ${theme}`).toEqual([]);
 	}
+
+	// The confirm dialog's Delete sits on the popover surface, a step lighter
+	// than the page, where the same tint has less contrast.
+	await page
+		.getByRole('row')
+		.nth(1)
+		.getByRole('button', { name: 'Delete' })
+		.click();
+	const confirmDelete = page
+		.getByRole('alertdialog')
+		.getByRole('button', { name: 'Delete' });
+	for (const theme of ['dark', 'light']) {
+		await page.evaluate(
+			(t) => document.documentElement.setAttribute('data-theme', t),
+			theme,
+		);
+		await confirmDelete.hover();
+		await page.waitForFunction(() => document.getAnimations().length === 0);
+		const dialogHoverResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+			.analyze();
+		expect(
+			dialogHoverResults.violations,
+			`hovered dialog Delete in ${theme}`,
+		).toEqual([]);
+	}
+	await page.getByRole('button', { name: 'Cancel' }).click();
 	await page.mouse.move(0, 0);
 
 	await page.setViewportSize({ width: 1280, height: 800 });
