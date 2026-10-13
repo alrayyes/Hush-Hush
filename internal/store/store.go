@@ -23,6 +23,13 @@ var schema string
 // applied.
 type Store struct {
 	db *sql.DB
+
+	// writeLock admits one in-process writer at a time. SQLite allows one
+	// anyway, but the driver ignores a request context while it waits on the
+	// busy handler (up to ten seconds), so the queue is kept here, where
+	// the context is honoured (alrayyes/hush-hush#863). busy_timeout stays as
+	// the backstop for a second process on the same file.
+	writeLock chan struct{}
 }
 
 // withConnectionOptions adds the per-connection pragmas and transaction
@@ -111,7 +118,7 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{db: db}, nil
+	return &Store{db: db, writeLock: make(chan struct{}, 1)}, nil
 }
 
 // migrateColumns adds every column that's been added to the schema since

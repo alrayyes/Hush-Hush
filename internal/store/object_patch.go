@@ -26,10 +26,11 @@ type ObjectPatch struct {
 // ErrAlreadyExists if the new slug is taken, and the whole patch is applied
 // or none of it. ErrNotFound if nothing matches.
 func (s *Store) PatchObject(ctx context.Context, slug string, patch ObjectPatch, opts ...ObjectOption) (id, newSlug string, err error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return "", "", fmt.Errorf("begin transaction: %w", err)
+		return "", "", err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	id, err = resolveObjectID(ctx, tx, slug, applyObjectOptions(opts))

@@ -141,10 +141,11 @@ func applyObjectOptions(opts []ObjectOption) objectOptions {
 func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string, opts ...ObjectOption) error {
 	options := applyObjectOptions(opts)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	if err := checkCreatable(ctx, tx, slug, usedBy); err != nil {
@@ -483,10 +484,11 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...ObjectOption) error {
 	options := applyObjectOptions(opts)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	id, err := resolveObjectID(ctx, tx, slug, options)
@@ -720,10 +722,11 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 // ErrUnknownConsumer if oldName isn't currently recorded anywhere, in
 // used_by or in consumers.
 func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (ConsumerEntry, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return ConsumerEntry{}, fmt.Errorf("begin transaction: %w", err)
+		return ConsumerEntry{}, err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	var exists int
@@ -929,10 +932,11 @@ func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string
 // ErrUnknownConsumer if name isn't currently recorded anywhere, in
 // used_by or in consumers.
 func (s *Store) DeleteConsumer(ctx context.Context, name string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	usedByResult, err := tx.ExecContext(ctx, `DELETE FROM used_by WHERE consumer = ?`, name)
@@ -982,10 +986,11 @@ func escapeLike(s string) string {
 // ErrNotFound if no object matches and ErrAmbiguousSlug if the slug has
 // several variants and no consumer was named.
 func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOption) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	options := applyObjectOptions(opts)
