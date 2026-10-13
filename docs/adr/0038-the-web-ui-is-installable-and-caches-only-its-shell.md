@@ -56,6 +56,7 @@ wanted, they get their own decision, with a story for logout and revocation.
   chunk it hadn't fetched yet gets a 404, and the person has to reload the page.
   A redeploy already does this, since the old hashed files are gone from the
   server, so the worker doesn't add a new failure.
-- `theme-color` and the manifest colors follow the OS color scheme, not the
-  in-app theme toggle. Someone who picks dark on a light OS sees light window
-  chrome and a light splash screen.
+- `theme-color` follows the theme the page shows, including a choice made with
+  the in-app toggle, because the theme script and the toggle both set it. The
+  manifest's `theme_color` and `background_color` are a static file and can't
+  follow, so the splash screen of an installed app is always light.

@@ -9,6 +9,19 @@ export const THEME_STORAGE_KEY = 'theme';
 
 export type Theme = 'light' | 'dark';
 
+// The page background of each theme, which is what <meta name="theme-color">
+// tints the browser's window chrome with (alrayyes/Hush-Hush#885). They are
+// written out three times: here, as app.css's --color-bg tokens, and in
+// app.html's inline script. theme.spec.ts fails if the three drift.
+export const THEME_COLORS: Record<Theme, string> = {
+	light: '#ffffff',
+	dark: '#121212',
+};
+
+export function themeColor(theme: Theme): string {
+	return THEME_COLORS[theme];
+}
+
 function isTheme(value: string | null): value is Theme {
 	return value === 'light' || value === 'dark';
 }
@@ -49,4 +62,7 @@ export function storeTheme(theme: Theme): void {
 
 export function applyTheme(theme: Theme): void {
 	document.documentElement.setAttribute('data-theme', theme);
+	document
+		.querySelector('meta[name="theme-color"]')
+		?.setAttribute('content', themeColor(theme));
 }

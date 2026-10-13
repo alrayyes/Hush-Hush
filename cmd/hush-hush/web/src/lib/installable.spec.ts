@@ -82,9 +82,8 @@ describe('app.html', () => {
 		);
 	});
 
-	it('sets a theme color for each color scheme', () => {
-		expect(html).toMatch(/name="theme-color"[^>]*prefers-color-scheme: light/);
-		expect(html).toMatch(/name="theme-color"[^>]*prefers-color-scheme: dark/);
+	it('has one theme-color tag, which the theme script keeps current', () => {
+		expect(html.match(/<meta name="theme-color"/g)).toHaveLength(1);
 	});
 
 	it('points iOS at a PNG home-screen icon that exists', () => {
