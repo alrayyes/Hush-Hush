@@ -1397,6 +1397,36 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await newerRequest;
 	await expect.poll(rowTexts).not.toEqual(oldestFirstPage);
 
+	// alrayyes/Hush-Hush#897: rows per page on the audit log. The request asks
+	// for one row more than the size, the choice is in the URL, and a size that
+	// holds every entry keeps the selector.
+	await page.goto('/audit-log');
+	const auditSize = auditPages.getByRole('combobox', { name: 'Rows per page' });
+	await expect(auditSize).toHaveText('25');
+	const sizeRequest = page.waitForRequest(
+		(request) =>
+			request.url().includes('/audit-log?') &&
+			request.url().includes('limit=51'),
+	);
+	await auditSize.click();
+	await expect(page.getByRole('listbox').getByRole('option')).toHaveText([
+		/^\s*25$/,
+		/^\s*50$/,
+		/^\s*100$/,
+	]);
+	await page.getByRole('option', { name: '50', exact: true }).click();
+	await sizeRequest;
+	await expect(page).toHaveURL(/[?&]size=50(&|$)/);
+	await expect(auditSize).toHaveText('50');
+	await expect(curlSnippet).toContainText('limit=50');
+	await page.reload();
+	await expect(auditSize).toHaveText('50');
+	await auditSize.click();
+	await page.getByRole('option', { name: '25', exact: true }).click();
+	await expect(page).not.toHaveURL(/size=/);
+	await expect(page.locator('tbody tr')).toHaveCount(25);
+	await expect(olderButton).toBeEnabled();
+
 	// tasks.md's 5.2: the owner-recipient opt-in checkbox. Recovering the
 	// escrowed identity generated at registration above, through its own
 	// public break-glass surface (the recovery phrase and the
@@ -2668,6 +2698,42 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	await expect(page).not.toHaveURL(/page=/);
 	await expect(secretsPager).toContainText('Showing 1–20 of 21');
+
+	// alrayyes/Hush-Hush#897: the reader picks 20, 50 or 100 rows. The size is
+	// the URL's, and a list that fits at the new size keeps the selector so the
+	// choice can be undone.
+	await page.goto('/');
+	const secretsSize = secretsPager.getByRole('combobox', {
+		name: 'Rows per page',
+	});
+	await expect(secretsSize).toHaveText('20');
+	await secretsSize.click();
+	await expect(page.getByRole('listbox').getByRole('option')).toHaveText([
+		/^\s*20$/,
+		/^\s*50$/,
+		/^\s*100$/,
+	]);
+	const sizeMenuResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(sizeMenuResults.violations).toEqual([]);
+	await page.getByRole('option', { name: '50', exact: true }).click();
+	await expect(page).toHaveURL(/[?&]size=50(&|$)/);
+	await expect(page).not.toHaveURL(/page=/);
+	await expect(page.getByRole('row')).toHaveCount(Math.min(50, total) + 1);
+	if (total <= 50) {
+		await expect(secretsPager).toContainText(`Showing 1–${total} of ${total}`);
+		await expect(secretsPager.getByRole('link', { name: 'Next' })).toHaveCount(
+			0,
+		);
+		await expect(secretsSize).toBeVisible();
+	}
+	await page.reload();
+	await expect(secretsSize).toHaveText('50');
+	await secretsSize.click();
+	await page.getByRole('option', { name: '20', exact: true }).click();
+	await expect(page).not.toHaveURL(/size=/);
+	await expect(page.getByRole('row')).toHaveCount(20 + 1);
 
 	for (const slug of pagingSlugs) {
 		expect(
