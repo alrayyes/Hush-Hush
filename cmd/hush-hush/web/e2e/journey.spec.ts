@@ -2433,6 +2433,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			theme,
 		);
 		await rowFor(widestSlug).getByRole('button', { name: 'Delete' }).hover();
+		// The button's colours transition (transition-all): axe would sample
+		// a mid-fade colour and report a contrast failure that isn't real.
 		await page.waitForFunction(() => document.getAnimations().length === 0);
 		const hoverResults = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
