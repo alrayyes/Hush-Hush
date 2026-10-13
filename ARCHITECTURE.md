@@ -49,7 +49,8 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
 - **Addressing**: an object has a UUID `id`, and callers ask for it by its
   `slug`, a name that is not unique. Objects that share a name are variants,
   each with its own value and consumers, and a consumer is in at most one of
-  them, so `consumer_a` and `consumer_d` can ask for `release_token` and get
+  them (the schema enforces it, and `Open` refuses a database that breaks
+  it), so `consumer_a` and `consumer_d` can ask for `release_token` and get
   different values. A consumer token resolves to its variant itself; a write
   token or session names one with `?id=`
   ([ADR 33](docs/adr/0033-one-name-many-variants.md)). `PATCH` edits a
