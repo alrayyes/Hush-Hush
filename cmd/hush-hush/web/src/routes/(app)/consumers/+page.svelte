@@ -21,9 +21,9 @@ import {
 	consumersHref,
 	secretsOverviewHref,
 	tokensHref,
-	totalPages,
 	truncateKey,
 } from '#lib/consumers.js';
+import Pager from '#lib/Pager.svelte';
 import { goto, invalidate } from '$app/navigation';
 import type { PageData } from './$types';
 
@@ -52,8 +52,6 @@ onDestroy(copier.dispose);
 function plural(count: number, noun: string): string {
 	return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
-
-const pages = $derived(totalPages(data.total, CONSUMERS_PAGE_SIZE));
 
 function apiErrorMessage(err: unknown, fallback: string): string {
 	return err instanceof ApiError ? err.message : fallback;
@@ -398,25 +396,13 @@ async function confirmDelete() {
 		</table>
 	{/if}
 
-	{#if pages > 1}
-		<nav aria-label="Pagination">
-			<ol class="mt-4 flex list-none flex-wrap gap-2 p-0">
-				{#each { length: pages } as _, i (i)}
-					{@const pageNumber = i + 1}
-					<li>
-						<a
-							href={consumersHref(pageNumber, data.q)}
-							aria-current={data.page === pageNumber ? 'page' : undefined}
-							class:font-bold={data.page === pageNumber}
-							class:underline={data.page === pageNumber}
-						>
-							{pageNumber}
-						</a>
-					</li>
-				{/each}
-			</ol>
-		</nav>
-	{/if}
+	<Pager
+		page={data.page}
+		total={data.total}
+		pageSize={CONSUMERS_PAGE_SIZE}
+		href={(n) => consumersHref(n, data.q)}
+		label="Consumers pages"
+	/>
 </main>
 
 <Dialog.Root bind:open={renameOpen}>
