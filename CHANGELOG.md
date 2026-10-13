@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.4](https://github.com/alrayyes/Hush-Hush/compare/v3.23.3...v3.23.4) (2026-10-13)
+
+
+### Bug Fixes
+
+* **store:** stop waiting for the write lock when the request ends ([#870](https://github.com/alrayyes/Hush-Hush/issues/870)) ([9613c67](https://github.com/alrayyes/Hush-Hush/commit/9613c67bbf9a1d3a307d373630d74e76e8f87106))
+
 ## [3.23.3](https://github.com/alrayyes/Hush-Hush/compare/v3.23.2...v3.23.3) (2026-10-13)
 
 
