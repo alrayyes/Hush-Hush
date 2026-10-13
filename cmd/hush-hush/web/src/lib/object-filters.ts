@@ -1,5 +1,6 @@
 import type { ObjectMetadata } from './api';
 import { actorName } from './attribution';
+import { SECRETS_SIZES } from './pageSize';
 
 // The secrets overview's filters that live in the URL, so a filtered view
 // survives a reload and can be shared. Text and tag stay local state.
@@ -42,11 +43,13 @@ export function parsePage(params: Pick<URLSearchParams, 'get'>): number {
 	return Number.isInteger(page) && page >= 1 ? page : 1;
 }
 
-// objectFiltersToSearch is the query string for a filter set and a page: ''
-// when none is set, otherwise starting with '?'. Page 1 has no parameter.
+// objectFiltersToSearch is the query string for a filter set, a page and a page
+// size: '' when none is set, otherwise starting with '?'. Page 1 and the default
+// size have no parameter.
 export function objectFiltersToSearch(
 	filters: ObjectFilters,
 	page = 1,
+	size: number = SECRETS_SIZES[0],
 ): string {
 	const params = new URLSearchParams();
 
@@ -56,6 +59,7 @@ export function objectFiltersToSearch(
 	if (filters.updatedSince) params.set('updated_since', filters.updatedSince);
 
 	if (page > 1) params.set('page', String(page));
+	if (size !== SECRETS_SIZES[0]) params.set('size', String(size));
 
 	const search = params.toString();
 
