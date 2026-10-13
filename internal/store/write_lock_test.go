@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"io/fs"
+	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -78,6 +81,11 @@ func TestWritesOutsideATransactionHonourTheContextToo(t *testing.T) {
 			return err
 		},
 		"consumer": func() error { return s.AddConsumer(ctx, "billing") },
+		"consumer public key": func() error {
+			_, err := s.SetConsumerPublicKey(ctx, "billing", "age1example")
+
+			return err
+		},
 		"session": func() error {
 			return s.CreateSession(ctx, Session{ID: "s1", CSRFToken: "c", CreatedAt: "now", ExpiresAt: "later"})
 		},
@@ -129,5 +137,30 @@ func TestAnEndedContextNeverWinsAFreeLock(t *testing.T) {
 		}
 
 		require.ErrorIs(t, err, context.Canceled)
+	}
+}
+
+// Nothing in the store may write straight through s.db: every write goes
+// through beginWrite or execWrite so it queues on the lock and honours the
+// request context (alrayyes/hush-hush#863). A helper that accepts either a
+// database or a transaction is the way one slipped past a search for
+// ExecContext, so passing s.db to such a helper is flagged too.
+func TestNoWriteBypassesTheWriteLock(t *testing.T) {
+	t.Parallel()
+
+	bypass := regexp.MustCompile(`s\.db\.(Exec|ExecContext)\(|(upsertConsumerRow|resolveRenamedPublicKey|rewriteUsedByForRename)\([^)]*\bs\.db\b`)
+
+	files, err := filepath.Glob("*.go")
+	require.NoError(t, err)
+
+	for _, file := range files {
+		if filepath.Ext(file) != ".go" || len(file) > 8 && file[len(file)-8:] == "_test.go" || file == "write_lock.go" {
+			continue
+		}
+
+		src, err := fs.ReadFile(os.DirFS("."), file)
+		require.NoError(t, err)
+
+		require.Empty(t, bypass.FindAllString(string(src), -1), "%s writes outside the write lock", file)
 	}
 }

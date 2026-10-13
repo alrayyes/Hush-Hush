@@ -25,7 +25,9 @@ func (s *Store) lockWrite(ctx context.Context) (func(), error) {
 }
 
 // beginWrite takes the in-process write lock and opens a transaction under
-// it. The caller defers release, after the deferred Rollback, so the lock is
+// it. The lock is not reentrant: nothing that runs inside the transaction may
+// call another method that takes it (execWrite, beginWrite), or it waits on
+// itself. The caller defers release, after the deferred Rollback, so the lock is
 // handed on once the transaction has ended.
 func (s *Store) beginWrite(ctx context.Context) (*sql.Tx, func(), error) {
 	release, err := s.lockWrite(ctx)

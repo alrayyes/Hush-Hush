@@ -913,13 +913,24 @@ func upsertConsumerRow(ctx context.Context, tx renameSQLTx, name, publicKey stri
 // stored secret objects whose used_by list references it (0 for a name
 // that exists only via this call), and the public key just set.
 func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string) (ConsumerEntry, error) {
-	if err := upsertConsumerRow(ctx, s.db, name, publicKey); err != nil {
+	tx, release, err := s.beginWrite(ctx)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+	defer release()
+	defer func() { _ = tx.Rollback() }()
+
+	if err := upsertConsumerRow(ctx, tx, name, publicKey); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("set consumer public key: %w", err)
 	}
 
 	var count int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, name).Scan(&count); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, name).Scan(&count); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("count consumer: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return ConsumerEntry{Name: name, SecretCount: count, PublicKey: publicKey}, nil
