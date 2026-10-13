@@ -666,6 +666,25 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// than silently sealing to fewer recipients than picked ("homelab",
 	// already keyed above, still resolves one, so Save stays enabled).
 	await expect(editDialog.getByText('(no key)')).toBeVisible();
+	// #847: a dialog taller than the viewport stays inside it and scrolls, so
+	// Save is never pushed off-screen (the re-seal error adds a paragraph).
+	const originalViewport = page.viewportSize();
+	await page.setViewportSize({ width: 1280, height: 400 });
+	await expect
+		.poll(async () => {
+			const box = await editDialog.boundingBox();
+			return box ? [box.y >= 0, box.y + box.height <= 400] : null;
+		})
+		.toEqual([true, true]);
+	// Header and footer stay pinned, only the body scrolls: Save and the title
+	// are on screen without scrolling anything.
+	await expect(editDialog.getByRole('button', { name: 'Save' })).toBeInViewport(
+		{ ratio: 1 },
+	);
+	await expect(
+		editDialog.getByRole('heading', { name: 'Edit mattermost_deploy_webhook' }),
+	).toBeInViewport({ ratio: 1 });
+	if (originalViewport) await page.setViewportSize(originalViewport);
 	await expectValueFieldIsPrivate(editDialog.locator('#edit-value'));
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
 	await editDialog.locator('#edit-tags').fill('prod');
