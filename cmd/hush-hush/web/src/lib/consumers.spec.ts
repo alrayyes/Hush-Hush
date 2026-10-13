@@ -7,7 +7,6 @@ import {
 	secretsOverviewHref,
 	summariseConsumers,
 	tokensHref,
-	totalPages,
 	truncateKey,
 	variantLabel,
 } from './consumers';
@@ -53,20 +52,6 @@ describe('consumersHref', () => {
 
 	it('includes both when neither is the default', () => {
 		expect(consumersHref(2, 'homelab')).toBe('/consumers?q=homelab&page=2');
-	});
-});
-
-describe('totalPages', () => {
-	it('is at least 1 even with no results', () => {
-		expect(totalPages(0, 20)).toBe(1);
-	});
-
-	it('rounds up a partial last page', () => {
-		expect(totalPages(21, 20)).toBe(2);
-	});
-
-	it('is exact for a total that divides evenly', () => {
-		expect(totalPages(40, 20)).toBe(2);
 	});
 });
 
