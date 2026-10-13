@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.0](https://github.com/alrayyes/Hush-Hush/compare/v3.22.1...v3.23.0) (2026-10-13)
+
+
+### Features
+
+* **api:** say which consumer and secret a 409 is about ([#856](https://github.com/alrayyes/Hush-Hush/issues/856)) ([e65018e](https://github.com/alrayyes/Hush-Hush/commit/e65018e1907ba33cf0e90d5b889c91e438a8d552))
+
 ## [3.22.1](https://github.com/alrayyes/Hush-Hush/compare/v3.22.0...v3.22.1) (2026-10-13)
 
 
