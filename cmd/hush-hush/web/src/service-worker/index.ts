@@ -2,6 +2,7 @@ import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { resolve } from '$app/paths';
 import { self } from '$app/service-worker';
+import { isShellRequest } from '../lib/shell-cache';
 
 // alrayyes/Hush-Hush#881. This worker exists so the browser will install the
 // app, and it keeps the app shell and nothing else. Only the build's own files
@@ -43,10 +44,8 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
 	const { request } = event;
-	if (request.method !== 'GET') return;
-
 	const { pathname } = new URL(request.url);
-	if (!SHELL.has(pathname)) return;
+	if (!isShellRequest(request.method, pathname, SHELL)) return;
 
 	event.respondWith(
 		caches.match(pathname).then((hit) => hit ?? fetch(request)),
