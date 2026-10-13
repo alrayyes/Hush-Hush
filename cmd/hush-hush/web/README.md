@@ -125,6 +125,24 @@ Both commands need a native Go toolchain on `PATH` (`e2e/server.sh` runs
 part of the `pre-push` git hook, which otherwise never assumes one; see
 `lefthook.yml`'s `web-check` comment for the timed decision.
 
+## Paging a list
+
+`src/lib/Pager.svelte` pages a list that knows its total, and
+`src/lib/CursorPager.svelte` pages one read by cursor, the audit log. Both
+render nothing when everything fits on one page, so a list passes its own page
+size and a short list shows no pager at all. `Pager` takes `page`, `total`,
+`pageSize` and `href`, a function from a page number to its URL: each page is a
+link, so it survives a reload and can be shared. The numbers to show, the
+"Showing 21–40 of 137" range and the clamp for a page past the end are plain
+functions in `src/lib/pageMath.ts`.
+
+A page past the end shows the last page, so a stale link never reads
+"Showing 381–137".
+
+From 640px up the page numbers show. Below that they collapse to Previous,
+"Page 2 of 7" and Next, with 44px targets. While `loading`, every control stays
+in place, dimmed.
+
 ## Installable app
 
 The UI can be added to a phone's home screen or installed from a desktop
