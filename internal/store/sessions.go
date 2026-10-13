@@ -26,7 +26,7 @@ type Session struct {
 
 // CreateSession stores a newly issued session.
 func (s *Store) CreateSession(ctx context.Context, sess Session) error {
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO sessions (id, csrf_token, created_at, expires_at) VALUES (?, ?, ?, ?)`,
 		sess.ID, sess.CSRFToken, sess.CreatedAt, sess.ExpiresAt,
 	); err != nil {
@@ -67,7 +67,7 @@ func (s *Store) GetSession(ctx context.Context, id string) (Session, error) {
 // DeleteSession invalidates a session immediately - logout, or the
 // regeneration a fresh login performs.
 func (s *Store) DeleteSession(ctx context.Context, id string) error {
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id = ?`, id); err != nil {
+	if _, err := s.execWrite(ctx, `DELETE FROM sessions WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
 

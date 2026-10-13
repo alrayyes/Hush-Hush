@@ -42,3 +42,22 @@ func (s *Store) beginWrite(ctx context.Context) (*sql.Tx, func(), error) {
 
 	return tx, release, nil
 }
+
+// execWrite runs one write statement outside an explicit transaction under the
+// same lock beginWrite takes, so it queues with the transactions instead of
+// racing them for SQLite's own lock and waiting out the busy timeout without
+// the request context. Reads do not take the lock.
+func (s *Store) execWrite(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	release, err := s.lockWrite(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
+	result, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("exec write: %w", err)
+	}
+
+	return result, nil
+}

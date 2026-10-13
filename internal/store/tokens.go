@@ -62,7 +62,7 @@ func (s *Store) CreateWriteToken(ctx context.Context, description string, ttl ti
 		ExpiresAt:   now.Add(ttl).Format(time.RFC3339),
 	}
 
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO write_tokens (id, token_hash, description, created_at, expires_at, owner) VALUES (?, ?, ?, ?, ?, ?)`,
 		wt.ID, hashToken(token), wt.Description, wt.CreatedAt, wt.ExpiresAt, nullableString(owner),
 	); err != nil {
@@ -155,7 +155,7 @@ func (s *Store) ListWriteTokens(ctx context.Context) ([]WriteToken, error) {
 // unaffected either way, per design: a leaked or forgotten token should
 // never be a shared blast radius.
 func (s *Store) RevokeWriteToken(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE write_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL`,
 		time.Now().UTC().Format(time.RFC3339), id,
 	)
@@ -194,7 +194,7 @@ func (s *Store) RotateWriteToken(ctx context.Context, id string, ttl time.Durati
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl).Format(time.RFC3339)
 
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE write_tokens SET token_hash = ?, expires_at = ?, last_used_at = NULL
 		 WHERE id = ? AND revoked_at IS NULL AND expires_at > ?`,
 		hashToken(token), expiresAt, id, now.Format(time.RFC3339),
@@ -232,7 +232,7 @@ func (s *Store) RotateWriteToken(ctx context.Context, id string, ttl time.Durati
 // tell a token nobody's used from one in daily use when deciding whether
 // to revoke it.
 func (s *Store) UpdateWriteTokenUsage(ctx context.Context, id, usedAt string) error {
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE write_tokens SET last_used_at = ? WHERE id = ?`, usedAt, id,
 	)
 	if err != nil {
@@ -278,7 +278,7 @@ func (s *Store) PurgeWriteToken(ctx context.Context, id string) error {
 		return ErrTokenStillActive
 	}
 
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM write_tokens WHERE id = ?`, id); err != nil {
+	if _, err := s.execWrite(ctx, `DELETE FROM write_tokens WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("purge write token: %w", err)
 	}
 

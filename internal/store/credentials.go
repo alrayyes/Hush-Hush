@@ -53,7 +53,7 @@ type Credential struct {
 
 // CreateCredential stores a newly registered credential.
 func (s *Store) CreateCredential(ctx context.Context, c Credential) error {
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO webauthn_credentials (id, public_key, sign_count, aaguid, nickname, created_at, backup_eligible, user_id, wrapped_identity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.PublicKey, c.SignCount, c.AAGUID, c.Nickname, c.CreatedAt, c.BackupEligible,
 		// nullableString (audit.go) turns an empty string into a real SQL
@@ -114,7 +114,7 @@ func (s *Store) ListCredentials(ctx context.Context) ([]Credential, error) {
 // RenameCredential updates a credential's nickname. Returns
 // ErrCredentialNotFound if no credential exists under id.
 func (s *Store) RenameCredential(ctx context.Context, id, nickname string) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE webauthn_credentials SET nickname = ? WHERE id = ?`, nickname, id)
+	result, err := s.execWrite(ctx, `UPDATE webauthn_credentials SET nickname = ? WHERE id = ?`, nickname, id)
 	if err != nil {
 		return fmt.Errorf("rename credential: %w", err)
 	}
@@ -136,7 +136,7 @@ func (s *Store) RenameCredential(ctx context.Context, id, nickname string) error
 // responsible for refusing to delete the last remaining one (this
 // package has no notion of "last" beyond ListCredentials' count).
 func (s *Store) DeleteCredential(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM webauthn_credentials WHERE id = ?`, id)
+	result, err := s.execWrite(ctx, `DELETE FROM webauthn_credentials WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("delete credential: %w", err)
 	}
@@ -157,7 +157,7 @@ func (s *Store) DeleteCredential(ctx context.Context, id string) error {
 // and timestamp - go-webauthn's own clone-detection step compares this
 // stored counter against a later assertion's, so it has to be kept current.
 func (s *Store) UpdateCredentialUsage(ctx context.Context, id string, signCount uint32, lastUsedAt string) error {
-	result, err := s.db.ExecContext(ctx,
+	result, err := s.execWrite(ctx,
 		`UPDATE webauthn_credentials SET sign_count = ?, last_used_at = ? WHERE id = ?`,
 		signCount, lastUsedAt, id,
 	)

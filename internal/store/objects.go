@@ -571,7 +571,7 @@ func (s *Store) AddConsumer(ctx context.Context, name string) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO consumers (name, created_at) VALUES (?, ?)`, name, now,
 	); err != nil {
 		return fmt.Errorf("insert consumer: %w", err)
