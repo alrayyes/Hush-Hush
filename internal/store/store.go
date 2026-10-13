@@ -84,6 +84,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
+	if err := enforceOneVariantPerConsumer(db); err != nil {
+		_ = db.Close()
+
+		return nil, err
+	}
+
 	if err := backfillOwnership(db); err != nil {
 		_ = db.Close()
 

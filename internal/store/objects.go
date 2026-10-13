@@ -13,6 +13,11 @@ import (
 // under the given id.
 var ErrAlreadyExists = errors.New("object already exists")
 
+// ErrDuplicateVariants is returned by Open when the database already holds a
+// consumer in two objects that share a slug. Nothing guesses which one keeps
+// it; the operator removes the consumer from one.
+var ErrDuplicateVariants = errors.New("a consumer is in more than one secret with the same name")
+
 // ErrNotFound is returned when no object exists under the given id.
 var ErrNotFound = errors.New("object not found")
 
