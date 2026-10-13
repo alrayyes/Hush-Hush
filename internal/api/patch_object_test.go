@@ -272,3 +272,17 @@ func TestPatchObjectRenameToAnUppercaseSlugIsAccepted(t *testing.T) {
 	_, err := s.GetObject(t.Context(), "CF_DNS_API_TOKEN_SECRET")
 	require.NoError(t, err)
 }
+
+func TestPatchOfALegacyNameThatEchoesItBackIsNotARename(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	// Stored before the naming rule, so the rule must not block editing it.
+	require.NoError(t, s.CreateObject(t.Context(), "legacy.name", sealedFixture, nil, "old", ""))
+
+	rec := patchObject(t, mux, "/objects/legacy.name", `{"slug":"legacy.name","description":"new"}`, token)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}

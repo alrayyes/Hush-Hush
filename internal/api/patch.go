@@ -36,7 +36,9 @@ func readPatchRequest(w http.ResponseWriter, r *http.Request) (store.ObjectPatch
 		return store.ObjectPatch{}, false
 	}
 
-	if req.Slug != nil && !validSlug(*req.Slug) {
+	// A slug equal to the current one is no rename, and a name stored before
+	// the rule may not follow it.
+	if req.Slug != nil && *req.Slug != r.PathValue("slug") && !validSlug(*req.Slug) {
 		writeError(w, r, http.StatusBadRequest, errInvalidSlug.Error())
 
 		return store.ObjectPatch{}, false
