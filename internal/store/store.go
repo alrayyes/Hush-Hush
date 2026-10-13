@@ -43,7 +43,9 @@ type Store struct {
 // later. Without it a deferred transaction reads a snapshot first and two
 // writers both get SQLITE_BUSY on the upgrade - busy_timeout alone cannot fix
 // that (alrayyes/hush-hush#852). Every BeginTx in this package writes, so no
-// read-only transaction is forced to take a write lock by it.
+// read-only transaction is forced to take a write lock by it. A future
+// read-only transaction must pass sql.TxOptions{ReadOnly: true}, which the
+// driver maps back to a plain BEGIN, or it takes the write lock too.
 func withConnectionOptions(path string) string {
 	sep := "?"
 	if strings.Contains(path, "?") {
