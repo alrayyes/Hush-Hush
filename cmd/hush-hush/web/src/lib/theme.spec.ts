@@ -54,9 +54,12 @@ describe('THEME_COLORS', () => {
 					: hex,
 			);
 
-		expect(tokens).toEqual(
-			expect.arrayContaining([THEME_COLORS.light, THEME_COLORS.dark]),
-		);
+		const colors = Object.values(THEME_COLORS);
+
+		expect(tokens.length).toBeGreaterThan(0);
+		// Every token is one of the two colors, and both colors are used.
+		expect(tokens.filter((hex) => !colors.includes(hex))).toEqual([]);
+		expect(new Set(tokens)).toEqual(new Set(colors));
 	});
 
 	it("are the ones app.html's inline script sets before first paint", () => {

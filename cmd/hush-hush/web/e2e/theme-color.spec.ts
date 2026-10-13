@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // chrome and an installed app's title bar. It has to follow the theme the page
 // shows, including a choice made with the toggle against the OS scheme.
 // themeColor's values are unit-tested in src/lib/theme.spec.ts; this checks
-// that the page applies them, before first paint and on a click.
+// that the page applies them on load and on a click.
 
 const LIGHT = '#ffffff';
 const DARK = '#121212';
