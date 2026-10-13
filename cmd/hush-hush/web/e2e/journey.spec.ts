@@ -1344,6 +1344,22 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(auditPagerAxe.violations).toEqual([]);
 
+	// The paged state in the dark theme too. Finishing the colour transitions
+	// first means axe reads the final colours, with no timer.
+	await page.evaluate(() =>
+		document.documentElement.setAttribute('data-theme', 'dark'),
+	);
+	await page.evaluate(() =>
+		Promise.all(document.getAnimations().map((a) => a.finished)),
+	);
+	const auditPagerAxeDark = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(auditPagerAxeDark.violations).toEqual([]);
+	await page.evaluate(() =>
+		document.documentElement.setAttribute('data-theme', 'light'),
+	);
+
 	const firstAuditPage = await rowTexts();
 	const olderRequest = page.waitForRequest(
 		(request) =>
@@ -1376,8 +1392,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			request.url().includes('order=asc') &&
 			/[?&]after=\d+/.test(request.url()),
 	);
+	const oldestFirstPage = await rowTexts();
 	await newerButton.click();
 	await newerRequest;
+	await expect.poll(rowTexts).not.toEqual(oldestFirstPage);
 
 	// tasks.md's 5.2: the owner-recipient opt-in checkbox. Recovering the
 	// escrowed identity generated at registration above, through its own
