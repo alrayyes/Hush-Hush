@@ -63,3 +63,12 @@ export function clampPage(
 
 	return Math.min(Math.max(Math.trunc(page), 1), totalPages(total, pageSize));
 }
+
+// The rows on one page of an already-loaded list. A page past the end gives
+// the last page, the same clamp the pager uses, so the rows and the "Showing"
+// text always agree.
+export function slicePage<T>(items: T[], page: number, pageSize: number): T[] {
+	const current = clampPage(page, items.length, pageSize);
+
+	return items.slice((current - 1) * pageSize, current * pageSize);
+}
