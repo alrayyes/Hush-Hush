@@ -63,6 +63,9 @@ UI, and everything - CLI, CI, and the browser - talks to the same API.
   `go:embed`; passkey (WebAuthn) authentication. A path that isn't a page or a
   build file answers 404 with the app
   ([ADR 36](docs/adr/0036-the-server-answers-404-for-a-path-that-is-not-a-page.md)).
+  It can be installed as an app, and its service worker caches the app shell
+  and never an API response
+  ([ADR 38](docs/adr/0038-the-web-ui-is-installable-and-caches-only-its-shell.md)).
 - **Operations**: one structured JSON log line per request, never carrying a
   query string, a header, a cookie or a body. `/readyz` bounds its database
   check and caches the answer for a few seconds, and goes 503 the moment a

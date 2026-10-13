@@ -73,6 +73,13 @@ func handleStatic(build fs.FS) http.Handler {
 
 		w.Header().Set("Cache-Control", cacheControl(path))
 
+		// Go's built-in MIME table has no entry for .webmanifest, and a host
+		// without a system one serves it as text/plain, which a browser
+		// won't install from.
+		if strings.HasSuffix(path, ".webmanifest") {
+			w.Header().Set("Content-Type", "application/manifest+json")
+		}
+
 		if info, err := fs.Stat(build, path); err == nil && !info.IsDir() {
 			fileServer.ServeHTTP(w, r)
 

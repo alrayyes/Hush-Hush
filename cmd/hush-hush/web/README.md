@@ -125,6 +125,24 @@ Both commands need a native Go toolchain on `PATH` (`e2e/server.sh` runs
 part of the `pre-push` git hook, which otherwise never assumes one; see
 `lefthook.yml`'s `web-check` comment for the timed decision.
 
+## Installable app
+
+The UI can be added to a phone's home screen or installed from a desktop
+browser, and then opens in its own window. That takes
+`static/manifest.webmanifest`, the icons in `static/icons/` and the service
+worker in `src/service-worker/`.
+
+The worker caches the app shell (the build's files and `static/`) and nothing
+else. An API response never reaches a cache, because it can carry a secret's
+sealed value or a token's metadata. So an installed app still needs the server,
+and there is no offline mode.
+
+The PNG icons are rendered from the SVG files beside them. After you edit one,
+run `scripts/generate-icons.sh` (it needs `rsvg-convert`) and commit the PNG
+files. The build doesn't render them. `e2e/installable.spec.ts` checks the
+manifest, the icons, Chromium's installability report and that no API response
+is cached.
+
 ## WebMCP tools
 
 Once logged in, the page declares two [WebMCP](https://webmachinelearning.github.io/webmcp/)
