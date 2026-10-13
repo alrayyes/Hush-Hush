@@ -684,6 +684,17 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		editDialog.getByRole('heading', { name: 'Edit mattermost_deploy_webhook' }),
 	).toBeInViewport({ ratio: 1 });
+	// The body is what scrolls: a field below the fold is off screen until the
+	// body is scrolled, then reachable.
+	const usedBy = editDialog.locator('#edit-used-by');
+	await expect(usedBy).not.toBeInViewport();
+	await editDialog.locator('div.overflow-y-auto').evaluate((body) => {
+		body.scrollTop = body.scrollHeight;
+	});
+	await expect(usedBy).toBeInViewport();
+	await editDialog.locator('div.overflow-y-auto').evaluate((body) => {
+		body.scrollTop = 0;
+	});
 	if (originalViewport) await page.setViewportSize(originalViewport);
 	await expectValueFieldIsPrivate(editDialog.locator('#edit-value'));
 	await editDialog.locator('#edit-value').fill(btoa('rotated'));
