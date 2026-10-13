@@ -2791,6 +2791,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page).toHaveURL(/consumer_token_page=2/);
 	await expect(bearerPager).toContainText('Showing 11');
 
+	// The consumer pager is below the fold, so clicking it scrolled the page.
+	// Paging it doesn't jump back to the top.
+	expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
 	// Both positions survive a reload.
 	await page.reload();
 	await expect(bearerPager).toContainText('Showing 11');
@@ -2818,6 +2822,31 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(bearerPager).toContainText(
 		`Showing ${lastBearerFrom}–${bearerTotal} of ${bearerTotal}`,
 	);
+
+	// The consumer list does the same, and filtered to one consumer it fits on
+	// one page and shows no pager.
+	await page.goto('/settings?consumer_token_page=99');
+	const lastConsumerFrom = Math.floor((consumerTotal - 1) / 10) * 10 + 1;
+	await expect(consumerPager).toContainText(
+		`Showing ${lastConsumerFrom}–${consumerTotal} of ${consumerTotal}`,
+	);
+	await page.goto('/settings?consumer=pager-consumer-03');
+	await expect(listRows('Consumer tokens')).toHaveCount(1);
+	await expect(consumerPager).toHaveCount(0);
+
+	// At 390px the lists are cards, and they page the same way.
+	await page.setViewportSize({ width: 390, height: 900 });
+	await page.goto('/settings');
+	await expect(
+		page.getByRole('list', { name: 'Bearer token list' }).getByRole('listitem'),
+	).toHaveCount(10);
+	await expect(
+		page
+			.getByRole('list', { name: 'Consumer token list' })
+			.getByRole('listitem'),
+	).toHaveCount(10);
+	await expect(bearerPager).toContainText('Page 1 of 2');
+	await page.setViewportSize({ width: 1280, height: 900 });
 
 	await page.setViewportSize({ width: 1280, height: 800 });
 

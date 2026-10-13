@@ -576,6 +576,7 @@ async function confirmPurgeConsumerToken() {
 			pageSize={SETTINGS_PAGE_SIZE}
 			href={(n) => listPageHref(page.url.searchParams, 'passkeys', n)}
 			label="Passkeys pages"
+			keepScroll
 		/>
 	</section>
 
@@ -740,6 +741,7 @@ async function confirmPurgeConsumerToken() {
 			pageSize={SETTINGS_PAGE_SIZE}
 			href={(n) => listPageHref(page.url.searchParams, 'tokens', n)}
 			label="Bearer tokens pages"
+			keepScroll
 		/>
 	</section>
 
@@ -964,6 +966,7 @@ async function confirmPurgeConsumerToken() {
 			pageSize={SETTINGS_PAGE_SIZE}
 			href={(n) => listPageHref(page.url.searchParams, 'consumerTokens', n)}
 			label="Consumer tokens pages"
+			keepScroll
 		/>
 	</section>
 </main>

@@ -52,6 +52,13 @@ describe('listPageHref', () => {
 		).toBe('/settings?consumer=homelab&consumer_token_page=2&token_page=3');
 	});
 
+	it.each([
+		['passkeys', 'passkey_page'],
+		['consumerTokens', 'consumer_token_page'],
+	] as const)("uses %s's own parameter, %s", (list, name) => {
+		expect(listPageHref(params(''), list, 2)).toBe(`/settings?${name}=2`);
+	});
+
 	it('drops the parameter for page 1', () => {
 		expect(
 			listPageHref(params('token_page=3&passkey_page=2'), 'tokens', 1),

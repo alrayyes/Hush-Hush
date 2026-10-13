@@ -13,7 +13,10 @@ import {
 // The numbered pager for a list that knows its total (alrayyes/Hush-Hush#892).
 // It renders nothing when the list fits on one page. Links, not buttons, so a
 // page is a URL: it survives a reload, can be shared and opens in a new tab.
-// While `loading`, every control stays where it is but can't be used.
+// While `loading`, every control stays where it is but can't be used. A list low
+// on a long page passes `keepScroll`, so paging it doesn't jump to the top
+// (SvelteKit 3's `data-sveltekit-reset="false"`, which keeps the scroll position
+// and the focused link, still there after the page changes).
 let {
 	page,
 	total,
@@ -21,6 +24,7 @@ let {
 	href,
 	label = 'Pagination',
 	loading = false,
+	keepScroll = false,
 }: {
 	page: number;
 	total: number;
@@ -28,6 +32,7 @@ let {
 	href: (page: number) => string;
 	label?: string;
 	loading?: boolean;
+	keepScroll?: boolean;
 } = $props();
 
 // A page past the end (a stale link, or rows deleted since) shows the last
@@ -58,6 +63,7 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 				variant="outline"
 				class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
 				href={href(Math.max(1, current - 1))}
+				data-sveltekit-reset={keepScroll ? false : undefined}
 				disabled={loading || current <= 1}
 			>
 				<ChevronLeftIcon aria-hidden="true" /> Previous
@@ -75,6 +81,7 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 								variant={item === current ? 'default' : 'outline'}
 								class="min-w-8 {dim}"
 								href={href(item)}
+							data-sveltekit-reset={keepScroll ? false : undefined}
 								disabled={loading}
 								aria-current={item === current ? 'page' : undefined}
 								aria-label="Page {item}"
@@ -90,6 +97,7 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 				variant="outline"
 				class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
 				href={href(Math.min(pages, current + 1))}
+				data-sveltekit-reset={keepScroll ? false : undefined}
 				disabled={loading || current >= pages}
 			>
 				Next <ChevronRightIcon aria-hidden="true" />
