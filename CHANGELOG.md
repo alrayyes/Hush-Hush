@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.29.4](https://github.com/alrayyes/Hush-Hush/compare/v3.29.3...v3.29.4) (2026-10-13)
+
+
+### Bug Fixes
+
+* **web:** put the audit log's controls back when a change fails to load ([#930](https://github.com/alrayyes/Hush-Hush/issues/930)) ([daa2189](https://github.com/alrayyes/Hush-Hush/commit/daa2189fd8421a6c97dc24f0ca414568a94c719d))
+
 ## [3.29.3](https://github.com/alrayyes/Hush-Hush/compare/v3.29.2...v3.29.3) (2026-10-13)
 
 
