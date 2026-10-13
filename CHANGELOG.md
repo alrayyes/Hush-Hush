@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.31.0](https://github.com/alrayyes/Hush-Hush/compare/v3.30.0...v3.31.0) (2026-10-13)
+
+
+### Features
+
+* **web:** page the Settings lists on their own, 10 at a time ([#928](https://github.com/alrayyes/Hush-Hush/issues/928)) ([3ea3c96](https://github.com/alrayyes/Hush-Hush/commit/3ea3c9685c1744ae7f3abcadeacfbf0c289861da))
+
 ## [3.30.0](https://github.com/alrayyes/Hush-Hush/compare/v3.29.4...v3.30.0) (2026-10-13)
 
 
