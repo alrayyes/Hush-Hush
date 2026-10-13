@@ -1,7 +1,7 @@
 <script lang="ts">
 import CheckIcon from '@lucide/svelte/icons/check';
 import CopyIcon from '@lucide/svelte/icons/copy';
-import { onDestroy } from 'svelte';
+import { onDestroy, untrack } from 'svelte';
 import {
 	ApiError,
 	type ConsumerEntry,
@@ -34,7 +34,10 @@ import {
 	matchesFilters,
 	type ObjectFilters,
 	objectFiltersToSearch,
+	parsePage,
 } from '#lib/object-filters.js';
+import Pager from '#lib/Pager.svelte';
+import { slicePage } from '#lib/pageMath.js';
 import { resealValue, resolveRecipients, sealValue } from '#lib/sealing.js';
 import {
 	filterByTag,
@@ -45,6 +48,7 @@ import {
 } from '#lib/tags.js';
 import { normalizeValue, valueFieldAttributes } from '#lib/value-field.js';
 import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/state';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -77,6 +81,35 @@ const filteredObjects = $derived(
 		matchesFilters(o, data.filters),
 	),
 );
+
+// The Secrets table pages 20 at a time over the list the page has already
+// loaded (the creator and date filters run here, so the total is exact). The
+// page lives in the URL, beside the filters, and is read from it rather than
+// from the load function so a page change doesn't fetch the list again.
+const SECRETS_PAGE_SIZE = 20;
+const currentPage = $derived(parsePage(page.url.searchParams));
+const pagedObjects = $derived(
+	slicePage(filteredObjects, currentPage, SECRETS_PAGE_SIZE),
+);
+
+function pageHref(n: number): string {
+	return `/${objectFiltersToSearch(data.filters, n)}`;
+}
+
+// The text and tag filters are local state, not URL: narrowing the list sends
+// the reader back to page 1, so they never land on a page that no longer
+// exists. The first run is the page loading, which must keep ?page=.
+let narrowed = { query, tag: activeTag };
+$effect(() => {
+	const next = { query, tag: activeTag };
+	if (next.query === narrowed.query && next.tag === narrowed.tag) return;
+	narrowed = next;
+	untrack(() => {
+		if (currentPage > 1) {
+			void goto(pageHref(1), { replace: true, reset: false });
+		}
+	});
+});
 
 // The filter form, seeded once from the URL's filters. Apply writes them
 // back to the URL, which reloads the list; the URL, not this state, is what
@@ -649,7 +682,7 @@ async function confirmDelete() {
 		{/if}
 
 		<ul aria-label="Secrets" class="m-0 list-none space-y-3 p-0 md:hidden">
-			{#each filteredObjects as object (object.id)}
+			{#each pagedObjects as object (object.id)}
 				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
 					<div class="flex items-start justify-between gap-2">
 						<span class="min-w-0 break-all font-mono text-sm font-semibold">{object.slug}</span>
@@ -754,7 +787,7 @@ async function confirmDelete() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each filteredObjects as object (object.id)}
+				{#each pagedObjects as object (object.id)}
 					<tr>
 						<td data-label="Id">
 							<span class="block max-w-28 xl:max-w-56 truncate" title={object.slug}>
@@ -848,6 +881,14 @@ async function confirmDelete() {
 				{/each}
 			</tbody>
 		</table>
+
+		<Pager
+			page={currentPage}
+			total={filteredObjects.length}
+			pageSize={SECRETS_PAGE_SIZE}
+			href={pageHref}
+			label="Secrets pages"
+		/>
 	{/if}
 </main>
 

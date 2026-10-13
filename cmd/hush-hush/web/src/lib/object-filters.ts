@@ -34,15 +34,28 @@ export function parseObjectFilters(params: URLSearchParams): ObjectFilters {
 	return filters;
 }
 
-// objectFiltersToSearch is the query string for a filter set: '' when none
-// is set, otherwise starting with '?'.
-export function objectFiltersToSearch(filters: ObjectFilters): string {
+// parsePage reads ?page= from the URL. Anything that isn't a whole number from
+// 1 up is the first page; a page past the end is clamped where it is shown.
+export function parsePage(params: Pick<URLSearchParams, 'get'>): number {
+	const page = Number(params.get('page'));
+
+	return Number.isInteger(page) && page >= 1 ? page : 1;
+}
+
+// objectFiltersToSearch is the query string for a filter set and a page: ''
+// when none is set, otherwise starting with '?'. Page 1 has no parameter.
+export function objectFiltersToSearch(
+	filters: ObjectFilters,
+	page = 1,
+): string {
 	const params = new URLSearchParams();
 
 	for (const name of filters.usedBy) params.append('used_by', name);
 	if (filters.createdBy) params.set('created_by', filters.createdBy);
 	if (filters.createdSince) params.set('created_since', filters.createdSince);
 	if (filters.updatedSince) params.set('updated_since', filters.updatedSince);
+
+	if (page > 1) params.set('page', String(page));
 
 	const search = params.toString();
 
