@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.3](https://github.com/alrayyes/Hush-Hush/compare/v3.23.2...v3.23.3) (2026-10-13)
+
+
+### Bug Fixes
+
+* **api:** one rule for a secret's name on create and rename ([#860](https://github.com/alrayyes/Hush-Hush/issues/860)) ([7c3ecf0](https://github.com/alrayyes/Hush-Hush/commit/7c3ecf0484098bd7cfc6646dcda89b4bb5fa24bf))
+
 ## [3.23.2](https://github.com/alrayyes/Hush-Hush/compare/v3.23.1...v3.23.2) (2026-10-13)
 
 
