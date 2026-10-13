@@ -906,7 +906,10 @@ async function confirmDelete() {
 			{/if}
 		</Dialog.Header>
 		<form onsubmit={submitEdit} class="flex min-h-0 flex-1 flex-col">
-			<div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+			<div
+				data-testid="edit-dialog-body"
+				class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
+			>
 				<div class="space-y-1">
 					<Label for="edit-value">New value (optional)</Label>
 					<Textarea
