@@ -36,7 +36,7 @@ export function parseObjectFilters(params: URLSearchParams): ObjectFilters {
 
 // parsePage reads ?page= from the URL. Anything that isn't a whole number from
 // 1 up is the first page; a page past the end is clamped where it is shown.
-export function parsePage(params: URLSearchParams): number {
+export function parsePage(params: Pick<URLSearchParams, 'get'>): number {
 	const page = Number(params.get('page'));
 
 	return Number.isInteger(page) && page >= 1 ? page : 1;
