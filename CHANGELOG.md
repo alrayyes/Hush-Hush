@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.1](https://github.com/alrayyes/Hush-Hush/compare/v3.23.0...v3.23.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **web:** keep the edit dialog's Save on screen on a short viewport ([#862](https://github.com/alrayyes/Hush-Hush/issues/862)) ([74eac27](https://github.com/alrayyes/Hush-Hush/commit/74eac273df5eeb62bffddf2f711a6766b5d7e757))
+
 ## [3.23.0](https://github.com/alrayyes/Hush-Hush/compare/v3.22.1...v3.23.0) (2026-10-13)
 
 
