@@ -247,13 +247,20 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "409":
-          description: An object already exists under that name for one of its `used_by` consumers, or the name is taken and `used_by` is empty. A name can hold one object per group of consumers, and a consumer is in at most one of them.
+          description: An object already exists under that name for one of its `used_by` consumers, or the name is taken and `used_by` is empty. A name can hold one object per group of consumers, and a consumer is in at most one of them. The message names the consumer, the secret's name and its id.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-              example:
-                error: object already exists
+              examples:
+                consumer:
+                  summary: A consumer is already in a secret with this name
+                  value:
+                    error: consumer "billing" is already in the secret named "db_password" (id 3f9a2c1e-6b7d-4e58-9a10-2d4c5b6e7f80)
+                noConsumer:
+                  summary: The name is taken and used_by is empty
+                  value:
+                    error: a secret named "db_password" already exists and this one names no consumer
 
   /objects/{slug}:
     get:
@@ -1843,8 +1850,15 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
-          example:
-            error: name has several variants; pass id to say which
+          examples:
+            ambiguous:
+              summary: A name with several variants and no id
+              value:
+                error: name has several variants; pass id to say which
+            consumer:
+              summary: A consumer is already in another secret with this name
+              value:
+                error: consumer "billing" is already in the secret named "db_password" (id 3f9a2c1e-6b7d-4e58-9a10-2d4c5b6e7f80)
   schemas:
     ObjectSlug:
       type: string
