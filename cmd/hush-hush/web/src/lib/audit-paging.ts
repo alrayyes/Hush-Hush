@@ -57,3 +57,47 @@ export function pagerState(
 		older: 'previous',
 	};
 }
+
+export type CursorPage<T> = {
+	entries: T[];
+	hasMore: boolean;
+	// The cursor that produced this page; undefined for the first.
+	after: number | undefined;
+	// The cursor of each earlier page, so Newer can go back (the API only pages
+	// forward, so "previous" is this bookkeeping).
+	stack: (number | undefined)[];
+};
+
+export type PageMove = 'first' | 'next' | 'previous';
+
+// turnPage reads one page and returns the state to show. It only returns once
+// the load has succeeded, and never changes what it was given, so a failed
+// load leaves the caller on the page it was on, with Newer and Older as they
+// were (alrayyes/Hush-Hush#906). A move that can't happen (onward with no more
+// entries, back from the first page) returns the same state without loading.
+export async function turnPage<T extends { id: number }>(
+	from: CursorPage<T>,
+	move: PageMove,
+	load: (after: number | undefined) => Promise<T[]>,
+	size: number,
+): Promise<CursorPage<T>> {
+	let after: number | undefined;
+	let stack: (number | undefined)[];
+
+	if (move === 'first') {
+		after = undefined;
+		stack = [];
+	} else if (move === 'next') {
+		if (!from.hasMore || from.entries.length === 0) return from;
+		after = from.entries[from.entries.length - 1].id;
+		stack = [...from.stack, from.after];
+	} else {
+		if (from.stack.length === 0) return from;
+		after = from.stack[from.stack.length - 1];
+		stack = from.stack.slice(0, -1);
+	}
+
+	const split = splitPage(await load(after), size);
+
+	return { ...split, after, stack };
+}
