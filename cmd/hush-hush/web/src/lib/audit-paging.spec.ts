@@ -160,7 +160,9 @@ describe('turnPage', () => {
 			throw new Error('network');
 		};
 
-		await expect(turnPage(first, 'next', fail, size)).rejects.toThrow('network');
+		await expect(turnPage(first, 'next', fail, size)).rejects.toThrow(
+			'network',
+		);
 		expect(first.stack).toEqual([]);
 		expect(first.after).toBeUndefined();
 
