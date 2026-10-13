@@ -141,10 +141,11 @@ func applyObjectOptions(opts []ObjectOption) objectOptions {
 func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, usedBy []string, description, ownerID string, opts ...ObjectOption) error {
 	options := applyObjectOptions(opts)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	if err := checkCreatable(ctx, tx, slug, usedBy); err != nil {
@@ -483,10 +484,11 @@ func (s *Store) ListObjects(ctx context.Context, filter ObjectFilter) ([]Object,
 func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...ObjectOption) error {
 	options := applyObjectOptions(opts)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	id, err := resolveObjectID(ctx, tx, slug, options)
@@ -569,7 +571,7 @@ func (s *Store) AddConsumer(ctx context.Context, name string) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`INSERT INTO consumers (name, created_at) VALUES (?, ?)`, name, now,
 	); err != nil {
 		return fmt.Errorf("insert consumer: %w", err)
@@ -720,10 +722,11 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 // ErrUnknownConsumer if oldName isn't currently recorded anywhere, in
 // used_by or in consumers.
 func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (ConsumerEntry, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return ConsumerEntry{}, fmt.Errorf("begin transaction: %w", err)
+		return ConsumerEntry{}, err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	var exists int
@@ -910,13 +913,24 @@ func upsertConsumerRow(ctx context.Context, tx renameSQLTx, name, publicKey stri
 // stored secret objects whose used_by list references it (0 for a name
 // that exists only via this call), and the public key just set.
 func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string) (ConsumerEntry, error) {
-	if err := upsertConsumerRow(ctx, s.db, name, publicKey); err != nil {
+	tx, release, err := s.beginWrite(ctx)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+	defer release()
+	defer func() { _ = tx.Rollback() }()
+
+	if err := upsertConsumerRow(ctx, tx, name, publicKey); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("set consumer public key: %w", err)
 	}
 
 	var count int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, name).Scan(&count); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, name).Scan(&count); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("count consumer: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return ConsumerEntry{Name: name, SecretCount: count, PublicKey: publicKey}, nil
@@ -929,10 +943,11 @@ func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string
 // ErrUnknownConsumer if name isn't currently recorded anywhere, in
 // used_by or in consumers.
 func (s *Store) DeleteConsumer(ctx context.Context, name string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	usedByResult, err := tx.ExecContext(ctx, `DELETE FROM used_by WHERE consumer = ?`, name)
@@ -982,10 +997,11 @@ func escapeLike(s string) string {
 // ErrNotFound if no object matches and ErrAmbiguousSlug if the slug has
 // several variants and no consumer was named.
 func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOption) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return err
 	}
+	defer release()
 	defer func() { _ = tx.Rollback() }()
 
 	options := applyObjectOptions(opts)

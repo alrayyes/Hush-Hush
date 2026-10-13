@@ -115,7 +115,7 @@ func (s *Store) CurrentUserPublicKey(ctx context.Context) (string, error) {
 // registration would silently strand every credential's existing wrapped
 // copy, which was wrapped against the original identity, not a new one.
 func (s *Store) SetUserEscrow(ctx context.Context, id, publicKey, recoveryWrappedIdentity string) error {
-	if _, err := s.db.ExecContext(ctx,
+	if _, err := s.execWrite(ctx,
 		`UPDATE users SET public_key = ?, recovery_wrapped_identity = ? WHERE id = ? AND public_key IS NULL`,
 		publicKey, recoveryWrappedIdentity, id,
 	); err != nil {
