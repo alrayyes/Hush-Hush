@@ -1288,6 +1288,28 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.waitForTimeout(2000);
 	expect(await rowTexts()).toEqual(newestFirst);
 	await page.unrouteAll({ behavior: 'wait' });
+
+	// alrayyes/Hush-Hush#921: a change whose fetch fails puts the controls back
+	// and leaves the table alone, so what the controls say, what the table
+	// shows and what the curl command asks for still agree.
+	await page.route(
+		(url) =>
+			url.pathname === '/audit-log' && url.searchParams.get('order') === 'asc',
+		(route) => route.abort(),
+	);
+	await orderButton.click();
+	await expect(page.getByRole('alert')).toBeVisible();
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
+	await expect(curlSnippet).toContainText('order=desc');
+	expect(await rowTexts()).toEqual(newestFirst);
+	await page.unrouteAll({ behavior: 'wait' });
+	await orderButton.click();
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'ascending');
+	await expect.poll(rowTexts).toEqual([...newestFirst].reverse());
+	await expect(page.getByRole('alert')).toHaveCount(0);
+	await orderButton.click();
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
+	await expect.poll(rowTexts).toEqual(newestFirst);
 	const actorTrigger = page.getByRole('combobox', {
 		name: 'Actor',
 		exact: true,
