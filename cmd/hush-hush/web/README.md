@@ -147,6 +147,12 @@ bar appears once the list outgrows the smallest option, and stays when one page
 holds everything, so a size picked too big can be undone. The other lists offer
 no choice.
 
+The three Settings lists (passkeys, bearer tokens, consumer tokens) page 10 at
+a time and each keeps its own page in the address (`passkey_page`, `token_page`,
+`consumer_token_page`), so paging one leaves the others where they are. They
+offer no size choice, and a list of 10 or fewer shows no pager. They pass
+`keepScroll`, so paging a list low on the page doesn't jump back to the top.
+
 From 640px up the page numbers show. Below that they collapse to Previous,
 "Page 2 of 7" and Next, with 44px targets. While `loading`, every control stays
 in place, dimmed.

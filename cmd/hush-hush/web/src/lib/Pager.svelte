@@ -18,7 +18,10 @@ import RowsPerPage from '#lib/RowsPerPage.svelte';
 // While `loading`, every control stays where it is but can't be used. A list
 // that offers a choice of page size passes `sizeOptions` and `onSizeChange`: the
 // bar then shows once the list outgrows the smallest option, and the page
-// controls only while one page can't hold everything.
+// controls only while one page can't hold everything. A list low on a long page
+// passes `keepScroll`, so paging it doesn't jump to the top (SvelteKit 3's
+// `data-sveltekit-reset="false"`, which keeps the scroll position and the
+// focused link, still there after the page changes).
 let {
 	page,
 	total,
@@ -26,6 +29,7 @@ let {
 	href,
 	label = 'Pagination',
 	loading = false,
+	keepScroll = false,
 	sizeOptions,
 	onSizeChange,
 }: {
@@ -35,6 +39,7 @@ let {
 	href: (page: number) => string;
 	label?: string;
 	loading?: boolean;
+	keepScroll?: boolean;
 	sizeOptions?: readonly number[];
 	onSizeChange?: (size: number) => void;
 } = $props();
@@ -80,6 +85,7 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 					variant="outline"
 					class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
 					href={href(Math.max(1, current - 1))}
+					data-sveltekit-reset={keepScroll ? false : undefined}
 					disabled={loading || current <= 1}
 				>
 					<ChevronLeftIcon aria-hidden="true" /> Previous
@@ -97,6 +103,7 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 									variant={item === current ? 'default' : 'outline'}
 									class="min-w-8 {dim}"
 									href={href(item)}
+								data-sveltekit-reset={keepScroll ? false : undefined}
 									disabled={loading}
 									aria-current={item === current ? 'page' : undefined}
 									aria-label="Page {item}"
@@ -112,6 +119,7 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 					variant="outline"
 					class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
 					href={href(Math.min(pages, current + 1))}
+					data-sveltekit-reset={keepScroll ? false : undefined}
 					disabled={loading || current >= pages}
 				>
 					Next <ChevronRightIcon aria-hidden="true" />

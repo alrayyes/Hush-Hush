@@ -23,6 +23,13 @@ import * as Dialog from '#lib/components/ui/dialog/index.js';
 import { Input } from '#lib/components/ui/input/index.js';
 import { Label } from '#lib/components/ui/label/index.js';
 import { formatTimestamp } from '#lib/datetime.js';
+import Pager from '#lib/Pager.svelte';
+import { slicePage } from '#lib/pageMath.js';
+import {
+	listPageHref,
+	parseListPage,
+	SETTINGS_PAGE_SIZE,
+} from '#lib/settings-paging.js';
 import TokenCard from '#lib/TokenCard.svelte';
 import {
 	findDuplicateToken,
@@ -224,9 +231,28 @@ const filteredConsumerTokens = $derived(
 		: data.consumerTokens,
 );
 
+// Each list pages 10 at a time and keeps its own page in the address
+// (alrayyes/Hush-Hush#896). The lists are loaded in full, so the totals are
+// exact, and a page past the end shows the last page that has rows.
+const passkeyPage = $derived(parseListPage(page.url.searchParams, 'passkeys'));
+const tokenPage = $derived(parseListPage(page.url.searchParams, 'tokens'));
+const consumerTokenPage = $derived(
+	parseListPage(page.url.searchParams, 'consumerTokens'),
+);
+const pagedCredentials = $derived(
+	slicePage(data.credentials, passkeyPage, SETTINGS_PAGE_SIZE),
+);
+const pagedTokens = $derived(
+	slicePage(data.tokens, tokenPage, SETTINGS_PAGE_SIZE),
+);
+const pagedConsumerTokens = $derived(
+	slicePage(filteredConsumerTokens, consumerTokenPage, SETTINGS_PAGE_SIZE),
+);
+
 function clearConsumerFilter() {
 	const url = new URL(page.url.href);
 	url.searchParams.delete('consumer');
+	url.searchParams.delete('consumer_token_page');
 	void goto(url, { replace: true, reset: false });
 }
 
@@ -455,7 +481,7 @@ async function confirmPurgeConsumerToken() {
 		</aside>
 
 		<ul aria-label="Passkey list" class="m-0 list-none space-y-3 p-0 md:hidden">
-			{#each data.credentials as credential (credential.id)}
+			{#each pagedCredentials as credential (credential.id)}
 				<li class="space-y-2 rounded-lg border border-border bg-background p-4">
 					<span class="block min-w-0 break-words font-semibold">{credential.nickname ?? ''}</span>
 					<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
@@ -506,7 +532,7 @@ async function confirmPurgeConsumerToken() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.credentials as credential (credential.id)}
+				{#each pagedCredentials as credential (credential.id)}
 					<tr>
 						<td data-label="Nickname">{credential.nickname ?? ''}</td>
 						<td data-label="Added">
@@ -543,6 +569,15 @@ async function confirmPurgeConsumerToken() {
 				{/each}
 			</tbody>
 		</table>
+
+		<Pager
+			page={passkeyPage}
+			total={data.credentials.length}
+			pageSize={SETTINGS_PAGE_SIZE}
+			href={(n) => listPageHref(page.url.searchParams, 'passkeys', n)}
+			label="Passkeys pages"
+			keepScroll
+		/>
 	</section>
 
 	<section class="mb-12">
@@ -622,7 +657,7 @@ async function confirmPurgeConsumerToken() {
 		</header>
 
 		<ul aria-label="Bearer token list" class="m-0 list-none space-y-3 p-0 md:hidden">
-			{#each data.tokens as token (token.id)}
+			{#each pagedTokens as token (token.id)}
 				<TokenCard
 					{token}
 					subtitle={token.owner ?? 'cli'}
@@ -646,7 +681,7 @@ async function confirmPurgeConsumerToken() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.tokens as token (token.id)}
+				{#each pagedTokens as token (token.id)}
 					<tr>
 						<td data-label="Description">{token.description}</td>
 						<td data-label="Owner">{token.owner ?? 'cli'}</td>
@@ -699,6 +734,15 @@ async function confirmPurgeConsumerToken() {
 				{/each}
 			</tbody>
 		</table>
+
+		<Pager
+			page={tokenPage}
+			total={data.tokens.length}
+			pageSize={SETTINGS_PAGE_SIZE}
+			href={(n) => listPageHref(page.url.searchParams, 'tokens', n)}
+			label="Bearer tokens pages"
+			keepScroll
+		/>
 	</section>
 
 	<section class="mb-12">
@@ -820,7 +864,7 @@ async function confirmPurgeConsumerToken() {
 		{/if}
 
 		<ul aria-label="Consumer token list" class="m-0 list-none space-y-3 p-0 md:hidden">
-			{#each filteredConsumerTokens as token (token.id)}
+			{#each pagedConsumerTokens as token (token.id)}
 				<TokenCard
 					{token}
 					subtitle={token.consumer}
@@ -845,7 +889,7 @@ async function confirmPurgeConsumerToken() {
 				</tr>
 			</thead>
 			<tbody>
-				{#each filteredConsumerTokens as token (token.id)}
+				{#each pagedConsumerTokens as token (token.id)}
 					<tr>
 						<td data-label="Consumer">{token.consumer}</td>
 						<td data-label="Description">
@@ -915,6 +959,15 @@ async function confirmPurgeConsumerToken() {
 				{/each}
 			</tbody>
 		</table>
+
+		<Pager
+			page={consumerTokenPage}
+			total={filteredConsumerTokens.length}
+			pageSize={SETTINGS_PAGE_SIZE}
+			href={(n) => listPageHref(page.url.searchParams, 'consumerTokens', n)}
+			label="Consumer tokens pages"
+			keepScroll
+		/>
 	</section>
 </main>
 

@@ -119,6 +119,27 @@ describe('Pager', () => {
 		expect(control(html, 'Next')).toContain('h-11');
 	});
 
+	it('keeps the scroll position when asked to, for a list low on a long page', () => {
+		const html = render(Pager, {
+			props: {
+				page: 2,
+				total: 137,
+				pageSize: 20,
+				href,
+				keepScroll: true,
+			},
+		}).body;
+
+		expect(control(html, 'Next')).toContain('data-sveltekit-reset="false"');
+		expect(control(html, 'Page 3')).toContain('data-sveltekit-reset="false"');
+	});
+
+	it('lets the page scroll to the top by default', () => {
+		expect(control(numbered({ page: 2, total: 137 }), 'Next')).not.toContain(
+			'data-sveltekit-reset',
+		);
+	});
+
 	it('carries the compact mobile status text', () => {
 		expect(numbered({ page: 2, total: 137 })).toContain('Page 2 of 7');
 	});
