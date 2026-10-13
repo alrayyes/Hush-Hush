@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.22.1](https://github.com/alrayyes/Hush-Hush/compare/v3.22.0...v3.22.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **store:** refuse a consumer in two secrets that share a name ([#850](https://github.com/alrayyes/Hush-Hush/issues/850)) ([6c6ec1e](https://github.com/alrayyes/Hush-Hush/commit/6c6ec1efd093dd826634db9935bd15b380a306c8))
+
 ## [3.22.0](https://github.com/alrayyes/Hush-Hush/compare/v3.21.0...v3.22.0) (2026-10-12)
 
 
