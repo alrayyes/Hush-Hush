@@ -159,3 +159,23 @@ describe('parsePage', () => {
 		expect(parsePage(new URLSearchParams('page=2.5'))).toBe(1);
 	});
 });
+
+// alrayyes/Hush-Hush#897: the page size is in the URL beside the page, and the
+// default size, like page 1, leaves no parameter.
+describe('objectFiltersToSearch with a page size', () => {
+	const none = { usedBy: [] } as unknown as Parameters<
+		typeof objectFiltersToSearch
+	>[0];
+
+	it('leaves out the default size', () => {
+		expect(objectFiltersToSearch(none, 1, 20)).toBe('');
+	});
+
+	it('writes a chosen size', () => {
+		expect(objectFiltersToSearch(none, 1, 50)).toBe('?size=50');
+	});
+
+	it('writes the size beside the page', () => {
+		expect(objectFiltersToSearch(none, 3, 100)).toBe('?page=3&size=100');
+	});
+});

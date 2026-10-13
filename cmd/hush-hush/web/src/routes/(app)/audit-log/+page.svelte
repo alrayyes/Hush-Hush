@@ -12,7 +12,6 @@ import {
 } from '#lib/api.js';
 import { auditActorLabel, toCSV, toJSON } from '#lib/audit-export.js';
 import {
-	AUDIT_PAGE_SIZE,
 	type AuditOrder,
 	cursorParams,
 	flipOrder,
@@ -29,6 +28,8 @@ import { Input } from '#lib/components/ui/input/index.js';
 import { Label } from '#lib/components/ui/label/index.js';
 import * as Select from '#lib/components/ui/select/index.js';
 import { formatTimestamp } from '#lib/datetime.js';
+import { AUDIT_SIZES, parsePageSize } from '#lib/pageSize.js';
+import { afterNavigate, replaceState } from '$app/navigation';
 import { page } from '$app/state';
 import type { PageData } from './$types';
 
@@ -42,6 +43,10 @@ let { data }: { data: PageData } = $props();
 // intentional one-time seed, not a sync bug.
 let entries: AuditLogEntry[] = $state(data.entries);
 let hasMore = $state(data.hasMore);
+// Rows per page, seeded from ?size= (the loader read it). Picking a size
+// rewrites the address in place; a real navigation that lands on another size,
+// the nav link or going back, is caught in afterNavigate below.
+let size = $state(data.size);
 let loading = $state(false);
 let loadError = $state('');
 
@@ -113,7 +118,7 @@ function currentQuery(after: number | undefined): AuditLogQuery {
 		from: fromFilter ? new Date(fromFilter).toISOString() : undefined,
 		to: toFilter ? new Date(toFilter).toISOString() : undefined,
 		order,
-		limit: AUDIT_PAGE_SIZE,
+		limit: size,
 		...cursorParams(order, after),
 	};
 }
@@ -137,9 +142,9 @@ async function go(move: PageMove) {
 			(after) =>
 				queryAuditLog({
 					...currentQuery(after),
-					limit: AUDIT_PAGE_SIZE + 1,
+					limit: size + 1,
 				}),
-			AUDIT_PAGE_SIZE,
+			size,
 		);
 		if (!isCurrent()) return;
 		entries = next.entries;
@@ -160,6 +165,27 @@ async function go(move: PageMove) {
 function resetToFirstPage() {
 	void go('first');
 }
+
+function changeSize(next: number) {
+	size = next;
+	const url = new URL(page.url.href);
+	if (next === AUDIT_SIZES[0]) url.searchParams.delete('size');
+	else url.searchParams.set('size', String(next));
+	replaceState(url, page.state);
+	resetToFirstPage();
+}
+
+// replaceState is shallow, so it isn't a navigation and doesn't land here. A
+// link or back/forward is: if the address now asks for another size, follow it.
+afterNavigate((navigation) => {
+	const fromAddress = parsePageSize(
+		(navigation.to?.url ?? page.url).searchParams,
+		AUDIT_SIZES,
+	);
+	if (fromAddress === size) return;
+	size = fromAddress;
+	resetToFirstPage();
+});
 
 function step(direction: PageStep) {
 	void go(direction);
@@ -516,5 +542,8 @@ function exportCSV() {
 		onOlder={() => step(pager.older)}
 		label="Audit log pages"
 		{loading}
+		{size}
+		sizeOptions={AUDIT_SIZES}
+		onSizeChange={changeSize}
 	/>
 </main>

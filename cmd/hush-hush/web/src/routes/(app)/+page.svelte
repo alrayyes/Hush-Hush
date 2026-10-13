@@ -38,6 +38,7 @@ import {
 } from '#lib/object-filters.js';
 import Pager from '#lib/Pager.svelte';
 import { slicePage } from '#lib/pageMath.js';
+import { parsePageSize, SECRETS_SIZES } from '#lib/pageSize.js';
 import { resealValue, resolveRecipients, sealValue } from '#lib/sealing.js';
 import {
 	filterByTag,
@@ -82,18 +83,19 @@ const filteredObjects = $derived(
 	),
 );
 
-// The Secrets table pages 20 at a time over the list the page has already
+// The Secrets table pages over the list the page has already
 // loaded (the creator and date filters run here, so the total is exact). The
 // page lives in the URL, beside the filters, and is read from it rather than
 // from the load function so a page change doesn't fetch the list again.
-const SECRETS_PAGE_SIZE = 20;
+// The rows per page is the reader's choice (20, 50 or 100), kept in ?size=.
+const pageSize = $derived(parsePageSize(page.url.searchParams, SECRETS_SIZES));
 const currentPage = $derived(parsePage(page.url.searchParams));
 const pagedObjects = $derived(
-	slicePage(filteredObjects, currentPage, SECRETS_PAGE_SIZE),
+	slicePage(filteredObjects, currentPage, pageSize),
 );
 
 function pageHref(n: number): string {
-	return `/${objectFiltersToSearch(data.filters, n)}`;
+	return `/${objectFiltersToSearch(data.filters, n, pageSize)}`;
 }
 
 // The text and tag filters are local state, not URL: narrowing the list sends
@@ -136,7 +138,15 @@ function applyFilters(event: SubmitEvent) {
 	if (filterCreatedBy) next.createdBy = filterCreatedBy;
 	if (filterCreatedSince) next.createdSince = filterCreatedSince;
 	if (filterUpdatedSince) next.updatedSince = filterUpdatedSince;
-	void goto(`/${objectFiltersToSearch(next)}`, { reset: false });
+	void goto(`/${objectFiltersToSearch(next, 1, pageSize)}`, { reset: false });
+}
+
+// A new size starts again at page 1, keeping the filters. It doesn't fetch the
+// list again: the page is cut from what is already loaded.
+function changePageSize(size: number) {
+	void goto(`/${objectFiltersToSearch(data.filters, 1, size)}`, {
+		reset: false,
+	});
 }
 
 // clearFilters resets the form and the URL, and the text and tag filters
@@ -148,7 +158,9 @@ function clearFilters() {
 	filterUpdatedSince = '';
 	query = '';
 	selectedTag = null;
-	void goto('/', { reset: false });
+	void goto(`/${objectFiltersToSearch({ usedBy: [] }, 1, pageSize)}`, {
+		reset: false,
+	});
 }
 
 // Which card's copy button is showing its "Copied" state, and the timer
@@ -885,9 +897,11 @@ async function confirmDelete() {
 		<Pager
 			page={currentPage}
 			total={filteredObjects.length}
-			pageSize={SECRETS_PAGE_SIZE}
+			{pageSize}
 			href={pageHref}
 			label="Secrets pages"
+			sizeOptions={SECRETS_SIZES}
+			onSizeChange={changePageSize}
 		/>
 	{/if}
 </main>
