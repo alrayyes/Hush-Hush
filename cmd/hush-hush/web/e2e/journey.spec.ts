@@ -1269,6 +1269,25 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(orderResults.violations).toEqual([]);
+
+	// alrayyes/Hush-Hush#922: two changes made before the first fetch resolves
+	// show the second one's results, even when the first arrives last. The
+	// oldest-first request is held back, so it resolves after the newest-first
+	// one that followed it.
+	await page.route(
+		(url) =>
+			url.pathname === '/audit-log' && url.searchParams.get('order') === 'asc',
+		async (route) => {
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await route.continue();
+		},
+	);
+	await orderButton.click();
+	await orderButton.click();
+	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
+	await page.waitForTimeout(2000);
+	expect(await rowTexts()).toEqual(newestFirst);
+	await page.unrouteAll({ behavior: 'wait' });
 	const actorTrigger = page.getByRole('combobox', {
 		name: 'Actor',
 		exact: true,

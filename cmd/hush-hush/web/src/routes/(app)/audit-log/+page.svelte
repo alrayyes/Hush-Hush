@@ -15,6 +15,7 @@ import {
 	type AuditOrder,
 	cursorParams,
 	flipOrder,
+	latestOnly,
 	type PageMove,
 	type PageStep,
 	pagerState,
@@ -91,7 +92,10 @@ function currentQuery(after: number | undefined): AuditLogQuery {
 // Turns to another page. The cursor stack, the entries and the flag only change
 // together, after the load succeeds (alrayyes/Hush-Hush#906): a failed load
 // shows the error and leaves Newer and Older where they were.
+const startRequest = latestOnly();
+
 async function go(move: PageMove) {
+	const isCurrent = startRequest();
 	loading = true;
 	loadError = '';
 
@@ -107,15 +111,17 @@ async function go(move: PageMove) {
 				}),
 			size,
 		);
+		if (!isCurrent()) return;
 		entries = next.entries;
 		hasMore = next.hasMore;
 		currentAfter = next.after;
 		cursorStack = next.stack;
 	} catch (err) {
+		if (!isCurrent()) return;
 		loadError =
 			err instanceof ApiError ? err.message : 'Failed to load the audit log.';
 	} finally {
-		loading = false;
+		if (isCurrent()) loading = false;
 	}
 }
 

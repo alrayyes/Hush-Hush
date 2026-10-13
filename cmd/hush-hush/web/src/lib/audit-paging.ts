@@ -104,3 +104,17 @@ export async function turnPage<T extends { id: number }>(
 
 	return { ...split, after, stack };
 }
+
+// latestOnly hands out a check for each request started: only the most recent
+// one is still current. A slower, older response that arrives after a newer
+// request began is stale and must be dropped, or it overwrites what the reader
+// last asked for (alrayyes/Hush-Hush#922).
+export function latestOnly(): () => () => boolean {
+	let latest = 0;
+
+	return () => {
+		const mine = ++latest;
+
+		return () => mine === latest;
+	};
+}

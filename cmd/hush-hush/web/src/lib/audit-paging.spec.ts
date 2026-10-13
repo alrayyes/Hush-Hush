@@ -3,6 +3,7 @@ import {
 	AUDIT_PAGE_SIZE,
 	cursorParams,
 	flipOrder,
+	latestOnly,
 	pagerState,
 	splitPage,
 	turnPage,
@@ -180,5 +181,24 @@ describe('turnPage', () => {
 
 		await expect(turnPage(last, 'next', load, size)).resolves.toBe(last);
 		await expect(turnPage(first, 'previous', load, size)).resolves.toBe(first);
+	});
+});
+
+describe('latestOnly', () => {
+	it('lets only the most recently started request count as current', () => {
+		const latest = latestOnly();
+		const first = latest();
+		const second = latest();
+
+		expect(first()).toBe(false);
+		expect(second()).toBe(true);
+	});
+
+	it('keeps a request current until another starts', () => {
+		const latest = latestOnly();
+		const only = latest();
+
+		expect(only()).toBe(true);
+		expect(only()).toBe(true);
 	});
 });
