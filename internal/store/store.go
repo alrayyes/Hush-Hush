@@ -25,25 +25,40 @@ type Store struct {
 	db *sql.DB
 }
 
-// withForeignKeys adds the foreign_keys pragma to path's DSN. SQLite ignores
-// foreign keys (so ON DELETE CASCADE never fires) unless each connection
-// turns them on for itself - it's a per-connection pragma, not a database
-// setting, and a database/sql pool opens connections whenever it likes. A
-// one-off PRAGMA Exec after Open only reached whichever connection ran it
-// (alrayyes/hush-hush#800).
-func withForeignKeys(path string) string {
+// withConnectionOptions adds the per-connection pragmas and transaction
+// mode to path's DSN.
+//
+// foreign_keys: SQLite ignores foreign keys (so ON DELETE CASCADE never
+// fires) unless each connection turns them on for itself - it's a
+// per-connection pragma, not a database setting, and a database/sql pool
+// opens connections whenever it likes. A one-off PRAGMA Exec after Open only
+// reached whichever connection ran it (alrayyes/hush-hush#800).
+//
+// busy_timeout: a writer that finds the database locked waits for the lock
+// (up to ten seconds) instead of returning SQLITE_BUSY at once, so
+// concurrent writers queue rather than fail (alrayyes/hush-hush#852).
+//
+// _txlock=immediate: every transaction opens with BEGIN IMMEDIATE, taking its
+// write lock up front instead of starting as a reader and failing to upgrade
+// later. Without it a deferred transaction reads a snapshot first and two
+// writers both get SQLITE_BUSY on the upgrade - busy_timeout alone cannot fix
+// that (alrayyes/hush-hush#852). Every BeginTx in this package writes, so no
+// read-only transaction is forced to take a write lock by it. A future
+// read-only transaction must pass sql.TxOptions{ReadOnly: true}, which the
+// driver maps back to a plain BEGIN, or it takes the write lock too.
+func withConnectionOptions(path string) string {
 	sep := "?"
 	if strings.Contains(path, "?") {
 		sep = "&"
 	}
 
-	return path + sep + "_pragma=foreign_keys(1)"
+	return path + sep + "_pragma=foreign_keys(1)&_pragma=busy_timeout(10000)&_txlock=immediate"
 }
 
 // Open opens (creating if necessary) a SQLite database at path and applies
 // the schema. path may be ":memory:" for an in-memory database.
 func Open(path string) (*Store, error) {
-	db, err := sql.Open("sqlite", withForeignKeys(path))
+	db, err := sql.Open("sqlite", withConnectionOptions(path))
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
