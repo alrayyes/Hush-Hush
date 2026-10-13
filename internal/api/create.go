@@ -99,6 +99,12 @@ func readCreateRequest(w http.ResponseWriter, r *http.Request) (CreateObjectRequ
 		return req, false
 	}
 
+	if !validSlug(req.Slug) {
+		writeError(w, r, http.StatusBadRequest, errInvalidSlug.Error())
+
+		return req, false
+	}
+
 	if len(req.Value) > MaxValueBytes {
 		writeError(w, r, http.StatusRequestEntityTooLarge, errValueTooLarge.Error())
 

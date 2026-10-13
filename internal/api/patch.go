@@ -3,17 +3,12 @@ package api
 import (
 	"errors"
 	"net/http"
-	"regexp"
 
 	"github.com/alrayyes/hush-hush/internal/store"
 )
 
-// slugPattern is components.schemas.ObjectSlug's pattern in api/openapi.yaml.
-var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
-
 var (
 	errPatchNothing = errors.New("at least one of description, slug or tags is required")
-	errInvalidSlug  = errors.New("slug must start with a-z or 0-9 and use only a-z, 0-9, '_' and '-'")
 	errSlugTaken    = errors.New("an object with that slug already exists")
 )
 
@@ -41,7 +36,9 @@ func readPatchRequest(w http.ResponseWriter, r *http.Request) (store.ObjectPatch
 		return store.ObjectPatch{}, false
 	}
 
-	if req.Slug != nil && !slugPattern.MatchString(*req.Slug) {
+	// A slug equal to the current one is no rename, and a name stored before
+	// the rule may not follow it.
+	if req.Slug != nil && *req.Slug != r.PathValue("slug") && !validSlug(*req.Slug) {
 		writeError(w, r, http.StatusBadRequest, errInvalidSlug.Error())
 
 		return store.ObjectPatch{}, false
