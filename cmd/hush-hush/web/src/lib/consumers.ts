@@ -39,13 +39,6 @@ export function consumersHref(page: number, q: string): string {
 	return qs ? `/consumers?${qs}` : '/consumers';
 }
 
-// totalPages is how many page-number links the directory renders, given
-// the API's own total count and the fixed page size - always at least
-// one, so an empty or single-page result still shows page 1.
-export function totalPages(total: number, pageSize: number): number {
-	return Math.max(1, Math.ceil(total / pageSize));
-}
-
 // secretsOverviewHref is where selecting a consumer navigates to -
 // GET /objects?used_by= already supports exactly this filter
 // (design.md's "Selecting a consumer reuses GET /objects?used_by="
