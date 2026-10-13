@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.29.1](https://github.com/alrayyes/Hush-Hush/compare/v3.29.0...v3.29.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **web:** keep a hovered destructive button readable in dark mode ([#909](https://github.com/alrayyes/Hush-Hush/issues/909)) ([1a1db14](https://github.com/alrayyes/Hush-Hush/commit/1a1db142b12063f9e5387fdcfd409b1765d9d5d7))
+
 ## [3.29.0](https://github.com/alrayyes/Hush-Hush/compare/v3.28.0...v3.29.0) (2026-10-13)
 
 
