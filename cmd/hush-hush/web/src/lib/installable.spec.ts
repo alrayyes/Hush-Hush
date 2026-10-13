@@ -40,6 +40,11 @@ describe('manifest.webmanifest', () => {
 		});
 	});
 
+	it('sets the theme and background colors as hex values', () => {
+		expect(manifest.theme_color).toMatch(/^#[0-9a-f]{6}$/i);
+		expect(manifest.background_color).toMatch(/^#[0-9a-f]{6}$/i);
+	});
+
 	it('carries a plain and a maskable icon at the sizes browsers ask for', () => {
 		const wanted = (manifest.icons as Icon[]).map(
 			(icon) => `${icon.sizes} ${icon.purpose ?? 'any'}`,
