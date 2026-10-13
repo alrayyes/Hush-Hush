@@ -70,8 +70,10 @@ let applied = {
 	order: 'desc' as AuditOrder,
 };
 
+// Read when a request starts, not when it ends: a From or To still being typed
+// when a Newer press resolves isn't part of what that request fetched.
 function snapshotControls() {
-	applied = {
+	return {
 		object: objectFilter,
 		actor: actorFilter,
 		caller: callerFilter,
@@ -123,6 +125,7 @@ const startRequest = latestOnly();
 
 async function go(move: PageMove) {
 	const isCurrent = startRequest();
+	const requested = snapshotControls();
 	loading = true;
 	loadError = '';
 
@@ -143,7 +146,7 @@ async function go(move: PageMove) {
 		hasMore = next.hasMore;
 		currentAfter = next.after;
 		cursorStack = next.stack;
-		snapshotControls();
+		applied = requested;
 	} catch (err) {
 		if (!isCurrent()) return;
 		restoreControls();
