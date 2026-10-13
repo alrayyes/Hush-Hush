@@ -2,7 +2,13 @@
 import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 import { Button } from '#lib/components/ui/button/index.js';
-import { pageRange, showPager, summaryRange, totalPages } from '#lib/pageMath.js';
+import {
+	clampPage,
+	pageRange,
+	showPager,
+	summaryRange,
+	totalPages,
+} from '#lib/pageMath.js';
 
 // The numbered pager for a list that knows its total (alrayyes/Hush-Hush#892).
 // It renders nothing when the list fits on one page. Links, not buttons, so a
@@ -24,9 +30,12 @@ let {
 	loading?: boolean;
 } = $props();
 
+// A page past the end (a stale link, or rows deleted since) shows the last
+// page, not an impossible range like "Showing 381–137".
+const current = $derived(clampPage(page, total, pageSize));
 const pages = $derived(totalPages(total, pageSize));
-const range = $derived(summaryRange(page, pageSize, total));
-const items = $derived(pageRange(page, pages));
+const range = $derived(summaryRange(current, pageSize, total));
+const items = $derived(pageRange(current, pages));
 
 // A disabled link has no :disabled state, so the button's own dimming never
 // reaches it. aria-disabled is what Button sets on a link, so style that.
@@ -48,13 +57,13 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 			<Button
 				variant="outline"
 				class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
-				href={href(Math.max(1, page - 1))}
-				disabled={loading || page <= 1}
+				href={href(Math.max(1, current - 1))}
+				disabled={loading || current <= 1}
 			>
 				<ChevronLeftIcon aria-hidden="true" /> Previous
 			</Button>
 
-			<span class="text-sm sm:hidden">Page {page} of {pages}</span>
+			<span class="text-sm sm:hidden">Page {current} of {pages}</span>
 
 			<ol class="m-0 hidden list-none items-center gap-1 p-0 sm:flex">
 				{#each items as item, i (i)}
@@ -63,11 +72,11 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 							<span class="px-1 text-muted-foreground" aria-hidden="true">…</span>
 						{:else}
 							<Button
-								variant={item === page ? 'default' : 'outline'}
+								variant={item === current ? 'default' : 'outline'}
 								class="min-w-8 {dim}"
 								href={href(item)}
 								disabled={loading}
-								aria-current={item === page ? 'page' : undefined}
+								aria-current={item === current ? 'page' : undefined}
 								aria-label="Page {item}"
 							>
 								{item}
@@ -80,8 +89,8 @@ const dim = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 			<Button
 				variant="outline"
 				class="h-11 min-w-11 sm:h-8 sm:min-w-0 {dim}"
-				href={href(Math.min(pages, page + 1))}
-				disabled={loading || page >= pages}
+				href={href(Math.min(pages, current + 1))}
+				disabled={loading || current >= pages}
 			>
 				Next <ChevronRightIcon aria-hidden="true" />
 			</Button>

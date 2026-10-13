@@ -136,8 +136,12 @@ link, so it survives a reload and can be shared. The numbers to show, the
 "Showing 21–40 of 137" range and the clamp for a page past the end are plain
 functions in `src/lib/pageMath.ts`.
 
-Below 640px the page numbers collapse to Previous, "Page 2 of 7" and Next, with
-44px targets. While `loading`, every control stays in place, dimmed.
+A page past the end shows the last page, so a stale link never reads
+"Showing 381–137".
+
+From 640px up the page numbers show. Below that they collapse to Previous,
+"Page 2 of 7" and Next, with 44px targets. While `loading`, every control stays
+in place, dimmed.
 
 ## Installable app
 

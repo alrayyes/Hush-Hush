@@ -105,6 +105,20 @@ describe('Pager', () => {
 		expect(html).not.toContain('href="/list?page=');
 	});
 
+	it('shows the last page, not an impossible range, when the page is past the end', () => {
+		const html = numbered({ page: 20, total: 137 });
+
+		expect(html).toContain('121–137');
+		expect(html).toContain('Page 7 of 7');
+	});
+
+	it('gives Previous and Next a 44px target below the sm breakpoint', () => {
+		const html = numbered({ page: 2, total: 137 });
+
+		expect(control(html, 'Previous')).toContain('h-11');
+		expect(control(html, 'Next')).toContain('h-11');
+	});
+
 	it('carries the compact mobile status text', () => {
 		expect(numbered({ page: 2, total: 137 })).toContain('Page 2 of 7');
 	});
@@ -152,6 +166,19 @@ describe('CursorPager', () => {
 
 		expect(isDisabled(control(html, 'Older'))).toBe(true);
 		expect(isDisabled(control(html, 'Newer'))).toBe(false);
+	});
+
+	it('gives Newer and Older a 44px target below the sm breakpoint', () => {
+		const html = cursor({ canNewer: true, canOlder: true });
+
+		expect(control(html, 'Newer')).toContain('h-11');
+		expect(control(html, 'Older')).toContain('h-11');
+	});
+
+	it('is marked busy while a page is loading', () => {
+		expect(cursor({ canNewer: true, canOlder: true, loading: true })).toContain(
+			'aria-busy="true"',
+		);
 	});
 
 	it('says "1 entry" for one', () => {

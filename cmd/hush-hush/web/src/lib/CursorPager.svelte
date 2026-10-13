@@ -29,6 +29,7 @@ let {
 {#if canNewer || canOlder}
 	<nav
 		aria-label={label}
+		aria-busy={loading}
 		class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
 	>
 		<p class="text-center text-sm text-muted-foreground sm:text-left">
