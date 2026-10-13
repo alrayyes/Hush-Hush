@@ -2473,7 +2473,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	for (const slug of pagingSlugs) {
 		const created = await page.request.post('/objects', {
 			headers: { 'X-CSRF-Token': csrfToken },
-			data: { slug, value: await sealForVariant(slug), used_by: [] },
+			data: {
+				slug,
+				value: await sealForVariant(slug),
+				used_by: [],
+				tags: ['paging'],
+			},
 		});
 		expect(created.ok()).toBe(true);
 	}
@@ -2510,15 +2515,31 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(secretsPager).toContainText('Showing 21');
 	await page.goto('/?page=99');
 	await expect(secretsPager).toContainText(`of ${total}`);
-	await expect(page.getByRole('row')).not.toHaveCount(1);
+	const lastFrom = Math.floor((total - 1) / 20) * 20 + 1;
+	await expect(secretsPager).toContainText(
+		`Showing ${lastFrom}–${total} of ${total}`,
+	);
 
 	// Narrowing the list sends the reader back to page 1.
 	await page.goto('/?page=2');
+	// Loading ?page=2 keeps page 2: the reset only follows a change.
+	await expect(secretsPager).toContainText('Showing 21');
+	await page.waitForTimeout(500);
+	await expect(page).toHaveURL(/[?&]page=2(&|$)/);
 	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('paging_');
 	await expect(page).not.toHaveURL(/page=/);
 	await expect(page.getByRole('row')).toHaveCount(20 + 1);
 	await expect(secretsPager).toContainText('Showing 1–20 of 21');
 	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('');
+
+	// So does picking a tag.
+	await page.goto('/?page=2');
+	await page
+		.getByRole('group', { name: 'Filter by tag' })
+		.getByRole('button', { name: 'paging (21)' })
+		.click();
+	await expect(page).not.toHaveURL(/page=/);
+	await expect(secretsPager).toContainText('Showing 1–20 of 21');
 
 	for (const slug of pagingSlugs) {
 		expect(

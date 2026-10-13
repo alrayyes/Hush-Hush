@@ -95,6 +95,10 @@ describe('slicePage', () => {
 		expect(slicePage(rows, 9, 20)).toEqual([41, 42, 43, 44, 45]);
 	});
 
+	it('shows the first page for page 0', () => {
+		expect(slicePage(rows, 0, 20)).toEqual(rows.slice(0, 20));
+	});
+
 	it('returns nothing for an empty list', () => {
 		expect(slicePage([], 1, 20)).toEqual([]);
 	});

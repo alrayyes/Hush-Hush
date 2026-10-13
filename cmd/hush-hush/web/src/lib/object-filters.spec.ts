@@ -154,5 +154,8 @@ describe('parsePage', () => {
 		expect(parsePage(new URLSearchParams('page=4'))).toBe(4);
 		expect(parsePage(new URLSearchParams('page=abc'))).toBe(1);
 		expect(parsePage(new URLSearchParams(''))).toBe(1);
+		expect(parsePage(new URLSearchParams('page=0'))).toBe(1);
+		expect(parsePage(new URLSearchParams('page=-1'))).toBe(1);
+		expect(parsePage(new URLSearchParams('page=2.5'))).toBe(1);
 	});
 });
