@@ -2354,7 +2354,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const consumerPages = page.getByRole('navigation', {
 		name: 'Consumers pages',
 	});
-	await expect(consumerPages.getByText(/^Showing 1–20 of \d+$/)).toBeVisible();
+	await expect(consumerPages.getByText('Showing 1–20 of 102')).toBeVisible();
 	// One header row and one row per consumer on the page.
 	await expect(page.getByRole('row')).toHaveCount(21);
 	const consumerPagesAxe = await new AxeBuilder({ page })
@@ -2364,12 +2364,20 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	await consumerPages.getByRole('link', { name: 'Page 2' }).click();
 	await expect(page).toHaveURL(/\/consumers\?page=2$/);
-	await expect(consumerPages.getByText(/^Showing 21–40 of \d+$/)).toBeVisible();
-	await expect(
-		consumerPages.getByRole('link', { name: 'Page 2' }),
-	).toHaveAttribute('aria-current', 'page');
-	await consumerPages.getByRole('link', { name: 'Previous' }).click();
-	await expect(consumerPages.getByText(/^Showing 1–20 of \d+$/)).toBeVisible();
+	await expect(consumerPages.getByText('Showing 21–40 of 102')).toBeVisible();
+
+	// The search term travels with the page links.
+	await page.goto('/consumers?q=svcfiles');
+	await expect(consumerPages.getByText('Showing 1–20 of 97')).toBeVisible();
+	await consumerPages.getByRole('link', { name: 'Page 2' }).click();
+	await expect(page).toHaveURL(/q=svcfiles/);
+	await expect(page).toHaveURL(/page=2/);
+	await expect(consumerPages.getByText('Showing 21–40 of 97')).toBeVisible();
+
+	// A page past the end (an old bookmark) lands on the last page.
+	await page.goto('/consumers?page=99');
+	await expect(page).toHaveURL(/\/consumers\?page=6$/);
+	await expect(consumerPages.getByText('Showing 101–102 of 102')).toBeVisible();
 
 	// A search that fits on one page drops the pager, and goes back to page 1.
 	await page.goto('/consumers?page=2');

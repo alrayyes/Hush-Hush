@@ -1,5 +1,11 @@
+import { redirect } from '@sveltejs/kit';
 import { listConsumersPage, listConsumerTokens } from '#lib/api.js';
-import { CONSUMERS_PAGE_SIZE, parseConsumersQuery } from '#lib/consumers.js';
+import {
+	CONSUMERS_PAGE_SIZE,
+	consumersHref,
+	parseConsumersQuery,
+} from '#lib/consumers.js';
+import { clampPage } from '#lib/pageMath.js';
 import type { PageLoad } from './$types';
 
 // app:consumers is invalidated after a secret create adds a new
@@ -17,6 +23,13 @@ export const load: PageLoad = async ({ depends, url }) => {
 		}),
 		listConsumerTokens(),
 	]);
+
+	// A page past the end (an old bookmark, or consumers deleted since) goes to
+	// the last page that has rows, not an empty table under a pager.
+	const last = clampPage(page, result.total, CONSUMERS_PAGE_SIZE);
+	if (last !== page) {
+		redirect(307, consumersHref(last, q));
+	}
 
 	// GET /consumer-tokens has no per-consumer filter to ask for a count
 	// from directly (design.md's "Counting lives in consumers/+page.ts"
