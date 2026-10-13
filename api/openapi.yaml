@@ -1856,7 +1856,7 @@ components:
               value:
                 error: name has several variants; pass id to say which
             consumer:
-              summary: A consumer is already in another secret with this name
+              summary: A consumer is already in another secret with this name (PUT /objects/{slug} and PATCH /consumers/{name} only)
               value:
                 error: consumer "billing" is already in the secret named "db_password" (id 3f9a2c1e-6b7d-4e58-9a10-2d4c5b6e7f80)
   schemas:
