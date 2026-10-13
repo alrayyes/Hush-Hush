@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.5](https://github.com/alrayyes/Hush-Hush/compare/v3.23.4...v3.23.5) (2026-10-13)
+
+
+### Bug Fixes
+
+* **web:** keep a dialog's close button in place while its content scrolls ([#871](https://github.com/alrayyes/Hush-Hush/issues/871)) ([dfcbe1c](https://github.com/alrayyes/Hush-Hush/commit/dfcbe1c891b387e0a7e09819b79e91549a3778a5)), closes [#865](https://github.com/alrayyes/Hush-Hush/issues/865)
+
 ## [3.23.4](https://github.com/alrayyes/Hush-Hush/compare/v3.23.3...v3.23.4) (2026-10-13)
 
 
