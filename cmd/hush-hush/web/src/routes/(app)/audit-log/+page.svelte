@@ -11,7 +11,16 @@ import {
 	queryAuditLog,
 } from '#lib/api.js';
 import { auditActorLabel, toCSV, toJSON } from '#lib/audit-export.js';
-import { type AuditOrder, cursorParams, flipOrder } from '#lib/audit-paging.js';
+import {
+	AUDIT_PAGE_SIZE,
+	type AuditOrder,
+	cursorParams,
+	flipOrder,
+	type PageStep,
+	pagerState,
+	splitPage,
+} from '#lib/audit-paging.js';
+import CursorPager from '#lib/CursorPager.svelte';
 import { createCopier } from '#lib/clipboard.js';
 import { Button } from '#lib/components/ui/button/index.js';
 import { Input } from '#lib/components/ui/input/index.js';
@@ -30,6 +39,7 @@ let { data }: { data: PageData } = $props();
 // svelte-check's state_referenced_locally warning is exactly this
 // intentional one-time seed, not a sync bug.
 let entries: AuditLogEntry[] = $state(data.entries);
+let hasMore = $state(data.hasMore);
 let loading = $state(false);
 let loadError = $state('');
 
@@ -67,6 +77,7 @@ function currentQuery(after: number | undefined): AuditLogQuery {
 		from: fromFilter ? new Date(fromFilter).toISOString() : undefined,
 		to: toFilter ? new Date(toFilter).toISOString() : undefined,
 		order,
+		limit: AUDIT_PAGE_SIZE,
 		...cursorParams(order, after),
 	};
 }
@@ -76,7 +87,14 @@ async function fetchPage(after: number | undefined) {
 	loadError = '';
 
 	try {
-		entries = await queryAuditLog(currentQuery(after));
+		// One row more than a page, to learn whether another page follows.
+		const rows = await queryAuditLog({
+			...currentQuery(after),
+			limit: AUDIT_PAGE_SIZE + 1,
+		});
+		const split = splitPage(rows, AUDIT_PAGE_SIZE);
+		entries = split.entries;
+		hasMore = split.hasMore;
 		currentAfter = after;
 	} catch (err) {
 		loadError =
@@ -92,7 +110,7 @@ function resetToFirstPage() {
 }
 
 function nextPage() {
-	if (entries.length === 0) return;
+	if (!hasMore || entries.length === 0) return;
 	cursorStack = [...cursorStack, currentAfter];
 	void fetchPage(entries[entries.length - 1].id);
 }
@@ -103,6 +121,13 @@ function previousPage() {
 	cursorStack = cursorStack.slice(0, -1);
 	void fetchPage(prev);
 }
+
+function step(direction: PageStep) {
+	if (direction === 'next') nextPage();
+	else previousPage();
+}
+
+const pager = $derived(pagerState(order, cursorStack.length > 0, hasMore));
 
 function toggleOrder() {
 	order = flipOrder(order);
@@ -445,16 +470,13 @@ function exportCSV() {
 		</Button>
 	</div>
 
-	<div class="mt-4 flex gap-2">
-		<Button
-			variant="outline"
-			onclick={previousPage}
-			disabled={cursorStack.length === 0 || loading}
-		>
-			Previous
-		</Button>
-		<Button variant="outline" onclick={nextPage} disabled={entries.length === 0 || loading}>
-			Next
-		</Button>
-	</div>
+	<CursorPager
+		count={entries.length}
+		canNewer={pager.canNewer}
+		canOlder={pager.canOlder}
+		onNewer={() => step(pager.newer)}
+		onOlder={() => step(pager.older)}
+		label="Audit log pages"
+		{loading}
+	/>
 </main>

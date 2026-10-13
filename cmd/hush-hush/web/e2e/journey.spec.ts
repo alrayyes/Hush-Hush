@@ -1247,17 +1247,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const newestFirst = await rowTexts();
 	expect(newestFirst.length).toBeGreaterThan(2);
 
-	const nextPageRequest = page.waitForRequest(
-		(request) =>
-			request.url().includes('/audit-log?') &&
-			request.url().includes('order=desc') &&
-			/[?&]before=\d+/.test(request.url()) &&
-			!request.url().includes('after='),
-	);
-	await page.getByRole('button', { name: 'Next' }).click();
-	await nextPageRequest;
-	await page.getByRole('button', { name: 'Previous' }).click();
-	await expect.poll(rowTexts).toEqual(newestFirst);
+	// Fewer entries than a page, so no pager yet. It appears in the paging
+	// segment at the end of this section, once enough entries exist.
+	await expect(
+		page.getByRole('navigation', { name: 'Audit log pages' }),
+	).toHaveCount(0);
 
 	await orderButton.click();
 	await expect(timestampHeader).toHaveAttribute('aria-sort', 'ascending');
@@ -1324,6 +1318,61 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page.getByText('object: mattermost_deploy_webhook')).toHaveCount(
 		0,
 	);
+
+	// alrayyes/Hush-Hush#895: the audit log pages 25 at a time with Newer and
+	// Older. Twenty-six more reads of one secret push the log past a page.
+	for (let i = 0; i < 26; i++) {
+		const read = await page.request.get('/objects/mattermost_deploy_webhook');
+		expect(read.ok()).toBe(true);
+	}
+	await page.goto('/audit-log');
+	const auditPages = page.getByRole('navigation', { name: 'Audit log pages' });
+	const newerButton = auditPages.getByRole('button', { name: 'Newer' });
+	const olderButton = auditPages.getByRole('button', { name: 'Older' });
+	await expect(page.locator('tbody tr')).toHaveCount(25);
+	await expect(auditPages.getByText('Showing 25 entries')).toBeVisible();
+	await expect(curlSnippet).toContainText('limit=25');
+	await expect(newerButton).toBeDisabled();
+	await expect(olderButton).toBeEnabled();
+	const auditPagerAxe = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(auditPagerAxe.violations).toEqual([]);
+
+	const firstAuditPage = await rowTexts();
+	const olderRequest = page.waitForRequest(
+		(request) =>
+			request.url().includes('/audit-log?') &&
+			request.url().includes('order=desc') &&
+			/[?&]before=\d+/.test(request.url()) &&
+			!request.url().includes('after='),
+	);
+	await olderButton.click();
+	await olderRequest;
+	await expect(newerButton).toBeEnabled();
+	await expect.poll(rowTexts).not.toEqual(firstAuditPage);
+	await newerButton.click();
+	await expect.poll(rowTexts).toEqual(firstAuditPage);
+
+	// Oldest first, the two buttons swap what they step toward: Newer reads
+	// onward with the matching cursor and Older has nowhere to go back to.
+	await page
+		.getByRole('columnheader', { name: 'Timestamp' })
+		.getByRole('button', { name: /Timestamp/ })
+		.click();
+	await expect(
+		page.getByRole('columnheader', { name: 'Timestamp' }),
+	).toHaveAttribute('aria-sort', 'ascending');
+	await expect(newerButton).toBeEnabled();
+	await expect(olderButton).toBeDisabled();
+	const newerRequest = page.waitForRequest(
+		(request) =>
+			request.url().includes('/audit-log?') &&
+			request.url().includes('order=asc') &&
+			/[?&]after=\d+/.test(request.url()),
+	);
+	await newerButton.click();
+	await newerRequest;
 
 	// tasks.md's 5.2: the owner-recipient opt-in checkbox. Recovering the
 	// escrowed identity generated at registration above, through its own
