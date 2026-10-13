@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.29.0](https://github.com/alrayyes/Hush-Hush/compare/v3.28.0...v3.29.0) (2026-10-13)
+
+
+### Features
+
+* **web:** use the cursor pager on the audit log, 25 at a time ([#904](https://github.com/alrayyes/Hush-Hush/issues/904)) ([119f923](https://github.com/alrayyes/Hush-Hush/commit/119f923eaa6cc969a6238b475c9828f8cab5da33))
+
 ## [3.28.0](https://github.com/alrayyes/Hush-Hush/compare/v3.27.0...v3.28.0) (2026-10-13)
 
 
