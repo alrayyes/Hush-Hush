@@ -1269,8 +1269,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(orderResults.violations).toEqual([]);
-	const actorTrigger = page.getByRole('button', { name: 'Actor', exact: true });
-	const objectTrigger = page.getByRole('button', {
+	const actorTrigger = page.getByRole('combobox', {
+		name: 'Actor',
+		exact: true,
+	});
+	const objectTrigger = page.getByRole('combobox', {
 		name: 'Object id',
 		exact: true,
 	});
@@ -1284,6 +1287,15 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		page.getByRole('option', { name: 'none', exact: true }),
 	).toHaveCount(0);
+	// alrayyes/Hush-Hush#917: the open menu is its own state, and no scan had
+	// it open. The trigger is a combobox that controls the list, and the list
+	// is named by the label.
+	await expect(page.getByRole('listbox', { name: 'Actor' })).toBeVisible();
+	await page.waitForFunction(() => document.getAnimations().length === 0);
+	const openSelectResults = await new AxeBuilder({ page })
+		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+		.analyze();
+	expect(openSelectResults.violations).toEqual([]);
 	await page.getByRole('option', { name: 'admin', exact: true }).click();
 	await expect(page.getByText('actor: admin')).toBeVisible();
 	// Every row so far (the create, both "View" reads, the detail page's
