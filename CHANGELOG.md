@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.26.0](https://github.com/alrayyes/Hush-Hush/compare/v3.25.0...v3.26.0) (2026-10-13)
+
+
+### Features
+
+* **web:** add the shared Pager and CursorPager components ([#899](https://github.com/alrayyes/Hush-Hush/issues/899)) ([fd0cc70](https://github.com/alrayyes/Hush-Hush/commit/fd0cc707661db05132f03b0b95acd38da3c1edad))
+
 ## [3.25.0](https://github.com/alrayyes/Hush-Hush/compare/v3.24.0...v3.25.0) (2026-10-13)
 
 
