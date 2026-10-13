@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.28.0](https://github.com/alrayyes/Hush-Hush/compare/v3.27.0...v3.28.0) (2026-10-13)
+
+
+### Features
+
+* **web:** page the Secrets list, 20 at a time ([#903](https://github.com/alrayyes/Hush-Hush/issues/903)) ([8b5b312](https://github.com/alrayyes/Hush-Hush/commit/8b5b3121c822f232909e598d5a8b5dfeba065f4d))
+
 ## [3.27.0](https://github.com/alrayyes/Hush-Hush/compare/v3.26.0...v3.27.0) (2026-10-13)
 
 
