@@ -211,7 +211,7 @@ func checkCreatable(ctx context.Context, q querier, slug string, usedBy []string
 	}
 
 	if len(usedBy) == 0 {
-		return ErrAlreadyExists
+		return &ConflictError{Slug: slug, kind: ErrAlreadyExists}
 	}
 
 	taken, err := consumersWithVariant(ctx, q, slug, "", usedBy)
@@ -220,29 +220,30 @@ func checkCreatable(ctx context.Context, q querier, slug string, usedBy []string
 	}
 
 	if len(taken) > 0 {
-		return ErrAlreadyExists
+		return &ConflictError{Slug: slug, Clashes: taken, kind: ErrAlreadyExists}
 	}
 
 	return nil
 }
 
-// consumersWithVariant returns those of consumers that already appear in a
-// variant of slug other than the one with id exceptID ("" for none).
-func consumersWithVariant(ctx context.Context, q querier, slug, exceptID string, consumers []string) ([]string, error) {
-	var taken []string
+// consumersWithVariant returns a Clash for each of consumers that already
+// appears in a variant of slug other than the one with id exceptID ("" for
+// none), naming that variant.
+func consumersWithVariant(ctx context.Context, q querier, slug, exceptID string, consumers []string) ([]Clash, error) {
+	var taken []Clash
 
 	for _, c := range consumers {
-		var found int
+		var holder string
 
 		err := q.QueryRowContext(ctx, `
-			SELECT 1 FROM objects o JOIN used_by u ON u.object_id = o.id
+			SELECT o.id FROM objects o JOIN used_by u ON u.object_id = o.id
 			WHERE o.slug = ? AND u.consumer = ? AND o.id <> ? LIMIT 1`,
 			slug, c, exceptID,
-		).Scan(&found)
+		).Scan(&holder)
 
 		switch {
 		case err == nil:
-			taken = append(taken, c)
+			taken = append(taken, Clash{Consumer: c, Slug: slug, ObjectID: holder})
 		case !errors.Is(err, sql.ErrNoRows):
 			return nil, fmt.Errorf("check consumer variant: %w", err)
 		}
@@ -504,7 +505,7 @@ func (s *Store) UpdateObject(ctx context.Context, slug string, value []byte, use
 		}
 
 		if len(taken) > 0 {
-			return ErrVariantConflict
+			return &ConflictError{Slug: slug, Clashes: taken, kind: ErrVariantConflict}
 		}
 	}
 
@@ -783,24 +784,39 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 // two variants of one slug: oldName in one, newName already in another. The
 // two names merge on a rename, and a consumer reads one value per slug.
 func checkRenameKeepsVariantsApart(ctx context.Context, q querier, oldName, newName string) error {
-	var clash int
-
-	err := q.QueryRowContext(ctx, `
-		SELECT 1 FROM used_by ua
+	rows, err := q.QueryContext(ctx, `
+		SELECT a.slug, b.id FROM used_by ua
 		JOIN objects a ON a.id = ua.object_id
 		JOIN objects b ON b.slug = a.slug AND b.id <> a.id
 		JOIN used_by ub ON ub.object_id = b.id
-		WHERE ua.consumer = ? AND ub.consumer = ? LIMIT 1`, oldName, newName,
-	).Scan(&clash)
-
-	switch {
-	case err == nil:
-		return ErrVariantConflict
-	case errors.Is(err, sql.ErrNoRows):
-		return nil
-	default:
+		WHERE ua.consumer = ? AND ub.consumer = ?
+		ORDER BY a.slug, b.id`, oldName, newName,
+	)
+	if err != nil {
 		return fmt.Errorf("check rename against variants: %w", err)
 	}
+	defer func() { _ = rows.Close() }()
+
+	var clashes []Clash
+
+	for rows.Next() {
+		c := Clash{Consumer: newName}
+		if err := rows.Scan(&c.Slug, &c.ObjectID); err != nil {
+			return fmt.Errorf("scan rename clash: %w", err)
+		}
+
+		clashes = append(clashes, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate rename clashes: %w", err)
+	}
+
+	if len(clashes) > 0 {
+		return &ConflictError{Clashes: clashes, kind: ErrVariantConflict}
+	}
+
+	return nil
 }
 
 // rewriteUsedByForRename is RenameConsumer's own used_by/consumers rewrite

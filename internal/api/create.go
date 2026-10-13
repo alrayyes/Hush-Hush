@@ -152,7 +152,7 @@ func handleCreateObject(s objectStore) http.HandlerFunc {
 				KeepReadableCopy: req.KeepReadableCopy,
 			})
 		case errors.Is(err, store.ErrAlreadyExists):
-			writeError(w, r, http.StatusConflict, "object already exists")
+			writeError(w, r, http.StatusConflict, conflictText(err, errObjectExists))
 		default:
 			writeInternalError(w, r, err)
 		}

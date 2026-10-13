@@ -53,7 +53,7 @@ func mcpLookupError(ctx context.Context, tool string, err error) error {
 	case errors.Is(err, store.ErrAmbiguousSlug):
 		return errAmbiguousName
 	case errors.Is(err, store.ErrVariantConflict):
-		return errVariantConflict
+		return conflictErr(err, errVariantConflict)
 	default:
 		return mcpInternalError(ctx, tool, err)
 	}
@@ -262,7 +262,7 @@ func mcpInject(s objectStore, caller, sourceIP, actorType, actorID string) mcp.T
 		switch {
 		case err == nil:
 		case errors.Is(err, store.ErrAlreadyExists):
-			return nil, ObjectMetadata{}, errMCPObjectAlreadyExists
+			return nil, ObjectMetadata{}, conflictErr(err, errMCPObjectAlreadyExists)
 		default:
 			return nil, ObjectMetadata{}, mcpInternalError(ctx, "inject", err)
 		}

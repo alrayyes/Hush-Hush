@@ -268,7 +268,7 @@ func renameConsumerOrWriteError(w http.ResponseWriter, r *http.Request, s object
 	case errors.Is(err, store.ErrUnknownConsumer):
 		writeError(w, r, http.StatusNotFound, "unknown consumer")
 	case errors.Is(err, store.ErrVariantConflict):
-		writeError(w, r, http.StatusConflict, errVariantConflict.Error())
+		writeError(w, r, http.StatusConflict, conflictText(err, errVariantConflict))
 	default:
 		writeInternalError(w, r, err)
 	}

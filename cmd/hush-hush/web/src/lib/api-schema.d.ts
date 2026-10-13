@@ -1524,11 +1524,6 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                /**
-                 * @example {
-                 *       "error": "name has several variants; pass id to say which"
-                 *     }
-                 */
                 "application/json": components["schemas"]["Error"];
             };
         };
@@ -1751,17 +1746,12 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description An object already exists under that name for one of its `used_by` consumers, or the name is taken and `used_by` is empty. A name can hold one object per group of consumers, and a consumer is in at most one of them. */
+            /** @description An object already exists under that name for one of its `used_by` consumers, or the name is taken and `used_by` is empty. A name can hold one object per group of consumers, and a consumer is in at most one of them. The message names the consumer, the secret's name and its id. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "error": "object already exists"
-                     *     }
-                     */
                     "application/json": components["schemas"]["Error"];
                 };
             };
