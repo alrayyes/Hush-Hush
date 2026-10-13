@@ -19,11 +19,19 @@ import (
 // fails, naming each pair, so an operator removes the consumer from one of
 // them with the API on the previous version first.
 func enforceOneVariantPerConsumer(db *sql.DB) error {
-	if err := reportDuplicateVariants(db); err != nil {
+	// One transaction, so a writer on the previous binary can't slip a
+	// duplicate in between the check and the index.
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if err := reportDuplicateVariants(tx); err != nil {
 		return err
 	}
 
-	if err := addColumnIfMissing(db, "used_by", "slug", "TEXT"); err != nil {
+	if err := addColumnIfMissing(tx, "used_by", "slug", "TEXT"); err != nil {
 		return err
 	}
 
@@ -44,17 +52,32 @@ func enforceOneVariantPerConsumer(db *sql.DB) error {
 				UPDATE used_by SET slug = NEW.slug WHERE object_id = NEW.id;
 			END`,
 	} {
-		if _, err := db.Exec(stmt); err != nil {
+		if _, err := tx.Exec(stmt); err != nil {
 			return fmt.Errorf("enforce one variant per consumer: %w", err)
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil
 }
 
+// asSlugConflict turns the unique index's violation into sentinel, so the
+// API answers 409 like it does for the pre-checks instead of a 500. Any other
+// error passes through.
+func asSlugConflict(err, sentinel error) error {
+	if err != nil && strings.Contains(err.Error(), "used_by.slug") {
+		return fmt.Errorf("%w: %w", sentinel, err)
+	}
+
+	return err
+}
+
 // reportDuplicateVariants returns an error listing every (slug, consumer)
 // pair that appears in more than one object.
-func reportDuplicateVariants(db *sql.DB) error {
+func reportDuplicateVariants(db queryExecer) error {
 	rows, err := db.Query(`
 		SELECT o.slug, u.consumer, COUNT(*)
 		FROM used_by u JOIN objects o ON o.id = u.object_id

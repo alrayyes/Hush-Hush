@@ -39,7 +39,7 @@ func TestTheSchemaRefusesAConsumerInTwoVariantsOfOneSlug(t *testing.T) {
 
 	_, err := s.DB().Exec(`INSERT INTO used_by (object_id, consumer) VALUES ('id-2', 'a')`)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "UNIQUE")
+	require.Contains(t, err.Error(), "used_by.slug")
 }
 
 func TestTheSameConsumerMayHoldDifferentSlugs(t *testing.T) {
@@ -72,6 +72,70 @@ func TestRenamingASlugKeepsTheConstraintHolding(t *testing.T) {
 	require.NoError(t, err)
 	_, err = s.DB().Exec(`INSERT INTO used_by (object_id, consumer) VALUES ('raw', 'a')`)
 	require.Error(t, err)
+
+	_, err = s.DB().Exec(`INSERT INTO used_by (object_id, consumer) VALUES ('raw', 'b')`)
+	require.Error(t, err, "the other variant moved too")
+
+	var stale int
+	require.NoError(t, s.DB().QueryRow(`SELECT COUNT(*) FROM used_by WHERE slug <> 'database' OR slug IS NULL`).Scan(&stale))
+	require.Zero(t, stale)
+}
+
+func TestReplacingUsedByThenReaddingAConsumerElsewhere(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, s.CreateObject(ctx, "db", []byte("x"), []string{"a"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "db", []byte("x"), []string{"b"}, "", ""))
+
+	// Moving "a" out of its variant frees it for the other one.
+	none := []string{}
+	require.NoError(t, s.UpdateObject(ctx, "db", []byte("x"), &none, store.ForConsumer("a")))
+
+	both := []string{"b", "a"}
+	require.NoError(t, s.UpdateObject(ctx, "db", []byte("x"), &both, store.ForConsumer("b")))
+
+	obj, err := s.GetObject(ctx, "db", store.ForConsumer("a"))
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"a", "b"}, obj.UsedBy)
+
+	// Deleting the consumer frees it again.
+	require.NoError(t, s.DeleteConsumer(ctx, "a"))
+	require.NoError(t, s.CreateObject(ctx, "db", []byte("x"), []string{"a"}, "", ""))
+}
+
+func TestOpenUpgradesADatabaseWithNoSlugColumnOnUsedBy(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "h.db")
+
+	s, err := store.Open(path)
+	require.NoError(t, err)
+
+	for _, stmt := range []string{
+		`DROP TRIGGER used_by_fill_slug`,
+		`DROP TRIGGER objects_sync_used_by_slug`,
+		`DROP INDEX used_by_slug_consumer`,
+		`ALTER TABLE used_by DROP COLUMN slug`,
+	} {
+		_, err = s.DB().Exec(stmt)
+		require.NoError(t, err)
+	}
+	// An id that is not a UUID is rewritten by an older migration on open.
+	require.NoError(t, insertVariant(t, s, "legacy-1", "db", "a"))
+	require.NoError(t, s.Close())
+
+	s, err = store.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	var slug string
+	require.NoError(t, s.DB().QueryRow(`SELECT slug FROM used_by WHERE consumer = 'a'`).Scan(&slug))
+	require.Equal(t, "db", slug)
+
+	require.ErrorIs(t, s.CreateObject(context.Background(), "db", []byte("x"), []string{"a"}, "", ""), store.ErrAlreadyExists)
 }
 
 func TestOpenReportsExistingDuplicatesInsteadOfPickingOne(t *testing.T) {

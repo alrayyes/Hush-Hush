@@ -169,7 +169,7 @@ func (s *Store) CreateObject(ctx context.Context, slug string, value []byte, use
 			`INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`,
 			id, consumer,
 		); err != nil {
-			return fmt.Errorf("insert used_by: %w", err)
+			return fmt.Errorf("insert used_by: %w", asSlugConflict(err, ErrAlreadyExists))
 		}
 	}
 
@@ -537,7 +537,7 @@ func replaceObjectRelations(ctx context.Context, tx *sql.Tx, id string, usedBy, 
 
 		for _, consumer := range *usedBy {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO used_by (object_id, consumer) VALUES (?, ?)`, id, consumer); err != nil {
-				return fmt.Errorf("insert used_by: %w", err)
+				return fmt.Errorf("insert used_by: %w", asSlugConflict(err, ErrVariantConflict))
 			}
 		}
 	}
@@ -821,7 +821,7 @@ func rewriteUsedByForRename(ctx context.Context, tx renameSQLTx, oldName, newNam
 	}
 
 	if _, err := tx.ExecContext(ctx, `UPDATE used_by SET consumer = ? WHERE consumer = ?`, newName, oldName); err != nil {
-		return fmt.Errorf("rename used_by rows: %w", err)
+		return fmt.Errorf("rename used_by rows: %w", asSlugConflict(err, ErrVariantConflict))
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM consumers WHERE name = ?`, oldName); err != nil {

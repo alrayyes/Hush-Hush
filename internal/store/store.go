@@ -377,13 +377,19 @@ func addAuditLogVariantColumn(db *sql.DB) error {
 	return addColumnIfMissing(db, "audit_log", "variant_id", "TEXT")
 }
 
+// queryExecer is the part of *sql.DB and *sql.Tx the schema helpers need.
+type queryExecer interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
 // addColumnIfMissing adds column to table if it isn't already there. The
 // schema's CREATE TABLE IF NOT EXISTS is a no-op against a database that
 // already has table, so a column added after a table's first release needs
 // its own idempotent path to reach an existing file - modernc.org/sqlite's
 // SQLite build doesn't support ALTER TABLE ... ADD COLUMN IF NOT EXISTS, so
 // this checks first instead.
-func addColumnIfMissing(db *sql.DB, table, column, definition string) error {
+func addColumnIfMissing(db queryExecer, table, column, definition string) error {
 	rows, err := db.Query(`SELECT name FROM pragma_table_info(?)`, table)
 	if err != nil {
 		return fmt.Errorf("inspect %s columns: %w", table, err)

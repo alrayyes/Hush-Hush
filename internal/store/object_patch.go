@@ -73,7 +73,8 @@ func (s *Store) PatchObject(ctx context.Context, slug string, patch ObjectPatch,
 
 // renameSlug moves every object named from to the name to, refusing a name
 // that already has objects. Nothing else references the slug (ADR 22), so
-// this is the whole rename.
+// this is the rename. The objects_sync_used_by_slug trigger carries each
+// variant's used_by rows to the new name.
 func renameSlug(ctx context.Context, q *sql.Tx, from, to, now string) error {
 	var taken int
 	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM objects WHERE slug = ?`, to).Scan(&taken); err != nil {
@@ -85,7 +86,7 @@ func renameSlug(ctx context.Context, q *sql.Tx, from, to, now string) error {
 	}
 
 	if _, err := q.ExecContext(ctx, `UPDATE objects SET slug = ?, updated_at = ? WHERE slug = ?`, to, now, from); err != nil {
-		return fmt.Errorf("rename slug: %w", err)
+		return fmt.Errorf("rename slug: %w", asSlugConflict(err, ErrAlreadyExists))
 	}
 
 	return nil

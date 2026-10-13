@@ -61,3 +61,15 @@ later changes, and it gives the web UI something to key a row on.
   merges them, which would put `d` in two variants of one name, so it is a 409.
 - A consumer that needs two different values under one name can't have them:
   it is one consumer, so it reads one.
+
+## Amendment: the schema enforces it too (#848)
+
+The one-variant-per-consumer rule was checked only in Go. `used_by` now holds a
+copy of its object's slug, kept in step by triggers, under a unique index on
+`(slug, consumer)`, so a writer that skips the checks, or a second process,
+still can't put a consumer in two variants. The API answers the same 409.
+
+`Open` refuses a database that already holds such a duplicate and names each
+`(slug, consumer)` pair. It doesn't pick which variant keeps the consumer: that
+would be a guess about someone's secrets. Remove the consumer from one variant
+on the previous version, then upgrade.
