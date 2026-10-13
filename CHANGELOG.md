@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.29.2](https://github.com/alrayyes/Hush-Hush/compare/v3.29.1...v3.29.2) (2026-10-13)
+
+
+### Bug Fixes
+
+* **web:** leave the audit log's Newer and Older alone when a page fails to load ([#919](https://github.com/alrayyes/Hush-Hush/issues/919)) ([b64971f](https://github.com/alrayyes/Hush-Hush/commit/b64971f6ae44d276b61ab3c85a1e36ce5887051e))
+* **web:** make the shared Select a labelled combobox that controls its list ([#925](https://github.com/alrayyes/Hush-Hush/issues/925)) ([f4f8730](https://github.com/alrayyes/Hush-Hush/commit/f4f8730599c942176e4a1e089ed5fc89af32c6c0)), closes [#917](https://github.com/alrayyes/Hush-Hush/issues/917)
+
 ## [3.29.1](https://github.com/alrayyes/Hush-Hush/compare/v3.29.0...v3.29.1) (2026-10-13)
 
 
