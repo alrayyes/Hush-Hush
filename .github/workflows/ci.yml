@@ -434,7 +434,7 @@ jobs:
   # apiDescriptionUrl is a relative "../../api/openapi.yaml", and that only
   # resolves if the deployed layout matches the repo's. docs/api/llms.txt
   # rides along the same way, scoped to this subpath per llmstxt.org's own
-  # spec - the site root (https://alrayyes.github.io/Hush-Hush/) has nothing
+  # spec - the site root (https://alrayyes.github.io/hush-hush/) has nothing
   # deployed to it, so there's no root-level llms.txt to write.
   pages:
     # Every other job in this workflow, so a red test or lint can't be

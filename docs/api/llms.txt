@@ -15,21 +15,21 @@ Protocol's Streamable HTTP transport, for an agent that needs to read or
 write a secret as one step in a larger task.
 
 This file covers `/docs/api/` - the rendered API reference - not the rest
-of the `alrayyes/Hush-Hush` repo or its web UI.
+of the `alrayyes/hush-hush` repo or its web UI.
 
 ## Docs
 
-- [API reference](https://alrayyes.github.io/Hush-Hush/docs/api/): the
+- [API reference](https://alrayyes.github.io/hush-hush/docs/api/): the
   Stoplight Elements rendering of the OpenAPI contract below - browsable
   endpoint list, request/response schemas, and examples.
-- [OpenAPI spec](https://alrayyes.github.io/Hush-Hush/api/openapi.yaml): the
+- [OpenAPI spec](https://alrayyes.github.io/hush-hush/api/openapi.yaml): the
   machine-readable contract itself - endpoints, schemas, and auth
   requirements for `objects`, `audit-log`, `consumers`, `auth`,
   `credentials`, `tokens`, and `mcp`.
-- [README](https://github.com/alrayyes/Hush-Hush/blob/main/README.md):
+- [README](https://github.com/alrayyes/hush-hush/blob/main/README.md):
   install, configuration, Docker usage, and the MCP/web-UI setup this API
   sits behind.
-- [ARCHITECTURE.md](https://github.com/alrayyes/Hush-Hush/blob/main/ARCHITECTURE.md):
+- [ARCHITECTURE.md](https://github.com/alrayyes/hush-hush/blob/main/ARCHITECTURE.md):
   the encryption model, read-path and write-path auth, and storage backend
   behind this API's design.
 
