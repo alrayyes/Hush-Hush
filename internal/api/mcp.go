@@ -102,7 +102,7 @@ type mcpInjectInput struct {
 // mcpGetInput is the "get" tool's input - just the object's slug, the same
 // single value api/openapi.yaml's getObject documents.
 type mcpGetInput struct {
-	Slug string `json:"slug" jsonschema:"the object's slug"`
+	Slug string `json:"slug" maxLength:"128" jsonschema:"the object's slug"`
 	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 }
 
@@ -137,7 +137,7 @@ type mcpEditInput struct {
 
 // mcpDeleteInput is the "delete" tool's input - just the object's slug.
 type mcpDeleteInput struct {
-	Slug string `json:"slug" jsonschema:"the object's slug"`
+	Slug string `json:"slug" maxLength:"128" jsonschema:"the object's slug"`
 	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 }
 
