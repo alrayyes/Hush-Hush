@@ -105,7 +105,7 @@ func TestMCPToolsListReturnsEveryTool(t *testing.T) {
 		names[i] = tool.Name
 	}
 
-	require.ElementsMatch(t, []string{"inject", "get", "update", "delete", "list", "edit"}, names)
+	require.ElementsMatch(t, []string{"inject", "get", "update", "delete", "list", "edit", "used_by"}, names)
 }
 
 // mcpCallToolBody builds a tools/call JSON-RPC request for the given tool
