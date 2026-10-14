@@ -105,6 +105,8 @@ func TestMCPAuditLogRefusesABadFilter(t *testing.T) {
 		want string
 	}{
 		"from not RFC 3339": {map[string]any{"from": "yesterday"}, "RFC 3339"},
+		"to not RFC 3339":   {map[string]any{"to": "tomorrow"}, "RFC 3339"},
+		"before zero":       {map[string]any{"before": 0}, "before"},
 		"unknown order":     {map[string]any{"order": "sideways"}, "asc or desc"},
 		"limit zero":        {map[string]any{"limit": 0}, "limit"},
 		"limit over 500":    {map[string]any{"limit": 501}, "limit"},
