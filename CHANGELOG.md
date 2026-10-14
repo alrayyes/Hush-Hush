@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.33.0](https://github.com/alrayyes/Hush-Hush/compare/v3.32.0...v3.33.0) (2026-10-14)
+
+
+### Features
+
+* **mcp:** add a used_by tool that lists an object's consumers ([#945](https://github.com/alrayyes/Hush-Hush/issues/945)) ([14db59f](https://github.com/alrayyes/Hush-Hush/commit/14db59f585e34d3b38c3beb0138b4ac65d8e921c))
+
+
+### Bug Fixes
+
+* **mcp:** cap the slug on the get and delete tools ([#948](https://github.com/alrayyes/Hush-Hush/issues/948)) ([0646eec](https://github.com/alrayyes/Hush-Hush/commit/0646eec3856bbb7540d60ad308d202fd7ef4c39f))
+
 ## [3.32.0](https://github.com/alrayyes/Hush-Hush/compare/v3.31.0...v3.32.0) (2026-10-14)
 
 
