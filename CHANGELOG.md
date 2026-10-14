@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.34.0](https://github.com/alrayyes/Hush-Hush/compare/v3.33.0...v3.34.0) (2026-10-14)
+
+
+### Features
+
+* **mcp:** add list_consumers and add_consumer tools ([#949](https://github.com/alrayyes/Hush-Hush/issues/949)) ([2d377fc](https://github.com/alrayyes/Hush-Hush/commit/2d377fccc13a1a0b4d08381138af7b5e2e2d94df))
+
 ## [3.33.0](https://github.com/alrayyes/Hush-Hush/compare/v3.32.0...v3.33.0) (2026-10-14)
 
 
