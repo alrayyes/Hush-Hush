@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"math"
 	"net/http"
@@ -220,28 +221,21 @@ func handleUpdateConsumer(s objectStore) http.HandlerFunc {
 			return
 		}
 
-		name := r.PathValue("name")
-		var entry store.ConsumerEntry
+		entry, err := updateConsumer(r.Context(), s, r.PathValue("name"), req)
+		switch {
+		case err == nil:
+		case errors.Is(err, store.ErrUnknownConsumer):
+			writeError(w, r, http.StatusNotFound, "unknown consumer")
 
-		if req.Name != "" {
-			renamed, ok := renameConsumerOrWriteError(w, r, s, name, req.Name)
-			if !ok {
-				return
-			}
+			return
+		case errors.Is(err, store.ErrVariantConflict):
+			writeError(w, r, http.StatusConflict, conflictText(err, errVariantConflict))
 
-			entry = renamed
-			name = req.Name
-		}
+			return
+		default:
+			writeInternalError(w, r, err)
 
-		if req.PublicKey != "" {
-			keyed, err := s.SetConsumerPublicKey(r.Context(), name, req.PublicKey)
-			if err != nil {
-				writeInternalError(w, r, err)
-
-				return
-			}
-
-			entry = keyed
+			return
 		}
 
 		writeJSON(w, http.StatusOK, ConsumerEntry{Name: entry.Name, SecretCount: entry.SecretCount, PublicKey: entry.PublicKey})
@@ -264,22 +258,32 @@ func validateUpdateConsumer(req UpdateConsumerRequest) string {
 	return ""
 }
 
-// renameConsumerOrWriteError renames a consumer, answering the request itself
-// (and returning false) when the rename can't happen.
-func renameConsumerOrWriteError(w http.ResponseWriter, r *http.Request, s objectStore, oldName, newName string) (store.ConsumerEntry, bool) {
-	renamed, err := s.RenameConsumer(r.Context(), oldName, newName)
-	switch {
-	case err == nil:
-		return renamed, true
-	case errors.Is(err, store.ErrUnknownConsumer):
-		writeError(w, r, http.StatusNotFound, "unknown consumer")
-	case errors.Is(err, store.ErrVariantConflict):
-		writeError(w, r, http.StatusConflict, conflictText(err, errVariantConflict))
-	default:
-		writeInternalError(w, r, err)
+// updateConsumer renames a consumer, then registers its public key under the
+// new name, for a request validateUpdateConsumer has already accepted. It
+// returns the store's errors as they are, for the caller to map.
+func updateConsumer(ctx context.Context, s objectStore, name string, req UpdateConsumerRequest) (store.ConsumerEntry, error) {
+	var entry store.ConsumerEntry
+
+	if req.Name != "" {
+		renamed, err := s.RenameConsumer(ctx, name, req.Name)
+		if err != nil {
+			return store.ConsumerEntry{}, err //nolint:wrapcheck // the caller maps the store's sentinels
+		}
+
+		entry = renamed
+		name = req.Name
 	}
 
-	return store.ConsumerEntry{}, false
+	if req.PublicKey != "" {
+		keyed, err := s.SetConsumerPublicKey(ctx, name, req.PublicKey)
+		if err != nil {
+			return store.ConsumerEntry{}, err //nolint:wrapcheck // the caller maps the store's sentinels
+		}
+
+		entry = keyed
+	}
+
+	return entry, nil
 }
 
 // handleDeleteConsumer strips name from the used_by list of every stored
