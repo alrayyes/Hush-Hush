@@ -99,16 +99,22 @@ func handleListConsumers(s objectStore) http.HandlerFunc {
 }
 
 // consumerFilterFrom parses GET /consumers's query parameters into a
-// store.ConsumerFilter, applying page and page_size's documented
-// defaults and page_size's cap.
+// store.ConsumerFilter.
 func consumerFilterFrom(q url.Values) (store.ConsumerFilter, error) {
+	return consumerFilter(q.Get("q"), q.Get("page"), q.Get("page_size"))
+}
+
+// consumerFilter turns the text of a consumers listing's three parameters,
+// "" for one not given, into a store.ConsumerFilter, applying page and
+// page_size's documented defaults and page_size's cap.
+func consumerFilter(name, page, pageSize string) (store.ConsumerFilter, error) {
 	filter := store.ConsumerFilter{
-		Name:     q.Get("q"),
+		Name:     name,
 		Page:     1,
 		PageSize: defaultConsumerPageSize,
 	}
 
-	if page := q.Get("page"); page != "" {
+	if page != "" {
 		n, err := strconv.Atoi(page)
 		if err != nil || n < 1 || n > math.MaxInt32 {
 			return store.ConsumerFilter{}, errInvalidConsumerPage
@@ -117,7 +123,7 @@ func consumerFilterFrom(q url.Values) (store.ConsumerFilter, error) {
 		filter.Page = n
 	}
 
-	if pageSize := q.Get("page_size"); pageSize != "" {
+	if pageSize != "" {
 		n, err := strconv.Atoi(pageSize)
 		if err != nil || n < 1 || n > maxConsumerPageSize {
 			return store.ConsumerFilter{}, errInvalidConsumerPageSize
