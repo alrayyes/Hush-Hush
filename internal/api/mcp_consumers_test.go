@@ -3,6 +3,8 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -91,4 +93,43 @@ func TestMCPAddConsumerRefusesADuplicateAndAnEmptyName(t *testing.T) {
 	empty := callTool(t, mux, token, "add_consumer", map[string]any{"name": ""})
 	require.True(t, empty.IsError)
 	require.Contains(t, empty.Content[0].Text, "required")
+}
+
+func TestMCPListConsumersReturnsTwentyToAPageUnlessAskedOtherwise(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	for i := range 21 {
+		require.NoError(t, s.AddConsumer(context.Background(), fmt.Sprintf("consumer-%02d", i)))
+	}
+
+	result := callTool(t, mux, token, "list_consumers", map[string]any{})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	var page mcpConsumersPage
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &page))
+	require.Len(t, page.Consumers, 20)
+	require.Equal(t, 21, page.Total)
+}
+
+func TestMCPListConsumersRefusesPageZeroAndAQueryOverTheLimit(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+
+	require.True(t, callTool(t, mux, token, "list_consumers", map[string]any{"page": 0}).IsError)
+	require.True(t, callTool(t, mux, token, "list_consumers", map[string]any{"query": strings.Repeat("a", 129)}).IsError)
+}
+
+func TestMCPAddConsumerRefusesANameOverTheLimit(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	result := callTool(t, mux, issueToken(t, s), "add_consumer", map[string]any{"name": strings.Repeat("a", 129)})
+	require.True(t, result.IsError)
+	require.Contains(t, result.Content[0].Text, "128")
 }

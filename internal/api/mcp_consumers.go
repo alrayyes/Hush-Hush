@@ -18,7 +18,7 @@ var (
 func addMCPConsumerTools(srv *mcp.Server, s objectStore) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "list_consumers",
-		Description: "List the consumers (repos or hosts) that secrets are shared with, each with how many secrets name it and its registered age public key if it has one. One page of 50 unless page_size says otherwise; total is the number of matches in all.",
+		Description: "List the consumers (repos or hosts) that secrets are shared with, each with how many secrets name it and its registered age public key if it has one. One page of 20 unless page_size says otherwise (at most 100); total is the number of matches in all.",
 	}, mcpListConsumers(s))
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -32,9 +32,9 @@ func addMCPConsumerTools(srv *mcp.Server, s objectStore) {
 // client that sends neither gets the first page, and one that sends 0 is
 // refused rather than read as absent.
 type mcpListConsumersInput struct {
-	Query    string `json:"query,omitempty" jsonschema:"only consumers whose name contains this text, case-insensitive"`
+	Query    string `json:"query,omitempty" maxLength:"128" jsonschema:"only consumers whose name contains this text, case-insensitive"`
 	Page     *int   `json:"page,omitempty" jsonschema:"which page to return, from 1; 1 when left out"`
-	PageSize *int   `json:"page_size,omitempty" jsonschema:"how many consumers per page; 50 when left out"`
+	PageSize *int   `json:"page_size,omitempty" jsonschema:"how many consumers per page, 1 to 100; 20 when left out"`
 }
 
 // mcpListConsumers is the "list_consumers" tool's handler - the paged listing
@@ -43,6 +43,10 @@ type mcpListConsumersInput struct {
 // plain array for.
 func mcpListConsumers(s objectStore) mcp.ToolHandlerFor[mcpListConsumersInput, ConsumersPage] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpListConsumersInput) (*mcp.CallToolResult, ConsumersPage, error) {
+		if err := checkLimits(in); err != nil {
+			return nil, ConsumersPage{}, err
+		}
+
 		filter, err := consumerFilter(in.Query, optionalInt(in.Page), optionalInt(in.PageSize))
 		if err != nil {
 			return nil, ConsumersPage{}, err
