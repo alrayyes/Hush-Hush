@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -48,7 +49,7 @@ const (
 // something it needs to protect.
 func handleQueryAuditLog(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		filter, err := auditLogFilterFrom(r)
+		filter, err := auditLogFilterFrom(r.URL.Query())
 		if err != nil {
 			writeError(w, r, http.StatusBadRequest, err.Error())
 
@@ -68,9 +69,7 @@ func handleQueryAuditLog(s objectStore) http.HandlerFunc {
 
 // auditLogFilterFrom parses GET /audit-log's query parameters into a
 // store.AuditLogFilter, applying limit's documented default and cap.
-func auditLogFilterFrom(r *http.Request) (store.AuditLogFilter, error) {
-	q := r.URL.Query()
-
+func auditLogFilterFrom(q url.Values) (store.AuditLogFilter, error) {
 	filter := store.AuditLogFilter{
 		ObjectID: q.Get("object_id"),
 		Caller:   q.Get("caller"),
