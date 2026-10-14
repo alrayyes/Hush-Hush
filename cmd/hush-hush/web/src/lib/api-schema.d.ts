@@ -283,7 +283,8 @@ export interface paths {
          *     age X25519 recipient (`age1...`); anything else, a private key
          *     included, is a 400 and nothing in the request is applied. Sending both
          *     fields in the same call renames first, then sets the key on the
-         *     resulting name.
+         *     resulting name, in one step: if the key can't be written, the rename
+         *     isn't applied either.
          *
          *     A rename also moves the consumer's read tokens to the new name, so
          *     they keep reading the same secrets; when it merges into an existing

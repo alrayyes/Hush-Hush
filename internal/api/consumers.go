@@ -258,32 +258,12 @@ func validateUpdateConsumer(req UpdateConsumerRequest) string {
 	return ""
 }
 
-// updateConsumer renames a consumer, then registers its public key under the
-// new name, for a request validateUpdateConsumer has already accepted. It
-// returns the store's errors as they are, for the caller to map.
+// updateConsumer renames a consumer and registers its public key under the
+// new name, in one store transaction, for a request validateUpdateConsumer has
+// already accepted. It returns the store's errors as they are, for the caller
+// to map.
 func updateConsumer(ctx context.Context, s objectStore, name string, req UpdateConsumerRequest) (store.ConsumerEntry, error) {
-	var entry store.ConsumerEntry
-
-	if req.Name != "" {
-		renamed, err := s.RenameConsumer(ctx, name, req.Name)
-		if err != nil {
-			return store.ConsumerEntry{}, err //nolint:wrapcheck // the caller maps the store's sentinels
-		}
-
-		entry = renamed
-		name = req.Name
-	}
-
-	if req.PublicKey != "" {
-		keyed, err := s.SetConsumerPublicKey(ctx, name, req.PublicKey)
-		if err != nil {
-			return store.ConsumerEntry{}, err //nolint:wrapcheck // the caller maps the store's sentinels
-		}
-
-		entry = keyed
-	}
-
-	return entry, nil
+	return s.UpdateConsumer(ctx, name, req.Name, req.PublicKey) //nolint:wrapcheck // the caller maps the store's sentinels
 }
 
 // handleDeleteConsumer strips name from the used_by list of every stored

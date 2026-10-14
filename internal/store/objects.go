@@ -1088,3 +1088,40 @@ func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOpt
 
 	return nil
 }
+
+// UpdateConsumer renames a consumer, registers its public key, or both, in
+// one write transaction: a key write that fails leaves the rename unapplied,
+// where two separate calls would leave the name changed and the key missing.
+// An empty newName or publicKey leaves that part alone, and the rename runs
+// first so the key lands on the resulting name. The errors are
+// RenameConsumer's and SetConsumerPublicKey's.
+func (s *Store) UpdateConsumer(ctx context.Context, name, newName, publicKey string) (ConsumerEntry, error) {
+	tx, release, err := s.beginWrite(ctx)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+	defer release()
+	defer func() { _ = tx.Rollback() }()
+
+	var entry ConsumerEntry
+
+	if newName != "" {
+		if entry, err = renameConsumerTx(ctx, tx, name, newName); err != nil {
+			return ConsumerEntry{}, err
+		}
+
+		name = newName
+	}
+
+	if publicKey != "" {
+		if entry, err = setConsumerPublicKeyTx(ctx, tx, name, publicKey); err != nil {
+			return ConsumerEntry{}, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return entry, nil
+}
