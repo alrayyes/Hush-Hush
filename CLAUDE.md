@@ -58,7 +58,7 @@ exist`. Don't `go install` Vale.
 - **`docs/api/index.html`** renders `api/openapi.yaml` with Scalar
   (`@scalar/api-reference`) - Redocly lints the spec, Scalar just reads it.
   `ci.yml`'s `pages` job deploys it to GitHub Pages on every push to `main`,
-  gated on `test` passing, at <https://alrayyes.github.io/Hush-Hush/docs/api/>.
+  gated on `test` passing, at <https://alrayyes.github.io/hush-hush/docs/api/>.
   A deploy replaces the whole site, so the same job also publishes the Go test
   and coverage reports under `/reports/` (`test`, `web`, `e2e` and `lighthouse`
   run on every push to `main` to build them), including the web unit and

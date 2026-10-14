@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Assembles the reports the CI `pages` job publishes at
-# apis.ryankes.eu/Hush-Hush/reports/ (rules/published-reports.md).
+# apis.ryankes.eu/hush-hush/reports/ (rules/published-reports.md).
 #
 # Usage: build-reports.sh <dest-dir>
 #
