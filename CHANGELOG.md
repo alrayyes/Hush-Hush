@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.34.1](https://github.com/alrayyes/Hush-Hush/compare/v3.34.0...v3.34.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **store:** check and add a consumer in one write turn ([#951](https://github.com/alrayyes/Hush-Hush/issues/951)) ([6027801](https://github.com/alrayyes/Hush-Hush/commit/602780156a7a23ec9291e2b2cb94abeb4eb8be08))
+
 ## [3.34.0](https://github.com/alrayyes/Hush-Hush/compare/v3.33.0...v3.34.0) (2026-10-14)
 
 
