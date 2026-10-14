@@ -46,3 +46,29 @@ func TestMCPUsedByOfAnUnknownObjectIsAToolError(t *testing.T) {
 	require.True(t, result.IsError)
 	require.Contains(t, result.Content[0].Text, "unknown object")
 }
+
+func TestMCPUsedByNamesTheConsumersOfTheVariantPicked(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	result := callTool(t, f.mux, f.write, "used_by", map[string]any{"slug": "release_token", "id": f.idD})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+	require.JSONEq(t, `{"used_by":["d"]}`, string(result.StructuredContent))
+}
+
+func TestMCPUsedByWithoutAnIDOnANameWithSeveralVariantsIsAToolError(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	require.True(t, callTool(t, f.mux, f.write, "used_by", map[string]any{"slug": "release_token"}).IsError)
+}
+
+func TestMCPUsedByWithAMalformedIDIsAToolError(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	require.True(t, callTool(t, f.mux, f.write, "used_by", map[string]any{"slug": "release_token", "id": "not-a-uuid"}).IsError)
+}

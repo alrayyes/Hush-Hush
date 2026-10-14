@@ -144,7 +144,7 @@ type mcpDeleteInput struct {
 // mcpUsedByInput is the "used_by" tool's input - the object's slug and the
 // optional variant id, as GET /objects/{slug}/used-by takes them.
 type mcpUsedByInput struct {
-	Slug string `json:"slug" jsonschema:"the object's slug"`
+	Slug string `json:"slug" maxLength:"128" jsonschema:"the object's slug"`
 	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 }
 
