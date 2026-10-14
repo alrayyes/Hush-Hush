@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.35.2](https://github.com/alrayyes/Hush-Hush/compare/v3.35.1...v3.35.2) (2026-10-14)
+
+
+### Bug Fixes
+
+* **store:** rename a consumer and set its key in one transaction ([#963](https://github.com/alrayyes/Hush-Hush/issues/963)) ([c6a3cae](https://github.com/alrayyes/Hush-Hush/commit/c6a3cae8433195d8ee23d8c086d91fc47ef77c7a))
+
 ## [3.35.1](https://github.com/alrayyes/Hush-Hush/compare/v3.35.0...v3.35.1) (2026-10-14)
 
 
