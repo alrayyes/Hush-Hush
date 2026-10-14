@@ -124,6 +124,17 @@ type mcpUpdateInput struct {
 	Tags   *[]string `json:"tags,omitempty" jsonschema:"replaces the object's tags; an empty list clears them; omit to leave them unchanged"`
 }
 
+// mcpEditInput is the "edit" tool's input - PatchObjectRequest's fields plus
+// the slug the HTTP PATCH takes from its path. new_slug is the rename, since
+// slug already names the object being edited.
+type mcpEditInput struct {
+	Slug        string    `json:"slug" maxLength:"128" jsonschema:"the object's current slug"`
+	ID          string    `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
+	NewSlug     *string   `json:"new_slug,omitempty" maxLength:"128" jsonschema:"renames the object, every variant of it; omit to keep the slug"`
+	Description *string   `json:"description,omitempty" maxLength:"1000" jsonschema:"replaces the description; an empty string clears it; omit to leave it unchanged"`
+	Tags        *[]string `json:"tags,omitempty" jsonschema:"replaces the object's tags; an empty list clears them; omit to leave them unchanged"`
+}
+
 // mcpDeleteInput is the "delete" tool's input - just the object's slug.
 type mcpDeleteInput struct {
 	Slug string `json:"slug" jsonschema:"the object's slug"`
@@ -179,7 +190,7 @@ func handleMCP(s objectStore, version string) http.HandlerFunc {
 }
 
 // newMCPServer builds the *mcp.Server for one HTTP request, registering
-// the five tools with handlers bound to that request's already-verified
+// its tools with handlers bound to that request's already-verified
 // actor - requireWriteAccess has already run by the time this is called,
 // so r carries the same context values actorFrom/callerFrom read for
 // every other handler.
@@ -202,8 +213,13 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "update",
-		Description: "Replace an object's sealed value. slug and description stay fixed; used_by is left unchanged unless given.",
+		Description: "Replace an object's sealed value. slug and description stay fixed (use edit to change them); used_by is left unchanged unless given.",
 	}, mcpUpdate(s, caller, sourceIP, actorType, actorID))
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "edit",
+		Description: "Change an object's description, tags or slug without its sealed value. Send at least one of description, tags and new_slug; a field left out stays as it is.",
+	}, mcpEdit(s, caller, sourceIP, actorType, actorID))
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "delete",
@@ -372,6 +388,42 @@ func mcpUpdateObject(ctx context.Context, s objectStore, in mcpUpdateInput, valu
 	}
 
 	return obj, nil
+}
+
+// mcpEdit is the "edit" tool's handler - the same metadata change
+// handlePatchObject (patch.go) performs over HTTP.
+func mcpEdit(s objectStore, caller, sourceIP, actorType, actorID string) mcp.ToolHandlerFor[mcpEditInput, ObjectMetadata] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpEditInput) (*mcp.CallToolResult, ObjectMetadata, error) {
+		selector, err := mcpSelector(in, in.ID)
+		if err != nil {
+			return nil, ObjectMetadata{}, err
+		}
+
+		patch, err := buildObjectPatch(PatchObjectRequest{Description: in.Description, Slug: in.NewSlug, Tags: in.Tags}, in.Slug)
+		if err != nil {
+			return nil, ObjectMetadata{}, err
+		}
+
+		id, slug, err := s.PatchObject(ctx, in.Slug, patch, selector...)
+		if errors.Is(err, store.ErrAlreadyExists) {
+			return nil, ObjectMetadata{}, conflictErr(err, errSlugTaken)
+		}
+
+		if err != nil {
+			return nil, ObjectMetadata{}, mcpLookupError(ctx, "edit", err)
+		}
+
+		obj, err := s.GetObject(ctx, slug, store.WithID(id))
+		if err != nil {
+			return nil, ObjectMetadata{}, mcpInternalError(ctx, "edit", err)
+		}
+
+		if err := s.RecordAuditLog(ctx, slug, store.AuditActionUpdate, caller, sourceIP, actorType, actorID, store.AuditVariant(id)); err != nil {
+			return nil, ObjectMetadata{}, mcpInternalError(ctx, "edit", err)
+		}
+
+		return nil, ObjectMetadata{ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}, nil
+	}
 }
 
 // mcpDelete is the "delete" tool's handler - the same removal

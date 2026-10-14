@@ -85,7 +85,7 @@ func mcpCall(t *testing.T, mux http.Handler, token, body string) mcpJSONRPCRespo
 	return resp
 }
 
-func TestMCPToolsListReturnsTheFiveTools(t *testing.T) {
+func TestMCPToolsListReturnsEveryTool(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
@@ -105,7 +105,7 @@ func TestMCPToolsListReturnsTheFiveTools(t *testing.T) {
 		names[i] = tool.Name
 	}
 
-	require.ElementsMatch(t, []string{"inject", "get", "update", "delete", "list"}, names)
+	require.ElementsMatch(t, []string{"inject", "get", "update", "delete", "list", "edit"}, names)
 }
 
 // mcpCallToolBody builds a tools/call JSON-RPC request for the given tool

@@ -22,6 +22,34 @@ type PatchObjectRequest struct {
 	Tags        *[]string `json:"tags,omitempty"`
 }
 
+// buildObjectPatch checks a patch request against slug, the name it applies
+// to, and turns it into the store's form. The error is the 400 message a
+// caller sees, over HTTP or as a tool result.
+func buildObjectPatch(req PatchObjectRequest, slug string) (store.ObjectPatch, error) {
+	if req.Description == nil && req.Slug == nil && req.Tags == nil {
+		return store.ObjectPatch{}, errPatchNothing
+	}
+
+	// A slug equal to the current one is no rename, and a name stored before
+	// the rule may not follow it.
+	if req.Slug != nil && *req.Slug != slug && !validSlug(*req.Slug) {
+		return store.ObjectPatch{}, errInvalidSlug
+	}
+
+	patch := store.ObjectPatch{Description: req.Description, Slug: req.Slug}
+
+	if req.Tags != nil {
+		tags, err := normaliseTags(*req.Tags)
+		if err != nil {
+			return store.ObjectPatch{}, err
+		}
+
+		patch.Tags = &tags
+	}
+
+	return patch, nil
+}
+
 // readPatchRequest decodes a patch body and checks it. When it isn't
 // acceptable it has already answered the caller, and returns false.
 func readPatchRequest(w http.ResponseWriter, r *http.Request) (store.ObjectPatch, bool) {
@@ -30,31 +58,11 @@ func readPatchRequest(w http.ResponseWriter, r *http.Request) (store.ObjectPatch
 		return store.ObjectPatch{}, false
 	}
 
-	if req.Description == nil && req.Slug == nil && req.Tags == nil {
-		writeError(w, r, http.StatusBadRequest, errPatchNothing.Error())
+	patch, err := buildObjectPatch(req, r.PathValue("slug"))
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
 
 		return store.ObjectPatch{}, false
-	}
-
-	// A slug equal to the current one is no rename, and a name stored before
-	// the rule may not follow it.
-	if req.Slug != nil && *req.Slug != r.PathValue("slug") && !validSlug(*req.Slug) {
-		writeError(w, r, http.StatusBadRequest, errInvalidSlug.Error())
-
-		return store.ObjectPatch{}, false
-	}
-
-	patch := store.ObjectPatch{Description: req.Description, Slug: req.Slug}
-
-	if req.Tags != nil {
-		tags, err := normaliseTags(*req.Tags)
-		if err != nil {
-			writeError(w, r, http.StatusBadRequest, err.Error())
-
-			return store.ObjectPatch{}, false
-		}
-
-		patch.Tags = &tags
 	}
 
 	return patch, true

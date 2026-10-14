@@ -101,9 +101,10 @@ curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 ### MCP
 
 `POST /mcp` serves the [MCP](https://modelcontextprotocol.io) Streamable
-HTTP transport, exposing the same five operations as
+HTTP transport, exposing the same operations as
 [`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) - `inject`,
-`get`, `update`, `delete`, `list` - as MCP tools, for an agent doing
+`get`, `update`, `delete`, `list` - as MCP tools, plus `edit`, which changes
+a secret's description, tags or slug without its value, for an agent doing
 infrastructure or deploy work that needs to read or write a secret as one
 step in a larger task. Point an MCP client at it with the same bearer
 token a write call needs:
@@ -121,8 +122,8 @@ token a write call needs:
 
 Every tool call needs that token, including `get` and `list` - stricter
 than their plain HTTP equivalents, since one authenticated MCP session is
-meant to do all five operations rather than five independently gated
-tools ([`docs/adr/0019-mcp-endpoint.md`](docs/adr/0019-mcp-endpoint.md)).
+meant to do every operation rather than each tool being gated on its
+own ([`docs/adr/0019-mcp-endpoint.md`](docs/adr/0019-mcp-endpoint.md)).
 `value` is base64-encoded sealed (age) ciphertext on both sides of a tool
 call, the same wire convention `api/openapi.yaml` already uses - this
 server never decrypts it, though it does read the age header and refuses a
