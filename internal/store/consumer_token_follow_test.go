@@ -103,3 +103,39 @@ func TestRenamingAConsumerToItsOwnNameKeepsItsTokens(t *testing.T) {
 	require.True(t, valid)
 	require.Equal(t, "same", consumer)
 }
+
+func TestAConsumerReAddedAfterADeleteDoesNotRevivePreviousTokens(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	require.NoError(t, s.AddConsumer(t.Context(), "homelab"))
+
+	_, token, err := s.CreateConsumerToken(t.Context(), "homelab", "deploy", time.Hour)
+	require.NoError(t, err)
+
+	require.NoError(t, s.DeleteConsumer(t.Context(), "homelab"))
+	require.NoError(t, s.AddConsumer(t.Context(), "homelab"))
+
+	_, _, valid, err := s.AuthenticateConsumerToken(t.Context(), token)
+	require.NoError(t, err)
+	require.False(t, valid, "re-adding the name must not bring the old token back")
+}
+
+func TestAConsumerCreatedUnderARenamedAwayNameInheritsNoTokens(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	require.NoError(t, s.AddConsumer(t.Context(), "old-name"))
+
+	_, token, err := s.CreateConsumerToken(t.Context(), "old-name", "deploy", time.Hour)
+	require.NoError(t, err)
+
+	_, err = s.RenameConsumer(t.Context(), "old-name", "new-name")
+	require.NoError(t, err)
+	require.NoError(t, s.AddConsumer(t.Context(), "old-name"))
+
+	_, consumer, valid, err := s.AuthenticateConsumerToken(t.Context(), token)
+	require.NoError(t, err)
+	require.True(t, valid)
+	require.Equal(t, "new-name", consumer, "the token stays with the renamed consumer")
+}
