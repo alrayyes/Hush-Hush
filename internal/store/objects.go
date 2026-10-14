@@ -559,8 +559,17 @@ func replaceObjectRelations(ctx context.Context, tx *sql.Tx, id string, usedBy, 
 // appears in the directory, whether added directly or recorded by an
 // object's used_by list.
 func (s *Store) AddConsumer(ctx context.Context, name string) error {
+	// The check and the insert share one write turn, or two adds of one name
+	// both pass the check and the loser's INSERT fails on the primary key.
+	tx, release, err := s.beginWrite(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	defer func() { _ = tx.Rollback() }()
+
 	var exists int
-	if err := s.db.QueryRowContext(ctx, `
+	if err := tx.QueryRowContext(ctx, `
 		SELECT 1 WHERE EXISTS (SELECT 1 FROM consumers WHERE name = ?)
 			OR EXISTS (SELECT 1 FROM used_by WHERE consumer = ?)`,
 		name, name,
@@ -571,10 +580,14 @@ func (s *Store) AddConsumer(ctx context.Context, name string) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := s.execWrite(ctx,
+	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO consumers (name, created_at) VALUES (?, ?)`, name, now,
 	); err != nil {
 		return fmt.Errorf("insert consumer: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit consumer: %w", err)
 	}
 
 	return nil
