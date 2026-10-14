@@ -102,14 +102,13 @@ curl "localhost:8080/audit-log?object_id=mattermost_deploy_webhook"
 
 `POST /mcp` serves the [MCP](https://modelcontextprotocol.io) Streamable
 HTTP transport, exposing the same operations as
-[`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) - `inject`,
-`get`, `update`, `delete`, `list` - as MCP tools, plus `edit`, which changes
-a secret's description, tags or slug without its value, `used_by`, which
-lists a secret's consumers, and `list_consumers` and `add_consumer` for the
-consumer directory, for an agent doing
-infrastructure or deploy work that needs to read or write a secret as one
-step in a larger task. Point an MCP client at it with the same bearer
-token a write call needs:
+[`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) - `inject`, `get`,
+`update`, `delete`, `list` - as MCP tools, plus `edit`, which changes a secret's
+description, tags or slug without its value, `used_by`, which lists a secret's
+consumers, and `list_consumers`, `add_consumer`, `update_consumer` and
+`delete_consumer` for the consumer directory, for an agent doing infrastructure
+or deploy work that needs to read or write a secret as one step in a larger
+task. Point an MCP client at it with the same bearer token a write call needs:
 
 ```json
 {
