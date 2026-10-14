@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -220,4 +221,66 @@ func TestMCPConsumerToolsRefuseANameOverTheLimit(t *testing.T) {
 	require.True(t, callTool(t, mux, token, "update_consumer", map[string]any{"name": long, "new_name": "x"}).IsError)
 	require.True(t, callTool(t, mux, token, "update_consumer", map[string]any{"name": "x", "new_name": long}).IsError)
 	require.True(t, callTool(t, mux, token, "delete_consumer", map[string]any{"name": long}).IsError)
+}
+
+func TestMCPUpdateConsumerMergesIntoAnExistingNameAndKeepsTheSecrets(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	require.NoError(t, s.CreateObject(context.Background(), "mcp_merge_a", []byte("v"), []string{"from"}, "", ""))
+	require.NoError(t, s.CreateObject(context.Background(), "mcp_merge_b", []byte("v"), []string{"into"}, "", ""))
+
+	result := callTool(t, mux, token, "update_consumer", map[string]any{"name": "from", "new_name": "into"})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	var out struct {
+		Name        string `json:"name"`
+		SecretCount int    `json:"secret_count"`
+	}
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &out))
+	require.Equal(t, "into", out.Name)
+	require.Equal(t, 2, out.SecretCount, "both secrets now name the merged consumer")
+}
+
+func TestMCPUpdateConsumerRefusesARenameThatWouldMergeTwoVariantsOfOneName(t *testing.T) {
+	t.Parallel()
+
+	f := newVariantFixture(t)
+
+	// d is the only consumer of one variant of release_token and a, b, c the
+	// consumers of the other: merging d into a would give both variants a.
+	result := callTool(t, f.mux, f.write, "update_consumer", map[string]any{"name": "d", "new_name": "a"})
+	require.True(t, result.IsError)
+
+	obj, err := f.s.GetObject(context.Background(), "release_token", store.WithID(f.idD))
+	require.NoError(t, err)
+	require.Equal(t, []string{"d"}, obj.UsedBy, "a refused rename changes nothing")
+}
+
+func TestMCPUpdateConsumerWithABadKeyAppliesNoRename(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	require.NoError(t, s.CreateObject(context.Background(), "mcp_badkey", []byte("v"), []string{"keep-me"}, "", ""))
+
+	result := callTool(t, mux, token, "update_consumer", map[string]any{"name": "keep-me", "new_name": "renamed", "public_key": "not-a-key"})
+	require.True(t, result.IsError)
+
+	obj, err := s.GetObject(context.Background(), "mcp_badkey")
+	require.NoError(t, err)
+	require.Equal(t, []string{"keep-me"}, obj.UsedBy)
+}
+
+func TestMCPConsumerToolsAcceptANameAtTheLimitAndRefuseAKeyOverIt(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	atLimit := strings.Repeat("a", 128)
+
+	require.False(t, callTool(t, mux, token, "add_consumer", map[string]any{"name": atLimit}).IsError)
+	require.False(t, callTool(t, mux, token, "update_consumer", map[string]any{"name": atLimit, "new_name": strings.Repeat("b", 128)}).IsError)
+	require.True(t, callTool(t, mux, token, "update_consumer", map[string]any{"name": "x", "public_key": strings.Repeat("a", 513)}).IsError)
 }
