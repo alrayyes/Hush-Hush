@@ -825,6 +825,23 @@ func moveConsumerName(ctx context.Context, tx *sql.Tx, oldName, newName string) 
 	return nil
 }
 
+// moveConsumerName points every object's used_by entry and every read token
+// at newName. A token is scoped to a consumer by name, so it follows the
+// rename or it would silently stop reading anything.
+func moveConsumerName(ctx context.Context, tx *sql.Tx, oldName, newName string) error {
+	if err := rewriteUsedByForRename(ctx, tx, oldName, newName); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE consumer_tokens SET consumer = ? WHERE consumer = ?`, newName, oldName,
+	); err != nil {
+		return fmt.Errorf("move consumer tokens: %w", err)
+	}
+
+	return nil
+}
+
 // checkRenameKeepsVariantsApart refuses a rename that would leave newName in
 // two variants of one slug: oldName in one, newName already in another. The
 // two names merge on a rename, and a consumer reads one value per slug.
