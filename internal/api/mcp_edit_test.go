@@ -91,11 +91,21 @@ func TestMCPEditRefusesAnInvalidNewSlugAnUnknownObjectAndATakenName(t *testing.T
 	seedObject(t, s, "mcp_edit_a")
 	seedObject(t, s, "mcp_edit_b")
 
-	for name, args := range map[string]map[string]any{
-		"invalid new slug": {"slug": "mcp_edit_a", "new_slug": "no spaces"},
-		"unknown object":   {"slug": "mcp_edit_missing", "description": "x"},
-		"name taken":       {"slug": "mcp_edit_a", "new_slug": "mcp_edit_b"},
+	for name, tc := range map[string]struct {
+		args map[string]any
+		want string
+	}{
+		"invalid new slug": {map[string]any{"slug": "mcp_edit_a", "new_slug": "no spaces"}, "slug"},
+		"unknown object":   {map[string]any{"slug": "mcp_edit_missing", "description": "x"}, "unknown object"},
+		"name taken":       {map[string]any{"slug": "mcp_edit_a", "new_slug": "mcp_edit_b"}, "already exists"},
 	} {
-		require.True(t, callTool(t, mux, token, "edit", args).IsError, name)
+		result := callTool(t, mux, token, "edit", tc.args)
+		require.True(t, result.IsError, name)
+		require.NotEmpty(t, result.Content, name)
+		require.Contains(t, result.Content[0].Text, tc.want, name)
 	}
+
+	// A refused rename changes nothing.
+	_, err := s.GetObject(context.Background(), "mcp_edit_a")
+	require.NoError(t, err)
 }

@@ -23,7 +23,6 @@ var (
 	errMCPValueNotBase64       = errors.New("value must be base64-encoded")
 	errMCPObjectAlreadyExists  = errors.New("object already exists")
 	errMCPUnknownObject        = errors.New("unknown object")
-	errMCPSlugTaken            = errors.New("an object with that slug already exists")
 )
 
 // mcpSelector holds a tool's input to its field limits and turns its optional
@@ -407,7 +406,7 @@ func mcpEdit(s objectStore, caller, sourceIP, actorType, actorID string) mcp.Too
 
 		id, slug, err := s.PatchObject(ctx, in.Slug, patch, selector...)
 		if errors.Is(err, store.ErrAlreadyExists) {
-			return nil, ObjectMetadata{}, conflictErr(err, errMCPSlugTaken)
+			return nil, ObjectMetadata{}, conflictErr(err, errSlugTaken)
 		}
 
 		if err != nil {
