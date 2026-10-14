@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.35.0](https://github.com/alrayyes/Hush-Hush/compare/v3.34.1...v3.35.0) (2026-10-14)
+
+
+### Features
+
+* **mcp:** add an audit_log tool that queries the audit log ([#961](https://github.com/alrayyes/Hush-Hush/issues/961)) ([42cbd67](https://github.com/alrayyes/Hush-Hush/commit/42cbd674943731337dff5a0b8792baa84da44ecf))
+* **mcp:** add update_consumer and delete_consumer tools ([#955](https://github.com/alrayyes/Hush-Hush/issues/955)) ([c15febf](https://github.com/alrayyes/Hush-Hush/commit/c15febf7f4a47c2f97839b6eb649eaa5d77975d2))
+
 ## [3.34.1](https://github.com/alrayyes/Hush-Hush/compare/v3.34.0...v3.34.1) (2026-10-14)
 
 
