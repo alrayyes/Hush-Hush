@@ -23,3 +23,19 @@ func TestMCPToolsThatTakeASlugRefuseOneOverTheLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestMCPToolsThatTakeASlugAcceptOneAtTheLimit(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	token := issueToken(t, s)
+	atLimit := strings.Repeat("a", 128)
+
+	for _, tool := range []string{"get", "delete", "used_by"} {
+		t.Run(tool, func(t *testing.T) {
+			result := callTool(t, mux, token, tool, map[string]any{"slug": atLimit})
+			require.True(t, result.IsError, "no such object, but not a length refusal")
+			require.Contains(t, result.Content[0].Text, "unknown object")
+		})
+	}
+}
