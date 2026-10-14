@@ -243,6 +243,8 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 		Description: "List stored objects' metadata (id, slug, used_by, description) - never the sealed value. One page of 50 unless limit says otherwise; the result's text says how many there are in all.",
 	}, mcpList(s))
 
+	addMCPConsumerTools(srv, s)
+
 	return srv
 }
 

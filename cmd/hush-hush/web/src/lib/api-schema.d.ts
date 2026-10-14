@@ -353,7 +353,8 @@ export interface paths {
          *     (https://modelcontextprotocol.io). Exposes tools mirroring
          *     hush-hush-cli's own operations: inject, get, update, delete, list,
          *     edit, which changes an object's description, tags or slug without
-         *     its sealed value, and used_by, which lists an object's consumers
+         *     its sealed value, used_by, which lists an object's consumers, and
+         *     list_consumers and add_consumer for the consumer directory
          *     (docs/adr/0019-mcp-endpoint.md).
          *
          *     Gated the same way every other write route is, applied uniformly
