@@ -290,10 +290,6 @@ export interface paths {
          *     they keep reading the same secrets; when it merges into an existing
          *     consumer, tokens of both names read as the merged name.
          *
-         *     A rename also moves the consumer's read tokens to the new name, so
-         *     they keep reading the same secrets; when it merges into an existing
-         *     consumer, tokens of both names read as the merged name.
-         *
          *     A session-authenticated call needs its CSRF token too; a
          *     bearer-token-authenticated one doesn't.
          */

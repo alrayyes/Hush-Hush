@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/alrayyes/hush-hush/internal/store"
 	"github.com/stretchr/testify/require"
@@ -32,8 +33,14 @@ func TestUpdateConsumerWithAFailingKeyWriteLeavesTheRenameUnapplied(t *testing.T
 	s := openTestStore(t)
 	require.NoError(t, s.CreateObject(t.Context(), "uc_atomic", []byte("v"), []string{"old-name"}, "", ""))
 
+	_, err := s.SetConsumerPublicKey(t.Context(), "old-name", "age1previouskey")
+	require.NoError(t, err)
+
+	_, token, err := s.CreateConsumerToken(t.Context(), "old-name", "deploy", time.Hour)
+	require.NoError(t, err)
+
 	// The key write is the second step; make it fail without touching the first.
-	_, err := s.DB().ExecContext(t.Context(), `
+	_, err = s.DB().ExecContext(t.Context(), `
 		CREATE TRIGGER refuse_key BEFORE INSERT ON consumers
 		WHEN NEW.public_key = '`+updateConsumerKey+`'
 		BEGIN SELECT RAISE(ABORT, 'key write refused'); END`)
@@ -45,6 +52,26 @@ func TestUpdateConsumerWithAFailingKeyWriteLeavesTheRenameUnapplied(t *testing.T
 	obj, err := s.GetObject(t.Context(), "uc_atomic")
 	require.NoError(t, err)
 	require.Equal(t, []string{"old-name"}, obj.UsedBy, "a failed key write must not leave the rename applied")
+
+	page, err := s.ListConsumersPage(t.Context(), store.ConsumerFilter{Name: "old-name", Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Len(t, page.Consumers, 1)
+	require.Equal(t, "age1previouskey", page.Consumers[0].PublicKey, "the previous key is untouched")
+
+	_, consumer, valid, err := s.AuthenticateConsumerToken(t.Context(), token)
+	require.NoError(t, err)
+	require.True(t, valid)
+	require.Equal(t, "old-name", consumer, "the token did not move with a rename that was rolled back")
+}
+
+func TestUpdateConsumerWithNeitherANameNorAKeyIsRefused(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	require.NoError(t, s.AddConsumer(t.Context(), "known"))
+
+	_, err := s.UpdateConsumer(t.Context(), "known", "", "")
+	require.ErrorIs(t, err, store.ErrNoConsumerChange)
 }
 
 func TestUpdateConsumerWithOnlyANameOrOnlyAKeyBehavesAsEach(t *testing.T) {

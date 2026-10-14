@@ -35,6 +35,9 @@ var ErrVariantConflict = errors.New("consumer would be in two variants of one sl
 // no stored object's used_by list currently records the given name.
 var ErrUnknownConsumer = errors.New("unknown consumer")
 
+// ErrNoConsumerChange is UpdateConsumer given neither a new name nor a key.
+var ErrNoConsumerChange = errors.New("no consumer change requested")
+
 // ErrConsumerAlreadyExists is returned by AddConsumer when name already
 // appears in the directory, whether added directly or recorded by an
 // object's used_by list.
@@ -825,23 +828,6 @@ func moveConsumerName(ctx context.Context, tx *sql.Tx, oldName, newName string) 
 	return nil
 }
 
-// moveConsumerName points every object's used_by entry and every read token
-// at newName. A token is scoped to a consumer by name, so it follows the
-// rename or it would silently stop reading anything.
-func moveConsumerName(ctx context.Context, tx *sql.Tx, oldName, newName string) error {
-	if err := rewriteUsedByForRename(ctx, tx, oldName, newName); err != nil {
-		return err
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		`UPDATE consumer_tokens SET consumer = ? WHERE consumer = ?`, newName, oldName,
-	); err != nil {
-		return fmt.Errorf("move consumer tokens: %w", err)
-	}
-
-	return nil
-}
-
 // checkRenameKeepsVariantsApart refuses a rename that would leave newName in
 // two variants of one slug: oldName in one, newName already in another. The
 // two names merge on a rename, and a consumer reads one value per slug.
@@ -1109,10 +1095,15 @@ func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOpt
 // UpdateConsumer renames a consumer, registers its public key, or both, in
 // one write transaction: a key write that fails leaves the rename unapplied,
 // where two separate calls would leave the name changed and the key missing.
-// An empty newName or publicKey leaves that part alone, and the rename runs
-// first so the key lands on the resulting name. The errors are
+// An empty newName or publicKey leaves that part alone (both empty is
+// ErrNoConsumerChange), and the rename runs first so the key lands on the
+// resulting name. The errors are
 // RenameConsumer's and SetConsumerPublicKey's.
 func (s *Store) UpdateConsumer(ctx context.Context, name, newName, publicKey string) (ConsumerEntry, error) {
+	if newName == "" && publicKey == "" {
+		return ConsumerEntry{}, ErrNoConsumerChange
+	}
+
 	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
 		return ConsumerEntry{}, err
