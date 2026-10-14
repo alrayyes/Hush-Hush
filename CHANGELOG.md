@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.32.0](https://github.com/alrayyes/Hush-Hush/compare/v3.31.0...v3.32.0) (2026-10-14)
+
+
+### Features
+
+* **mcp:** add an edit tool for a secret's description, tags and slug ([#942](https://github.com/alrayyes/Hush-Hush/issues/942)) ([1bde2da](https://github.com/alrayyes/Hush-Hush/commit/1bde2da3efd6d32bb980b283c9955b1e404dd9f7))
+
 ## [3.31.0](https://github.com/alrayyes/Hush-Hush/compare/v3.30.0...v3.31.0) (2026-10-13)
 
 
