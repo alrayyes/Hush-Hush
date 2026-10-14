@@ -47,8 +47,7 @@ type objectStore interface {
 	ListConsumers(ctx context.Context) ([]string, error)
 	ListConsumersPage(ctx context.Context, filter store.ConsumerFilter) (store.ConsumerPage, error)
 	AddConsumer(ctx context.Context, name string) error
-	RenameConsumer(ctx context.Context, oldName, newName string) (store.ConsumerEntry, error)
-	SetConsumerPublicKey(ctx context.Context, name, publicKey string) (store.ConsumerEntry, error)
+	UpdateConsumer(ctx context.Context, name, newName, publicKey string) (store.ConsumerEntry, error)
 	DeleteConsumer(ctx context.Context, name string) error
 	UpdateObject(ctx context.Context, slug string, value []byte, usedBy *[]string, opts ...store.ObjectOption) error
 	PatchObject(ctx context.Context, slug string, patch store.ObjectPatch, opts ...store.ObjectOption) (id, newSlug string, err error)

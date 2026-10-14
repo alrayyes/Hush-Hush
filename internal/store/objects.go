@@ -35,6 +35,9 @@ var ErrVariantConflict = errors.New("consumer would be in two variants of one sl
 // no stored object's used_by list currently records the given name.
 var ErrUnknownConsumer = errors.New("unknown consumer")
 
+// ErrNoConsumerChange is UpdateConsumer given neither a new name nor a key.
+var ErrNoConsumerChange = errors.New("no consumer change requested")
+
 // ErrConsumerAlreadyExists is returned by AddConsumer when name already
 // appears in the directory, whether added directly or recorded by an
 // object's used_by list.
@@ -743,6 +746,21 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 	defer release()
 	defer func() { _ = tx.Rollback() }()
 
+	entry, err := renameConsumerTx(ctx, tx, oldName, newName)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return entry, nil
+}
+
+// renameConsumerTx is RenameConsumer's work inside a write transaction the
+// caller owns, so a rename can share one with another change.
+func renameConsumerTx(ctx context.Context, tx *sql.Tx, oldName, newName string) (ConsumerEntry, error) {
 	var exists int
 	switch err := tx.QueryRowContext(ctx, `
 		SELECT 1 WHERE EXISTS (SELECT 1 FROM used_by WHERE consumer = ?)
@@ -788,10 +806,6 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 		if err := upsertConsumerRow(ctx, tx, newName, resolvedKey); err != nil {
 			return ConsumerEntry{}, fmt.Errorf("record renamed consumer: %w", err)
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return ConsumerEntry{Name: newName, SecretCount: count, PublicKey: resolvedKey}, nil
@@ -951,6 +965,21 @@ func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string
 	defer release()
 	defer func() { _ = tx.Rollback() }()
 
+	entry, err := setConsumerPublicKeyTx(ctx, tx, name, publicKey)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return entry, nil
+}
+
+// setConsumerPublicKeyTx is SetConsumerPublicKey's work inside a write
+// transaction the caller owns.
+func setConsumerPublicKeyTx(ctx context.Context, tx *sql.Tx, name, publicKey string) (ConsumerEntry, error) {
 	if err := upsertConsumerRow(ctx, tx, name, publicKey); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("set consumer public key: %w", err)
 	}
@@ -958,10 +987,6 @@ func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string
 	var count int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM used_by WHERE consumer = ?`, name).Scan(&count); err != nil {
 		return ConsumerEntry{}, fmt.Errorf("count consumer: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return ConsumerEntry{Name: name, SecretCount: count, PublicKey: publicKey}, nil
@@ -1065,4 +1090,46 @@ func (s *Store) DeleteObject(ctx context.Context, slug string, opts ...ObjectOpt
 	}
 
 	return nil
+}
+
+// UpdateConsumer renames a consumer, registers its public key, or both, in
+// one write transaction: a key write that fails leaves the rename unapplied,
+// where two separate calls would leave the name changed and the key missing.
+// An empty newName or publicKey leaves that part alone (both empty is
+// ErrNoConsumerChange), and the rename runs first so the key lands on the
+// resulting name. The errors are
+// RenameConsumer's and SetConsumerPublicKey's.
+func (s *Store) UpdateConsumer(ctx context.Context, name, newName, publicKey string) (ConsumerEntry, error) {
+	if newName == "" && publicKey == "" {
+		return ConsumerEntry{}, ErrNoConsumerChange
+	}
+
+	tx, release, err := s.beginWrite(ctx)
+	if err != nil {
+		return ConsumerEntry{}, err
+	}
+	defer release()
+	defer func() { _ = tx.Rollback() }()
+
+	var entry ConsumerEntry
+
+	if newName != "" {
+		if entry, err = renameConsumerTx(ctx, tx, name, newName); err != nil {
+			return ConsumerEntry{}, err
+		}
+
+		name = newName
+	}
+
+	if publicKey != "" {
+		if entry, err = setConsumerPublicKeyTx(ctx, tx, name, publicKey); err != nil {
+			return ConsumerEntry{}, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ConsumerEntry{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return entry, nil
 }
