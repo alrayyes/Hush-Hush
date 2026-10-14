@@ -81,3 +81,45 @@ func TestConcurrentCreatesOfDifferentSlugsAllSucceed(t *testing.T) {
 		require.NoError(t, err, "worker %d: %v", i, err)
 	}
 }
+
+// Two adds of one consumer name that run at once leave one winner, and the
+// loser sees ErrConsumerAlreadyExists, not the constraint error its INSERT
+// would otherwise return after both passed the existence check.
+func TestConcurrentAddsOfOneConsumerReturnAlreadyExists(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "concurrent-consumers.db")
+
+	s, err := store.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, s.Close()) })
+
+	const workers = 12
+
+	var wg sync.WaitGroup
+	errs := make([]error, workers)
+	start := make(chan struct{})
+
+	for i := range workers {
+		wg.Go(func() {
+			<-start
+
+			errs[i] = s.AddConsumer(context.Background(), "homelab/race")
+		})
+	}
+
+	close(start)
+	wg.Wait()
+
+	successes := 0
+
+	for i, err := range errs {
+		if err != nil {
+			require.ErrorIs(t, err, store.ErrConsumerAlreadyExists, "worker %d: %v", i, err)
+
+			continue
+		}
+
+		successes++
+	}
+
+	require.Equal(t, 1, successes, "exactly one add must succeed")
+}
