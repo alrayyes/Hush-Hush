@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.35.1](https://github.com/alrayyes/Hush-Hush/compare/v3.35.0...v3.35.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **store:** consumer read tokens follow a rename and go with a delete ([#960](https://github.com/alrayyes/Hush-Hush/issues/960)) ([6afd981](https://github.com/alrayyes/Hush-Hush/commit/6afd98133d95cc74d49f67d83f5dabfb7c6dcd7a))
+
 ## [3.35.0](https://github.com/alrayyes/Hush-Hush/compare/v3.34.1...v3.35.0) (2026-10-14)
 
 
