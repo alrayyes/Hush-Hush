@@ -244,6 +244,7 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 	}, mcpList(s))
 
 	addMCPConsumerTools(srv, s)
+	addMCPAuditLogTool(srv, s)
 
 	return srv
 }
