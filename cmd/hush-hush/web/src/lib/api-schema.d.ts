@@ -254,7 +254,10 @@ export interface paths {
          *     currently records it - the objects themselves aren't touched
          *     otherwise, and none are deleted even if this empties their
          *     `used_by` list. A subsequent `GET /consumers` no longer lists this
-         *     name. A session-authenticated call needs its CSRF token too; a
+         *     name. The consumer's read tokens are revoked in the same step, so a
+         *     token never outlives the consumer it was minted for and can't read
+         *     again if a consumer of that name is added later. A
+         *     session-authenticated call needs its CSRF token too; a
          *     bearer-token-authenticated one doesn't.
          */
         delete: operations["deleteConsumer"];
@@ -281,6 +284,10 @@ export interface paths {
          *     included, is a 400 and nothing in the request is applied. Sending both
          *     fields in the same call renames first, then sets the key on the
          *     resulting name.
+         *
+         *     A rename also moves the consumer's read tokens to the new name, so
+         *     they keep reading the same secrets; when it merges into an existing
+         *     consumer, tokens of both names read as the merged name.
          *
          *     A session-authenticated call needs its CSRF token too; a
          *     bearer-token-authenticated one doesn't.

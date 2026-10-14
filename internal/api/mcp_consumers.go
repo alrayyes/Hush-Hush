@@ -29,12 +29,12 @@ func addMCPConsumerTools(srv *mcp.Server, s objectStore) {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "update_consumer",
-		Description: "Rename a consumer, register or replace its age public key, or both. A new_name that is already a consumer merges the two. Send at least one of new_name and public_key; a key can be replaced but not cleared.",
+		Description: "Rename a consumer, register or replace its age public key, or both. The consumer's read tokens follow a rename. A new_name that is already a consumer merges the two, and tokens of both then read as the merged name. Send at least one of new_name and public_key; a key can be replaced but not cleared.",
 	}, mcpUpdateConsumer(s))
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "delete_consumer",
-		Description: "Remove a consumer from every secret that names it. The secrets themselves stay, even if this leaves one with no consumers.",
+		Description: "Remove a consumer from every secret that names it, and revoke its read tokens. The secrets themselves stay, even if this leaves one with no consumers.",
 	}, mcpDeleteConsumer(s))
 }
 

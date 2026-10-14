@@ -731,7 +731,8 @@ func (s *Store) ListConsumersPage(ctx context.Context, filter ConsumerFilter) (C
 // newName's own key wins if it already had one, otherwise oldName's key
 // (if any) carries over - the surviving identity is newName, so its key
 // takes precedence rather than being silently overwritten by the one
-// being merged away. Renaming a name to itself is a no-op. It returns
+// being merged away. The consumer's read tokens move to newName too. Renaming
+// a name to itself is a no-op. It returns
 // ErrUnknownConsumer if oldName isn't currently recorded anywhere, in
 // used_by or in consumers.
 func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (ConsumerEntry, error) {
@@ -767,7 +768,7 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 			return ConsumerEntry{}, err
 		}
 
-		if err := rewriteUsedByForRename(ctx, tx, oldName, newName); err != nil {
+		if err := moveConsumerName(ctx, tx, oldName, newName); err != nil {
 			return ConsumerEntry{}, err
 		}
 	}
@@ -794,6 +795,23 @@ func (s *Store) RenameConsumer(ctx context.Context, oldName, newName string) (Co
 	}
 
 	return ConsumerEntry{Name: newName, SecretCount: count, PublicKey: resolvedKey}, nil
+}
+
+// moveConsumerName points every object's used_by entry and every read token
+// at newName. A token is scoped to a consumer by name, so it follows the
+// rename or it would silently stop reading anything.
+func moveConsumerName(ctx context.Context, tx *sql.Tx, oldName, newName string) error {
+	if err := rewriteUsedByForRename(ctx, tx, oldName, newName); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE consumer_tokens SET consumer = ? WHERE consumer = ?`, newName, oldName,
+	); err != nil {
+		return fmt.Errorf("move consumer tokens: %w", err)
+	}
+
+	return nil
 }
 
 // checkRenameKeepsVariantsApart refuses a rename that would leave newName in
@@ -950,11 +968,11 @@ func (s *Store) SetConsumerPublicKey(ctx context.Context, name, publicKey string
 }
 
 // DeleteConsumer strips name from the used_by list of every stored object
-// that currently records it, and removes its consumers row if it has
-// one. The objects themselves aren't touched otherwise, and none are
-// deleted even if this empties their used_by list. It returns
-// ErrUnknownConsumer if name isn't currently recorded anywhere, in
-// used_by or in consumers.
+// that currently records it, removes its consumers row if it has one, and
+// revokes its read tokens. The objects themselves aren't touched otherwise,
+// and none are deleted even if this empties their used_by list. It returns
+// ErrUnknownConsumer if name isn't currently recorded anywhere, in used_by or
+// in consumers.
 func (s *Store) DeleteConsumer(ctx context.Context, name string) error {
 	tx, release, err := s.beginWrite(ctx)
 	if err != nil {
@@ -985,6 +1003,16 @@ func (s *Store) DeleteConsumer(ctx context.Context, name string) error {
 
 	if usedByRows == 0 && consumersRows == 0 {
 		return ErrUnknownConsumer
+	}
+
+	// There is no foreign key from a token to its consumer, so without this
+	// the token would outlive the consumer and read again as soon as one of
+	// that name is re-added. Revoked, not deleted, as a manual revoke does.
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE consumer_tokens SET revoked_at = ? WHERE consumer = ? AND revoked_at IS NULL`,
+		time.Now().UTC().Format(time.RFC3339), name,
+	); err != nil {
+		return fmt.Errorf("revoke consumer tokens: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {

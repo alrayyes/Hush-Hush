@@ -288,7 +288,8 @@ func updateConsumer(ctx context.Context, s objectStore, name string, req UpdateC
 
 // handleDeleteConsumer strips name from the used_by list of every stored
 // object that currently records it. The objects themselves aren't
-// deleted, even if this empties their used_by list.
+// deleted, even if this empties their used_by list. The consumer's read
+// tokens are revoked with it.
 func handleDeleteConsumer(s objectStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := s.DeleteConsumer(r.Context(), r.PathValue("name"))
