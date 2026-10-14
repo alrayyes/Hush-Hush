@@ -141,6 +141,13 @@ type mcpDeleteInput struct {
 	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
 }
 
+// mcpUsedByInput is the "used_by" tool's input - the object's slug and the
+// optional variant id, as GET /objects/{slug}/used-by takes them.
+type mcpUsedByInput struct {
+	Slug string `json:"slug" jsonschema:"the object's slug"`
+	ID   string `json:"id,omitempty" maxLength:"36" jsonschema:"the object's UUID, to pick one variant when the slug has several"`
+}
+
 // mcpDeleteOutput confirms a delete happened, since the HTTP DELETE's 204
 // has nothing for a tool call to echo back.
 type mcpDeleteOutput struct {
@@ -220,6 +227,11 @@ func newMCPServer(s objectStore, version string, r *http.Request) *mcp.Server {
 		Name:        "edit",
 		Description: "Change an object's description, tags or slug without its sealed value. Send at least one of description, tags and new_slug; a field left out stays as it is.",
 	}, mcpEdit(s, caller, sourceIP, actorType, actorID))
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "used_by",
+		Description: "List the consumers recorded against an object: what depends on it. Never the sealed value.",
+	}, mcpUsedBy(s))
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "delete",
@@ -423,6 +435,30 @@ func mcpEdit(s objectStore, caller, sourceIP, actorType, actorID string) mcp.Too
 		}
 
 		return nil, ObjectMetadata{ID: obj.ID, Slug: obj.Slug, UsedBy: obj.UsedBy, Tags: tagsOrEmpty(obj.Tags), Description: obj.Description}, nil
+	}
+}
+
+// mcpUsedBy is the "used_by" tool's handler - the same lookup
+// handleGetObjectUsedBy (used_by.go) performs over HTTP. No audit entry,
+// matching it: only reads of the value are logged.
+func mcpUsedBy(s objectStore) mcp.ToolHandlerFor[mcpUsedByInput, UsedBy] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in mcpUsedByInput) (*mcp.CallToolResult, UsedBy, error) {
+		opts, err := mcpSelector(in, in.ID)
+		if err != nil {
+			return nil, UsedBy{}, err
+		}
+
+		obj, err := s.GetObject(ctx, in.Slug, opts...)
+		if err != nil {
+			return nil, UsedBy{}, mcpLookupError(ctx, "used_by", err)
+		}
+
+		usedBy := obj.UsedBy
+		if usedBy == nil {
+			usedBy = []string{}
+		}
+
+		return nil, UsedBy{UsedBy: usedBy}, nil
 	}
 }
 
