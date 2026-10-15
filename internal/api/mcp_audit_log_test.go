@@ -217,4 +217,5 @@ func TestMCPAuditLogFilterOptionsListsWhatTheLogHolds(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(result.StructuredContent, &options))
 	require.Equal(t, []string{"a"}, options.ObjectIDs)
+	require.Equal(t, []string{"ci"}, options.Callers)
 }
