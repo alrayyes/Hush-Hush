@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.37.0](https://github.com/alrayyes/hush-hush/compare/v3.36.0...v3.37.0) (2026-10-15)
+
+
+### Features
+
+* **mcp:** add the consumer token tools ([#980](https://github.com/alrayyes/hush-hush/issues/980)) ([20a719b](https://github.com/alrayyes/hush-hush/commit/20a719b92c3910788b5ebb4cd7724bf1ecb15ada))
+
 ## [3.36.0](https://github.com/alrayyes/hush-hush/compare/v3.35.2...v3.36.0) (2026-10-15)
 
 
