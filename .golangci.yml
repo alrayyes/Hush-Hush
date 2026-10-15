@@ -53,6 +53,10 @@ linters:
   # `golangci-lint run` silently while the exclusion just never applies,
   # only surfacing via `golangci-lint config verify`.
   exclusions:
+    # `go list ./...` walks node_modules, and vitest's browser mode pulls in
+    # `flatted`, which ships a Go package. It isn't ours to lint.
+    paths:
+      - node_modules
     rules:
       - path: _test\.go
         linters:

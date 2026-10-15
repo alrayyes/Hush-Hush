@@ -594,9 +594,11 @@ jobs:
         run: bun run check
       - name: vitest
         # JUnit and a cobertura/html coverage report for `pages` to publish.
+        # The node project only: the component project needs a real Chromium,
+        # which this Alpine container can't run, so the e2e job runs it.
         run: >-
-          bun run test --coverage --reporter=default --reporter=junit
-          --outputFile.junit=reports/unit.xml
+          bun run test --project server --coverage --reporter=default
+          --reporter=junit --outputFile.junit=reports/unit.xml
       - name: Keep the vitest reports for pages
         if: github.event_name == 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -650,6 +652,11 @@ jobs:
       - run: bun run build
         working-directory: cmd/hush-hush/web
       - run: bunx playwright install --with-deps chromium
+        working-directory: cmd/hush-hush/web
+      # Svelte components rendered in the Chromium just installed: what a
+      # page shows and does, in milliseconds, so the journey below needn't.
+      - name: component tests
+        run: bun run test --project component
         working-directory: cmd/hush-hush/web
       - run: bun run test:e2e
         working-directory: cmd/hush-hush/web

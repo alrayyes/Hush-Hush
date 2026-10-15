@@ -1,6 +1,7 @@
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
+import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -38,6 +39,23 @@ export default defineConfig({
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				},
+			},
+			{
+				// A component is rendered in a real Chromium, the one the e2e job
+				// already installs, so layout, focus and runes behave as they do in
+				// the app (alrayyes/hush-hush#987).
+				extends: './vite.config.ts',
+				test: {
+					name: 'component',
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+					setupFiles: ['vitest-browser-svelte'],
+					browser: {
+						enabled: true,
+						headless: true,
+						provider: playwright(),
+						instances: [{ browser: 'chromium' }],
+					},
 				},
 			},
 		],
