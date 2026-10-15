@@ -1914,25 +1914,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		},
 	});
 
-	// alrayyes/hush-hush#536: whether a token is active, and which buttons it
-	// gets, is the server's answer, not the browser clock's. A browser whose
-	// clock runs a year ahead must still see this live token as active, with
-	// Rotate and Revoke and no Delete permanently. Opened as a second page in
-	// the same context so it shares the session and the first page keeps real
-	// time.
-	const skewedPage = await context.newPage();
-	await skewedPage.clock.setFixedTime(
-		new Date(Date.now() + 400 * 24 * 60 * 60 * 1000),
-	);
-	await skewedPage.goto('/settings');
-	const skewedRow = skewedPage.getByRole('row', { name: /ci-runner/ });
-	await expect(skewedRow.getByRole('cell').nth(5)).toHaveText('Active');
-	await expect(skewedRow.getByRole('button', { name: 'Rotate' })).toBeVisible();
-	await expect(
-		skewedRow.getByRole('button', { name: 'Delete permanently' }),
-	).toHaveCount(0);
-	await skewedPage.close();
-
+	// That a token's status and buttons are the server's answer, not the browser
+	// clock's (#536), is settings.svelte.spec.ts's, for both token tables.
 	// alrayyes/hush-hush#484: below md each token is a card with a
 	// time-left badge and Rotate / Revoke as separate 44px targets. The
 	// consumer token above was created with a 30-day TTL.
@@ -2084,72 +2067,54 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	await expect(consumerTokenRow).toHaveCount(0);
 
-	// The bearer-token side of the same gating, exercising the "Expired"
-	// path specifically (unrevoked, past its own expiry) - the case the
-	// old two-state `revoked ? 'Revoked' : 'Active'` Status column got
-	// wrong (design.md's own "latent bug" note). The create dialog's own
-	// TTL field is day-granularity (tokenTTLDays), so a 1-second-TTL
-	// token is seeded directly through the API instead, the same way
-	// this test already seeds a consumer's public key above.
-	await page.request.post('/tokens', {
+	// The bearer-token side of the same gating, with a token that is dead. A
+	// revoked one is made and revoked through the API, so there is nothing to
+	// wait for; how a dead token reads and which buttons it gets, expired or
+	// revoked, is settings.svelte.spec.ts's. What is left here is that the two
+	// layouts agree, that the card's delete is a 44px target, and that the
+	// delete really removes the row.
+	const created = await page.request.post('/tokens', {
 		headers: { 'X-CSRF-Token': csrfToken },
-		data: { description: 'short-lived token', ttl_seconds: 1 },
+		data: { description: 'revoked token', ttl_seconds: 3600 },
 	});
-	const shortLivedRow = page.getByRole('row', { name: /short-lived token/ });
-	await expect(async () => {
-		await page.reload();
-		await page.getByRole('heading', { name: 'Settings' }).waitFor();
-		await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired', {
-			timeout: 500,
-		});
-	}).toPass({ intervals: [250], timeout: 10_000 });
+	const { id: revokedTokenId } = await created.json();
+	await page.request.delete(`/tokens/${revokedTokenId}`, {
+		headers: { 'X-CSRF-Token': csrfToken },
+	});
+	await page.reload();
+	await page.getByRole('heading', { name: 'Settings' }).waitFor();
+
+	const deadRow = page.getByRole('row', { name: /revoked token/ });
 	await expectListParity(page, {
 		path: '/settings',
 		list: 'Bearer token list',
 		ids: [],
 		facts: {
-			description: { pattern: /short-lived token/ },
-			status: { pattern: /Expired/ },
+			description: { pattern: /revoked token/ },
+			status: { pattern: /Revoked/ },
 			'created and expires': { pattern: TIMESTAMP, times: 2 },
 			'last used': { pattern: /never/ },
 		},
 	});
 
-	// #484: an expired token's card says so, and offers only the permanent
-	// delete, not Rotate or Revoke.
+	// #484: below md the dead token's delete is a 44px target.
 	await page.setViewportSize({ width: 390, height: 844 });
-	const shortLivedCard = page
+	const deadCard = page
 		.getByRole('list', { name: 'Bearer token list' })
 		.getByRole('listitem')
-		.filter({ hasText: 'short-lived token' });
-	await expect(shortLivedCard.getByTestId('ttl-badge')).toHaveText('expired');
-	await expect(shortLivedCard).toContainText('Expired');
-	await expect(
-		shortLivedCard.getByRole('button', { name: 'Rotate' }),
-	).toHaveCount(0);
-	await expect(
-		shortLivedCard.getByRole('button', { name: 'Revoke' }),
-	).toHaveCount(0);
-	const purgeBox = await shortLivedCard
+		.filter({ hasText: 'revoked token' });
+	const purgeBox = await deadCard
 		.getByRole('button', { name: 'Delete permanently' })
 		.boundingBox();
 	expect(purgeBox?.width).toBeGreaterThanOrEqual(44);
 	expect(purgeBox?.height).toBeGreaterThanOrEqual(44);
 	await page.setViewportSize({ width: 1280, height: 720 });
-	await expect(
-		shortLivedRow.getByRole('button', { name: 'Rotate' }),
-	).toHaveCount(0);
-	await expect(
-		shortLivedRow.getByRole('button', { name: 'Revoke' }),
-	).toHaveCount(0);
-	await shortLivedRow
-		.getByRole('button', { name: 'Delete permanently' })
-		.click();
+	await deadRow.getByRole('button', { name: 'Delete permanently' }).click();
 	await page
 		.getByRole('alertdialog', { name: 'Delete this token permanently?' })
 		.getByRole('button', { name: 'Delete permanently' })
 		.click();
-	await expect(shortLivedRow).toHaveCount(0);
+	await expect(deadRow).toHaveCount(0);
 
 	await page.setViewportSize({ width: 320, height: 720 });
 

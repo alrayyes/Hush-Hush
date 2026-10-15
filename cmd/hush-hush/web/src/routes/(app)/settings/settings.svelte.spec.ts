@@ -1,0 +1,236 @@
+import { beforeEach, expect, test, vi } from 'vitest';
+import { render } from 'vitest-browser-svelte';
+import type { ConsumerTokenMetadata, TokenMetadata } from '#lib/api.js';
+import Settings from './+page.svelte';
+
+// The page reads the address through $app/state, refreshes through
+// $app/navigation and writes through #lib/api.js. All three are stood in for,
+// so a test hands the page the tokens the server would send and sees what it
+// shows and calls.
+const stub = vi.hoisted(() => ({
+	purgeToken: vi.fn(),
+	invalidate: vi.fn(),
+}));
+
+vi.mock('$app/navigation', () => ({
+	goto: vi.fn(),
+	invalidate: stub.invalidate,
+}));
+vi.mock('$app/state', () => ({
+	page: { url: new URL('http://localhost/settings') },
+}));
+vi.mock('#lib/api.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/api.js')>()),
+	purgeToken: stub.purgeToken,
+}));
+
+const token = (overrides: Partial<TokenMetadata>): TokenMetadata => ({
+	id: 'id',
+	description: 'a token',
+	owner: 'cli',
+	created_at: '2026-01-01T00:00:00Z',
+	expires_at: '2099-01-01T00:00:00Z',
+	revoked: false,
+	...overrides,
+});
+
+// An expiry long past by the browser's clock, on a token the server calls
+// active: what a browser whose clock runs ahead sees (#536).
+const live = token({
+	id: 'live',
+	description: 'live token',
+	expires_at: '2020-01-01T00:00:00Z',
+	status: 'active',
+	allowed_actions: ['rotate', 'revoke'],
+});
+const expired = token({
+	id: 'expired',
+	description: 'expired token',
+	status: 'expired',
+	allowed_actions: ['purge'],
+});
+const revoked = token({
+	id: 'revoked',
+	description: 'revoked token',
+	revoked: true,
+	status: 'revoked',
+	allowed_actions: ['purge'],
+});
+
+const consumerToken = (
+	overrides: Partial<ConsumerTokenMetadata>,
+): ConsumerTokenMetadata => ({
+	id: '0123456789abcdef',
+	consumer: 'deploy-bot',
+	description: 'a read token',
+	created_at: '2026-01-01T00:00:00Z',
+	expires_at: '2099-01-01T00:00:00Z',
+	revoked: false,
+	...overrides,
+});
+const liveConsumerToken = consumerToken({
+	id: 'aaaaaaaaaaaaaaaa',
+	description: 'live read token',
+	expires_at: '2020-01-01T00:00:00Z',
+	status: 'active',
+	allowed_actions: ['rotate', 'revoke'],
+});
+const deadConsumerToken = consumerToken({
+	id: 'bbbbbbbbbbbbbbbb',
+	description: 'dead read token',
+	status: 'expired',
+	allowed_actions: ['purge'],
+});
+
+const data = {
+	// The layout's own fields, which the page's data type includes.
+	environment: 'test',
+	version: 'v1.2.3',
+	healthy: true,
+	authenticated: true,
+	credentials: [],
+	tokens: [live, expired, revoked],
+	consumerTokens: [liveConsumerToken, deadConsumerToken],
+};
+
+beforeEach(() => {
+	stub.purgeToken.mockReset();
+	stub.invalidate.mockReset();
+});
+
+const row = (screen: Awaited<ReturnType<typeof render>>, name: RegExp) =>
+	screen.getByRole('row', { name });
+
+test('a token the server calls active shows Active, Rotate and Revoke, whatever the browser clock says', async () => {
+	const screen = await render(Settings, { data });
+	const live = row(screen, /live token/);
+
+	await expect
+		.element(live.getByRole('cell', { name: 'Active' }))
+		.toBeVisible();
+	await expect
+		.element(live.getByRole('button', { name: 'Rotate' }))
+		.toBeVisible();
+	await expect
+		.element(live.getByRole('button', { name: 'Revoke' }))
+		.toBeVisible();
+	await expect
+		.element(live.getByRole('button', { name: 'Delete permanently' }))
+		.not.toBeInTheDocument();
+});
+
+test('an expired token reads Expired and offers only Delete permanently', async () => {
+	const screen = await render(Settings, { data });
+	const expired = row(screen, /expired token/);
+
+	await expect
+		.element(expired.getByRole('cell', { name: 'Expired' }))
+		.toBeVisible();
+	await expect
+		.element(expired.getByRole('button', { name: 'Delete permanently' }))
+		.toBeVisible();
+	await expect
+		.element(expired.getByRole('button', { name: 'Rotate' }))
+		.not.toBeInTheDocument();
+	await expect
+		.element(expired.getByRole('button', { name: 'Revoke' }))
+		.not.toBeInTheDocument();
+});
+
+test('a revoked token reads Revoked and offers only Delete permanently', async () => {
+	const screen = await render(Settings, { data });
+	const revoked = row(screen, /revoked token/);
+
+	await expect
+		.element(revoked.getByRole('cell', { name: 'Revoked' }))
+		.toBeVisible();
+	await expect
+		.element(revoked.getByRole('button', { name: 'Delete permanently' }))
+		.toBeVisible();
+	await expect
+		.element(revoked.getByRole('button', { name: 'Rotate' }))
+		.not.toBeInTheDocument();
+});
+
+test('Delete permanently asks first, then purges that token and reloads the page data', async () => {
+	stub.purgeToken.mockResolvedValue(undefined);
+	const screen = await render(Settings, { data });
+
+	await row(screen, /expired token/)
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+	expect(stub.purgeToken).not.toHaveBeenCalled();
+	await screen
+		.getByRole('alertdialog', { name: 'Delete this token permanently?' })
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+
+	await vi.waitFor(() =>
+		expect(stub.purgeToken).toHaveBeenCalledWith('expired'),
+	);
+	await vi.waitFor(() =>
+		expect(stub.invalidate).toHaveBeenCalledWith('app:settings'),
+	);
+});
+
+test('a purge the server refuses is shown in the dialog and keeps it open', async () => {
+	const { ApiError } = await import('#lib/api.js');
+	stub.purgeToken.mockRejectedValue(
+		new ApiError(
+			409,
+			'token must be revoked or expired before it can be purged',
+		),
+	);
+	const screen = await render(Settings, { data });
+
+	await row(screen, /expired token/)
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+	const dialog = screen.getByRole('alertdialog', {
+		name: 'Delete this token permanently?',
+	});
+	await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+
+	const alert = dialog.getByRole('alert');
+	await expect
+		.poll(() => alert.element().textContent)
+		.toContain('must be revoked or expired');
+	expect(stub.invalidate).not.toHaveBeenCalled();
+});
+
+// The consumer token table is a second copy of the same markup (#536).
+test('a consumer token the server calls active shows Active, Rotate and Revoke, whatever the browser clock says', async () => {
+	const screen = await render(Settings, { data });
+	const live = row(screen, /live read token/);
+
+	await expect
+		.element(live.getByRole('cell', { name: 'Active' }))
+		.toBeVisible();
+	await expect
+		.element(live.getByRole('button', { name: 'Rotate' }))
+		.toBeVisible();
+	await expect
+		.element(live.getByRole('button', { name: 'Revoke' }))
+		.toBeVisible();
+	await expect
+		.element(live.getByRole('button', { name: 'Delete permanently' }))
+		.not.toBeInTheDocument();
+});
+
+test('an expired consumer token reads Expired and offers only Delete permanently', async () => {
+	const screen = await render(Settings, { data });
+	const dead = row(screen, /dead read token/);
+
+	await expect
+		.element(dead.getByRole('cell', { name: 'Expired' }))
+		.toBeVisible();
+	await expect
+		.element(dead.getByRole('button', { name: 'Delete permanently' }))
+		.toBeVisible();
+	await expect
+		.element(dead.getByRole('button', { name: 'Rotate' }))
+		.not.toBeInTheDocument();
+	await expect
+		.element(dead.getByRole('button', { name: 'Revoke' }))
+		.not.toBeInTheDocument();
+});
