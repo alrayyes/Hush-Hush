@@ -211,3 +211,21 @@ func TestAuthIdentityRejectsAnInvalidBearerToken(t *testing.T) {
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func TestMCPOwnerIdentityReportsTheEscrowedPublicKey(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	registerCredential(t, mux, nil, "first")
+
+	userID, err := s.CurrentUserID(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, s.SetUserEscrow(context.Background(), userID, "age1ownerkey", "recovery-wrapped"))
+
+	result := callTool(t, mux, issueToken(t, s), "owner_identity", map[string]any{})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	var identity hushhush.OwnerIdentity
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &identity))
+	require.Equal(t, "age1ownerkey", identity.PublicKey)
+}

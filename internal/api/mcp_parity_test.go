@@ -36,6 +36,7 @@ var mcpOperationTool = map[string]string{
 	"deleteConsumer":             "delete_consumer",
 	"queryAuditLog":              "audit_log",
 	"queryAuditLogFilterOptions": "audit_log_filter_options",
+	"getOwnerIdentity":           "owner_identity",
 }
 
 var mcpExcludedOperations = map[string]string{
@@ -51,7 +52,6 @@ var mcpExcludedOperations = map[string]string{
 
 var mcpPendingOperations = map[string]string{
 	"getAuthStatus":       "#970",
-	"getOwnerIdentity":    "#970",
 	"listCredentials":     "#970",
 	"renameCredential":    "#970",
 	"deleteCredential":    "#970",
