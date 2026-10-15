@@ -350,6 +350,7 @@ test('a card shows the status the server sent, and a consumer token its id', asy
 		.filter({ hasText: /dead read token/ });
 
 	await expect.poll(() => bearer.element().textContent).toContain('Expired');
+	await expect.poll(() => consumer.element().textContent).toContain('Expired');
 	await expect
 		.element(consumer.getByTestId('token-id'))
 		.toHaveTextContent('bbbbbbbbbbbbbbbb');
