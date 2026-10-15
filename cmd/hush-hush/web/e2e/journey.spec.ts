@@ -2788,16 +2788,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	// Narrowing the list sends the reader back to page 1.
 	await page.goto('/?page=2');
-	// Loading ?page=2 keeps page 2: the reset only follows a change.
+	// That loading ?page=2 keeps page 2, and that each narrowing asks to go back
+	// to page 1, is overview.svelte.spec.ts's. What this proves is that the
+	// address really changes.
 	await expect(secretsPager).toContainText('Showing 21');
-	// Two frames: a reset that fires after load would have run by now.
-	await page.evaluate(
-		() =>
-			new Promise<void>((resolve) =>
-				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-			),
-	);
-	await expect(page).toHaveURL(/[?&]page=2(&|$)/);
 	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('paging_');
 	await expect(page).not.toHaveURL(/page=/);
 	await expect(page.getByRole('row')).toHaveCount(20 + 1);
