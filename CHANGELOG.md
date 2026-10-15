@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.36.0](https://github.com/alrayyes/hush-hush/compare/v3.35.2...v3.36.0) (2026-10-15)
+
+
+### Features
+
+* **mcp:** add audit_log_filter_options ([#978](https://github.com/alrayyes/hush-hush/issues/978)) ([f23622f](https://github.com/alrayyes/hush-hush/commit/f23622f6ad3bef96e2ee9e86f67caedf4464d691))
+* **mcp:** add owner_identity ([#979](https://github.com/alrayyes/hush-hush/issues/979)) ([11e6dca](https://github.com/alrayyes/hush-hush/commit/11e6dcac3ec13d1a3a11b9059ca6e7b433a58c2e))
+
 ## [3.35.2](https://github.com/alrayyes/Hush-Hush/compare/v3.35.1...v3.35.2) (2026-10-14)
 
 
