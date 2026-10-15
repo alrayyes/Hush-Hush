@@ -1075,7 +1075,7 @@ paths:
   /auth/logout:
     post:
       operationId: logout
-      x-mcp-excluded: "Ends a browser session and needs its CSRF token, which a bearer-token MCP call has neither of."
+      x-mcp-excluded: "Ends a browser session and needs its CSRF token, and a bearer-token MCP call has neither."
       summary: End the current session
       description: |
         Invalidates the session presented with the request. State-changing
@@ -1157,7 +1157,7 @@ paths:
   /credentials:
     get:
       operationId: listCredentials
-      x-mcp-excluded: "The owner's passkeys are session-only: a write token that could rename or delete them could lock the owner out."
+      x-mcp-excluded: "Session-only over HTTP, and a tool keeps its route's authorisation: a write token is not a session."
       summary: List registered passkeys
       description: |
         Returns every credential registered to the admin account -
@@ -1293,7 +1293,7 @@ paths:
 
     get:
       operationId: listTokens
-      x-mcp-excluded: "Owner write tokens are session-only: minting or revoking one with a write token is the escalation the design rules out."
+      x-mcp-excluded: "Session-only over HTTP, and a tool keeps its route's authorisation: a write token is not a session."
       summary: List write bearer tokens
       description: |
         Returns every issued token's metadata - never a raw value, which
