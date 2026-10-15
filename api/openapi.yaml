@@ -85,6 +85,7 @@ paths:
   /healthz:
     get:
       operationId: health
+      x-mcp-excluded: "Liveness probe for the orchestrator, not a task an agent does."
       summary: Liveness
       description: |
         Answers 200 unconditionally. There's nothing behind this service to
@@ -104,6 +105,7 @@ paths:
   /readyz:
     get:
       operationId: ready
+      x-mcp-excluded: "Readiness probe for the orchestrator, not a task an agent does."
       summary: Readiness
       description: |
         Answers 200 when the database can serve a request and 503 when it
@@ -885,6 +887,7 @@ paths:
   /mcp:
     post:
       operationId: mcp
+      x-mcp-excluded: "The MCP transport itself."
       summary: MCP (Model Context Protocol) endpoint
       description: |
         Serves the MCP Streamable HTTP transport - JSON-RPC 2.0 messages
@@ -942,6 +945,7 @@ paths:
   /auth/register/begin:
     post:
       operationId: beginRegistration
+      x-mcp-excluded: "Passkey ceremony: it needs the owner's authenticator in a browser."
       summary: Begin passkey registration
       description: |
         Starts a WebAuthn registration ceremony and returns the
@@ -971,6 +975,7 @@ paths:
   /auth/register/finish:
     post:
       operationId: finishRegistration
+      x-mcp-excluded: "Passkey ceremony: it needs the owner's authenticator in a browser."
       summary: Complete passkey registration
       description: |
         Verifies the browser's attestation response and stores the new
@@ -1010,6 +1015,7 @@ paths:
   /auth/login/begin:
     post:
       operationId: beginLogin
+      x-mcp-excluded: "Passkey ceremony: it needs the owner's authenticator in a browser."
       summary: Begin passkey login
       description: |
         Starts a WebAuthn login ceremony and returns the credential-request
@@ -1037,6 +1043,7 @@ paths:
   /auth/login/finish:
     post:
       operationId: finishLogin
+      x-mcp-excluded: "Passkey ceremony: it needs the owner's authenticator in a browser."
       summary: Complete passkey login
       description: |
         Verifies the browser's assertion response against a registered
@@ -1068,6 +1075,7 @@ paths:
   /auth/logout:
     post:
       operationId: logout
+      x-mcp-excluded: "Ends a browser session and needs its CSRF token, which a bearer-token MCP call has neither of."
       summary: End the current session
       description: |
         Invalidates the session presented with the request. State-changing
@@ -1090,6 +1098,7 @@ paths:
   /auth/status:
     get:
       operationId: getAuthStatus
+      x-mcp-excluded: "Tells the sign-in page whether to offer registration; an MCP call is already authenticated and cannot register."
       summary: Report whether an admin account exists and whether the caller has a session
       description: |
         A read-only, side-effect-free check the login page uses to decide
@@ -1148,6 +1157,7 @@ paths:
   /credentials:
     get:
       operationId: listCredentials
+      x-mcp-excluded: "The owner's passkeys are session-only: a write token that could rename or delete them could lock the owner out."
       summary: List registered passkeys
       description: |
         Returns every credential registered to the admin account -
@@ -1179,6 +1189,7 @@ paths:
   /credentials/{id}:
     patch:
       operationId: renameCredential
+      x-mcp-excluded: "The owner's passkeys are session-only: a write token that could rename or delete them could lock the owner out."
       summary: Rename a passkey
       tags: [credentials]
       security:
@@ -1210,6 +1221,7 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteCredential
+      x-mcp-excluded: "The owner's passkeys are session-only: a write token that could rename or delete them could lock the owner out."
       summary: Remove a passkey
       description: |
         Permanently removes a credential. Refused when it's the only one
@@ -1242,6 +1254,7 @@ paths:
   /tokens:
     post:
       operationId: createToken
+      x-mcp-excluded: "Owner write tokens are session-only: minting or revoking one with a write token is the escalation the design rules out."
       summary: Create a write bearer token
       description: |
         Issues a new write-path bearer token, owned by the admin account
@@ -1280,6 +1293,7 @@ paths:
 
     get:
       operationId: listTokens
+      x-mcp-excluded: "Owner write tokens are session-only: minting or revoking one with a write token is the escalation the design rules out."
       summary: List write bearer tokens
       description: |
         Returns every issued token's metadata - never a raw value, which
@@ -1313,6 +1327,7 @@ paths:
   /tokens/{id}:
     delete:
       operationId: revokeToken
+      x-mcp-excluded: "Owner write tokens are session-only: minting or revoking one with a write token is the escalation the design rules out."
       summary: Revoke a write bearer token
       description: |
         Invalidates the token issued under id. Revoking an id that's
@@ -1335,6 +1350,7 @@ paths:
   /tokens/{id}/rotate:
     post:
       operationId: rotateToken
+      x-mcp-excluded: "Owner write tokens are session-only: minting or revoking one with a write token is the escalation the design rules out."
       summary: Rotate a write bearer token
       description: |
         Replaces the secret and expiry of the token issued under id,
@@ -1383,6 +1399,7 @@ paths:
   /tokens/{id}/purge:
     delete:
       operationId: purgeToken
+      x-mcp-excluded: "Owner write tokens are session-only: minting or revoking one with a write token is the escalation the design rules out."
       summary: Permanently delete a dead write bearer token
       description: |
         Permanently removes the token issued under id, once it's already

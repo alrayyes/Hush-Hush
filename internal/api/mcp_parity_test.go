@@ -9,15 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Every operation in api/openapi.yaml is reachable through an MCP tool, or is
-// on a written list with a reason (rules/mcp.md). A new endpoint with no tool
-// fails here, not in a later audit.
+// Every operation in api/openapi.yaml is reachable through an MCP tool, or the
+// spec says why it is not (rules/mcp.md). A new endpoint with no tool fails
+// here, not in a later audit.
 //
-// mcpOperationTool maps an operation to the tool that does it.
-// mcpExcludedOperations are deliberately not agent-reachable.
-// mcpPendingOperations are the gap alrayyes/hush-hush#970 closes one resource
-// at a time: a slice moves its operations into mcpOperationTool, and the
-// last one deletes this list.
+// mcpOperationTool maps an operation to the tool that does it. An operation
+// an agent should not reach carries x-mcp-excluded in the spec, with the
+// reason as its value: the spec is where a reader of the API looks, so the
+// exclusion lives beside the operation instead of in a second list.
 //
 // This checks names, not behaviour: it can't tell that two tools were swapped
 // between their operations. What each tool does is the tool tests' job.
@@ -44,44 +43,29 @@ var mcpOperationTool = map[string]string{
 	"purgeConsumerToken":         "purge_consumer_token",
 }
 
-var mcpExcludedOperations = map[string]string{
-	"health":             "liveness probe for the orchestrator, not a task an agent does",
-	"ready":              "readiness probe for the orchestrator, not a task an agent does",
-	"mcp":                "the MCP transport itself",
-	"beginRegistration":  "passkey ceremony: needs the owner's authenticator in a browser",
-	"finishRegistration": "passkey ceremony: needs the owner's authenticator in a browser",
-	"beginLogin":         "passkey ceremony: needs the owner's authenticator in a browser",
-	"finishLogin":        "passkey ceremony: needs the owner's authenticator in a browser",
-	"logout":             "needs a browser session and its CSRF token, which a bearer-token MCP call has neither of",
-}
-
-var mcpPendingOperations = map[string]string{
-	"getAuthStatus":    "#970",
-	"listCredentials":  "#970",
-	"renameCredential": "#970",
-	"deleteCredential": "#970",
-	"createToken":      "#970",
-	"listTokens":       "#970",
-	"revokeToken":      "#970",
-	"rotateToken":      "#970",
-	"purgeToken":       "#970",
-}
-
-func specOperationIDs(t *testing.T) []string {
+// specOperations is every operation ID in the spec, with the reason it is
+// left out of MCP where the spec gives one.
+func specOperations(t *testing.T) (ids []string, excluded map[string]string) {
 	t.Helper()
 
 	doc, err := openapi3.NewLoader().LoadFromFile("../../api/openapi.yaml")
 	require.NoError(t, err)
 
-	var ids []string
+	excluded = map[string]string{}
 	for _, item := range doc.Paths.Map() {
 		for _, op := range item.Operations() {
 			ids = append(ids, op.OperationID)
+
+			if reason, ok := op.Extensions["x-mcp-excluded"]; ok {
+				text, isText := reason.(string)
+				require.True(t, isText && text != "", "%s: x-mcp-excluded needs a reason", op.OperationID)
+				excluded[op.OperationID] = text
+			}
 		}
 	}
 	sort.Strings(ids)
 
-	return ids
+	return ids, excluded
 }
 
 func listedMCPTools(t *testing.T) []string {
@@ -109,38 +93,53 @@ func listedMCPTools(t *testing.T) []string {
 func TestEveryOperationHasAnMCPToolOrAWrittenReason(t *testing.T) {
 	t.Parallel()
 
+	ids, excluded := specOperations(t)
+
 	var unaccounted []string
-	for _, id := range specOperationIDs(t) {
+	for _, id := range ids {
 		_, mapped := mcpOperationTool[id]
-		_, excluded := mcpExcludedOperations[id]
-		_, pending := mcpPendingOperations[id]
-		if !mapped && !excluded && !pending {
+		_, left := excluded[id]
+		if !mapped && !left {
 			unaccounted = append(unaccounted, id)
 		}
 	}
 
 	require.Empty(t, unaccounted,
-		"add an MCP tool for each (mcpOperationTool) or a reason to leave it out (mcpExcludedOperations)")
+		"add an MCP tool for each (mcpOperationTool) or x-mcp-excluded with a reason in the spec")
 }
 
-func TestNoListedOperationIsNotInTheSpec(t *testing.T) {
+func TestAnOperationIsMappedOrExcludedNotBoth(t *testing.T) {
 	t.Parallel()
 
+	_, excluded := specOperations(t)
+
+	var both []string
+	for id := range excluded {
+		if _, mapped := mcpOperationTool[id]; mapped {
+			both = append(both, id)
+		}
+	}
+
+	require.Empty(t, both, "it has a tool, so drop x-mcp-excluded; or it is excluded, so drop the tool")
+}
+
+func TestNoMappedOperationIsMissingFromTheSpec(t *testing.T) {
+	t.Parallel()
+
+	ids, _ := specOperations(t)
 	inSpec := map[string]bool{}
-	for _, id := range specOperationIDs(t) {
+	for _, id := range ids {
 		inSpec[id] = true
 	}
 
 	var stale []string
-	for _, list := range []map[string]string{mcpOperationTool, mcpExcludedOperations, mcpPendingOperations} {
-		for id := range list {
-			if !inSpec[id] {
-				stale = append(stale, id)
-			}
+	for id := range mcpOperationTool {
+		if !inSpec[id] {
+			stale = append(stale, id)
 		}
 	}
 
-	require.Empty(t, stale, "removed from the spec, so remove from the parity lists")
+	require.Empty(t, stale, "removed from the spec, so remove from mcpOperationTool")
 }
 
 func TestEveryMappedOperationNamesARegisteredTool(t *testing.T) {
@@ -177,27 +176,4 @@ func TestEveryRegisteredToolIsMappedFromAnOperation(t *testing.T) {
 	}
 
 	require.Empty(t, orphans, "a tool that does no listed operation has no place in the parity map")
-}
-
-func TestAnOperationIsOnExactlyOneList(t *testing.T) {
-	t.Parallel()
-
-	var onSeveral []string
-	for _, id := range specOperationIDs(t) {
-		_, mapped := mcpOperationTool[id]
-		_, excluded := mcpExcludedOperations[id]
-		_, pending := mcpPendingOperations[id]
-
-		count := 0
-		for _, on := range []bool{mapped, excluded, pending} {
-			if on {
-				count++
-			}
-		}
-		if count > 1 {
-			onSeveral = append(onSeveral, id)
-		}
-	}
-
-	require.Empty(t, onSeveral, "drop it from mcpPendingOperations once it has a tool or a reason; an operation is mapped or excluded, not both")
 }
