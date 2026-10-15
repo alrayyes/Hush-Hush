@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { resolveTheme, THEME_COLORS, themeColor } from './theme';
+import { applyTheme, resolveTheme, THEME_COLORS, themeColor } from './theme';
 
 describe('resolveTheme', () => {
 	it('uses a stored light preference over the OS setting', () => {
@@ -67,5 +68,86 @@ describe('THEME_COLORS', () => {
 
 		expect(html).toContain(`light: '${THEME_COLORS.light}'`);
 		expect(html).toContain(`dark: '${THEME_COLORS.dark}'`);
+	});
+});
+
+// What the page does with a theme, against a stand-in document: the meta tag
+// is the only thing the browser reads, so recording its content is enough.
+function fakeDocument() {
+	const meta = { content: '' };
+	const root = { theme: '' };
+	return {
+		meta,
+		root,
+		document: {
+			documentElement: {
+				setAttribute: (_name: string, value: string) => {
+					root.theme = value;
+				},
+			},
+			querySelector: () => ({
+				setAttribute: (_name: string, value: string) => {
+					meta.content = value;
+				},
+			}),
+		},
+	};
+}
+
+describe('applyTheme', () => {
+	it.each(['light', 'dark'] as const)(
+		'sets data-theme and the theme-color meta to %s',
+		(theme) => {
+			const page = fakeDocument();
+			const original = globalThis.document;
+			globalThis.document = page.document as unknown as Document;
+			try {
+				applyTheme(theme);
+			} finally {
+				globalThis.document = original;
+			}
+
+			expect(page.root.theme).toBe(theme);
+			expect(page.meta.content).toBe(THEME_COLORS[theme]);
+		},
+	);
+});
+
+describe("app.html's inline theme script", () => {
+	// The script runs before first paint, so it can't import theme.ts; run
+	// the real text from the file against a stand-in browser instead.
+	const script = /<script>([\s\S]*?)<\/script>/
+		.exec(read('src/app.html'))?.[1]
+		.replace(/%sveltekit\.head%/g, '');
+
+	function load(stored: string | null, prefersDark: boolean) {
+		const page = fakeDocument();
+		runInNewContext(script ?? '', {
+			document: page.document,
+			localStorage: { getItem: () => stored },
+			window: { matchMedia: () => ({ matches: prefersDark }) },
+		});
+		return page;
+	}
+
+	it('follows the OS scheme when nothing is stored', () => {
+		const page = load(null, true);
+
+		expect(page.root.theme).toBe('dark');
+		expect(page.meta.content).toBe(THEME_COLORS.dark);
+	});
+
+	it('lets a stored choice win over the OS scheme', () => {
+		const page = load('dark', false);
+
+		expect(page.root.theme).toBe('dark');
+		expect(page.meta.content).toBe(THEME_COLORS.dark);
+	});
+
+	it('shows light when nothing is stored and the OS does not ask for dark', () => {
+		const page = load(null, false);
+
+		expect(page.root.theme).toBe('light');
+		expect(page.meta.content).toBe(THEME_COLORS.light);
 	});
 });
