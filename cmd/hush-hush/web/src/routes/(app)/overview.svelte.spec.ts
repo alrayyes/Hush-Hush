@@ -52,13 +52,28 @@ beforeEach(() => {
 test('loading page 2 keeps page 2', async () => {
 	router.url = new URL('http://localhost/?page=2');
 
+	// Time is the test's: a reset deferred by a timer or a frame after the page
+	// mounts would otherwise land after the assertion and pass it.
+	vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame'] });
+	try {
+		await render(Overview, { data });
+		await vi.advanceTimersByTimeAsync(1000);
+
+		expect(router.goto).not.toHaveBeenCalled();
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+test('loading page 2 shows the second page', async () => {
+	router.url = new URL('http://localhost/?page=2');
+
 	const screen = await render(Overview, { data });
 
 	const pager = screen.getByRole('navigation', { name: 'Secrets pages' });
 	await expect
 		.poll(() => pager.element().textContent)
 		.toMatch(/Showing 21–21 of 21/);
-	expect(router.goto).not.toHaveBeenCalled();
 });
 
 test('searching from page 2 goes back to page 1, replacing the history entry', async () => {
