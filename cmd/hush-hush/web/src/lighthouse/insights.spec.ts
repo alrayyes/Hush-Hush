@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { INSIGHTS, missedInsights } from './lighthouse-insights';
+import { expect, test } from 'vitest';
+import { INSIGHTS, missedInsights } from '../../e2e/lighthouse-insights';
 
 // The four audits #721 is about. Lighthouse 13 renamed them from
 // uses-long-cache-ttl and friends, so an assertion on an old ID passes

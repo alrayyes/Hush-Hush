@@ -102,7 +102,7 @@ as the Playwright journey above) against every page of the app: the
 login, changelog, disclaimer, privacy and licence pages, then, signed in
 and with a few secrets, consumers and tokens seeded, the secrets overview,
 a secret's detail page, consumers, the audit log and settings. A test
-(`e2e/lighthouse-pages.spec.ts`) fails when a route has no audit. It
+(`src/lighthouse/pages.spec.ts`) fails when a route has no audit. It
 checks only the `performance` and `best-practices` categories
 
 - SEO and PWA are skipped outright, not meaningful for a self-hosted
