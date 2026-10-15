@@ -76,18 +76,13 @@ test('a release card copies its image tag and links its release page', async ({
 	).toBeVisible();
 });
 
-test('the changelog has no horizontal scroll at 320px and no a11y violations', async ({
-	page,
-}) => {
+// The 320px no-scroll check for /changelog is viewport.spec.ts's. What is
+// left here is axe at the narrowest width, which viewport.spec.ts scans only
+// at the default one.
+test('the changelog has no a11y violations at 320px', async ({ page }) => {
 	await page.setViewportSize({ width: 320, height: 720 });
 	await page.goto('/changelog');
 	await expect(page.getByRole('article').first()).toBeVisible();
-
-	const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-		scrollWidth: document.documentElement.scrollWidth,
-		clientWidth: document.documentElement.clientWidth,
-	}));
-	expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
 	const results = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
