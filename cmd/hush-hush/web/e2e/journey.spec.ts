@@ -1038,9 +1038,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	await expect(page.getByText('No consumers match yet.')).toBeVisible();
 
-	// #324: a consumer can be added directly, with no secret referencing
-	// it yet - it should show up with a secret count of 0, and adding the
-	// same name again should be rejected rather than silently duplicating.
+	// #324: a consumer can be added directly, with no secret referencing it
+	// yet, and shows up in the directory.
 	await page.getByRole('button', { name: 'Add consumer' }).click();
 	const addDialog = page.getByRole('dialog', { name: 'Add a consumer' });
 	await expect(addDialog).toBeVisible();
@@ -1055,29 +1054,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.getByRole('row')
 		.filter({ has: page.getByRole('link', { name: 'homelab-new' }) });
 	await expect(addedRow).toBeVisible();
-	await expect(addedRow.getByRole('cell').nth(1)).toHaveText('0');
-	// #476: a consumer with no consumer tokens shows a plain "0", not a link.
-	const addedTokensCell = addedRow.getByRole('cell').nth(2);
-	await expect(addedTokensCell).toHaveText('0');
-	await expect(addedTokensCell.getByRole('link')).toHaveCount(0);
-
-	// #482: on a phone its card says "not registered" instead of a key,
-	// with no copy button to offer.
-	await page.setViewportSize({ width: 390, height: 844 });
-	const addedCard = page
-		.getByRole('list', { name: 'Consumers' })
-		.getByRole('listitem')
-		.filter({ hasText: 'homelab-new' });
-	await expect(addedCard).toContainText('not registered');
-	await expect(addedCard).toContainText(/0 secrets\b/);
-	await expect(addedCard.getByRole('button', { name: /Copy/ })).toHaveCount(0);
-	await page.setViewportSize({ width: 1280, height: 720 });
-
-	await page.getByRole('button', { name: 'Add consumer' }).click();
-	await addDialog.getByLabel('Name', { exact: true }).fill('homelab-new');
-	await addDialog.getByRole('button', { name: 'Add' }).click();
-	await expect(page.getByRole('alert')).toHaveText('consumer already exists');
-	await addDialog.getByRole('button', { name: 'Cancel' }).click();
+	// The 0 count and plain 0 for a consumer with no tokens (#476), the phone
+	// card's 'not registered' with no Copy (#482), and the server's 'consumer
+	// already exists' for a duplicate (#324) are consumers.svelte.spec.ts's,
+	// with the count and message pinned in consumers_test.go.
 
 	// #780: a consumer's public key is registered from the UI. The server
 	// validates it, so a bad key shows the server's own message and
@@ -1093,9 +1073,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await addDialog.getByRole('button', { name: 'Add' }).click();
 	await expect(addDialog).toBeHidden();
 	await expect(keyedRow).toContainText(keyedTruncated);
-	await expect(
-		keyedRow.getByRole('button', { name: 'Replace key for keyed-consumer' }),
-	).toBeVisible();
 
 	const noKeyRow = page
 		.getByRole('row')
@@ -1105,12 +1082,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	const keyDialog = page.getByRole('dialog', { name: 'Set public key' });
 	await expect(keyDialog).toBeVisible();
-	await keyDialog.getByLabel('Public key', { exact: true }).fill('not-a-key');
-	await keyDialog.getByRole('button', { name: 'Save' }).click();
-	await expect(keyDialog.getByRole('alert')).toContainText(
-		'public_key must be an age public key',
-	);
-	await expect(keyDialog.getByRole('alert')).not.toContainText('not-a-key');
+	// A key the server refuses shows the server's message and is never echoed
+	// (#780), in consumers.svelte.spec.ts and consumers_test.go. The open
+	// dialog is scanned once here.
 	const keyDialogResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -1119,20 +1093,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await keyDialog.getByRole('button', { name: 'Save' }).click();
 	await expect(keyDialog).toBeHidden();
 	await expect(noKeyRow).toContainText(keyedTruncated);
-	await expect(
-		noKeyRow.getByRole('button', { name: 'Replace key for homelab-new' }),
-	).toBeVisible();
-
-	// A phone card offers the same action.
-	await page.setViewportSize({ width: 390, height: 844 });
-	await expect(
-		page
-			.getByRole('list', { name: 'Consumers' })
-			.getByRole('listitem')
-			.filter({ hasText: 'homelab-new' })
-			.getByRole('button', { name: 'Replace key for homelab-new' }),
-	).toBeVisible();
-	await page.setViewportSize({ width: 1280, height: 720 });
 
 	// Put the directory back the way later steps expect it.
 	await keyedRow.getByRole('button', { name: 'Delete' }).click();

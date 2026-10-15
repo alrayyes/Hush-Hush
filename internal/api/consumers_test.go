@@ -416,6 +416,12 @@ func TestAddConsumerDuplicateNameReturnsConflict(t *testing.T) {
 	mux.ServeHTTP(rec, addConsumerRequest(t, "homelab/mattermost", issueToken(t, s)))
 
 	require.Equal(t, http.StatusConflict, rec.Code)
+
+	// The page shows this text as it is (frontend.md: the server's own
+	// message), so it is part of the contract.
+	var body hushhush.Error
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "consumer already exists", body.Error)
 }
 
 func TestAddConsumerWithoutNameIsRejected(t *testing.T) {
@@ -641,6 +647,8 @@ func TestUpdateConsumerRejectsAPublicKeyThatIsNotAnAgeRecipient(t *testing.T) {
 
 			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 			require.NotContains(t, rec.Body.String(), key)
+			// The dialog shows this text as it is, so it is part of the contract.
+			require.Contains(t, rec.Body.String(), "public_key must be an age public key")
 
 			page, err := s.ListConsumersPage(t.Context(), store.ConsumerFilter{Page: 1, PageSize: 10})
 			require.NoError(t, err)
