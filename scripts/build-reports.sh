@@ -13,7 +13,8 @@
 #   GO_REPORTS          junit.xml, coverage.html, coverage.xml, coverage.out
 #   WEB_REPORTS         reports/unit.xml and coverage/ (vitest, with
 #                       cobertura-coverage.xml)
-#   E2E_REPORTS         e2e.xml
+#   E2E_REPORTS         e2e.xml and component.xml (the e2e job runs both the
+#                       Playwright journeys and the vitest component project)
 #   LIGHTHOUSE_REPORTS  <page>.report.html and <page>.report.json (optional)
 #
 # GitHub Pages cannot list a directory, so every report directory gets an
@@ -46,10 +47,12 @@ HTML
 # Tests: one JUnit file per runner, named for it.
 cp "$go_dir/junit.xml" "$reports/tests/junit.xml"
 cp "$web_dir/reports/unit.xml" "$reports/tests/web-unit.xml"
+cp "$e2e_dir/component.xml" "$reports/tests/web-component.xml"
 cp "$e2e_dir/e2e.xml" "$reports/tests/e2e.xml"
 page "Test results" '<ul>
 <li><a href="junit.xml">junit.xml</a> (Go tests)</li>
 <li><a href="web-unit.xml">web-unit.xml</a> (web unit tests)</li>
+<li><a href="web-component.xml">web-component.xml</a> (web component tests, in Chromium)</li>
 <li><a href="e2e.xml">e2e.xml</a> (Playwright journeys)</li>
 </ul>
 <p><a href="../">All reports</a></p>' >"$reports/tests/index.html"
