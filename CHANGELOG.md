@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.38.0](https://github.com/alrayyes/hush-hush/compare/v3.37.0...v3.38.0) (2026-10-15)
+
+
+### Features
+
+* **api:** record in the spec which operations MCP leaves out ([#984](https://github.com/alrayyes/hush-hush/issues/984)) ([672e6ab](https://github.com/alrayyes/hush-hush/commit/672e6abcad9b9ef73c63371065eb2b4832a29d0f))
+
 ## [3.37.0](https://github.com/alrayyes/hush-hush/compare/v3.36.0...v3.37.0) (2026-10-15)
 
 
