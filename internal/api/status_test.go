@@ -229,3 +229,17 @@ func TestMCPOwnerIdentityReportsTheEscrowedPublicKey(t *testing.T) {
 	require.NoError(t, json.Unmarshal(result.StructuredContent, &identity))
 	require.Equal(t, "age1ownerkey", identity.PublicKey)
 }
+
+func TestMCPOwnerIdentityBeforeEscrowIsAnEmptyKeyNotAnError(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	registerCredential(t, mux, nil, "first")
+
+	result := callTool(t, mux, issueToken(t, s), "owner_identity", map[string]any{})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	var identity hushhush.OwnerIdentity
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &identity))
+	require.Empty(t, identity.PublicKey)
+}

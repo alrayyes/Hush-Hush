@@ -20,7 +20,8 @@ type mcpOwnerIdentityInput struct{}
 
 // mcpOwnerIdentity is the "owner_identity" tool's handler - the same lookup
 // handleAuthIdentity (status.go) performs over HTTP. The route takes a write
-// token or a session, as does /mcp, so no access is widened.
+// token or a session, as does /mcp, so no access is widened; a session also
+// needs its CSRF token here, which the read-only route does not ask for.
 func mcpOwnerIdentity(s objectStore) mcp.ToolHandlerFor[mcpOwnerIdentityInput, OwnerIdentity] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ mcpOwnerIdentityInput) (*mcp.CallToolResult, OwnerIdentity, error) {
 		publicKey, err := s.CurrentUserPublicKey(ctx)
