@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { ApiError } from '#lib/api.js';
-import { truncateKey } from '#lib/consumers.js';
+import { tokensHref, truncateKey } from '#lib/consumers.js';
 import Consumers from './+page.svelte';
 
 // The page refreshes through $app/navigation and writes through #lib/api.js.
@@ -62,7 +62,16 @@ test('a consumer with no tokens shows a plain 0, and one with tokens links to th
 	expect(none.getByRole('link').query()).toBeNull();
 	await expect
 		.element(row(screen, 'keyed-consumer').getByRole('link', { name: '2' }))
-		.toHaveAttribute('href', expect.stringContaining('keyed-consumer'));
+		.toHaveAttribute('href', tokensHref('keyed-consumer'));
+});
+
+test('each row shows how many secrets name the consumer', async () => {
+	const screen = await render(Consumers, { data });
+
+	const none = row(screen, 'homelab-new').getByRole('cell').nth(1);
+	const some = row(screen, 'keyed-consumer').getByRole('cell').nth(1);
+	await expect.poll(() => none.element().textContent?.trim()).toBe('0');
+	await expect.poll(() => some.element().textContent?.trim()).toBe('2');
 });
 
 // #780: a key is truncated with Replace and Copy; none reads not registered.
@@ -110,17 +119,35 @@ test('a phone card says not registered and offers no Copy for a consumer without
 		.toContain('not registered');
 	await expect.poll(() => without.element().textContent).toMatch(/0 secrets\b/);
 	expect(without.getByRole('button', { name: /^Copy/ }).query()).toBeNull();
+	const setKey = without.getByRole('button', {
+		name: 'Set key for homelab-new',
+	});
+	await expect.poll(() => setKey.element().textContent?.trim()).toBe('Set key');
+});
+
+test("a phone card links to the consumer's tokens, and says 0 plainly without any", async () => {
+	const screen = await render(Consumers, { data });
+
+	await expect
+		.element(
+			card(screen, 'keyed-consumer').getByRole('link', { name: '2 tokens' }),
+		)
+		.toHaveAttribute('href', tokensHref('keyed-consumer'));
+	const none = card(screen, 'homelab-new');
+	await expect.poll(() => none.element().textContent).toContain('0 tokens');
+	expect(none.getByRole('link', { name: /tokens/ }).query()).toBeNull();
 });
 
 test('a phone card offers Replace key and Copy for a consumer with a key', async () => {
 	const screen = await render(Consumers, { data });
 	const keyed = card(screen, 'keyed-consumer');
 
+	const replaceKey = keyed.getByRole('button', {
+		name: 'Replace key for keyed-consumer',
+	});
 	await expect
-		.element(
-			keyed.getByRole('button', { name: 'Replace key for keyed-consumer' }),
-		)
-		.toBeVisible();
+		.poll(() => replaceKey.element().textContent?.trim())
+		.toBe('Replace key');
 	await expect
 		.element(
 			keyed.getByRole('button', { name: 'Copy public key keyed-consumer' }),
@@ -187,4 +214,16 @@ test('a valid key is saved for that consumer, and the page data reloads', async 
 	await vi.waitFor(() =>
 		expect(stub.invalidate).toHaveBeenCalledWith('app:consumers'),
 	);
+});
+
+test('a consumer with a key opens a Replace dialog, one without opens a Set dialog', async () => {
+	const screen = await render(Consumers, { data });
+
+	await row(screen, 'keyed-consumer')
+		.getByRole('button', { name: 'Replace key for keyed-consumer' })
+		.click();
+
+	await expect
+		.element(screen.getByRole('dialog', { name: 'Replace public key' }))
+		.toBeVisible();
 });

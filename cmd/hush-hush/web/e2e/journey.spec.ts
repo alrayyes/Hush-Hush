@@ -1038,9 +1038,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.click();
 	await expect(page.getByText('No consumers match yet.')).toBeVisible();
 
-	// #324: a consumer can be added directly, with no secret referencing
-	// it yet - it should show up with a secret count of 0, and adding the
-	// same name again should be rejected rather than silently duplicating.
+	// #324: a consumer can be added directly, with no secret referencing it
+	// yet, and shows up in the directory.
 	await page.getByRole('button', { name: 'Add consumer' }).click();
 	const addDialog = page.getByRole('dialog', { name: 'Add a consumer' });
 	await expect(addDialog).toBeVisible();
