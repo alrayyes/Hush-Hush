@@ -9,6 +9,11 @@ import Settings from './+page.svelte';
 // shows and calls.
 const stub = vi.hoisted(() => ({
 	purgeToken: vi.fn(),
+	purgeConsumerToken: vi.fn(),
+	revokeToken: vi.fn(),
+	revokeConsumerToken: vi.fn(),
+	rotateToken: vi.fn(),
+	rotateConsumerToken: vi.fn(),
 	invalidate: vi.fn(),
 }));
 
@@ -22,6 +27,11 @@ vi.mock('$app/state', () => ({
 vi.mock('#lib/api.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('#lib/api.js')>()),
 	purgeToken: stub.purgeToken,
+	purgeConsumerToken: stub.purgeConsumerToken,
+	revokeToken: stub.revokeToken,
+	revokeConsumerToken: stub.revokeConsumerToken,
+	rotateToken: stub.rotateToken,
+	rotateConsumerToken: stub.rotateConsumerToken,
 }));
 
 const token = (overrides: Partial<TokenMetadata>): TokenMetadata => ({
@@ -94,8 +104,7 @@ const data = {
 };
 
 beforeEach(() => {
-	stub.purgeToken.mockReset();
-	stub.invalidate.mockReset();
+	for (const fn of Object.values(stub)) fn.mockReset();
 });
 
 const row = (screen: Awaited<ReturnType<typeof render>>, name: RegExp) =>
@@ -233,4 +242,115 @@ test('an expired consumer token reads Expired and offers only Delete permanently
 	await expect
 		.element(dead.getByRole('button', { name: 'Revoke' }))
 		.not.toBeInTheDocument();
+});
+
+// The phone cards are TokenCard, which the page hands a token and three
+// handlers. TokenCard.svelte.spec.ts pins the card; these pin that the page
+// wires each button to its own dialog and its own call, for the right kind of
+// token.
+const cardActions = [
+	[
+		'bearer',
+		'Bearer token list',
+		/live token/,
+		'Rotate',
+		'dialog',
+		'Rotate this token?',
+		'Rotate',
+		'rotateToken',
+		'live',
+	],
+	[
+		'bearer',
+		'Bearer token list',
+		/live token/,
+		'Revoke',
+		'alertdialog',
+		'Revoke this token?',
+		'Revoke',
+		'revokeToken',
+		'live',
+	],
+	[
+		'bearer',
+		'Bearer token list',
+		/expired token/,
+		'Delete permanently',
+		'alertdialog',
+		'Delete this token permanently?',
+		'Delete permanently',
+		'purgeToken',
+		'expired',
+	],
+	[
+		'consumer',
+		'Consumer token list',
+		/live read token/,
+		'Rotate',
+		'dialog',
+		'Rotate this token?',
+		'Rotate',
+		'rotateConsumerToken',
+		'aaaaaaaaaaaaaaaa',
+	],
+	[
+		'consumer',
+		'Consumer token list',
+		/live read token/,
+		'Revoke',
+		'alertdialog',
+		'Revoke this token?',
+		'Revoke',
+		'revokeConsumerToken',
+		'aaaaaaaaaaaaaaaa',
+	],
+	[
+		'consumer',
+		'Consumer token list',
+		/dead read token/,
+		'Delete permanently',
+		'alertdialog',
+		'Delete this token permanently?',
+		'Delete permanently',
+		'purgeConsumerToken',
+		'bbbbbbbbbbbbbbbb',
+	],
+] as const;
+
+test.each(cardActions)(
+	'a %s token card: %s %#',
+	async (_kind, list, text, button, role, title, confirm, call, id) => {
+		stub[call].mockResolvedValue({ ...live, value: 'raw' });
+		const screen = await render(Settings, { data });
+		const card = screen
+			.getByRole('list', { name: list })
+			.getByRole('listitem')
+			.filter({ hasText: text });
+
+		await card.getByRole('button', { name: button }).click();
+		await screen
+			.getByRole(role, { name: title })
+			.getByRole('button', { name: confirm })
+			.click();
+
+		await vi.waitFor(() => expect(stub[call]).toHaveBeenCalledOnce());
+		expect(stub[call].mock.calls[0]?.[0]).toBe(id);
+	},
+);
+
+test('a card shows the status the server sent, and a consumer token its id', async () => {
+	const screen = await render(Settings, { data });
+	const bearer = screen
+		.getByRole('list', { name: 'Bearer token list' })
+		.getByRole('listitem')
+		.filter({ hasText: /expired token/ });
+	const consumer = screen
+		.getByRole('list', { name: 'Consumer token list' })
+		.getByRole('listitem')
+		.filter({ hasText: /dead read token/ });
+
+	await expect.poll(() => bearer.element().textContent).toContain('Expired');
+	await expect
+		.element(consumer.getByTestId('token-id'))
+		.toHaveTextContent('bbbbbbbbbbbbbbbb');
 });
