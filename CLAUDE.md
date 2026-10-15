@@ -51,6 +51,13 @@ exist`. Don't `go install` Vale.
   setting is on** (`can_approve_pull_request_reviews: true` via the Actions
   permissions API) - release-please can't open its release PR without it,
   and it's off by default on a new repo.
+- **A new API operation needs an MCP tool in the same pull request, or the
+  spec's `x-mcp-excluded: "<reason>"` on it in `api/openapi.yaml`.**
+  `internal/api/mcp_parity_test.go` reads every operation ID from the spec and
+  fails on one with neither (`rules/mcp.md`). Add the tool, then map the
+  operation to it in `mcpOperationTool`. The extension covers the `/mcp`
+  endpoint only: WebMCP tools run as the signed-in session, so they keep their
+  own list.
 - **Dependabot raises the dependency pull requests here**, not Renovate -
   GitHub-primary repos use GitHub-native Dependabot
   (`.github/dependabot.yml`); Renovate is the answer on a Forgejo instance
