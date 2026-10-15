@@ -24,6 +24,7 @@ echo '<testsuites/>' >"$tmp/in/web/reports/unit.xml"
 echo '<html>web coverage</html>' >"$tmp/in/web/coverage/index.html"
 echo '<?xml version="1.0"?><coverage line-rate="1"/>' >"$tmp/in/web/coverage/cobertura-coverage.xml"
 echo '<testsuites/>' >"$tmp/in/e2e/e2e.xml"
+echo '<testsuites/>' >"$tmp/in/e2e/component.xml"
 for page in login secrets-overview; do
   echo "<html>$page</html>" >"$tmp/in/lh/$page.report.html"
   echo '{}' >"$tmp/in/lh/$page.report.json"
@@ -53,7 +54,7 @@ check_links() {
 # 1. With Lighthouse reports.
 build "$tmp/with" "$tmp/in/lh"
 r="$tmp/with/reports"
-for f in tests/junit.xml tests/web-unit.xml tests/e2e.xml tests/index.html \
+for f in tests/junit.xml tests/web-unit.xml tests/web-component.xml tests/e2e.xml tests/index.html \
   coverage/coverage.xml coverage/coverage.out coverage/index.html \
   coverage/web/coverage.xml coverage/web/index.html \
   lighthouse/login.report.html lighthouse/login.report.json \
