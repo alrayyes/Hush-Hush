@@ -85,11 +85,14 @@ function fakeDocument() {
 					root.theme = value;
 				},
 			},
-			querySelector: () => ({
-				setAttribute: (_name: string, value: string) => {
-					meta.content = value;
-				},
-			}),
+			querySelector: (selector: string) =>
+				selector === 'meta[name="theme-color"]'
+					? {
+							setAttribute: (_name: string, value: string) => {
+								meta.content = value;
+							},
+						}
+					: null,
 		},
 	};
 }
@@ -116,9 +119,14 @@ describe('applyTheme', () => {
 describe("app.html's inline theme script", () => {
 	// The script runs before first paint, so it can't import theme.ts; run
 	// the real text from the file against a stand-in browser instead.
-	const script = /<script>([\s\S]*?)<\/script>/
-		.exec(read('src/app.html'))?.[1]
-		.replace(/%sveltekit\.head%/g, '');
+	const scripts = [
+		...read('src/app.html').matchAll(/<script>([\s\S]*?)<\/script>/g),
+	];
+	const script = scripts[0]?.[1];
+
+	it('is the only inline script in the page', () => {
+		expect(scripts).toHaveLength(1);
+	});
 
 	function load(stored: string | null, prefersDark: boolean) {
 		const page = fakeDocument();
