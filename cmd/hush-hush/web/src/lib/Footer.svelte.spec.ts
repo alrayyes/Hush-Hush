@@ -15,6 +15,17 @@ test('the source link goes to the repository', async () => {
 		.toHaveAttribute('href', 'https://github.com/alrayyes/Hush-Hush');
 });
 
+test('the footer is the page landmark', async () => {
+	const screen = await render(Footer, { version: 'v1.2.3' });
+
+	await expect.element(screen.getByRole('contentinfo')).toBeVisible();
+});
+
+test('the source link opens in a new tab', async () => {
+	const screen = await render(Footer, { version: 'v1.2.3' });
+
+	await expect.element(sourceLink(screen)).toHaveAttribute('target', '_blank');
+});
 test('the source link opens without handing the new page the app', async () => {
 	const screen = await render(Footer, { version: 'v1.2.3' });
 
