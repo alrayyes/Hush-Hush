@@ -86,7 +86,7 @@ cd cmd/hush-hush/web
 bun install
 bun run check      # svelte-check — types, unused exports, Svelte-aware lint
 bun run generate:api # regenerate the API types and limits from api/openapi.yaml
-bun run test       # vitest
+bun run test       # vitest: node unit tests, and component tests in Chromium (bunx playwright install chromium, once)
 bun run lint       # biome check
 bun run build      # writes build/, which cmd/hush-hush/embed.go embeds
 bun run test:e2e   # Playwright journeys + axe-core WCAG 2.1 AA scans, blocking

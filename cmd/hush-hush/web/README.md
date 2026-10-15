@@ -60,8 +60,15 @@ bun run generate:api:check # fail if those generated files are stale (CI and pre
 bun run check         # svelte-check: types, unused exports, Svelte-aware lint
 bun run lint          # biome check: JS/TS/CSS/JSON lint and format check
 bun run lint:tailwind # oxlint + @shadcn/lint: Tailwind class usage
-bun run test          # vitest: unit tests for src/lib's pure logic
+bun run test          # vitest: both projects below
+bun run test --project server     # node: unit tests for src/lib's pure logic
+bun run test --project component  # Svelte components in a real Chromium
 ```
+
+The component project (`src/**/*.svelte.spec.ts`, rendered with
+`vitest-browser-svelte`) needs Playwright's Chromium once:
+`bunx playwright install chromium`. CI runs it in the `e2e` job, which already
+installs that browser.
 
 ### End-to-end and accessibility (Playwright + axe-core)
 
