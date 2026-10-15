@@ -18,6 +18,9 @@ import (
 // mcpPendingOperations are the gap alrayyes/hush-hush#970 closes one resource
 // at a time: a slice moves its operations into mcpOperationTool, and the
 // last one deletes this list.
+//
+// This checks names, not behaviour: it can't tell that two tools were swapped
+// between their operations. What each tool does is the tool tests' job.
 
 var mcpOperationTool = map[string]string{
 	"listObjects":     "list",
