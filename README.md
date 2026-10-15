@@ -114,6 +114,9 @@ operations as [`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) -
   which lists the values to filter it by.
 - `owner_identity`, which returns the owner's public key, to add as a sealing
   recipient when keeping a copy the owner can read.
+- `create_consumer_token`, `list_consumer_tokens`, `rotate_consumer_token`,
+  `revoke_consumer_token` and `purge_consumer_token`, for the read tokens a
+  consumer fetches its secrets with.
 
 Point an MCP client at it with the same bearer token a write call needs:
 

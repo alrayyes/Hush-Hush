@@ -37,6 +37,11 @@ var mcpOperationTool = map[string]string{
 	"queryAuditLog":              "audit_log",
 	"queryAuditLogFilterOptions": "audit_log_filter_options",
 	"getOwnerIdentity":           "owner_identity",
+	"createConsumerToken":        "create_consumer_token",
+	"listConsumerTokens":         "list_consumer_tokens",
+	"revokeConsumerToken":        "revoke_consumer_token",
+	"rotateConsumerToken":        "rotate_consumer_token",
+	"purgeConsumerToken":         "purge_consumer_token",
 }
 
 var mcpExcludedOperations = map[string]string{
@@ -51,20 +56,15 @@ var mcpExcludedOperations = map[string]string{
 }
 
 var mcpPendingOperations = map[string]string{
-	"getAuthStatus":       "#970",
-	"listCredentials":     "#970",
-	"renameCredential":    "#970",
-	"deleteCredential":    "#970",
-	"createToken":         "#970",
-	"listTokens":          "#970",
-	"revokeToken":         "#970",
-	"rotateToken":         "#970",
-	"purgeToken":          "#970",
-	"createConsumerToken": "#970",
-	"listConsumerTokens":  "#970",
-	"revokeConsumerToken": "#970",
-	"rotateConsumerToken": "#970",
-	"purgeConsumerToken":  "#970",
+	"getAuthStatus":    "#970",
+	"listCredentials":  "#970",
+	"renameCredential": "#970",
+	"deleteCredential": "#970",
+	"createToken":      "#970",
+	"listTokens":       "#970",
+	"revokeToken":      "#970",
+	"rotateToken":      "#970",
+	"purgeToken":       "#970",
 }
 
 func specOperationIDs(t *testing.T) []string {
