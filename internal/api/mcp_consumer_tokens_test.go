@@ -45,7 +45,12 @@ func TestMCPConsumerTokenLifecycle(t *testing.T) {
 	require.NoError(t, json.Unmarshal(call("list_consumer_tokens", map[string]any{}).StructuredContent, &listed))
 	require.Equal(t, 1, listed.Total)
 	require.Equal(t, created.ID, listed.Tokens[0].ID)
-	require.Empty(t, listed.Tokens[0].Value, "a listing never carries a value")
+
+	var raw struct {
+		Tokens []map[string]any `json:"tokens"`
+	}
+	require.NoError(t, json.Unmarshal(call("list_consumer_tokens", map[string]any{}).StructuredContent, &raw))
+	require.NotContains(t, raw.Tokens[0], "value", "a listing never carries a raw value")
 
 	var rotated mcpConsumerToken
 	require.NoError(t, json.Unmarshal(call("rotate_consumer_token", map[string]any{"id": created.ID}).StructuredContent, &rotated))
