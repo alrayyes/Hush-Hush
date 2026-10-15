@@ -107,8 +107,9 @@ HTTP transport, exposing the same operations as
 description, tags or slug without its value, `used_by`, which lists a secret's
 consumers, and `list_consumers`, `add_consumer`, `update_consumer` and
 `delete_consumer` for the consumer directory, and `audit_log`, which queries the
-audit log, for an agent doing infrastructure or deploy work that needs to read
-or write a secret as one step in a larger task. Point an MCP client at it with
+audit log, with `audit_log_filter_options` listing the values to filter it by,
+for an agent doing infrastructure or deploy work that needs to read or write a
+secret as one step in a larger task. Point an MCP client at it with
 the same bearer token a write call needs:
 
 ```json

@@ -23,18 +23,19 @@ import (
 // between their operations. What each tool does is the tool tests' job.
 
 var mcpOperationTool = map[string]string{
-	"listObjects":     "list",
-	"createObject":    "inject",
-	"getObject":       "get",
-	"updateObject":    "update",
-	"patchObject":     "edit",
-	"deleteObject":    "delete",
-	"getObjectUsedBy": "used_by",
-	"listConsumers":   "list_consumers",
-	"addConsumer":     "add_consumer",
-	"updateConsumer":  "update_consumer",
-	"deleteConsumer":  "delete_consumer",
-	"queryAuditLog":   "audit_log",
+	"listObjects":                "list",
+	"createObject":               "inject",
+	"getObject":                  "get",
+	"updateObject":               "update",
+	"patchObject":                "edit",
+	"deleteObject":               "delete",
+	"getObjectUsedBy":            "used_by",
+	"listConsumers":              "list_consumers",
+	"addConsumer":                "add_consumer",
+	"updateConsumer":             "update_consumer",
+	"deleteConsumer":             "delete_consumer",
+	"queryAuditLog":              "audit_log",
+	"queryAuditLogFilterOptions": "audit_log_filter_options",
 }
 
 var mcpExcludedOperations = map[string]string{
@@ -49,22 +50,21 @@ var mcpExcludedOperations = map[string]string{
 }
 
 var mcpPendingOperations = map[string]string{
-	"queryAuditLogFilterOptions": "#970",
-	"getAuthStatus":              "#970",
-	"getOwnerIdentity":           "#970",
-	"listCredentials":            "#970",
-	"renameCredential":           "#970",
-	"deleteCredential":           "#970",
-	"createToken":                "#970",
-	"listTokens":                 "#970",
-	"revokeToken":                "#970",
-	"rotateToken":                "#970",
-	"purgeToken":                 "#970",
-	"createConsumerToken":        "#970",
-	"listConsumerTokens":         "#970",
-	"revokeConsumerToken":        "#970",
-	"rotateConsumerToken":        "#970",
-	"purgeConsumerToken":         "#970",
+	"getAuthStatus":       "#970",
+	"getOwnerIdentity":    "#970",
+	"listCredentials":     "#970",
+	"renameCredential":    "#970",
+	"deleteCredential":    "#970",
+	"createToken":         "#970",
+	"listTokens":          "#970",
+	"revokeToken":         "#970",
+	"rotateToken":         "#970",
+	"purgeToken":          "#970",
+	"createConsumerToken": "#970",
+	"listConsumerTokens":  "#970",
+	"revokeConsumerToken": "#970",
+	"rotateConsumerToken": "#970",
+	"purgeConsumerToken":  "#970",
 }
 
 func specOperationIDs(t *testing.T) []string {

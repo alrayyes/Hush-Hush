@@ -201,3 +201,20 @@ func TestMCPAuditLogWithoutATokenIsRejected(t *testing.T) {
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
+
+func TestMCPAuditLogFilterOptionsListsWhatTheLogHolds(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	require.NoError(t, s.RecordAuditLog(context.Background(), "a", store.AuditActionRead, "ci", "203.0.113.1", "", ""))
+
+	result := callTool(t, mux, issueToken(t, s), "audit_log_filter_options", map[string]any{})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+
+	var options struct {
+		ObjectIDs []string `json:"object_ids"`
+		Callers   []string `json:"callers"`
+	}
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &options))
+	require.Equal(t, []string{"a"}, options.ObjectIDs)
+}

@@ -14,6 +14,11 @@ func addMCPAuditLogTool(srv *mcp.Server, s objectStore) {
 		Name:        "audit_log",
 		Description: "Query the audit log: every create, read, update and delete of a secret, with when, who and from where. Filters combine with AND. One page of 50, oldest first, unless limit and order say otherwise; pass after (or before, newest first) with the last id you got to read the next page.",
 	}, mcpAuditLog(s))
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "audit_log_filter_options",
+		Description: "List every object id, actor and caller the audit log holds, so audit_log can be filtered by a value that exists. Takes no arguments.",
+	}, mcpAuditLogFilterOptions(s))
 }
 
 // mcpAuditLogInput is the "audit_log" tool's input, mirroring GET /audit-log's
@@ -69,5 +74,23 @@ func mcpAuditLog(s objectStore) mcp.ToolHandlerFor[mcpAuditLogInput, []AuditLogE
 		}
 
 		return nil, auditLogEntriesFrom(rows), nil
+	}
+}
+
+// mcpAuditLogFilterOptionsInput is empty: GET /audit-log/filter-options takes
+// no parameters.
+type mcpAuditLogFilterOptionsInput struct{}
+
+// mcpAuditLogFilterOptions is the "audit_log_filter_options" tool's handler -
+// the same lookup handleQueryAuditLogFilterOptions (audit_log.go) performs
+// over HTTP, shaped by the same function.
+func mcpAuditLogFilterOptions(s objectStore) mcp.ToolHandlerFor[mcpAuditLogFilterOptionsInput, AuditLogFilterOptions] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, _ mcpAuditLogFilterOptionsInput) (*mcp.CallToolResult, AuditLogFilterOptions, error) {
+		options, err := s.QueryAuditLogFilterOptions(ctx)
+		if err != nil {
+			return nil, AuditLogFilterOptions{}, mcpInternalError(ctx, "audit_log_filter_options", err)
+		}
+
+		return nil, auditLogFilterOptionsFrom(options), nil
 	}
 }
