@@ -112,6 +112,8 @@ operations as [`hush-hush-cli`](https://github.com/alrayyes/hush-hush-cli) -
   for the consumer directory.
 - `audit_log`, which queries the audit log, and `audit_log_filter_options`,
   which lists the values to filter it by.
+- `owner_identity`, which returns the owner's public key, to add as a sealing
+  recipient when keeping a copy the owner can read.
 
 Point an MCP client at it with the same bearer token a write call needs:
 
