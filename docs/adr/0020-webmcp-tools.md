@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 39](0039-webmcp-mirrors-every-mcp-tool-and-confirms-the-destructive-ones.md)
 
 ## Context
 
