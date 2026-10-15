@@ -1,7 +1,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { expect, test } from '@playwright/test';
-import { AUDITED_PAGES } from './lighthouse-pages';
+import { expect, test } from 'vitest';
+import { AUDITED_PAGES } from '../../e2e/lighthouse-pages';
 
 // Every page of the app is audited by Lighthouse. A page added to the router
 // and left out of AUDITED_PAGES would be published as untested, which is how
