@@ -8,15 +8,20 @@ import AuditLog from './+page.svelte';
 // for, so a test holds a fetch open and settles it when it chooses.
 const stub = vi.hoisted(() => ({
 	queryAuditLog: vi.fn(),
+	afterNavigate: vi.fn(),
+	replaceState: vi.fn(),
+	url: new URL('http://localhost/audit-log'),
 }));
 
 vi.mock('$app/navigation', () => ({
-	afterNavigate: vi.fn(),
-	replaceState: vi.fn(),
+	afterNavigate: stub.afterNavigate,
+	replaceState: stub.replaceState,
 }));
 vi.mock('$app/state', () => ({
 	page: {
-		url: new URL('http://localhost/audit-log'),
+		get url() {
+			return stub.url;
+		},
 		state: {},
 	},
 }));
@@ -61,6 +66,9 @@ function held<T>() {
 
 beforeEach(() => {
 	stub.queryAuditLog.mockReset();
+	stub.afterNavigate.mockReset();
+	stub.replaceState.mockReset();
+	stub.url = new URL('http://localhost/audit-log');
 });
 
 const orderButton = (screen: Awaited<ReturnType<typeof render>>) =>
@@ -186,4 +194,86 @@ test("the server's own message is what the alert says", async () => {
 	await expect
 		.poll(() => alert.element().textContent)
 		.toContain('the audit log is unavailable');
+});
+
+// alrayyes/Hush-Hush#897: rows per page. The selector shows once another page
+// exists, so these entries say there is one.
+const morePages = { ...data, hasMore: true };
+const sizeSelect = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('combobox', { name: 'Rows per page' });
+
+test('the audit log offers 25, 50 and 100 rows per page', async () => {
+	const screen = await render(AuditLog, { data: morePages });
+
+	await sizeSelect(screen).click();
+
+	const options = screen.getByRole('listbox').getByRole('option');
+	await expect
+		.poll(() => options.elements().map((option) => option.textContent?.trim()))
+		.toEqual(['25', '50', '100']);
+});
+
+test('picking a size asks for one row more than it, and puts it in the address', async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, { data: morePages });
+
+	await sizeSelect(screen).click();
+	await screen.getByRole('option', { name: '50', exact: true }).click();
+
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenCalledWith(
+			expect.objectContaining({ limit: 51 }),
+		),
+	);
+	const [url] = stub.replaceState.mock.calls[0] ?? [];
+	expect((url as URL).searchParams.get('size')).toBe('50');
+	const curl = screen.getByRole('group', { name: 'Query with curl' });
+	await expect.poll(() => curl.element().textContent).toContain('limit=50');
+});
+
+test('picking the default size takes the size out of the address', async () => {
+	stub.url = new URL('http://localhost/audit-log?size=50');
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, {
+		data: { ...morePages, size: 50 },
+	});
+
+	await sizeSelect(screen).click();
+	await screen.getByRole('option', { name: '25', exact: true }).click();
+
+	await vi.waitFor(() => expect(stub.replaceState).toHaveBeenCalled());
+	const [url] = stub.replaceState.mock.calls[0] ?? [];
+	expect((url as URL).searchParams.has('size')).toBe(false);
+});
+
+// The size is the address's: following the nav link to /audit-log, which has
+// no ?size=, goes back to the default.
+test('following a link to another size reloads at that size', async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	await render(AuditLog, { data: { ...morePages, size: 50 } });
+	const onNavigate = stub.afterNavigate.mock.calls[0]?.[0];
+
+	onNavigate({ to: { url: new URL('http://localhost/audit-log') } });
+
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenCalledWith(
+			expect.objectContaining({ limit: 26 }),
+		),
+	);
+});
+
+test('following a link to the size it already has changes nothing', async () => {
+	// Time is the test's, so a reload deferred by a timer or a frame is seen.
+	vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame'] });
+	try {
+		await render(AuditLog, { data: morePages });
+		const onNavigate = stub.afterNavigate.mock.calls[0]?.[0];
+
+		onNavigate({ to: { url: new URL('http://localhost/audit-log') } });
+		await vi.advanceTimersByTimeAsync(1000);
+
+		expect(stub.queryAuditLog).not.toHaveBeenCalled();
+	} finally {
+		vi.useRealTimers();
+	}
 });
