@@ -1393,28 +1393,18 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await newerRequest;
 	await expect.poll(rowTexts).not.toEqual(oldestFirstPage);
 
-	// alrayyes/Hush-Hush#897: rows per page on the audit log. The request asks
-	// for one row more than the size, the choice is in the URL, and a size that
-	// holds every entry keeps the selector.
+	// alrayyes/Hush-Hush#897: rows per page on the audit log.
 	await page.goto('/audit-log');
 	const auditSize = auditPages.getByRole('combobox', { name: 'Rows per page' });
 	await expect(auditSize).toHaveText('25');
-	const sizeRequest = page.waitForRequest(
-		(request) =>
-			request.url().includes('/audit-log?') &&
-			request.url().includes('limit=51'),
-	);
+	// The options, the extra row asked for and the curl command are
+	// audit-log.svelte.spec.ts's. What this proves is that picking one really
+	// changes the address, and that the address is what a reload and a link
+	// read back.
 	await auditSize.click();
-	await expect(page.getByRole('listbox').getByRole('option')).toHaveText([
-		/^\s*25$/,
-		/^\s*50$/,
-		/^\s*100$/,
-	]);
 	await page.getByRole('option', { name: '50', exact: true }).click();
-	await sizeRequest;
 	await expect(page).toHaveURL(/[?&]size=50(&|$)/);
 	await expect(auditSize).toHaveText('50');
-	await expect(curlSnippet).toContainText('limit=50');
 	await page.reload();
 	await expect(auditSize).toHaveText('50');
 	// The size is the address's: following the nav link to /audit-log, which
