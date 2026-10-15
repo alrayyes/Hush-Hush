@@ -42,7 +42,7 @@ var mcpExcludedOperations = map[string]string{
 	"finishRegistration": "passkey ceremony: needs the owner's authenticator in a browser",
 	"beginLogin":         "passkey ceremony: needs the owner's authenticator in a browser",
 	"finishLogin":        "passkey ceremony: needs the owner's authenticator in a browser",
-	"logout":             "ends a browser session; an MCP call is stateless and has none",
+	"logout":             "needs a browser session and its CSRF token, which a bearer-token MCP call has neither of",
 }
 
 var mcpPendingOperations = map[string]string{
@@ -176,17 +176,25 @@ func TestEveryRegisteredToolIsMappedFromAnOperation(t *testing.T) {
 	require.Empty(t, orphans, "a tool that does no listed operation has no place in the parity map")
 }
 
-func TestAPendingOperationIsNotAlsoMappedOrExcluded(t *testing.T) {
+func TestAnOperationIsOnExactlyOneList(t *testing.T) {
 	t.Parallel()
 
-	var both []string
-	for id := range mcpPendingOperations {
+	var onSeveral []string
+	for _, id := range specOperationIDs(t) {
 		_, mapped := mcpOperationTool[id]
 		_, excluded := mcpExcludedOperations[id]
-		if mapped || excluded {
-			both = append(both, id)
+		_, pending := mcpPendingOperations[id]
+
+		count := 0
+		for _, on := range []bool{mapped, excluded, pending} {
+			if on {
+				count++
+			}
+		}
+		if count > 1 {
+			onSeveral = append(onSeveral, id)
 		}
 	}
 
-	require.Empty(t, both, "drop it from mcpPendingOperations once it has a tool or a reason")
+	require.Empty(t, onSeveral, "drop it from mcpPendingOperations once it has a tool or a reason; an operation is mapped or excluded, not both")
 }
