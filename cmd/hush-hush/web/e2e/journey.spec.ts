@@ -1250,71 +1250,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(orderResults.violations).toEqual([]);
 
-	// alrayyes/Hush-Hush#922: two changes made before the first fetch resolves
-	// show the second one's results, even when the first arrives last. The
-	// oldest-first request is held back, so it resolves after the newest-first
-	// one that followed it.
-	let releaseAsc = () => {};
-	const ascHeld = new Promise<void>((resolve) => {
-		releaseAsc = resolve;
-	});
-	await page.route(
-		(url) =>
-			url.pathname === '/audit-log' && url.searchParams.get('order') === 'asc',
-		async (route) => {
-			await ascHeld;
-			await route.continue();
-		},
-	);
-	const newerDesc = page.waitForResponse(
-		(response) =>
-			new URL(response.url()).pathname === '/audit-log' &&
-			new URL(response.url()).searchParams.get('order') === 'desc',
-	);
-	await orderButton.click();
-	await orderButton.click();
-	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
-	// The newer request has landed before the older one is let go, so the late
-	// one really does arrive last.
-	await newerDesc;
-	const lateAsc = page.waitForResponse(
-		(response) =>
-			new URL(response.url()).pathname === '/audit-log' &&
-			new URL(response.url()).searchParams.get('order') === 'asc',
-	);
-	releaseAsc();
-	await lateAsc;
-	// Two frames: the page has had its chance to apply the late response.
-	await page.evaluate(
-		() =>
-			new Promise<void>((resolve) =>
-				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-			),
-	);
-	expect(await rowTexts()).toEqual(newestFirst);
-	await page.unrouteAll({ behavior: 'wait' });
-
-	// alrayyes/Hush-Hush#921: a change whose fetch fails puts the controls back
-	// and leaves the table alone, so what the controls say, what the table
-	// shows and what the curl command asks for still agree.
-	await page.route(
-		(url) =>
-			url.pathname === '/audit-log' && url.searchParams.get('order') === 'asc',
-		(route) => route.abort(),
-	);
-	await orderButton.click();
-	await expect(page.getByRole('alert')).toBeVisible();
-	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
-	await expect(curlSnippet).toContainText('order=desc');
-	expect(await rowTexts()).toEqual(newestFirst);
-	await page.unrouteAll({ behavior: 'wait' });
-	await orderButton.click();
-	await expect(timestampHeader).toHaveAttribute('aria-sort', 'ascending');
-	await expect.poll(rowTexts).toEqual([...newestFirst].reverse());
-	await expect(page.getByRole('alert')).toHaveCount(0);
-	await orderButton.click();
-	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
-	await expect.poll(rowTexts).toEqual(newestFirst);
+	// That the newer of two order changes wins when the older fetch arrives
+	// last (#922), and that a failed change puts the controls back and keeps
+	// the table (#921), are audit-log.svelte.spec.ts's.
 	const actorTrigger = page.getByRole('combobox', {
 		name: 'Actor',
 		exact: true,
