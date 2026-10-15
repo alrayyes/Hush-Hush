@@ -656,7 +656,9 @@ jobs:
       # Svelte components rendered in the Chromium just installed: what a
       # page shows and does, in milliseconds, so the journey below needn't.
       - name: component tests
-        run: bun run test --project component
+        run: >-
+          bun run test --project component --reporter=default
+          --reporter=junit --outputFile.junit=reports/component.xml
         working-directory: cmd/hush-hush/web
       - run: bun run test:e2e
         working-directory: cmd/hush-hush/web
@@ -665,7 +667,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: e2e-reports
-          path: cmd/hush-hush/web/reports/e2e.xml
+          path: |
+            cmd/hush-hush/web/reports/e2e.xml
+            cmd/hush-hush/web/reports/component.xml
           if-no-files-found: error
           retention-days: 1
 
