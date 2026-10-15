@@ -1274,18 +1274,35 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// show the second one's results, even when the first arrives last. The
 	// oldest-first request is held back, so it resolves after the newest-first
 	// one that followed it.
+	let releaseAsc = () => {};
+	const ascHeld = new Promise<void>((resolve) => {
+		releaseAsc = resolve;
+	});
 	await page.route(
 		(url) =>
 			url.pathname === '/audit-log' && url.searchParams.get('order') === 'asc',
 		async (route) => {
-			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await ascHeld;
 			await route.continue();
 		},
 	);
 	await orderButton.click();
 	await orderButton.click();
 	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
-	await page.waitForTimeout(2000);
+	const lateAsc = page.waitForResponse(
+		(response) =>
+			new URL(response.url()).pathname === '/audit-log' &&
+			new URL(response.url()).searchParams.get('order') === 'asc',
+	);
+	releaseAsc();
+	await lateAsc;
+	// Two frames: the page has had its chance to apply the late response.
+	await page.evaluate(
+		() =>
+			new Promise<void>((resolve) =>
+				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+			),
+	);
 	expect(await rowTexts()).toEqual(newestFirst);
 	await page.unrouteAll({ behavior: 'wait' });
 
@@ -2090,12 +2107,14 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		headers: { 'X-CSRF-Token': csrfToken },
 		data: { description: 'short-lived token', ttl_seconds: 1 },
 	});
-	await page.waitForTimeout(1_500);
-	await page.reload();
-	await page.getByRole('heading', { name: 'Settings' }).waitFor();
-
 	const shortLivedRow = page.getByRole('row', { name: /short-lived token/ });
-	await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired');
+	await expect(async () => {
+		await page.reload();
+		await page.getByRole('heading', { name: 'Settings' }).waitFor();
+		await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired', {
+			timeout: 500,
+		});
+	}).toPass({ intervals: [250] });
 	await expectListParity(page, {
 		path: '/settings',
 		list: 'Bearer token list',
@@ -2783,7 +2802,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.goto('/?page=2');
 	// Loading ?page=2 keeps page 2: the reset only follows a change.
 	await expect(secretsPager).toContainText('Showing 21');
-	await page.waitForTimeout(500);
+	// Two frames: a reset that fires after load would have run by now.
+	await page.evaluate(
+		() =>
+			new Promise<void>((resolve) =>
+				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+			),
+	);
 	await expect(page).toHaveURL(/[?&]page=2(&|$)/);
 	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('paging_');
 	await expect(page).not.toHaveURL(/page=/);
