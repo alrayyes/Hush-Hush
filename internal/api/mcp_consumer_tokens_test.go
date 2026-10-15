@@ -75,3 +75,30 @@ func TestMCPPurgeOfAnActiveConsumerTokenIsAToolError(t *testing.T) {
 	result := callTool(t, mux, bearer, "purge_consumer_token", map[string]any{"id": created.ID})
 	require.True(t, result.IsError, "a token has to be revoked or expired first, as over HTTP")
 }
+
+func TestMCPListConsumerTokensPagesWithLimitAndOffset(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+	bearer := issueToken(t, s)
+
+	for range 3 {
+		require.False(t, callTool(t, mux, bearer, "create_consumer_token", map[string]any{"consumer": "ci"}).IsError)
+	}
+
+	var page mcpConsumerTokenList
+	result := callTool(t, mux, bearer, "list_consumer_tokens", map[string]any{"limit": 2, "offset": 2})
+	require.False(t, result.IsError, "content: %+v", result.Content)
+	require.NoError(t, json.Unmarshal(result.StructuredContent, &page))
+	require.Equal(t, 3, page.Total, "total counts every token, not the page")
+	require.Len(t, page.Tokens, 1, "offset 2 of 3 leaves one")
+}
+
+func TestMCPListConsumerTokensRefusesAZeroLimit(t *testing.T) {
+	t.Parallel()
+
+	mux, s := newTestMux(t)
+
+	result := callTool(t, mux, issueToken(t, s), "list_consumer_tokens", map[string]any{"limit": 0})
+	require.True(t, result.IsError, "0 is refused, as ?limit=0 is over HTTP")
+}
