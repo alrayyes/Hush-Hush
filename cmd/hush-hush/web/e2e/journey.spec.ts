@@ -1286,9 +1286,17 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			await route.continue();
 		},
 	);
+	const newerDesc = page.waitForResponse(
+		(response) =>
+			new URL(response.url()).pathname === '/audit-log' &&
+			new URL(response.url()).searchParams.get('order') === 'desc',
+	);
 	await orderButton.click();
 	await orderButton.click();
 	await expect(timestampHeader).toHaveAttribute('aria-sort', 'descending');
+	// The newer request has landed before the older one is let go, so the late
+	// one really does arrive last.
+	await newerDesc;
 	const lateAsc = page.waitForResponse(
 		(response) =>
 			new URL(response.url()).pathname === '/audit-log' &&
@@ -2114,7 +2122,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		await expect(shortLivedRow.getByRole('cell').nth(5)).toHaveText('Expired', {
 			timeout: 500,
 		});
-	}).toPass({ intervals: [250] });
+	}).toPass({ intervals: [250], timeout: 10_000 });
 	await expectListParity(page, {
 		path: '/settings',
 		list: 'Bearer token list',
