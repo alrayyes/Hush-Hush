@@ -214,6 +214,25 @@ func TestQueryAuditLogFilterOptionsReturnsDistinctValuesThatActuallyAppear(t *te
 	}, options.Actors)
 }
 
+// "none" is the unauthenticated reads, so it is only an option when the log
+// holds one. Since every read needs a credential the web UI's own entries are
+// all attributed, and the menu offers real actors only.
+func TestQueryAuditLogFilterOptionsOmitsNoneWhenEveryEntryIsAttributed(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	ctx := context.Background()
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionCreate, "", "203.0.113.1", "session", "admin"))
+	require.NoError(t, s.RecordAuditLog(ctx, "a", store.AuditActionRead, "", "203.0.113.2", "token", "a1b2c3d4e5f6a7b8"))
+
+	options, err := s.QueryAuditLogFilterOptions(ctx)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []store.AuditActorOption{
+		{Value: "admin", Label: "admin"},
+		{Value: "a1b2c3d4e5f6a7b8", Label: "token:a1b2c3d4e5f6a7b8"},
+	}, options.Actors)
+}
+
 // A read by a consumer token is recorded with its own actor type. It used to
 // fall into the "none" branch, once per token, which the web UI keys its
 // options by: two of them crashed the page.
