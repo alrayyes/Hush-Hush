@@ -63,7 +63,9 @@ const jobsThatRun = (path: string) =>
 
 // ---- 1. One case per path: which CI jobs run -------------------------------
 
-const GO = ['build', 'gomod', 'govulncheck', 'lint', 'pact', 'test'];
+// advisories is the dependency audit's pull request gate. govulncheck reports
+// only what the code can reach, so Go source counts as a dependency change.
+const GO = ['advisories', 'build', 'gomod', 'lint', 'pact', 'test'];
 const cases: [path: string, expected: string[]][] = [
   ['internal/api/create.go', [...GO, 'container-integration', 'e2e', 'lighthouse']],
   ['main.go', [...GO, 'container-integration']],
@@ -89,8 +91,8 @@ const cases: [path: string, expected: string[]][] = [
   ['.hadolint.yaml', ['dockerfile', 'container-integration', 'prose']],
   ['.goreleaser.yml', ['goreleaser', 'prose']],
   ['compose.yaml', ['container-integration', 'prose']],
-  ['package.json', ['web', 'prose', 'api', 'package-json', 'bun-audit', 'ci-config']],
-  ['bun.lock', ['web', 'prose', 'api', 'bun-audit', 'ci-config']],
+  ['package.json', ['web', 'prose', 'api', 'package-json', 'advisories', 'ci-config']],
+  ['bun.lock', ['web', 'prose', 'api', 'advisories', 'ci-config']],
   ['redocly.yaml', ['api', 'prose']],
   ['.spectral.yaml', ['api', 'prose']],
   ['docs/api/index.html', ['api']],
@@ -102,7 +104,7 @@ const cases: [path: string, expected: string[]][] = [
   // ltex runs in prose.yml, not here, so ci.yml has nothing to run for it.
   ['.ltex.json', []],
   // Editing the pipeline's own config runs what it configures.
-  ['.github/workflows/ci.yml', [...GO, 'container-integration', 'e2e', 'lighthouse', 'web', 'api', 'dockerfile', 'goreleaser', 'package-json', 'bun-audit', 'prose', 'ci-config']],
+  ['.github/workflows/ci.yml', [...GO, 'container-integration', 'e2e', 'lighthouse', 'web', 'api', 'dockerfile', 'goreleaser', 'package-json', 'prose', 'ci-config']],
   // Hook config is yaml, so prettier covers it, and nothing else in ci.yml reads it.
   ['lefthook.yml', ['prose', 'ci-config']],
   ['scripts/test-ci.ts', ['ci-config']],

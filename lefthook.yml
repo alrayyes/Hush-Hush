@@ -157,10 +157,10 @@ commit-msg:
 # Checks CI runs that this hook doesn't, and why (a gap should be a decision,
 # not an oversight):
 #
-# - govulncheck and bun-audit read an advisory database that changes under
+# - govulncheck and bun audit read an advisory database that changes under
 #   you. A green local run says nothing about next week and a red one blames the
-#   wrong push, so CI runs them when a lockfile changes and audit.yml runs them
-#   daily.
+#   wrong push, so CI's `advisories` job compares a pull request with its base
+#   and advisory-scan.yml scans main daily. Run them by hand (CONTRIBUTING.md).
 # - pact (provider verification) links a native Pact library at build time,
 #   behind the `pact` build tag, which needs `pact-go install` first. No other
 #   hook needs that download.
