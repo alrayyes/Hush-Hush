@@ -1217,20 +1217,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		name: 'Actor',
 		exact: true,
 	});
-	const objectTrigger = page.getByRole('combobox', {
-		name: 'Object id',
-		exact: true,
-	});
 
+	// The menus' options (including no `none` while every entry is attributed,
+	// #438/#446, which is a store test), the chips, and what is fetched for an
+	// actor or an object are audit-log.svelte.spec.ts's, and the server's
+	// filtering is the Go audit tests'.
 	await actorTrigger.click();
-	// #438/#446: GET /objects/{slug} now requires a credential, so a
-	// logged-in "View" authenticates as the session's own admin account
-	// instead of recording no verified actor - the dropdown no longer
-	// offers a "none" option at all (this used to be the "unverified
-	// actor" case this test covered, alrayyes/hush-hush#451).
-	await expect(
-		page.getByRole('option', { name: 'none', exact: true }),
-	).toHaveCount(0);
 	// alrayyes/Hush-Hush#917: the open menu is its own state, and no scan had
 	// it open. The trigger is a combobox that controls the list, and the list
 	// is named by the label.
@@ -1240,45 +1232,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(openSelectResults.violations).toEqual([]);
+	// One real pick, to prove the menu is wired to the real page.
 	await page.getByRole('option', { name: 'admin', exact: true }).click();
 	await expect(page.getByText('actor: admin')).toBeVisible();
-	// Every row so far (the create, both "View" reads, the detail page's
-	// own read of the ciphertext (#480), all three edits) is
-	// now attributed to admin - waiting on the row count itself (not
-	// just the chip, which updates synchronously before the refetch
-	// resolves) avoids asserting against the table's still-unfiltered
-	// content.
-	await expect(rows).toHaveCount(13);
-	for (const row of await rows.all()) {
-		await expect(row.getByRole('cell').nth(2)).toHaveText('admin');
-	}
-
-	await actorTrigger.click();
-	await page.getByRole('option', { name: 'Any actor' }).click();
-	await expect(page.getByText('actor: admin')).toHaveCount(0);
-	await expect(rows).toHaveCount(13);
-
-	await objectTrigger.click();
-	await page.getByRole('option', { name: 'mattermost_deploy_webhook' }).click();
-	await expect(
-		page.getByText('object: mattermost_deploy_webhook'),
-	).toBeVisible();
-	// One of the two renames is logged under the temporary name, so it drops out here.
-	await expect(rows).toHaveCount(12);
-	for (const row of await rows.all()) {
-		await expect(row.getByRole('cell').first()).toHaveText(
-			'mattermost_deploy_webhook',
-		);
-	}
-
-	await page
-		.locator('li')
-		.filter({ hasText: 'object: mattermost_deploy_webhook' })
-		.getByRole('button')
-		.click();
-	await expect(page.getByText('object: mattermost_deploy_webhook')).toHaveCount(
-		0,
-	);
 
 	// alrayyes/Hush-Hush#895: the audit log pages 25 at a time with Newer and
 	// Older. Twenty-six more reads of one secret push the log past a page.
@@ -2305,7 +2261,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		page.getByRole('row').filter({
 			has: page.getByRole('cell', { name: new RegExp(`^${slug}`) }),
 		});
-	for (const width of [1280, 1920]) {
+	// 1280px is where the xl: truncation widths start and every wider width is
+	// the same layout with more room, so a row that fits here fits there: no
+	// 1920px pass.
+	for (const width of [1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('/');
 		await expect(rowFor('many_consumers')).toHaveCount(1);
@@ -2366,7 +2325,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		},
 	});
 	expect(widest.ok()).toBe(true);
-	for (const width of [768, 900, 1024, 1280, 1440]) {
+	// The tightest width of each regime. The table shows from 768px (md:), the
+	// truncation widths grow at 1280px (xl:), and within a regime a wider
+	// viewport only adds room, so a fit at 768 and at 1280 is a fit at 900,
+	// 1024 and 1440. No width in between has a breakpoint of its own; a new
+	// one (an md-to-xl utility, a media query) needs its width added back here.
+	for (const width of [768, 1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('/');
 		await expect(rowFor(widestSlug)).toHaveCount(1);

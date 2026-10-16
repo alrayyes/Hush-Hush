@@ -277,3 +277,133 @@ test('following a link to the size it already has changes nothing', async () => 
 		vi.useRealTimers();
 	}
 });
+
+// alrayyes/hush-hush#323: the object and actor filters are menus of what the
+// log holds. Picking one shows its chip and fetches with it; removing the chip
+// or picking the empty choice fetches without.
+const filterData = {
+	...data,
+	filterOptions: {
+		object_ids: ['mattermost_deploy_webhook', 'other_secret'],
+		actors: [
+			{ value: 'admin', label: 'admin' },
+			{ value: 'a1b2c3d4e5f6a7b8', label: 'token:a1b2c3d4e5f6a7b8' },
+		],
+		callers: [],
+	},
+};
+const chip = (screen: Awaited<ReturnType<typeof render>>, text: string) =>
+	screen.getByRole('listitem').filter({ hasText: text });
+const actorMenu = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('combobox', { name: 'Actor', exact: true });
+const objectMenu = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('combobox', { name: 'Object id', exact: true });
+
+test('the Actor menu offers Any actor and the actors the server listed, and nothing else', async () => {
+	const screen = await render(AuditLog, { data: filterData });
+
+	await actorMenu(screen).click();
+
+	const options = screen
+		.getByRole('listbox', { name: 'Actor' })
+		.getByRole('option');
+	await expect
+		.poll(() => options.elements().map((o) => o.textContent?.trim()))
+		.toEqual(['Any actor', 'admin', 'token:a1b2c3d4e5f6a7b8']);
+});
+
+test('picking an actor shows its chip and fetches with that actor', async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, { data: filterData });
+
+	await actorMenu(screen).click();
+	await screen.getByRole('option', { name: 'admin', exact: true }).click();
+
+	await expect.element(chip(screen, 'actor: admin')).toBeVisible();
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenCalledWith(
+			expect.objectContaining({ actor: 'admin' }),
+		),
+	);
+});
+
+test('the chip names a token actor by its label, and fetches with its id', async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, { data: filterData });
+
+	await actorMenu(screen).click();
+	await screen
+		.getByRole('option', { name: 'token:a1b2c3d4e5f6a7b8', exact: true })
+		.click();
+
+	await expect
+		.element(chip(screen, 'actor: token:a1b2c3d4e5f6a7b8'))
+		.toBeVisible();
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenCalledWith(
+			expect.objectContaining({ actor: 'a1b2c3d4e5f6a7b8' }),
+		),
+	);
+});
+
+test('choosing Any actor afterwards takes the chip away and fetches without an actor', async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, { data: filterData });
+	await actorMenu(screen).click();
+	await screen.getByRole('option', { name: 'admin', exact: true }).click();
+	await expect.element(chip(screen, 'actor: admin')).toBeVisible();
+
+	await actorMenu(screen).click();
+	await screen.getByRole('option', { name: 'Any actor' }).click();
+
+	await expect.poll(() => chip(screen, 'actor:').query()).toBeNull();
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenLastCalledWith(
+			expect.not.objectContaining({ actor: 'admin' }),
+		),
+	);
+});
+
+test('picking an object shows its chip, and the chip removes it and fetches without', async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, { data: filterData });
+
+	await objectMenu(screen).click();
+	await screen
+		.getByRole('option', { name: 'mattermost_deploy_webhook', exact: true })
+		.click();
+	await expect
+		.element(chip(screen, 'object: mattermost_deploy_webhook'))
+		.toBeVisible();
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenCalledWith(
+			expect.objectContaining({ object_id: 'mattermost_deploy_webhook' }),
+		),
+	);
+
+	await screen.getByRole('button', { name: 'Remove object filter' }).click();
+
+	await expect.poll(() => chip(screen, 'object:').query()).toBeNull();
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenLastCalledWith(
+			expect.not.objectContaining({ object_id: 'mattermost_deploy_webhook' }),
+		),
+	);
+});
+
+test("the actor chip's button removes it and fetches without an actor", async () => {
+	stub.queryAuditLog.mockResolvedValue(newestFirst);
+	const screen = await render(AuditLog, { data: filterData });
+	await actorMenu(screen).click();
+	await screen.getByRole('option', { name: 'admin', exact: true }).click();
+	await expect.element(chip(screen, 'actor: admin')).toBeVisible();
+
+	await screen.getByRole('button', { name: 'Remove actor filter' }).click();
+
+	await expect.poll(() => chip(screen, 'actor:').query()).toBeNull();
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenLastCalledWith(
+			expect.not.objectContaining({ actor: 'admin' }),
+		),
+	);
+});
