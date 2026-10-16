@@ -264,6 +264,9 @@ The pull request **title** has to be a valid Conventional Commit too —
 squash merge defaults its commit message to the pull request title, so this
 is the only check standing between a badly titled pull request and a bad
 message on `main`.
+Dependabot's own titles ("bump `<module path>` from X to Y in the `<group>`
+group") get the same rules minus the 100-character cap, because a long module
+path pushes them over it and nobody can shorten a title the bot writes.
 
 Once a pull request's checks are green, squash-merge it and delete the
 branch. [release-please](https://github.com/googleapis/release-please)
