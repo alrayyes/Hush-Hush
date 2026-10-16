@@ -2378,26 +2378,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(page).toHaveURL(/\/consumers\?page=2$/);
 	await expect(consumerPages.getByText('Showing 21–40 of 102')).toBeVisible();
 
-	// The search term travels with the page links.
-	await page.goto('/consumers?q=svcfiles');
-	await expect(consumerPages.getByText('Showing 1–20 of 97')).toBeVisible();
-	await consumerPages.getByRole('link', { name: 'Page 2' }).click();
-	await expect(page).toHaveURL(/q=svcfiles/);
-	await expect(page).toHaveURL(/page=2/);
-	await expect(consumerPages.getByText('Showing 21–40 of 97')).toBeVisible();
-
-	// A page past the end (an old bookmark) lands on the last page.
-	await page.goto('/consumers?page=99');
-	await expect(page).toHaveURL(/\/consumers\?page=6$/);
-	await expect(consumerPages.getByText('Showing 101–102 of 102')).toBeVisible();
-
-	// A search that fits on one page drops the pager, and goes back to page 1.
-	await page.goto('/consumers?page=2');
-	await page.getByLabel('Filter by name').fill('dotfiles');
-	await page.getByLabel('Filter by name').press('Enter');
-	await expect(page).toHaveURL(/q=dotfiles/);
-	await expect(page).not.toHaveURL(/page=/);
-	await expect(consumerPages).toHaveCount(0);
+	// That the page links carry the search, a page past the end lands on the
+	// last page (the load function's 307) and Enter in the filter goes to page
+	// 1 are consumers.svelte.spec.ts's and load.spec.ts's; the q filter and
+	// the totals are the Go consumers tests'.
 
 	// alrayyes/hush-hush#752: a secret with the longest slug, ten of the
 	// longest tags and a long description still fits the page at desktop

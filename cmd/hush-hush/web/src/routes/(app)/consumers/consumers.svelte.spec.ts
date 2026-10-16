@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import { ApiError } from '#lib/api.js';
 import { tokensHref, truncateKey } from '#lib/consumers.js';
@@ -8,13 +9,14 @@ import Consumers from './+page.svelte';
 // Both are stood in for, so a test hands the page the directory the server
 // would send and decides what each write answers.
 const stub = vi.hoisted(() => ({
+	goto: vi.fn(),
 	addConsumer: vi.fn(),
 	setConsumerPublicKey: vi.fn(),
 	invalidate: vi.fn(),
 }));
 
 vi.mock('$app/navigation', () => ({
-	goto: vi.fn(),
+	goto: stub.goto,
 	invalidate: stub.invalidate,
 }));
 vi.mock('#lib/api.js', async (importOriginal) => ({
@@ -226,4 +228,74 @@ test('a consumer with a key opens a Replace dialog, one without opens a Set dial
 	await expect
 		.element(screen.getByRole('dialog', { name: 'Replace public key' }))
 		.toBeVisible();
+});
+
+// alrayyes/hush-hush#894: the directory pages at 20 with the shared pager.
+const manyData = (page: number, total: number, q = '') => ({
+	...data,
+	page,
+	total,
+	q,
+});
+const consumerPager = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('navigation', { name: 'Consumers pages' });
+
+test.each([
+	[1, 102, 'Showing 1–20 of 102'],
+	[2, 102, 'Showing 21–40 of 102'],
+	[6, 102, 'Showing 101–102 of 102'],
+])('page %i of %i reads %s', async (page, total, text) => {
+	const screen = await render(Consumers, { data: manyData(page, total) });
+
+	await expect
+		.poll(() => consumerPager(screen).element().textContent)
+		.toContain(text);
+});
+
+test('the page links carry the search', async () => {
+	const screen = await render(Consumers, {
+		data: manyData(1, 97, 'svcfiles'),
+	});
+
+	await expect
+		.element(consumerPager(screen).getByRole('link', { name: 'Page 2' }))
+		.toHaveAttribute('href', '/consumers?q=svcfiles&page=2');
+});
+
+test('a directory that fits on one page has no pager', async () => {
+	const screen = await render(Consumers, { data: manyData(1, 2) });
+
+	await expect.poll(() => consumerPager(screen).query()).toBeNull();
+});
+
+test('pressing Enter in the filter goes to page 1 with that search', async () => {
+	const screen = await render(Consumers, { data: manyData(2, 102) });
+
+	await screen.getByLabelText('Filter by name').fill('dotfiles');
+	await userEvent.keyboard('{Enter}');
+
+	await vi.waitFor(() =>
+		expect(stub.goto).toHaveBeenCalledWith('/consumers?q=dotfiles', {
+			reset: false,
+		}),
+	);
+});
+
+test('an empty directory says so, and an empty search says what it matched', async () => {
+	const empty = await render(Consumers, {
+		data: { ...data, consumers: [], total: 0 },
+	});
+	await expect
+		.poll(() => empty.container.textContent)
+		.toContain('No consumers match yet.');
+});
+
+test('a search with no match names it', async () => {
+	const screen = await render(Consumers, {
+		data: { ...data, consumers: [], total: 0, q: 'nope' },
+	});
+
+	await expect
+		.poll(() => screen.container.textContent)
+		.toContain('No consumers match "nope".');
 });
