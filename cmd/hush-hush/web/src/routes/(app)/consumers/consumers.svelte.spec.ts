@@ -262,6 +262,59 @@ test('the page links carry the search', async () => {
 		.toHaveAttribute('href', '/consumers?q=svcfiles&page=2');
 });
 
+test('Previous and Next carry the search too', async () => {
+	const screen = await render(Consumers, {
+		data: manyData(2, 97, 'svcfiles'),
+	});
+
+	await expect
+		.element(consumerPager(screen).getByRole('link', { name: 'Previous' }))
+		.toHaveAttribute('href', '/consumers?q=svcfiles');
+	await expect
+		.element(consumerPager(screen).getByRole('link', { name: 'Next' }))
+		.toHaveAttribute('href', '/consumers?q=svcfiles&page=3');
+});
+
+test('leaving the filter after typing goes to page 1 with that search', async () => {
+	const screen = await render(Consumers, { data: manyData(2, 102) });
+
+	await screen.getByLabelText('Filter by name').fill('dotfiles');
+	await userEvent.tab();
+
+	await vi.waitFor(() =>
+		expect(stub.goto).toHaveBeenCalledWith('/consumers?q=dotfiles', {
+			reset: false,
+		}),
+	);
+});
+
+test('the search is trimmed before it is used', async () => {
+	const screen = await render(Consumers, { data: manyData(1, 102) });
+
+	await screen.getByLabelText('Filter by name').fill('  dotfiles  ');
+	await userEvent.tab();
+
+	await vi.waitFor(() =>
+		expect(stub.goto).toHaveBeenCalledWith('/consumers?q=dotfiles', {
+			reset: false,
+		}),
+	);
+});
+
+test('Enter on a filter that has not changed still applies it', async () => {
+	const screen = await render(Consumers, {
+		data: manyData(2, 97, 'dotfiles'),
+	});
+
+	await screen.getByLabelText('Filter by name').click();
+	await userEvent.keyboard('{Enter}');
+
+	await vi.waitFor(() =>
+		expect(stub.goto).toHaveBeenCalledWith('/consumers?q=dotfiles', {
+			reset: false,
+		}),
+	);
+});
 test('a directory that fits on one page has no pager', async () => {
 	const screen = await render(Consumers, { data: manyData(1, 2) });
 

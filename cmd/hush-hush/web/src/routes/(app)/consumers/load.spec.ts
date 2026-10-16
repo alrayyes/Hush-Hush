@@ -82,6 +82,14 @@ test('the redirect keeps the search', async () => {
 	});
 });
 
+test('it hands back the search and the page it was asked for', async () => {
+	answer(97, [{ name: 'a' }]);
+
+	const data = await run('/consumers?q=svcfiles&page=2').result;
+
+	expect(data).toMatchObject({ total: 97, page: 2, q: 'svcfiles' });
+});
+
 test('the last page itself does not redirect', async () => {
 	answer(102, [{ name: 'a' }]);
 
