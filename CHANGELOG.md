@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.38.1](https://github.com/alrayyes/hush-hush/compare/v3.38.0...v3.38.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* bump github.com/klauspost/compress ([#1008](https://github.com/alrayyes/hush-hush/issues/1008)) ([378bde8](https://github.com/alrayyes/hush-hush/commit/378bde8251e39194c4ec0efb9dd3aa9d615b8533))
+* bump oven/bun ([#1007](https://github.com/alrayyes/hush-hush/issues/1007)) ([1d66086](https://github.com/alrayyes/hush-hush/commit/1d660862559f1527b35e0a1a0545f2293ffbc3f2))
+* bump the minor-and-patch group across 1 directory with 10 updates ([#1012](https://github.com/alrayyes/hush-hush/issues/1012)) ([db3840a](https://github.com/alrayyes/hush-hush/commit/db3840ab8edb446a718bc0c1e5b3e66d91a4915f))
+
 ## [3.38.0](https://github.com/alrayyes/hush-hush/compare/v3.37.0...v3.38.0) (2026-10-15)
 
 
