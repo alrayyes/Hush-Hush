@@ -15,6 +15,7 @@ const stub = vi.hoisted(() => ({
 	rotateToken: vi.fn(),
 	rotateConsumerToken: vi.fn(),
 	invalidate: vi.fn(),
+	url: new URL('http://localhost/settings'),
 }));
 
 vi.mock('$app/navigation', () => ({
@@ -22,7 +23,11 @@ vi.mock('$app/navigation', () => ({
 	invalidate: stub.invalidate,
 }));
 vi.mock('$app/state', () => ({
-	page: { url: new URL('http://localhost/settings') },
+	page: {
+		get url() {
+			return stub.url;
+		},
+	},
 }));
 vi.mock('#lib/api.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('#lib/api.js')>()),
@@ -104,7 +109,10 @@ const data = {
 };
 
 beforeEach(() => {
-	for (const fn of Object.values(stub)) fn.mockReset();
+	for (const value of Object.values(stub)) {
+		if (typeof value === 'function') value.mockReset();
+	}
+	stub.url = new URL('http://localhost/settings');
 });
 
 const row = (screen: Awaited<ReturnType<typeof render>>, name: RegExp) =>
@@ -354,4 +362,169 @@ test('a card shows the status the server sent, and a consumer token its id', asy
 	await expect
 		.element(consumer.getByTestId('token-id'))
 		.toHaveTextContent('bbbbbbbbbbbbbbbb');
+});
+
+// alrayyes/Hush-Hush#896: the Settings lists page on their own, 10 at a time,
+// each with its page in the address. Twelve of each kind push both past one
+// page; the passkeys stay on one.
+const pagerToken = (n: string) =>
+	token({
+		id: `bearer-${n}`,
+		description: `pager bearer ${n}`,
+		status: 'active',
+		allowed_actions: ['rotate', 'revoke'],
+	});
+const pagerConsumerToken = (n: string) =>
+	consumerToken({
+		id: `consumer-${n.padStart(16, '0')}`,
+		consumer: `pager-consumer-${n}`,
+		description: `pager consumer ${n}`,
+		status: 'active',
+		allowed_actions: ['rotate', 'revoke'],
+	});
+const nn = Array.from({ length: 12 }, (_, i) => String(i).padStart(2, '0'));
+const pagedData = {
+	...data,
+	tokens: nn.map(pagerToken),
+	consumerTokens: nn.map(pagerConsumerToken),
+};
+
+const settingsPager = (
+	screen: Awaited<ReturnType<typeof render>>,
+	name: string,
+) => screen.getByRole('navigation', { name });
+const rowsLike = (screen: Awaited<ReturnType<typeof render>>, text: RegExp) =>
+	screen.getByRole('row').filter({ hasText: text });
+
+test('each list shows 10 rows under its own pager, and a list that fits one page has none', async () => {
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.poll(
+			() => settingsPager(screen, 'Bearer tokens pages').element().textContent,
+		)
+		.toContain('Showing 1–10 of 12');
+	await expect
+		.poll(
+			() =>
+				settingsPager(screen, 'Consumer tokens pages').element().textContent,
+		)
+		.toContain('Showing 1–10 of 12');
+	await expect
+		.poll(() => rowsLike(screen, /pager bearer/).elements().length)
+		.toBe(10);
+	await expect
+		.poll(() => rowsLike(screen, /pager consumer/).elements().length)
+		.toBe(10);
+	expect(settingsPager(screen, 'Passkeys pages').query()).toBeNull();
+});
+
+test('a list takes its page from its own parameter and leaves the other where it is', async () => {
+	stub.url = new URL('http://localhost/settings?token_page=2');
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.poll(
+			() => settingsPager(screen, 'Bearer tokens pages').element().textContent,
+		)
+		.toContain('Showing 11–12 of 12');
+	await expect
+		.poll(
+			() =>
+				settingsPager(screen, 'Consumer tokens pages').element().textContent,
+		)
+		.toContain('Showing 1–10 of 12');
+	await expect
+		.poll(() => rowsLike(screen, /pager bearer/).elements().length)
+		.toBe(2);
+});
+
+test('the consumer list shows its own second page', async () => {
+	stub.url = new URL('http://localhost/settings?consumer_token_page=2');
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.poll(() => rowsLike(screen, /pager consumer/).elements().length)
+		.toBe(2);
+	await expect
+		.poll(() => rowsLike(screen, /pager bearer/).elements().length)
+		.toBe(10);
+});
+
+test.each([
+	[
+		'bearer',
+		'consumer_token_page=2',
+		'Bearer tokens pages',
+		'Page 2',
+		'/settings?consumer_token_page=2&token_page=2',
+	],
+	[
+		'consumer',
+		'token_page=2',
+		'Consumer tokens pages',
+		'Next',
+		'/settings?token_page=2&consumer_token_page=2',
+	],
+])(
+	"the %s list's page links keep the other list's position",
+	async (_kind, address, label, link, href) => {
+		stub.url = new URL(`http://localhost/settings?${address}`);
+		const screen = await render(Settings, { data: pagedData });
+
+		await expect
+			.element(settingsPager(screen, label).getByRole('link', { name: link }))
+			.toHaveAttribute('href', href);
+	},
+);
+
+test.each([
+	['Bearer tokens pages', 'Next'],
+	['Consumer tokens pages', 'Next'],
+])('paging %s does not jump the page back to the top', async (label, link) => {
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.element(settingsPager(screen, label).getByRole('link', { name: link }))
+		.toHaveAttribute('data-sveltekit-reset', 'false');
+});
+
+test.each([
+	['token_page', 'Bearer tokens pages'],
+	['consumer_token_page', 'Consumer tokens pages'],
+])('a %s past the end shows the last page', async (param, label) => {
+	stub.url = new URL(`http://localhost/settings?${param}=99`);
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.poll(() => settingsPager(screen, label).element().textContent)
+		.toContain('Showing 11–12 of 12');
+});
+
+test('filtered to one consumer, the list fits one page and shows no pager', async () => {
+	stub.url = new URL('http://localhost/settings?consumer=pager-consumer-03');
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.poll(() => rowsLike(screen, /pager consumer/).elements().length)
+		.toBe(1);
+	expect(settingsPager(screen, 'Consumer tokens pages').query()).toBeNull();
+});
+
+test('the phone cards page the same way', async () => {
+	const screen = await render(Settings, { data: pagedData });
+
+	const bearerCards = screen
+		.getByRole('list', { name: 'Bearer token list' })
+		.getByRole('listitem');
+	const consumerCards = screen
+		.getByRole('list', { name: 'Consumer token list' })
+		.getByRole('listitem');
+	await expect.poll(() => bearerCards.elements().length).toBe(10);
+	await expect.poll(() => consumerCards.elements().length).toBe(10);
+	await expect
+		.poll(
+			() => settingsPager(screen, 'Bearer tokens pages').element().textContent,
+		)
+		.toContain('Page 1 of 2');
 });
