@@ -2541,17 +2541,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	}
 	await page.setViewportSize({ width: 1280, height: 900 });
 
-	// The page is the URL's: a reload shows the same page, and a page past
-	// the end shows the last one.
-	await page.reload();
-	await expect(secretsPager).toContainText('Showing 21');
-	await page.goto('/?page=99');
-	await expect(secretsPager).toContainText(`of ${total}`);
-	const lastFrom = Math.floor((total - 1) / 20) * 20 + 1;
-	await expect(secretsPager).toContainText(
-		`Showing ${lastFrom}–${total} of ${total}`,
-	);
-
+	// What a page past the end shows, and that a reload keeps the page, is
+	// overview.svelte.spec.ts's.
 	// Narrowing the list sends the reader back to page 1.
 	await page.goto('/?page=2');
 	// That loading ?page=2 keeps page 2, and that each narrowing asks to go back
@@ -2580,13 +2571,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const secretsSize = secretsPager.getByRole('combobox', {
 		name: 'Rows per page',
 	});
-	await expect(secretsSize).toHaveText('20');
 	await secretsSize.click();
-	await expect(page.getByRole('listbox').getByRole('option')).toHaveText([
-		/^\s*20$/,
-		/^\s*50$/,
-		/^\s*100$/,
-	]);
 	const sizeMenuResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -2607,20 +2592,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.getByRole('option', { name: '50', exact: true }).click();
 	await expect(page).toHaveURL(/[?&]size=50(&|$)/);
 	await expect(page).not.toHaveURL(/page=/);
-	await expect(page.getByRole('row')).toHaveCount(Math.min(50, total) + 1);
-	// Everything fits on one page at 50, so the page controls are gone and the
-	// select stays. The journey seeds well under 50 secrets; if that changes this
-	// fails loudly instead of skipping the check.
-	expect(total).toBeLessThanOrEqual(50);
-	await expect(secretsPager).toContainText(`Showing 1–${total} of ${total}`);
-	await expect(secretsPager.getByRole('link', { name: 'Next' })).toHaveCount(0);
-	await expect(secretsSize).toBeVisible();
-	await page.reload();
-	await expect(secretsSize).toHaveText('50');
-	await secretsSize.click();
-	await page.getByRole('option', { name: '20', exact: true }).click();
-	await expect(page).not.toHaveURL(/size=/);
-	await expect(page.getByRole('row')).toHaveCount(20 + 1);
+	// What size 50 shows, the selector staying when one page holds everything,
+	// and picking 20 again, are overview.svelte.spec.ts's.
 
 	for (const slug of pagingSlugs) {
 		expect(

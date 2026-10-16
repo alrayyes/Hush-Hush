@@ -244,3 +244,91 @@ test('All brings every secret back', async () => {
 
 	await expect.poll(() => cards(screen).elements().length).toBe(5);
 });
+
+// alrayyes/hush-hush#893 and #897: the table pages 20 at a time by default, the
+// page and the rows per page are the URL's, and the size can be chosen.
+const pager = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('navigation', { name: 'Secrets pages' });
+const sizeSelect = (screen: Awaited<ReturnType<typeof render>>) =>
+	pager(screen).getByRole('combobox', { name: 'Rows per page' });
+
+test('page 1 shows the first 20 of 21 and links Next to page 2', async () => {
+	const screen = await render(Overview, { data });
+
+	await expect
+		.poll(() => pager(screen).element().textContent)
+		.toMatch(/Showing 1–20 of 21/);
+	await expect.poll(() => cards(screen).elements().length).toBe(20);
+	await expect
+		.element(pager(screen).getByRole('link', { name: 'Next' }))
+		.toHaveAttribute('href', '/?page=2');
+});
+
+test('page 2 shows the one that is left', async () => {
+	router.url = new URL('http://localhost/?page=2');
+	const screen = await render(Overview, { data });
+
+	await expect.poll(() => cards(screen).elements().length).toBe(1);
+	await expect
+		.poll(() => cards(screen).first().element().textContent)
+		.toContain('paging_20');
+});
+
+test('a page past the end shows the last one', async () => {
+	router.url = new URL('http://localhost/?page=99');
+	const screen = await render(Overview, { data });
+
+	await expect
+		.poll(() => pager(screen).element().textContent)
+		.toMatch(/Showing 21–21 of 21/);
+	await expect.poll(() => cards(screen).elements().length).toBe(1);
+});
+
+test('the rows-per-page menu offers 20, 50 and 100', async () => {
+	const screen = await render(Overview, { data });
+
+	await sizeSelect(screen).click();
+
+	const options = screen.getByRole('listbox').getByRole('option');
+	await expect
+		.poll(() => options.elements().map((o) => o.textContent?.trim()))
+		.toEqual(['20', '50', '100']);
+});
+
+test('picking 50 asks for ?size=50 from page 1', async () => {
+	router.url = new URL('http://localhost/?page=2');
+	const screen = await render(Overview, { data });
+
+	await sizeSelect(screen).click();
+	await screen.getByRole('option', { name: '50', exact: true }).click();
+
+	await vi.waitFor(() =>
+		expect(router.goto).toHaveBeenCalledWith('/?size=50', { reset: false }),
+	);
+});
+
+test('at size 50 everything is on one page, and the selector stays to undo it', async () => {
+	router.url = new URL('http://localhost/?size=50');
+	const screen = await render(Overview, { data });
+
+	await expect.poll(() => cards(screen).elements().length).toBe(21);
+	await expect
+		.poll(() => pager(screen).element().textContent)
+		.toMatch(/Showing 1–21 of 21/);
+	await expect.element(sizeSelect(screen)).toHaveTextContent('50');
+	await expect
+		.element(pager(screen).getByRole('link', { name: 'Next' }))
+		.not.toBeInTheDocument();
+});
+
+test('picking 20 again drops the size from the address', async () => {
+	router.url = new URL('http://localhost/?size=50');
+	const screen = await render(Overview, { data });
+
+	await sizeSelect(screen).click();
+	await screen.getByRole('option', { name: '20', exact: true }).click();
+
+	await vi.waitFor(() =>
+		expect(router.goto).toHaveBeenCalledWith('/', { reset: false }),
+	);
+});
