@@ -439,6 +439,18 @@ test('a list takes its page from its own parameter and leaves the other where it
 		.toBe(2);
 });
 
+test('the consumer list shows its own second page', async () => {
+	stub.url = new URL('http://localhost/settings?consumer_token_page=2');
+	const screen = await render(Settings, { data: pagedData });
+
+	await expect
+		.poll(() => rowsLike(screen, /pager consumer/).elements().length)
+		.toBe(2);
+	await expect
+		.poll(() => rowsLike(screen, /pager bearer/).elements().length)
+		.toBe(10);
+});
+
 test.each([
 	[
 		'bearer',

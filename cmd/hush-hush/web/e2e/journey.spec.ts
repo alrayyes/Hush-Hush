@@ -2789,7 +2789,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		document.documentElement.setAttribute('data-theme', 'light'),
 	);
 
-	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.setViewportSize({ width: 1280, height: 800 });
 
 	// Log out lives in .topbar-actions, not <nav> - it's an account
