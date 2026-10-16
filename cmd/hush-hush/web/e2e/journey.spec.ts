@@ -2083,15 +2083,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// alrayyes/hush-hush#522: the secrets list shows each secret's tags and
 	// filters by one. Done last because it adds secrets, and every earlier
 	// assertion counts audit rows and secrets. The values are sealed here,
-	// not through the dialog (which can't set tags yet, #523).
-	// alrayyes/hush-hush#535: attribution came from the first 50 audit
-	// events, so once the log passed 50 a newer secret showed none. Every
-	// read is an event; push the log well past 50, then create the secrets
-	// below and check they still say who made them.
-	for (let i = 0; i < 55; i++) {
-		await page.request.get('/objects/mattermost_deploy_webhook');
-	}
-
+	// not through the dialog (which can't set tags yet, #523). The tags on a
+	// card, the pills and their counts, the pressed state, a tag with the
+	// search box and who a card says created and updated a secret are
+	// overview.svelte.spec.ts's; attribution past the first 50 audit events
+	// (#535) is store/attribution_test.go's.
 	for (const [slug, tags] of [
 		['tagged_one', ['prod', 'homelab']],
 		['tagged_two', ['prod']],
@@ -2111,47 +2107,16 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.goto('/');
 	const cardList = page.getByRole('list', { name: 'Secrets' });
 	await expect(cardList.getByRole('listitem')).toHaveCount(5);
-	await expect(
-		cardList.getByRole('listitem').filter({ hasText: 'tagged_three' }),
-	).toContainText(/Updated .+ by admin/);
-
-	const taggedOne = cardList
-		.getByRole('listitem')
-		.filter({ hasText: 'tagged_one' });
-	// The API doesn't promise an order for an object's tags, so only the set
-	// is asserted.
-	await expect(taggedOne.getByTestId('tag')).toHaveCount(2);
-	expect((await taggedOne.getByTestId('tag').allTextContents()).sort()).toEqual(
-		['homelab', 'prod'],
-	);
 
 	const tagFilter = page.getByRole('group', { name: 'Filter by tag' });
-	await expect(tagFilter.getByRole('button')).toHaveText([
-		'All (5)',
-		'prod (2)',
-		'backup (1)',
-		'homelab (1)',
-	]);
 	for (const pill of await tagFilter.getByRole('button').all()) {
 		const box = await pill.boundingBox();
 		expect(box?.height).toBeGreaterThanOrEqual(44);
 	}
 
+	// One real click, to prove the filter is wired to the real list.
 	await tagFilter.getByRole('button', { name: 'prod (2)' }).click();
-	await expect(
-		tagFilter.getByRole('button', { name: 'prod (2)' }),
-	).toHaveAttribute('aria-pressed', 'true');
-	await expect(
-		tagFilter.getByRole('button', { name: 'All (5)' }),
-	).toHaveAttribute('aria-pressed', 'false');
 	await expect(cardList.getByRole('listitem')).toHaveCount(2);
-
-	// A tag and the search box both apply.
-	await page
-		.getByRole('searchbox', { name: 'Filter secrets' })
-		.fill('tagged_two');
-	await expect(cardList.getByRole('listitem')).toHaveCount(1);
-	await page.getByRole('searchbox', { name: 'Filter secrets' }).fill('');
 
 	// The pills animate their colours when pressed, and axe samples a
 	// mid-transition colour as a false contrast failure: let every CSS
