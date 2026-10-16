@@ -332,3 +332,37 @@ test('picking 20 again drops the size from the address', async () => {
 		expect(router.goto).toHaveBeenCalledWith('/', { reset: false }),
 	);
 });
+
+// The pager's links carry the chosen size, so paging at 50 stays at 50. The
+// fixture needs more than 50 rows for a second page to exist at that size.
+const manySecrets = Array.from({ length: 51 }, (_, i) =>
+	secret(`many_${String(i).padStart(2, '0')}`, []),
+);
+
+test('at size 50 Next keeps the size', async () => {
+	router.url = new URL('http://localhost/?size=50');
+	const screen = await render(Overview, {
+		data: { ...data, objects: manySecrets },
+	});
+
+	await expect
+		.poll(() => pager(screen).element().textContent)
+		.toMatch(/Showing 1–50 of 51/);
+	await expect
+		.element(pager(screen).getByRole('link', { name: 'Next' }))
+		.toHaveAttribute('href', '/?page=2&size=50');
+});
+
+test('at size 50 on page 2 Previous goes to page 1 and keeps the size', async () => {
+	router.url = new URL('http://localhost/?page=2&size=50');
+	const screen = await render(Overview, {
+		data: { ...data, objects: manySecrets },
+	});
+
+	await expect
+		.poll(() => pager(screen).element().textContent)
+		.toMatch(/Showing 51–51 of 51/);
+	await expect
+		.element(pager(screen).getByRole('link', { name: 'Previous' }))
+		.toHaveAttribute('href', '/?size=50');
+});
