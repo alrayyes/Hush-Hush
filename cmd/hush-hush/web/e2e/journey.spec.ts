@@ -2305,7 +2305,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		page.getByRole('row').filter({
 			has: page.getByRole('cell', { name: new RegExp(`^${slug}`) }),
 		});
-	for (const width of [1280, 1920]) {
+	// 1280px is where the xl: truncation widths start and every wider width is
+	// the same layout with more room, so a row that fits here fits there: no
+	// 1920px pass.
+	for (const width of [1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('/');
 		await expect(rowFor('many_consumers')).toHaveCount(1);
@@ -2366,7 +2369,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		},
 	});
 	expect(widest.ok()).toBe(true);
-	for (const width of [768, 900, 1024, 1280, 1440]) {
+	// The tightest width of each regime. The table shows from 768px (md:), the
+	// truncation widths grow at 1280px (xl:), and within a regime a wider
+	// viewport only adds room, so a fit at 768 and at 1280 is a fit at 900,
+	// 1024 and 1440. No width in between has a breakpoint of its own; a new
+	// one (an md-to-xl utility, a media query) needs its width added back here.
+	for (const width of [768, 1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('/');
 		await expect(rowFor(widestSlug)).toHaveCount(1);
