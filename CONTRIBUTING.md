@@ -136,12 +136,17 @@ naming it, so pushing only a README runs the prose checks and no Go. Editing
 `lefthook.yml` or `ci.yml` runs every job. When you change a filter in
 `ci.yml`, change its list in `lefthook.yml` in the same commit.
 
-The two dependency audits (`govulncheck` and `bun-audit`) skip a pull request
-that leaves the lockfiles alone, so `audit.yml` runs them again every day. A
-failure there opens or updates one issue per tool, titled "Scheduled audit
-failed: govulncheck" or "Scheduled audit failed: bun-audit", because nobody
-watches a scheduled run. You can start it by hand from the Actions tab. Its
-commands mirror the jobs in `ci.yml`, so change both together.
+Dependency advisories are checked twice, and neither blocks a pull request for
+something it didn't do. The `advisories` job in `ci.yml` audits the pull request
+and its base with `bun audit` and `govulncheck`, and fails only on an advisory
+the pull request introduces; it runs when Go source or the manifest or lock file
+changes, because `govulncheck` reports only what the code can reach.
+`advisory-scan.yml` audits `main` every day, on a dependency push and by hand,
+and keeps one open "Dependency advisories" issue that lists what it finds,
+updates it when the list changes and closes it when the audit is clean. Don't
+edit that issue; the job owns it. There is no `--ignore` anywhere: an advisory
+with no patched release stays in the issue until one ships. To check by hand,
+run `bun audit` and `go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...`.
 
 ## How it fits together
 
