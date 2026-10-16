@@ -195,6 +195,13 @@ test('the pills read All, then each tag by how many secrets carry it', async () 
 	await expect
 		.poll(() => pills.elements().map((p) => p.textContent?.trim()))
 		.toEqual(['All (5)', 'prod (2)', 'backup (1)', 'homelab (1)']);
+	// Nothing is picked yet, so All is the one pressed.
+	await expect
+		.element(pill(screen, 'All (5)'))
+		.toHaveAttribute('aria-pressed', 'true');
+	await expect
+		.element(pill(screen, 'prod (2)'))
+		.toHaveAttribute('aria-pressed', 'false');
 });
 
 test('picking a tag shows only its secrets and marks the pill pressed', async () => {
