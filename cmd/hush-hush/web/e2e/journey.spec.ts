@@ -2722,10 +2722,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// alrayyes/Hush-Hush#896: the Settings lists page on their own, 10 at a time,
 	// each with its page in the address. Twelve more bearer tokens and consumer
 	// tokens push both past a page; the passkeys stay on one.
-	const listTotal = async (path: string) =>
-		Number((await page.request.get(path)).headers()['x-total-count']);
-	const bearerBefore = await listTotal('/tokens');
-	const consumerBefore = await listTotal('/consumer-tokens');
 	for (let i = 0; i < 12; i++) {
 		const n = String(i).padStart(2, '0');
 		expect(
@@ -2749,8 +2745,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			).ok(),
 		).toBe(true);
 	}
-	const bearerTotal = bearerBefore + 12;
-	const consumerTotal = consumerBefore + 12;
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto('/settings');
 	const bearerPager = page.getByRole('navigation', {
@@ -2759,31 +2753,16 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const consumerPager = page.getByRole('navigation', {
 		name: 'Consumer tokens pages',
 	});
-	const listRows = (heading: string) =>
-		page
-			.locator('section')
-			.filter({ has: page.getByRole('heading', { name: heading }) })
-			.locator('tbody tr');
-	await expect(
-		page.getByRole('navigation', { name: 'Passkeys pages' }),
-	).toHaveCount(0);
-	await expect(bearerPager).toContainText(`Showing 1–10 of ${bearerTotal}`);
-	await expect(consumerPager).toContainText(`Showing 1–10 of ${consumerTotal}`);
-	await expect(listRows('Bearer tokens')).toHaveCount(10);
-	await expect(listRows('Consumer tokens')).toHaveCount(10);
-
-	// Paging one list leaves the other where it was.
+	// The rows and pager text of each list, a list's page taken from its own
+	// parameter, the links keeping the other list's position, a page past the
+	// end, the consumer filter and the phone cards are
+	// settings.svelte.spec.ts's. What these two real clicks, the scroll and the
+	// reload prove is that the address really carries both positions.
 	await bearerPager.getByRole('link', { name: 'Page 2' }).click();
 	await expect(page).toHaveURL(/[?&]token_page=2(&|$)/);
-	await expect(page).not.toHaveURL(/consumer_token_page/);
-	await expect(bearerPager).toContainText(
-		`Showing 11–${Math.min(20, bearerTotal)} of ${bearerTotal}`,
-	);
-	await expect(consumerPager).toContainText(`Showing 1–10 of ${consumerTotal}`);
 	await consumerPager.getByRole('link', { name: 'Next' }).click();
 	await expect(page).toHaveURL(/token_page=2/);
 	await expect(page).toHaveURL(/consumer_token_page=2/);
-	await expect(bearerPager).toContainText('Showing 11');
 
 	// The consumer pager is below the fold, so clicking it scrolled the page.
 	// Paging it doesn't jump back to the top.
@@ -2810,38 +2789,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		document.documentElement.setAttribute('data-theme', 'light'),
 	);
 
-	// A page past the end shows the last page that has rows.
-	await page.goto('/settings?token_page=99');
-	const lastBearerFrom = Math.floor((bearerTotal - 1) / 10) * 10 + 1;
-	await expect(bearerPager).toContainText(
-		`Showing ${lastBearerFrom}–${bearerTotal} of ${bearerTotal}`,
-	);
-
-	// The consumer list does the same, and filtered to one consumer it fits on
-	// one page and shows no pager.
-	await page.goto('/settings?consumer_token_page=99');
-	const lastConsumerFrom = Math.floor((consumerTotal - 1) / 10) * 10 + 1;
-	await expect(consumerPager).toContainText(
-		`Showing ${lastConsumerFrom}–${consumerTotal} of ${consumerTotal}`,
-	);
-	await page.goto('/settings?consumer=pager-consumer-03');
-	await expect(listRows('Consumer tokens')).toHaveCount(1);
-	await expect(consumerPager).toHaveCount(0);
-
-	// At 390px the lists are cards, and they page the same way.
-	await page.setViewportSize({ width: 390, height: 900 });
-	await page.goto('/settings');
-	await expect(
-		page.getByRole('list', { name: 'Bearer token list' }).getByRole('listitem'),
-	).toHaveCount(10);
-	await expect(
-		page
-			.getByRole('list', { name: 'Consumer token list' })
-			.getByRole('listitem'),
-	).toHaveCount(10);
-	await expect(bearerPager).toContainText('Page 1 of 2');
 	await page.setViewportSize({ width: 1280, height: 900 });
-
 	await page.setViewportSize({ width: 1280, height: 800 });
 
 	// Log out lives in .topbar-actions, not <nav> - it's an account
