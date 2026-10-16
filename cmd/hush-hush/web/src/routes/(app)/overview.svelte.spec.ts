@@ -125,3 +125,122 @@ test('picking a tag from page 2 goes back to page 1', async () => {
 		}),
 	);
 });
+
+// alrayyes/hush-hush#522: the list shows each secret's tags and filters by
+// one. The three tagged secrets sit among two untagged ones.
+let secretCount = 0;
+const secret = (slug: string, tags: string[]) => ({
+	id: `10000000-0000-4000-8000-${String(secretCount++).padStart(12, '0')}`,
+	slug,
+	used_by: [],
+	tags,
+	created_at: '2026-01-01T00:00:00Z',
+	updated_at: '2026-01-02T00:00:00Z',
+	created_by: { type: 'session', id: 'user-1' },
+	// Updated by someone else, so a card that names the creator twice shows.
+	updated_by: { type: 'token', id: 'tok-9' },
+});
+const tagData = {
+	...data,
+	objects: [
+		secret('plain_one', []),
+		secret('plain_two', []),
+		secret('tagged_one', ['prod', 'homelab']),
+		secret('tagged_two', ['prod']),
+		secret('tagged_three', ['backup']),
+	],
+};
+
+const cards = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('list', { name: 'Secrets' }).getByRole('listitem');
+const pill = (screen: Awaited<ReturnType<typeof render>>, name: string) =>
+	screen
+		.getByRole('group', { name: 'Filter by tag' })
+		.getByRole('button', { name });
+
+test("a card lists the secret's own tags", async () => {
+	const screen = await render(Overview, { data: tagData });
+
+	const tags = cards(screen)
+		.filter({ hasText: 'tagged_one' })
+		.getByTestId('tag');
+	await expect
+		.poll(() =>
+			tags
+				.elements()
+				.map((tag) => tag.textContent?.trim())
+				.sort(),
+		)
+		.toEqual(['homelab', 'prod']);
+});
+
+test('a card says who created the secret and who last updated it', async () => {
+	const screen = await render(Overview, { data: tagData });
+
+	const card = cards(screen).filter({ hasText: 'tagged_three' });
+	await expect
+		.poll(() => card.element().textContent?.replace(/\s+/g, ' '))
+		.toMatch(/Created .+ by admin/);
+	await expect
+		.poll(() => card.element().textContent?.replace(/\s+/g, ' '))
+		.toMatch(/Updated .+ by token:tok-9/);
+});
+
+test('the pills read All, then each tag by how many secrets carry it', async () => {
+	const screen = await render(Overview, { data: tagData });
+
+	const pills = screen
+		.getByRole('group', { name: 'Filter by tag' })
+		.getByRole('button');
+	await expect
+		.poll(() => pills.elements().map((p) => p.textContent?.trim()))
+		.toEqual(['All (5)', 'prod (2)', 'backup (1)', 'homelab (1)']);
+	// Nothing is picked yet, so All is the one pressed.
+	await expect
+		.element(pill(screen, 'All (5)'))
+		.toHaveAttribute('aria-pressed', 'true');
+	await expect
+		.element(pill(screen, 'prod (2)'))
+		.toHaveAttribute('aria-pressed', 'false');
+});
+
+test('picking a tag shows only its secrets and marks the pill pressed', async () => {
+	const screen = await render(Overview, { data: tagData });
+
+	await pill(screen, 'prod (2)').click();
+
+	await expect
+		.element(pill(screen, 'prod (2)'))
+		.toHaveAttribute('aria-pressed', 'true');
+	await expect
+		.element(pill(screen, 'All (5)'))
+		.toHaveAttribute('aria-pressed', 'false');
+	await expect.poll(() => cards(screen).elements().length).toBe(2);
+});
+
+test('a tag and the search box both apply', async () => {
+	const screen = await render(Overview, { data: tagData });
+
+	await pill(screen, 'prod (2)').click();
+	await screen
+		.getByRole('searchbox', { name: 'Filter secrets' })
+		.fill('tagged_two');
+
+	await expect.poll(() => cards(screen).elements().length).toBe(1);
+
+	// A secret the search matches but the tag doesn't stays out.
+	await screen
+		.getByRole('searchbox', { name: 'Filter secrets' })
+		.fill('tagged_three');
+	await expect.poll(() => cards(screen).elements().length).toBe(0);
+});
+
+test('All brings every secret back', async () => {
+	const screen = await render(Overview, { data: tagData });
+
+	await pill(screen, 'prod (2)').click();
+	await expect.poll(() => cards(screen).elements().length).toBe(2);
+	await pill(screen, 'All (5)').click();
+
+	await expect.poll(() => cards(screen).elements().length).toBe(5);
+});
