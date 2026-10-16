@@ -2372,7 +2372,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// The tightest width of each regime. The table shows from 768px (md:), the
 	// truncation widths grow at 1280px (xl:), and within a regime a wider
 	// viewport only adds room, so a fit at 768 and at 1280 is a fit at 900,
-	// 1024 and 1440. No width in between has a breakpoint of its own.
+	// 1024 and 1440. No width in between has a breakpoint of its own; a new
+	// one (an md-to-xl utility, a media query) needs its width added back here.
 	for (const width of [768, 1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('/');
