@@ -366,3 +366,20 @@ test('at size 50 on page 2 Previous goes to page 1 and keeps the size', async ()
 		.element(pager(screen).getByRole('link', { name: 'Previous' }))
 		.toHaveAttribute('href', '/?size=50');
 });
+
+test('at size 100 Next carries 100, not a size the test happened to use before', async () => {
+	router.url = new URL('http://localhost/?size=100');
+	const hundredAndOne = Array.from({ length: 101 }, (_, i) =>
+		secret(`hundred_${String(i).padStart(3, '0')}`, []),
+	);
+	const screen = await render(Overview, {
+		data: { ...data, objects: hundredAndOne },
+	});
+
+	await expect
+		.poll(() => pager(screen).element().textContent)
+		.toMatch(/Showing 1–100 of 101/);
+	await expect
+		.element(pager(screen).getByRole('link', { name: 'Next' }))
+		.toHaveAttribute('href', '/?page=2&size=100');
+});
