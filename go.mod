@@ -7,7 +7,7 @@ require (
 	github.com/descope/virtualwebauthn v1.0.5
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/go-webauthn/webauthn v0.18.2
-	github.com/klauspost/compress v1.18.7
+	github.com/klauspost/compress v1.20.3
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pact-foundation/pact-go/v2 v2.8.0
 	github.com/spf13/cobra v1.10.2
