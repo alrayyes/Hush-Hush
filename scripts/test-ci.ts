@@ -266,6 +266,23 @@ if (imageUses.size > 1) {
   );
 }
 
+// The dependency audit has to run the Go the image ships with. go.mod's `go`
+// line can't say that (golangci-lint's image can't read a newer toolchain's
+// export data, so it stays behind), and govulncheck audits whatever standard
+// library it runs on.
+const shippedGo = (await read('Dockerfile')).match(/^FROM golang:([0-9.]+)-/m)?.[1];
+if (!shippedGo) fail("Dockerfile: no `FROM golang:<version>-` line to compare the audit's Go with");
+for (const [file, from] of [
+  ['.github/workflows/ci.yml', '\n  advisories:'],
+  ['.github/workflows/advisory-scan.yml', ''],
+]) {
+  const text = await read(file);
+  const used = text.slice(Math.max(0, text.indexOf(from))).match(/go-version: "?([0-9.]+)"?/)?.[1];
+  if (shippedGo && used !== shippedGo) {
+    fail(`${file}: the audit sets up Go ${used ?? '(from go.mod)'} but the Dockerfile ships ${shippedGo}`);
+  }
+}
+
 // pact-go's native library has to match the Go module.
 const goMod = await read('go.mod');
 const moduleVersion = goMod.match(/pact-foundation\/pact-go\/v2 (v[0-9.]+)/)?.[1];
