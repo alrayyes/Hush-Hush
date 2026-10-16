@@ -36,4 +36,8 @@ jobs:
       - name: commitlint the pull request title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: echo "$PR_TITLE" | bunx commitlint --verbose
+          # Dependabot writes "bump <module path> from X to Y in the <group>
+          # group across N directories", which a long module path pushes past
+          # 100 characters. Its titles get the same config minus the length cap.
+          CONFIG: ${{ github.actor == 'dependabot[bot]' && '.commitlintrc.dependabot.json' || '.commitlintrc.json' }}
+        run: echo "$PR_TITLE" | bunx commitlint --config "$CONFIG" --verbose
