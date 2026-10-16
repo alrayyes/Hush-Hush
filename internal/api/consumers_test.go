@@ -123,16 +123,17 @@ func TestListConsumersWithPageAndPageSizeReturnsOnePage(t *testing.T) {
 	require.Equal(t, []hushhush.ConsumerEntry{{Name: "work/ci-runner", SecretCount: 1}}, body.Consumers)
 }
 
-// The most-used consumer sorts last by name, so a listing ordered by anything
-// but name puts different consumers on page 1.
+// The counts neither rise nor fall with the names (alpha 2, beta 1, mu 3,
+// zeta 1), so a listing ordered by anything but name puts different consumers
+// on page 1.
 func TestListConsumersPageIsSortedByNameWhateverTheCounts(t *testing.T) {
 	t.Parallel()
 
 	mux, s := newTestMux(t)
 	ctx := context.Background()
-	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"zeta", "mu", "alpha"}, "", ""))
-	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"zeta", "mu", "beta"}, "", ""))
-	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"zeta"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"mu", "alpha"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"mu", "alpha", "beta"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"mu", "zeta"}, "", ""))
 
 	req := httptest.NewRequest(http.MethodGet, "/consumers?page=1&page_size=2", nil)
 	req.Header.Set("Authorization", "Bearer "+issueToken(t, s))
@@ -145,7 +146,7 @@ func TestListConsumersPageIsSortedByNameWhateverTheCounts(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Equal(t, 4, body.Total)
 	require.Equal(t, []hushhush.ConsumerEntry{
-		{Name: "alpha", SecretCount: 1},
+		{Name: "alpha", SecretCount: 2},
 		{Name: "beta", SecretCount: 1},
 	}, body.Consumers)
 }
