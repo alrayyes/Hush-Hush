@@ -325,6 +325,39 @@ func TestListConsumersPageReturnsOnePageAndTheTotalCount(t *testing.T) {
 	}, secondPage.Consumers)
 }
 
+// The counts neither rise nor fall with the names (alpha 2, beta 1, mu 3,
+// zeta 1), so a listing ordered by how many secrets name each consumer, in
+// either direction, puts different consumers on page 1.
+func seedConsumersAgainstNameOrder(t *testing.T, s *store.Store) {
+	t.Helper()
+
+	ctx := context.Background()
+	require.NoError(t, s.CreateObject(ctx, "a", []byte("v"), []string{"mu", "alpha"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "b", []byte("v"), []string{"mu", "alpha", "beta"}, "", ""))
+	require.NoError(t, s.CreateObject(ctx, "c", []byte("v"), []string{"mu", "zeta"}, "", ""))
+}
+
+func TestListConsumersPageIsSortedByNameWhateverTheCounts(t *testing.T) {
+	t.Parallel()
+
+	s := openTestStore(t)
+	seedConsumersAgainstNameOrder(t, s)
+
+	firstPage, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Page: 1, PageSize: 2})
+	require.NoError(t, err)
+	require.Equal(t, []store.ConsumerEntry{
+		{Name: "alpha", SecretCount: 2},
+		{Name: "beta", SecretCount: 1},
+	}, firstPage.Consumers)
+
+	secondPage, err := s.ListConsumersPage(context.Background(), store.ConsumerFilter{Page: 2, PageSize: 2})
+	require.NoError(t, err)
+	require.Equal(t, []store.ConsumerEntry{
+		{Name: "mu", SecretCount: 3},
+		{Name: "zeta", SecretCount: 1},
+	}, secondPage.Consumers)
+}
+
 func TestListConsumersPagePastTheLastPageIsEmpty(t *testing.T) {
 	t.Parallel()
 
