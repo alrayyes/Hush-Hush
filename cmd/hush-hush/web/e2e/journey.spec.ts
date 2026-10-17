@@ -207,17 +207,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(results.violations).toEqual([]);
 
-	// #301: the current page's nav link carries aria-current="page" -
-	// checked here and again after navigating to Consumers below, so
-	// this proves it actually moves rather than sticking to whichever
-	// link loaded first.
-	await expect(nav.getByRole('link', { name: 'Secrets' })).toHaveAttribute(
-		'aria-current',
-		'page',
-	);
-	await expect(
-		nav.getByRole('link', { name: 'Consumers' }),
-	).not.toHaveAttribute('aria-current', 'page');
+	// Which nav link is the current page (#301), in the top nav and the phone
+	// tab bar, and what the top bar says (#481), are layout.svelte.spec.ts's.
 
 	// alrayyes/hush-hush#480: below md the top nav row gives way to a fixed
 	// bottom tab bar. Both are real <nav> landmarks with their own
@@ -269,28 +260,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		barBox?.y ?? 0,
 	);
 
-	// aria-current moves with navigation, same as the top nav above.
-	await expect(tabBar.getByRole('link', { name: 'Secrets' })).toHaveAttribute(
-		'aria-current',
-		'page',
-	);
 	await tabBar.getByRole('link', { name: 'Consumers' }).click();
 	await page.waitForURL('/consumers');
-	await expect(tabBar.getByRole('link', { name: 'Consumers' })).toHaveAttribute(
-		'aria-current',
-		'page',
-	);
-	await expect(
-		tabBar.getByRole('link', { name: 'Secrets' }),
-	).not.toHaveAttribute('aria-current', 'page');
 
 	// alrayyes/hush-hush#481: the phone top bar carries the brand, the
 	// instance label from /healthz, an ACTIVE pill, and an account menu that
 	// holds Log out and the theme toggle (the design drops both).
 	const topBar = page.getByRole('banner');
-	await expect(topBar.getByText('HUSH-HUSH')).toBeVisible();
-	await expect(topBar.getByText('e2e / local')).toBeVisible();
-	await expect(topBar.getByText('ACTIVE', { exact: true })).toBeVisible();
 	await expect(topBar.getByRole('button', { name: 'Log out' })).toHaveCount(0);
 
 	const accountMenu = topBar.getByRole('button', { name: 'Account menu' });
@@ -299,30 +275,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	expect(accountBox?.height).toBeGreaterThanOrEqual(44);
 	await accountMenu.click();
 	const accountDialog = page.getByRole('dialog', { name: 'Account' });
-	await expect(
-		accountDialog.getByRole('button', { name: 'Log out' }),
-	).toBeVisible();
-	await expect(
-		accountDialog.getByRole('button', {
-			name: /switch to (dark|light) mode/i,
-		}),
-	).toBeVisible();
+	await expect(accountDialog).toBeVisible();
 	const accountResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
 	expect(accountResults.violations).toEqual([]);
 	await page.keyboard.press('Escape');
 	await expect(accountDialog).toBeHidden();
-
-	// A failing /healthz must not blank the app or claim it is active.
-	await page.route('**/healthz', (route) => route.abort());
-	await page.reload();
-	await expect(topBar.getByText('OFFLINE', { exact: true })).toBeVisible();
-	await expect(topBar.getByText('ACTIVE', { exact: true })).toHaveCount(0);
-	await expect(topBar.getByText('e2e / local')).toHaveCount(0);
-	await page.unroute('**/healthz');
-	await page.reload();
-	await expect(topBar.getByText('ACTIVE', { exact: true })).toBeVisible();
 
 	const mobileResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -839,14 +798,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// (alrayyes/hush-hush#252), plus its own axe-core scan.
 	await nav.getByRole('link', { name: 'Consumers' }).click();
 	await expect(page.getByRole('heading', { name: 'Consumers' })).toBeVisible();
-	await expect(nav.getByRole('link', { name: 'Consumers' })).toHaveAttribute(
-		'aria-current',
-		'page',
-	);
-	await expect(nav.getByRole('link', { name: 'Secrets' })).not.toHaveAttribute(
-		'aria-current',
-		'page',
-	);
 	await expect(page.getByRole('link', { name: 'homelab' })).toBeVisible();
 	// That one consumer fits on a page with no pager is consumers.svelte.spec.ts's.
 	const consumersResults = await new AxeBuilder({ page })
@@ -1548,7 +1499,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(sameConsumerRows).toHaveCount(1);
 
 	// alrayyes/hush-hush#711: repeating an active token's consumer and
-	// description warns, naming that token, and lets the user go ahead.
+	// description warns and lets the user go ahead. What the warning says is
+	// settings.svelte.spec.ts's; here the server's token id feeds it.
 	const existingTokenId = (
 		await sameConsumerRows.locator('[data-testid="token-id"]').textContent()
 	)?.trim();
