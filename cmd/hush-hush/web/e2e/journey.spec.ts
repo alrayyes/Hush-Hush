@@ -1864,6 +1864,19 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// under its own id. Two are made through the API (the create dialog is
 	// exercised for the third below); sealing here only needs a well-formed
 	// age file, which any recipient gives.
+	// Secrets seeded only to push a list past a page, removed together.
+	const deleteSecrets = async (slugs: readonly string[]) => {
+		const removed = await Promise.all(
+			slugs.map((slug) =>
+				page.request.delete(`/objects/${slug}`, {
+					headers: { 'X-CSRF-Token': csrfToken },
+				}),
+			),
+		);
+		for (const response of removed) {
+			expect(response.ok()).toBe(true);
+		}
+	};
 	const sealForVariant = async (text: string) => {
 		const encrypter = new age.Encrypter();
 		encrypter.addRecipient(homelabRecipient);
@@ -2222,15 +2235,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.analyze();
 	expect(manyCardResults.violations).toEqual([]);
 
-	for (const slug of ['many_consumers', 'few_consumers', 'some_consumers']) {
-		expect(
-			(
-				await page.request.delete(`/objects/${slug}`, {
-					headers: { 'X-CSRF-Token': csrfToken },
-				})
-			).ok(),
-		).toBe(true);
-	}
+	await deleteSecrets(['many_consumers', 'few_consumers', 'some_consumers']);
 
 	// alrayyes/Hush-Hush#893: the Secrets table pages 20 at a time, the page is
 	// in the URL, and a short list shows no pager. Seeded on top of whatever
@@ -2241,16 +2246,20 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		{ length: 21 },
 		(_, i) => `paging_${String(i).padStart(2, '0')}`,
 	);
-	for (const slug of pagingSlugs) {
-		const created = await page.request.post('/objects', {
-			headers: { 'X-CSRF-Token': csrfToken },
-			data: {
-				slug,
-				value: await sealForVariant(slug),
-				used_by: [],
-				tags: ['paging'],
-			},
-		});
+	const pagingCreated = await Promise.all(
+		pagingSlugs.map(async (slug) =>
+			page.request.post('/objects', {
+				headers: { 'X-CSRF-Token': csrfToken },
+				data: {
+					slug,
+					value: await sealForVariant(slug),
+					used_by: [],
+					tags: ['paging'],
+				},
+			}),
+		),
+	);
+	for (const created of pagingCreated) {
 		expect(created.ok()).toBe(true);
 	}
 	const total = existing + pagingSlugs.length;
@@ -2350,15 +2359,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// What size 50 shows, the selector staying when one page holds everything,
 	// and picking 20 again, are overview.svelte.spec.ts's.
 
-	for (const slug of pagingSlugs) {
-		expect(
-			(
-				await page.request.delete(`/objects/${slug}`, {
-					headers: { 'X-CSRF-Token': csrfToken },
-				})
-			).ok(),
-		).toBe(true);
-	}
+	await deleteSecrets(pagingSlugs);
 
 	// alrayyes/Hush-Hush#896: the Settings lists page on their own, 10 at a time,
 	// each with its page in the address. Twelve more bearer tokens and consumer
