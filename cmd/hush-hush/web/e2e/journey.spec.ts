@@ -375,18 +375,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// specs/consumers/spec.md's "Picking a consumer with a registered
 	// public key resolves a recipient" scenario.
 	await page.getByRole('option', { name: 'homelab', exact: true }).click();
-	// A tag the API's pattern rejects stops the submit and is named.
-	await page.locator('#create-tags').fill('prod, bad tag');
-	await page.getByRole('button', { name: 'Create' }).click();
-	await expect(
-		createDialog.getByText('"bad tag" is not a valid tag.'),
-	).toBeVisible();
-	await expect(createDialog).toBeVisible();
-	// A value that is only whitespace counts as empty.
-	await page.locator('#create-value').fill(' \n\t ');
-	await page.locator('#create-tags').fill('Prod, homelab, prod');
-	await page.getByRole('button', { name: 'Create' }).click();
-	await expect(createDialog.getByRole('alert')).toHaveText('Enter a value.');
+	// That a tag the API would refuse and a value of only whitespace stop the
+	// submit is overview.svelte.spec.ts's.
 	await page.locator('#create-value').fill(`  \n${plaintextValue}\t \n`);
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('button', { name: 'New secret' }).waitFor();
