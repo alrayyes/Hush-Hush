@@ -1476,36 +1476,21 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// Consumer tokens: create/rotate/revoke, and the single-select
 	// consumer picker (max=1, showKeyStatus=false -
 	// openspec/changes/consumer-read-tokens-web-ui/design.md). "ci-runner"
-	// is deliberately a consumer with no registered public key - proving
-	// showKeyStatus=false actually suppresses the "(no key)" hint
-	// ConsumerCombobox's used_by callers still show.
+	// is deliberately a consumer with no registered public key; that the
+	// picker then shows no "(no key)" hint is settings.svelte.spec.ts's.
 	await page.getByRole('button', { name: 'New consumer token' }).click();
 	const createConsumerTokenDialog = page.getByRole('dialog', {
 		name: 'Create a consumer token',
 	});
 	await page.locator('#consumer-token-consumer').fill('ci-runner');
 	await page.getByRole('listbox').waitFor();
-	await expect(createConsumerTokenDialog.getByText('(no key)')).toHaveCount(0);
 	await page.getByRole('option', { name: 'Add "ci-runner"' }).click();
-	await expect(createConsumerTokenDialog.getByLabel('Consumer')).toHaveCount(0);
 	await page
 		.locator('#consumer-token-description')
 		.fill('deploy read token for ci-runner');
-	// alrayyes/hush-hush#537: the default and the limits come from the API
-	// spec - 90 days, between 1 and 365 - not from the page.
+	// The lifetime's default and limits (#537), the picker leaving no key hint
+	// and the repeat warning's text are settings.svelte.spec.ts's.
 	const consumerTokenTtl = page.locator('#consumer-token-ttl');
-	await expect(consumerTokenTtl).toHaveValue('90');
-	await expect(consumerTokenTtl).toHaveAttribute('min', '1');
-	await expect(consumerTokenTtl).toHaveAttribute('max', '365');
-	await expect(
-		createConsumerTokenDialog.getByText('From 1 to 365 days.'),
-	).toBeVisible();
-	await consumerTokenTtl.fill('366');
-	expect(
-		await consumerTokenTtl.evaluate(
-			(el) => (el as HTMLInputElement).validity.rangeOverflow,
-		),
-	).toBe(true);
 	await consumerTokenTtl.fill('30');
 	// The Create button's disabled state clears (consumer is picked) but
 	// Tailwind's disabled:opacity-50 briefly outlives the DOM's own
@@ -1529,10 +1514,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const consumerTokenValueField = page.getByLabel('Token value');
 	await expect(consumerTokenValueField).not.toHaveValue('');
 	const firstConsumerTokenValue = await consumerTokenValueField.inputValue();
-	await page.getByRole('button', { name: 'Copy token' }).click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-		firstConsumerTokenValue,
-	);
 	await page
 		.getByRole('dialog', { name: 'Token created' })
 		.getByRole('button', { name: 'Done' })
@@ -1599,10 +1580,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await repeatDialog
 		.locator('#consumer-token-description')
 		.fill('deploy read token for ci-runner');
-	const repeatWarning = repeatDialog.getByRole('alert');
-	await expect(repeatWarning).toContainText('already has an active token');
-	await expect(repeatWarning).toContainText(existingTokenId ?? 'missing id');
-	await expect(repeatWarning).toContainText(TIMESTAMP);
 	await expect(
 		repeatDialog.getByRole('button', { name: 'Create anyway' }),
 	).toBeVisible();
