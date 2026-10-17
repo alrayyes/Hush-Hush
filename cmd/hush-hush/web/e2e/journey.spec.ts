@@ -1860,10 +1860,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await tagFilter.getByRole('button', { name: 'All (5)' }).click();
 	await expect(cardList.getByRole('listitem')).toHaveCount(5);
 
-	// alrayyes/hush-hush#670: one name can hold a value per consumer, each
-	// under its own id. Two are made through the API (the create dialog is
-	// exercised for the third below); sealing here only needs a well-formed
-	// age file, which any recipient gives.
 	// Secrets seeded only to push a list past a page, removed together.
 	const deleteSecrets = async (slugs: readonly string[]) => {
 		const removed = await Promise.all(
@@ -1877,6 +1873,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			expect(response.ok()).toBe(true);
 		}
 	};
+	// alrayyes/hush-hush#670: one name can hold a value per consumer, each
+	// under its own id. Two are made through the API (the create dialog is
+	// exercised for the third below); sealing here only needs a well-formed
+	// age file, which any recipient gives.
 	const sealForVariant = async (text: string) => {
 		const encrypter = new age.Encrypter();
 		encrypter.addRecipient(homelabRecipient);
