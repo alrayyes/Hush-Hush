@@ -727,13 +727,16 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// #790: a path no route matches shows the 404 page inside the signed-in
 	// shell, and a load that fails shows the 500 page with no internals.
 	await page.goto('/no/such/page');
+	// What the page says besides its heading, and where it links, is
+	// error.svelte.spec.ts's; here it has to be the page an unmatched path
+	// reaches, inside the signed-in shell.
 	await expect(
 		page.getByRole('heading', { level: 1, name: 'Page not found' }),
 	).toBeVisible();
 	await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
-	await expect(
-		page.getByRole('link', { name: 'Open secrets' }),
-	).toHaveAttribute('href', '/');
+	// The signed-in variant follows the root layout's session, which the
+	// component test stubs.
+	await expect(page.getByRole('link', { name: 'Open secrets' })).toBeVisible();
 	const notFoundResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -744,7 +747,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(
 		page.getByRole('heading', { level: 1, name: 'Something went wrong' }),
 	).toBeVisible();
-	await expect(page.getByText('500', { exact: true })).toBeVisible();
 	await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
 	expect(await page.content()).not.toMatch(
 		/\bat \S+\.(js|ts|svelte)|node_modules/,

@@ -15,15 +15,11 @@ test('a path no route matches is a 404 with a plain page in the app shell', asyn
 	await expect(
 		page.getByRole('heading', { level: 1, name: 'Page not found' }),
 	).toBeVisible();
-	await expect(page.getByText('404', { exact: true })).toBeVisible();
 	// Signed out: the login-page shell, no signed-in navigation.
 	await expect(page.getByRole('navigation', { name: 'Primary' })).toHaveCount(
 		0,
 	);
 	await expect(page.getByRole('contentinfo')).toBeVisible();
-	await expect(
-		page.getByRole('link', { name: /sign in/i }).first(),
-	).toHaveAttribute('href', '/');
 
 	const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
 	expect(results.violations).toEqual([]);
