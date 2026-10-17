@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { SESSION_FILE } from './e2e/session';
 
 // Runs against the real built output (adapter-static's build/), embedded
 // into the real Go binary by e2e/server.sh - a bare `vite preview` 500s on
@@ -27,10 +28,34 @@ export default defineConfig({
 		url: baseURL,
 		reuseExistingServer: !process.env.CI,
 	},
+	// The journey registers the one passkey the server accepts and signs in, so it
+	// goes first and saves the session. The signed-in specs start from that
+	// session and run once it passes, and the sign-out check runs last, since
+	// signing out ends the session for everything before it. Specs that need no
+	// session run beside all of them. A signed-in spec shares the journey's
+	// database, so it works out its own counts and removes what it adds.
 	projects: [
 		{
 			name: 'chromium',
 			use: { ...devices['Desktop Chrome'] },
+			testIgnore: ['journey.spec.ts', 'signed-in/**', 'signed-out/**'],
+		},
+		{
+			name: 'journey',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: 'journey.spec.ts',
+		},
+		{
+			name: 'signed-in',
+			use: { ...devices['Desktop Chrome'], storageState: SESSION_FILE },
+			testMatch: 'signed-in/**/*.spec.ts',
+			dependencies: ['journey'],
+		},
+		{
+			name: 'signed-out',
+			use: { ...devices['Desktop Chrome'], storageState: SESSION_FILE },
+			testMatch: 'signed-out/**/*.spec.ts',
+			dependencies: ['signed-in'],
 		},
 	],
 });

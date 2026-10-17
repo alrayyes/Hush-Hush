@@ -50,3 +50,6 @@ vite.config.ts.timestamp-*
 
 # Vitest browser mode writes screenshots of a failed component test here.
 .vitest
+
+# The signed-in session the e2e journey leaves for the specs after it.
+/e2e/.auth/
