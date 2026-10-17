@@ -17,6 +17,16 @@ async function expectValueFieldIsPrivate(field: Locator) {
 	await expect(field).toHaveAttribute('autocorrect', 'off');
 }
 
+// 44x44px is the minimum touch target (WCAG 2.5.5): each control is measured
+// where it is drawn, so a utility class that shrinks one fails here.
+async function expectTouchTargets(controls: Locator[]) {
+	for (const control of controls) {
+		const box = await control.boundingBox();
+		expect(box?.width).toBeGreaterThanOrEqual(44);
+		expect(box?.height).toBeGreaterThanOrEqual(44);
+	}
+}
+
 // alrayyes/hush-hush#272: /audit-log is both a SvelteKit page route and a
 // real backend API endpoint, and Go's mux used to route a hard
 // navigation there straight to the JSON handler instead of the SPA's
@@ -229,10 +239,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		const link = tabBar.getByRole('link', { name });
 		await expect(link).toBeVisible();
 
-		// 44x44px is the minimum touch target.
-		const box = await link.boundingBox();
-		expect(box?.width).toBeGreaterThanOrEqual(44);
-		expect(box?.height).toBeGreaterThanOrEqual(44);
+		await expectTouchTargets([link]);
 	}
 
 	// The footer's repository link is a 44px target on a phone, and the footer
@@ -425,16 +432,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const copySlug = secretCard.getByRole('button', {
 		name: 'Copy slug mattermost_deploy_webhook',
 	});
-	for (const control of [
+	await expectTouchTargets([
 		copySlug,
 		secretCard.getByRole('link', { name: 'Inspect' }),
 		secretCard.getByRole('button', { name: 'Edit' }),
 		secretCard.getByRole('button', { name: 'Delete' }),
-	]) {
-		const box = await control.boundingBox();
-		expect(box?.width).toBeGreaterThanOrEqual(44);
-		expect(box?.height).toBeGreaterThanOrEqual(44);
-	}
+	]);
 
 	// Inspect is a link (to the detail page) styled as a button: it must not
 	// pick up the global anchor underline, or it reads differently from Edit
@@ -796,15 +799,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const copyKey = consumerCard.getByRole('button', {
 		name: 'Copy public key homelab',
 	});
-	for (const control of [
+	await expectTouchTargets([
 		copyKey,
 		consumerCard.getByRole('button', { name: 'Rename' }),
 		consumerCard.getByRole('button', { name: 'Delete' }),
-	]) {
-		const box = await control.boundingBox();
-		expect(box?.width).toBeGreaterThanOrEqual(44);
-		expect(box?.height).toBeGreaterThanOrEqual(44);
-	}
+	]);
 
 	const consumerCardResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -1000,15 +999,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// What a card says, the action as a word and the curl command are
 	// audit-log.svelte.spec.ts's. The real log has to give the same count.
 
-	for (const control of [
+	await expectTouchTargets([
 		page.getByRole('button', { name: 'Export CSV' }),
 		page.getByRole('button', { name: 'Export JSON' }),
 		page.getByRole('button', { name: 'Copy command' }),
-	]) {
-		const box = await control.boundingBox();
-		expect(box?.width).toBeGreaterThanOrEqual(44);
-		expect(box?.height).toBeGreaterThanOrEqual(44);
-	}
+	]);
 
 	const curlSnippet = page.getByRole('group', { name: 'Query with curl' });
 	const auditCardResults = await new AxeBuilder({ page })
@@ -1077,8 +1072,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	// alrayyes/Hush-Hush#895: the audit log pages 25 at a time with Newer and
 	// Older. Twenty-six more reads of one secret push the log past a page.
-	for (let i = 0; i < 26; i++) {
-		const read = await page.request.get('/objects/mattermost_deploy_webhook');
+	const reads = await Promise.all(
+		Array.from({ length: 26 }, () =>
+			page.request.get('/objects/mattermost_deploy_webhook'),
+		),
+	);
+	for (const read of reads) {
 		expect(read.ok()).toBe(true);
 	}
 	await page.goto('/audit-log');
@@ -1348,14 +1347,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.getByRole('listitem')
 		.first();
 	await expect(passkeyCard).toBeVisible();
-	for (const control of [
+	await expectTouchTargets([
 		passkeyCard.getByRole('button', { name: 'Rename' }),
 		passkeyCard.getByRole('button', { name: 'Delete' }),
-	]) {
-		const box = await control.boundingBox();
-		expect(box?.width).toBeGreaterThanOrEqual(44);
-		expect(box?.height).toBeGreaterThanOrEqual(44);
-	}
+	]);
 	const passkeyCardResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -2040,24 +2035,22 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// 1280px is where the xl: truncation widths start and every wider width is
 	// the same layout with more room, so a row that fits here fits there: no
 	// 1920px pass.
-	for (const width of [1280]) {
-		await page.setViewportSize({ width, height: 900 });
-		await page.goto('/');
-		await expect(rowFor('many_consumers')).toHaveCount(1);
-		const manyBox = await rowFor('many_consumers').boundingBox();
-		const fewBox = await rowFor('few_consumers').boundingBox();
-		expect(manyBox?.height).toBeLessThanOrEqual((fewBox?.height ?? 0) + 4);
-		expect(
-			await page.evaluate(
-				() =>
-					document.documentElement.scrollWidth <=
-					document.documentElement.clientWidth,
-			),
-		).toBe(true);
-		await expect(
-			rowFor('many_consumers').getByRole('button', { name: 'Delete' }),
-		).toBeInViewport();
-	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto('/');
+	await expect(rowFor('many_consumers')).toHaveCount(1);
+	const manyBox = await rowFor('many_consumers').boundingBox();
+	const fewBox = await rowFor('few_consumers').boundingBox();
+	expect(manyBox?.height).toBeLessThanOrEqual((fewBox?.height ?? 0) + 4);
+	expect(
+		await page.evaluate(
+			() =>
+				document.documentElement.scrollWidth <=
+				document.documentElement.clientWidth,
+		),
+	).toBe(true);
+	await expect(
+		rowFor('many_consumers').getByRole('button', { name: 'Delete' }),
+	).toBeInViewport();
 
 	// alrayyes/Hush-Hush#894: the consumers directory pages at 20 with the
 	// shared pager. The 100 consumers seeded above are five pages and more.
@@ -2370,28 +2363,28 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// alrayyes/Hush-Hush#896: the Settings lists page on their own, 10 at a time,
 	// each with its page in the address. Twelve more bearer tokens and consumer
 	// tokens push both past a page; the passkeys stay on one.
-	for (let i = 0; i < 12; i++) {
-		const n = String(i).padStart(2, '0');
-		expect(
-			(
-				await page.request.post('/tokens', {
+	const seeded = await Promise.all(
+		Array.from({ length: 12 }, (_, i) => {
+			const n = String(i).padStart(2, '0');
+
+			return [
+				page.request.post('/tokens', {
 					headers: { 'X-CSRF-Token': csrfToken },
 					data: { description: `pager bearer ${n}`, ttl_seconds: 86_400 },
-				})
-			).ok(),
-		).toBe(true);
-		expect(
-			(
-				await page.request.post('/consumer-tokens', {
+				}),
+				page.request.post('/consumer-tokens', {
 					headers: { 'X-CSRF-Token': csrfToken },
 					data: {
 						consumer: `pager-consumer-${n}`,
 						description: `pager consumer ${n}`,
 						ttl_seconds: 86_400,
 					},
-				})
-			).ok(),
-		).toBe(true);
+				}),
+			];
+		}).flat(),
+	);
+	for (const created of seeded) {
+		expect(created.ok()).toBe(true);
 	}
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto('/settings');
