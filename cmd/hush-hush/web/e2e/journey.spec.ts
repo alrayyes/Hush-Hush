@@ -550,20 +550,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	// The sealed ciphertext, base64, with a working copy button.
 	const sealed = page.getByLabel('Sealed ciphertext (base64)');
 	await expect(sealed).not.toHaveValue('');
-	const sealedValue = await sealed.inputValue();
-	await page.getByRole('button', { name: 'Copy sealed ciphertext' }).click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-		sealedValue,
-	);
-
-	// The CLI snippet uses the CLI's real flags and a placeholder key, never
-	// a real one (the design's `-i ~/.age/key.txt` doesn't exist).
-	const cliSnippet = page.getByRole('group', { name: 'Fetch with the CLI' });
-	await expect(cliSnippet).toContainText(
-		'hush-hush-cli get mattermost_deploy_webhook --identity "AGE-SECRET-KEY-1..."',
-	);
-	await expect(cliSnippet).not.toContainText('-i ~/.age');
-
+	// The copy button, the CLI snippet and the key's truncation are
+	// secret-detail.svelte.spec.ts's.
 	// The consumer recorded at creation, with its registered public key
 	// truncated, not shown whole.
 	const consumersSection = page.getByRole('region', {
@@ -574,7 +562,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(consumersSection).toContainText(
 		`${homelabRecipient.slice(0, 10)}…${homelabRecipient.slice(-6)}`,
 	);
-	await expect(consumersSection).not.toContainText(homelabRecipient);
 
 	// At most three recent audit events, newest first. The secret has been
 	// created and nothing else yet, bar this page's own read.
