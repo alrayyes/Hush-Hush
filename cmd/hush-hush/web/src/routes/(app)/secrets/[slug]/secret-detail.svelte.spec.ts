@@ -157,3 +157,34 @@ test('a name with several variants offers the choice, each linked by id', async 
 			'/secrets/release_token?id=aaaaaaaa-0000-4000-8000-000000000002',
 		);
 });
+
+test('a long consumer list says how many are shown and filters by name', async () => {
+	const names = [
+		...Array.from(
+			{ length: 97 },
+			(_, i) => `consumer_${String(i).padStart(3, '0')}`,
+		),
+		'dotfiles',
+		'dotfiles-claude',
+		'dotfiles-work',
+	];
+	const screen = await render(SecretDetail, {
+		data: {
+			...found,
+			consumers: names.map((name) => ({ name, publicKey: undefined })),
+		},
+	});
+
+	const section = screen.getByRole('region', { name: 'Authorized consumers' });
+	await expect
+		.poll(() => section.getByRole('status').element().textContent?.trim())
+		.toBe('100 of 100 shown');
+	await section.getByLabelText('Filter consumers').fill('dotfiles');
+
+	await expect
+		.poll(() => section.getByRole('status').element().textContent?.trim())
+		.toBe('3 of 100 shown');
+	await expect
+		.poll(() => section.getByRole('listitem').elements().length)
+		.toBe(3);
+});

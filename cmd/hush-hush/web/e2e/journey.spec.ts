@@ -2118,7 +2118,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	await consumerPages.getByRole('link', { name: 'Page 2' }).click();
 	await expect(page).toHaveURL(/\/consumers\?page=2$/);
-	await expect(consumerPages.getByText('Showing 21–40 of 102')).toBeVisible();
 
 	// That the page links carry the search, a page past the end lands on the
 	// last page (the load function's 307) and Enter in the filter goes to page
@@ -2221,24 +2220,12 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const consumersDialog = page.getByRole('dialog', {
 		name: 'Consumers of many_consumers',
 	});
-	await expect(consumersDialog).toContainText('100 consumers');
-	await expect(consumersDialog.getByRole('status')).toHaveText(
-		'100 of 100 shown',
-	);
+	// The dialog's count, filter, empty message and links are
+	// ConsumerList.svelte.spec.ts's and overview.svelte.spec.ts's.
 	const dialogList = consumersDialog.getByRole('list');
 	expect(
 		await dialogList.evaluate((el) => el.scrollHeight > el.clientHeight),
 	).toBe(true);
-	await consumersDialog.getByLabel('Filter consumers').fill('dotfiles');
-	await expect(consumersDialog.getByRole('status')).toHaveText(
-		'3 of 100 shown',
-	);
-	await expect(consumersDialog.getByRole('listitem')).toHaveCount(3);
-	await consumersDialog
-		.getByLabel('Filter consumers')
-		.fill('nothing-like-this');
-	await expect(consumersDialog).toContainText('No consumers match');
-	await consumersDialog.getByLabel('Filter consumers').fill('dotfiles');
 	const manyDialogResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -2254,8 +2241,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(detailConsumers.getByRole('status')).toHaveText(
 		'100 of 100 shown',
 	);
-	await detailConsumers.getByLabel('Filter consumers').fill('dotfiles');
-	await expect(detailConsumers.getByRole('listitem')).toHaveCount(3);
+	// Its filter is secret-detail.svelte.spec.ts's.
 
 	// Phone width: the card names two consumers and offers the same button
 	// as a 44px target, and the card doesn't grow with the list.

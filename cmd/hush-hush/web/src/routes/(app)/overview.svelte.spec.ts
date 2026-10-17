@@ -579,3 +579,31 @@ test('Delete asks first, and Cancel deletes nothing', async () => {
 	await expect.element(dialog).not.toBeInTheDocument();
 	expect(api.deleteObject).not.toHaveBeenCalled();
 });
+
+// A secret with a hundred consumers shows two, and a button opens them all.
+const hundred = Array.from(
+	{ length: 100 },
+	(_, i) => `consumer_${String(i).padStart(3, '0')}`,
+);
+test('a card with many consumers offers them all in a dialog that counts them', async () => {
+	const screen = await render(Overview, {
+		data: {
+			...data,
+			objects: [{ ...secret('many_consumers', []), used_by: hundred }],
+		},
+	});
+
+	await cards(screen)
+		.getByRole('button', { name: 'Show all 100 consumers of many_consumers' })
+		.click();
+
+	const dialog = screen.getByRole('dialog', {
+		name: 'Consumers of many_consumers',
+	});
+	await expect
+		.poll(() => dialog.element().textContent)
+		.toContain('100 consumers');
+	await expect
+		.poll(() => dialog.getByRole('status').element().textContent?.trim())
+		.toBe('100 of 100 shown');
+});
