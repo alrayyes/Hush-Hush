@@ -3,6 +3,7 @@ import { expect, type Locator, test } from '@playwright/test';
 import * as age from 'age-encryption';
 import { unwrapIdentityWithRecoveryPhrase } from '../src/lib/identity';
 import { expectListParity, expectNavParity } from './layout-parity';
+import { SESSION_FILE } from './session';
 
 // A timestamp as formatTimestamp writes it, for the parity checks.
 const TIMESTAMP = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
@@ -2361,83 +2362,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	await deleteSecrets(pagingSlugs);
 
-	// alrayyes/Hush-Hush#896: the Settings lists page on their own, 10 at a time,
-	// each with its page in the address. Twelve more bearer tokens and consumer
-	// tokens push both past a page; the passkeys stay on one.
-	const seeded = await Promise.all(
-		Array.from({ length: 12 }, (_, i) => {
-			const n = String(i).padStart(2, '0');
-
-			return [
-				page.request.post('/tokens', {
-					headers: { 'X-CSRF-Token': csrfToken },
-					data: { description: `pager bearer ${n}`, ttl_seconds: 86_400 },
-				}),
-				page.request.post('/consumer-tokens', {
-					headers: { 'X-CSRF-Token': csrfToken },
-					data: {
-						consumer: `pager-consumer-${n}`,
-						description: `pager consumer ${n}`,
-						ttl_seconds: 86_400,
-					},
-				}),
-			];
-		}).flat(),
-	);
-	for (const created of seeded) {
-		expect(created.ok()).toBe(true);
-	}
-	await page.setViewportSize({ width: 1280, height: 900 });
-	await page.goto('/settings');
-	const bearerPager = page.getByRole('navigation', {
-		name: 'Bearer tokens pages',
-	});
-	const consumerPager = page.getByRole('navigation', {
-		name: 'Consumer tokens pages',
-	});
-	// The rows and pager text of each list, a list's page taken from its own
-	// parameter, the links keeping the other list's position, a page past the
-	// end, the consumer filter and the phone cards are
-	// settings.svelte.spec.ts's. What these two real clicks, the scroll and the
-	// reload prove is that the address really carries both positions.
-	await bearerPager.getByRole('link', { name: 'Page 2' }).click();
-	await expect(page).toHaveURL(/[?&]token_page=2(&|$)/);
-	await consumerPager.getByRole('link', { name: 'Next' }).click();
-	await expect(page).toHaveURL(/token_page=2/);
-	await expect(page).toHaveURL(/consumer_token_page=2/);
-
-	// The consumer pager is below the fold, so clicking it scrolled the page.
-	// Paging it doesn't jump back to the top.
-	expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-
-	// Both positions survive a reload.
-	await page.reload();
-	await expect(bearerPager).toContainText('Showing 11');
-	await expect(consumerPager).toContainText('Showing 11');
-
-	// The paged state, in both themes.
-	for (const theme of ['light', 'dark']) {
-		await page.evaluate(
-			(t) => document.documentElement.setAttribute('data-theme', t),
-			theme,
-		);
-		await page.waitForFunction(() => document.getAnimations().length === 0);
-		const settingsPagerResults = await new AxeBuilder({ page })
-			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-			.analyze();
-		expect(settingsPagerResults.violations, theme).toEqual([]);
-	}
-	await page.evaluate(() =>
-		document.documentElement.setAttribute('data-theme', 'light'),
-	);
-
-	await page.setViewportSize({ width: 1280, height: 800 });
-
-	// Log out lives in .topbar-actions, not <nav> - it's an account
-	// action, not a navigation link (#294).
-	await page.getByRole('button', { name: 'Log out' }).click();
-	await page.waitForURL('/login');
-
-	await page.goto('/changelog');
-	await expect(page.locator('nav')).toHaveCount(0);
+	// What is left of the session is the next specs' starting point: they run
+	// after this one, signed in as the user it registered (e2e/session.ts).
+	await context.storageState({ path: SESSION_FILE });
 });

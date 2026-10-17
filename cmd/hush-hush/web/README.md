@@ -90,7 +90,10 @@ journeys through the login page and every authenticated page area
 every route, since the app has no SSR and every page's own `+layout.ts` fetches
 `GET /healthz` at load. Login uses a Chromium CDP virtual authenticator to
 register a real passkey rather than a stubbed session, the same WebAuthn
-ceremony a real browser performs (`rules/a11y.md`). Each page a journey
+ceremony a real browser performs (`rules/a11y.md`). The journey runs first
+and leaves its signed-in session behind; specs under `e2e/signed-in/` start
+from that session once it passes, and `e2e/signed-out/` runs last, since
+signing out ends it. Each page a journey
 test reaches also gets an accessibility scan (`@axe-core/playwright`)
 against WCAG 2.1 AA (`wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa`) - any
 violation fails the run, same as CI's `e2e` job.
