@@ -17,6 +17,8 @@ on:
     paths:
       - package.json
       - bun.lock
+      - cmd/hush-hush/web/package.json
+      - cmd/hush-hush/web/bun.lock
       - go.mod
       - go.sum
       - "**/*.go"
@@ -54,5 +56,6 @@ jobs:
           setup: bun install --frozen-lockfile --ignore-scripts
           commands: |
             bun audit
+            cd cmd/hush-hush/web && bun audit
             go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
           labels: dependencies

@@ -76,6 +76,10 @@ const cases: [path: string, expected: string[]][] = [
   ['.golangci.yml', [...GO, 'container-integration', 'prose']],
   ['api/openapi.yaml', [...GO, 'container-integration', 'e2e', 'lighthouse', 'web', 'api', 'prose']],
   ['cmd/hush-hush/web/src/app.css', ['web', 'e2e', 'lighthouse', 'container-integration']],
+  // The web app's own lockfile is audited by the advisories gate too (the root
+  // bun.lock is not the one the embedded front end ships with).
+  ['cmd/hush-hush/web/bun.lock', ['advisories', 'web', 'e2e', 'lighthouse', 'container-integration']],
+  ['cmd/hush-hush/web/package.json', ['advisories', 'web', 'e2e', 'lighthouse', 'container-integration']],
   ['cmd/hush-hush/web/build/index.html', [...GO, 'web', 'e2e', 'lighthouse', 'container-integration']],
   ['pacts/hush-hush-cli-hush-hush-server.json', [...GO, 'container-integration']],
   ['integration/container_test.go', [...GO, 'container-integration']],
@@ -280,6 +284,20 @@ for (const [file, from] of [
   const used = text.slice(Math.max(0, text.indexOf(from))).match(/go-version: "?([0-9.]+)"?/)?.[1];
   if (shippedGo && used !== shippedGo) {
     fail(`${file}: the audit sets up Go ${used ?? '(from go.mod)'} but the Dockerfile ships ${shippedGo}`);
+  }
+}
+
+// The web app has its own lockfile, and it is the one that ships. Both halves of
+// the dependency audit (the pull request gate and the daily scan) have to read it,
+// or a front-end advisory is found by neither.
+for (const [file, from] of [
+  ['.github/workflows/ci.yml', '\n  advisories:'],
+  ['.github/workflows/advisory-scan.yml', ''],
+]) {
+  const text = await read(file);
+  const audit = text.slice(Math.max(0, text.indexOf(from)));
+  if (!/cd cmd\/hush-hush\/web && bun audit/.test(audit)) {
+    fail(`${file}: the audit doesn't run \`bun audit\` in cmd/hush-hush/web, so its lockfile is unchecked`);
   }
 }
 

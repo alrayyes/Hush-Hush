@@ -124,6 +124,8 @@ jobs:
             bun-lock:
               - 'package.json'
               - 'bun.lock'
+              - 'cmd/hush-hush/web/package.json'
+              - 'cmd/hush-hush/web/bun.lock'
               - '.github/workflows/ci.yml'
             # What scripts/test-ci.ts reads: the workflows, the hook, the images
             # and the versions it compares.
@@ -723,6 +725,7 @@ jobs:
           setup: bun install --frozen-lockfile --ignore-scripts
           commands: |
             bun audit
+            cd cmd/hush-hush/web && bun audit
             go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
   # A hook is something you can skip, and the version number depends on
