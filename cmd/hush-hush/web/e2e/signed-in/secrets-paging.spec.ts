@@ -25,26 +25,26 @@ test('the Secrets table pages and sizes through the address', async ({
 		return btoa(String.fromCharCode(...sealed));
 	};
 
-	const before = await (await page.request.get('/objects')).json();
+	const before = await (await page.request.get('/objects?limit=500')).json();
 	const existing = (before.objects ?? before).length as number;
 	const pagingSlugs = Array.from(
 		{ length: 21 },
 		(_, i) => `paging_${String(i).padStart(2, '0')}`,
 	);
-	const pagingCreated = await Promise.all(
-		pagingSlugs.map(async (slug) =>
-			page.request.post('/objects', {
-				headers,
-				data: {
-					slug,
-					value: await sealFor(slug),
-					used_by: [],
-					tags: ['paging'],
-				},
-			}),
-		),
-	);
 	try {
+		const pagingCreated = await Promise.all(
+			pagingSlugs.map(async (slug) =>
+				page.request.post('/objects', {
+					headers,
+					data: {
+						slug,
+						value: await sealFor(slug),
+						used_by: [],
+						tags: ['paging'],
+					},
+				}),
+			),
+		);
 		for (const created of pagingCreated) {
 			expect(created.ok(), await created.text()).toBe(true);
 		}
