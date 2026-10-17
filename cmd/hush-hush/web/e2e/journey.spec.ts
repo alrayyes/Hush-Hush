@@ -760,6 +760,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		page.getByRole('heading', { level: 1, name: 'Page not found' }),
 	).toBeVisible();
 	await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+	// The signed-in variant follows the root layout's session, which the
+	// component test stubs.
+	await expect(page.getByRole('link', { name: 'Open secrets' })).toBeVisible();
 	const notFoundResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
