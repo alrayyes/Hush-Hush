@@ -352,3 +352,42 @@ test('a search with no match names it', async () => {
 		.poll(() => screen.container.textContent)
 		.toContain('No consumers match "nope".');
 });
+
+// #482: the phone card names the consumer and counts its secrets, shows the
+// key truncated and never whole, and Copy puts the whole key on the clipboard.
+const oneSecret = {
+	...data,
+	consumers: [{ name: 'homelab', secret_count: 1, public_key: KEY }],
+	total: 1,
+	tokenCounts: new Map<string, number>(),
+};
+
+test('a phone card links the consumer, counts its one secret and truncates the key', async () => {
+	const screen = await render(Consumers, { data: oneSecret });
+	const homelab = card(screen, 'homelab');
+
+	await expect
+		.element(homelab.getByRole('link', { name: 'homelab' }))
+		.toBeVisible();
+	await expect.poll(() => homelab.element().textContent).toMatch(/1 secret\b/);
+	await expect
+		.poll(() => homelab.element().textContent)
+		.toContain(truncateKey(KEY));
+	expect(homelab.element().textContent).not.toContain(KEY);
+});
+
+test('Copy puts the whole key on the clipboard, not the truncated preview', async () => {
+	const writeText = vi.fn().mockResolvedValue(undefined);
+	vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+	const screen = await render(Consumers, { data: oneSecret });
+	const homelab = card(screen, 'homelab');
+
+	await homelab
+		.getByRole('button', { name: 'Copy public key homelab' })
+		.click();
+
+	await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith(KEY));
+	await expect
+		.element(homelab.getByRole('button', { name: 'Copied public key homelab' }))
+		.toBeVisible();
+});
