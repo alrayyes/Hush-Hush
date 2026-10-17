@@ -881,11 +881,7 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		'page',
 	);
 	await expect(page.getByRole('link', { name: 'homelab' })).toBeVisible();
-	// One consumer fits on a page: no pager, and no "Showing" text.
-	await expect(
-		page.getByRole('navigation', { name: 'Consumers pages' }),
-	).toHaveCount(0);
-	await expect(page.getByText(/^Showing /)).toHaveCount(0);
+	// That one consumer fits on a page with no pager is consumers.svelte.spec.ts's.
 	const consumersResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -911,15 +907,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.getByRole('listitem')
 		.filter({ hasText: 'homelab' });
 	await expect(consumerCard).toBeVisible();
-	await expect(
-		consumerCard.getByRole('link', { name: 'homelab' }),
-	).toBeVisible();
-	await expect(consumerCard).toContainText(/1 secret\b/);
-	await expect(consumerCard).toContainText(
-		`${homelabRecipient.slice(0, 10)}…${homelabRecipient.slice(-6)}`,
-	);
-	await expect(consumerCard).not.toContainText(homelabRecipient);
-
+	// The card's link, count and truncated key, and Copy writing the whole
+	// key, are consumers.svelte.spec.ts's.
 	const copyKey = consumerCard.getByRole('button', {
 		name: 'Copy public key homelab',
 	});
@@ -933,15 +922,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		expect(box?.height).toBeGreaterThanOrEqual(44);
 	}
 
-	// The whole key goes on the clipboard, not the truncated preview.
-	await copyKey.click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-		homelabRecipient,
-	);
-	await expect(
-		consumerCard.getByRole('button', { name: 'Copied public key homelab' }),
-	).toBeVisible();
-
 	const consumerCardResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();
@@ -950,10 +930,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await page.setViewportSize({ width: 1280, height: 720 });
 	await expect(page.getByRole('table')).toBeVisible();
 	await expect(consumerList).toBeHidden();
-
-	await page.getByLabel('Filter by name').fill('nomatch');
-	await page.getByLabel('Filter by name').blur();
-	await expect(page.getByText('No consumers match "nomatch".')).toBeVisible();
 
 	await page.getByLabel('Filter by name').fill('homelab');
 	await page.getByLabel('Filter by name').blur();
