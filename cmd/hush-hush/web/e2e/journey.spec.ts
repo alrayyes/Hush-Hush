@@ -2086,10 +2086,10 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await expect(variantA).toHaveCount(1);
 	await expect(variantD).toHaveCount(1);
 
-	// Edit and View act on the variant they were clicked on, not the name.
+	// Edit, View and Delete say which variant they act on, and use its id:
+	// overview.svelte.spec.ts's. Here the real server takes the edit.
 	await variantD.getByRole('button', { name: 'Edit' }).click();
 	const variantEdit = page.getByRole('dialog', { name: 'Edit release_token' });
-	await expect(variantEdit).toContainText('Variant for consumer_d');
 	await variantEdit.locator('#edit-value').fill('rotated for consumer_d');
 	await variantEdit.getByLabel('Keep a readable copy for yourself').check();
 	await variantEdit.getByRole('button', { name: 'Save' }).click();
@@ -2100,8 +2100,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 
 	await variantA.getByRole('button', { name: 'View' }).click();
 	const variantView = page.getByRole('dialog', { name: 'release_token' });
-	await expect(variantView).toContainText('Variant for consumer_a');
-	await expect(variantView.getByRole('listitem')).toHaveText(['consumer_a']);
 	await expect(variantView.getByLabel('Ciphertext (base64)')).not.toHaveValue(
 		'',
 	);
@@ -2179,7 +2177,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const variantDelete = page.getByRole('alertdialog', {
 		name: 'Delete release_token?',
 	});
-	await expect(variantDelete).toContainText('Variant for consumer_d');
 	await variantDelete
 		.getByRole('button', { name: 'Delete', exact: true })
 		.click();

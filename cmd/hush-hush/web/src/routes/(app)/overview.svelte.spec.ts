@@ -23,6 +23,18 @@ vi.mock('$app/state', () => ({
 	},
 }));
 
+// What the dialogs fetch and delete by is the API's; a test reads which id the
+// page asked for.
+const api = vi.hoisted(() => ({
+	getObjectValue: vi.fn(),
+	deleteObject: vi.fn(),
+}));
+vi.mock('#lib/api.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/api.js')>()),
+	getObjectValue: api.getObjectValue,
+	deleteObject: api.deleteObject,
+}));
+
 const objects = Array.from({ length: 21 }, (_, i) => ({
 	id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
 	slug: `paging_${String(i).padStart(2, '0')}`,
@@ -44,6 +56,8 @@ const data = {
 
 beforeEach(() => {
 	router.goto.mockReset();
+	api.getObjectValue.mockReset();
+	api.deleteObject.mockReset();
 	router.url = new URL('http://localhost/');
 });
 
@@ -382,4 +396,113 @@ test('at size 100 Next carries 100, not a size the test happened to use before',
 	await expect
 		.element(pager(screen).getByRole('link', { name: 'Next' }))
 		.toHaveAttribute('href', '/?page=2&size=100');
+});
+
+// alrayyes/hush-hush#670: one name can hold a value per consumer, each under its
+// own id. Which variant a row is, and that its buttons act on that one and not
+// the name, are the page's; the conflict a duplicate consumer raises is the
+// server's message (conflict_message_test.go), shown as it comes.
+const variantA = {
+	...secret('release_token', []),
+	id: '20000000-0000-4000-8000-00000000000a',
+	used_by: ['consumer_a'],
+};
+const variantD = {
+	...secret('release_token', []),
+	id: '20000000-0000-4000-8000-00000000000d',
+	used_by: ['consumer_d'],
+};
+const variantData = { ...data, objects: [variantA, variantD] };
+const variantCard = (
+	screen: Awaited<ReturnType<typeof render>>,
+	consumer: string,
+) => cards(screen).filter({ hasText: consumer });
+
+test('View opens the variant it was clicked on and fetches that id', async () => {
+	api.getObjectValue.mockResolvedValue('c2VhbGVk');
+	const screen = await render(Overview, { data: variantData });
+
+	await variantCard(screen, 'consumer_d')
+		.getByRole('button', { name: 'View' })
+		.click();
+
+	const dialog = screen.getByRole('dialog', { name: 'release_token' });
+	await expect
+		.poll(() => dialog.element().textContent)
+		.toContain('Variant for consumer_d');
+	await expect
+		.poll(() => dialog.getByRole('listitem').element().textContent)
+		.toContain('consumer_d');
+	await vi.waitFor(() =>
+		expect(api.getObjectValue).toHaveBeenCalledWith(
+			'release_token',
+			variantD.id,
+		),
+	);
+	await expect
+		.element(dialog.getByRole('textbox', { name: 'Ciphertext (base64)' }))
+		.toHaveValue('c2VhbGVk');
+});
+
+test('Edit says which variant it is editing', async () => {
+	const screen = await render(Overview, { data: variantData });
+
+	await variantCard(screen, 'consumer_d')
+		.getByRole('button', { name: 'Edit' })
+		.click();
+
+	const dialog = screen.getByRole('dialog', { name: 'Edit release_token' });
+	await expect
+		.poll(() => dialog.element().textContent)
+		.toContain('Variant for consumer_d');
+	await expect
+		.poll(() => dialog.element().textContent)
+		.not.toContain('consumer_a');
+});
+
+test('Delete confirms the variant and removes that id, not its sibling', async () => {
+	api.deleteObject.mockResolvedValue(undefined);
+	const screen = await render(Overview, { data: variantData });
+
+	await variantCard(screen, 'consumer_d')
+		.getByRole('button', { name: 'Delete' })
+		.click();
+
+	const dialog = screen.getByRole('alertdialog', {
+		name: 'Delete release_token?',
+	});
+	await expect
+		.poll(() => dialog.element().textContent)
+		.toContain('Variant for consumer_d');
+	await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+	await vi.waitFor(() =>
+		expect(api.deleteObject).toHaveBeenCalledWith('release_token', variantD.id),
+	);
+	expect(api.deleteObject).toHaveBeenCalledTimes(1);
+});
+
+test("Inspect links to the variant's own page by id", async () => {
+	const screen = await render(Overview, { data: variantData });
+
+	const inspect = variantCard(screen, 'consumer_d').getByRole('link', {
+		name: 'Inspect',
+	});
+
+	await expect
+		.element(inspect)
+		.toHaveAttribute('href', `/secrets/release_token?id=${variantD.id}`);
+});
+
+test('a name with one variant carries no variant label', async () => {
+	const screen = await render(Overview, {
+		data: { ...data, objects: [variantA] },
+	});
+
+	await cards(screen).getByRole('button', { name: 'Edit' }).click();
+
+	const dialog = screen.getByRole('dialog', { name: 'Edit release_token' });
+	await expect.element(dialog).toBeVisible();
+	await expect
+		.poll(() => dialog.element().textContent)
+		.not.toContain('Variant for');
 });
