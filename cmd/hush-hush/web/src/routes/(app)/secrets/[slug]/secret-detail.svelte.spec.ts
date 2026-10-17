@@ -19,13 +19,14 @@ const layout = {
 	healthy: true,
 	authenticated: true,
 };
-const event = (id: number, action: string): AuditLogEntry => ({
+const event = (id: number, action: AuditLogEntry['action']): AuditLogEntry => ({
 	id,
 	object_id: 'mattermost_deploy_webhook',
 	action,
 	timestamp: '2026-01-01T00:00:00Z',
 	ip: '203.0.113.1',
-	actor: { type: 'session', id: 'user-1' },
+	actor_type: 'session',
+	actor_id: 'user-1',
 });
 const found = {
 	...layout,

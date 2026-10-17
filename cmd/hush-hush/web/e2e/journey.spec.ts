@@ -547,13 +547,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		page.getByRole('heading', { name: 'mattermost_deploy_webhook' }),
 	).toBeVisible();
 
-	// The sealed ciphertext, base64, with a working copy button.
+	// The sealed ciphertext, base64, fetched for real.
 	const sealed = page.getByLabel('Sealed ciphertext (base64)');
 	await expect(sealed).not.toHaveValue('');
-	// The copy button, the CLI snippet and the key's truncation are
-	// secret-detail.svelte.spec.ts's.
-	// The consumer recorded at creation, with its registered public key
-	// truncated, not shown whole.
+	// The copy button, the CLI snippet and that a key is never shown whole
+	// are secret-detail.svelte.spec.ts's.
+	// The consumer recorded at creation, joined with its registered public
+	// key from the directory, truncated.
 	const consumersSection = page.getByRole('region', {
 		name: 'Authorized consumers',
 	});
