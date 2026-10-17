@@ -506,3 +506,76 @@ test('a name with one variant carries no variant label', async () => {
 		.poll(() => dialog.element().textContent)
 		.not.toContain('Variant for');
 });
+
+// alrayyes/hush-hush#480: below md the list is one card per secret, with a
+// search box that filters by id or description.
+const described = {
+	...data,
+	objects: [
+		{
+			...secret('mattermost_deploy_webhook', []),
+			description: 'prod deploy webhook for homelab/vps-docker',
+		},
+		{ ...secret('other_secret', []), description: 'something else' },
+	],
+};
+const searchBox = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('searchbox', { name: 'Filter secrets' });
+
+test('a card shows the secret, its description and how it is encrypted', async () => {
+	const screen = await render(Overview, { data: described });
+
+	const card = cards(screen).filter({ hasText: 'mattermost_deploy_webhook' });
+	await expect
+		.poll(() => card.element().textContent)
+		.toContain('prod deploy webhook for homelab/vps-docker');
+	await expect
+		.poll(() => card.element().textContent)
+		.toContain('age-encrypted (X25519)');
+});
+
+test('searching matches the id or the description', async () => {
+	const screen = await render(Overview, { data: described });
+
+	await searchBox(screen).fill('vps-docker');
+	await expect.poll(() => cards(screen).elements().length).toBe(1);
+	await expect
+		.poll(() => cards(screen).element().textContent)
+		.toContain('mattermost_deploy_webhook');
+
+	await searchBox(screen).fill('other_');
+	await expect.poll(() => cards(screen).elements().length).toBe(1);
+	await expect
+		.poll(() => cards(screen).element().textContent)
+		.toContain('other_secret');
+});
+
+test('a search that matches nothing says so, and clearing it brings the list back', async () => {
+	const screen = await render(Overview, { data: described });
+
+	await searchBox(screen).fill('no-such-secret');
+
+	await expect.poll(() => cards(screen).elements().length).toBe(0);
+	await expect
+		.poll(() => document.body.textContent)
+		.toContain('No secrets match “no-such-secret”.');
+	await searchBox(screen).fill('');
+	await expect.poll(() => cards(screen).elements().length).toBe(2);
+});
+
+test('Delete asks first, and Cancel deletes nothing', async () => {
+	const screen = await render(Overview, { data: described });
+
+	await cards(screen)
+		.filter({ hasText: 'mattermost_deploy_webhook' })
+		.getByRole('button', { name: 'Delete' })
+		.click();
+
+	const dialog = screen.getByRole('alertdialog', {
+		name: 'Delete mattermost_deploy_webhook?',
+	});
+	await expect.element(dialog).toBeVisible();
+	await dialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect.element(dialog).not.toBeInTheDocument();
+	expect(api.deleteObject).not.toHaveBeenCalled();
+});
