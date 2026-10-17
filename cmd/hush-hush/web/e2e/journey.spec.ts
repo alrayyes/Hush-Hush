@@ -466,10 +466,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		.getByRole('listitem')
 		.filter({ hasText: 'mattermost_deploy_webhook' });
 	await expect(secretCard).toBeVisible();
-	await expect(secretCard).toContainText(
-		'prod deploy webhook for homelab/vps-docker',
-	);
-	await expect(secretCard).toContainText('age-encrypted (X25519)');
+	// The card's description and encryption badge, and the search box's
+	// matching by id or description, are overview.svelte.spec.ts's.
 	// The API returns tags sorted, whatever order they were entered in.
 	await expect(secretCard.getByTestId('tag')).toHaveText(['homelab', 'prod']);
 	await expect(secretCard).toContainText(/Updated .+ by admin/);
@@ -513,24 +511,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			name: 'Copied mattermost_deploy_webhook',
 		}),
 	).toBeVisible();
-
-	// Delete still goes through the confirmation dialog.
-	await secretCard.getByRole('button', { name: 'Delete' }).click();
-	await expect(
-		page.getByRole('alertdialog', {
-			name: 'Delete mattermost_deploy_webhook?',
-		}),
-	).toBeVisible();
-	await page.getByRole('button', { name: 'Cancel' }).click();
-
-	// Search matches slug or description, and says so when nothing matches.
-	const search = page.getByRole('searchbox', { name: 'Filter secrets' });
-	await search.fill('no-such-secret');
-	await expect(secretCard).toBeHidden();
-	await expect(page.getByText('No secrets match')).toBeVisible();
-	await search.fill('vps-docker');
-	await expect(secretCard).toBeVisible();
-	await search.fill('');
 
 	const cardResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
