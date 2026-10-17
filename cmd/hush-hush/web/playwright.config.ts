@@ -50,6 +50,9 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'], storageState: SESSION_FILE },
 			testMatch: 'signed-in/**/*.spec.ts',
 			dependencies: ['journey'],
+			// They share the journey's database, and some count what is in it.
+			fullyParallel: false,
+			workers: 1,
 		},
 		{
 			name: 'signed-out',
