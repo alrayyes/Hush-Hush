@@ -36,11 +36,12 @@ test('the Settings lists page on their own and the address carries both position
 			];
 		}).flat(),
 	);
-	for (const created of seeded) {
-		expect(created.ok()).toBe(true);
-	}
 
 	try {
+		for (const created of seeded) {
+			expect(created.ok(), await created.text()).toBe(true);
+		}
+
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.goto('/settings');
 		const bearerPager = page.getByRole('navigation', {
@@ -83,7 +84,7 @@ test('the Settings lists page on their own and the address carries both position
 			['/consumer-tokens', 'consumer-tokens'],
 		] as const) {
 			const ids = (
-				(await (await page.request.get(path)).json()) as {
+				(await (await page.request.get(`${path}?limit=500`)).json()) as {
 					id: string;
 					description: string;
 				}[]
