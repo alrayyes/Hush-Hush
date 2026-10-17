@@ -1338,7 +1338,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const recoveryNotice = page.getByRole('complementary', {
 		name: 'Recovery phrase',
 	});
-	// What the notice and a passkey card say are settings.svelte.spec.ts's.
+	// What the recovery notice and a passkey card say is settings.svelte.spec.ts's
+	// ('the recovery notice says…', 'a passkey card says when it was added…').
 
 	await page.setViewportSize({ width: 390, height: 844 });
 	await expect(recoveryNotice).toBeVisible();
