@@ -1,6 +1,7 @@
 import * as age from 'age-encryption';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { ApiError } from '#lib/api.js';
 import Overview from './+page.svelte';
 
 // The page reads the URL through $app/state and navigates through
@@ -30,6 +31,8 @@ const api = vi.hoisted(() => ({
 	getObjectValue: vi.fn(),
 	deleteObject: vi.fn(),
 	createObject: vi.fn(),
+	updateObject: vi.fn(),
+	patchObject: vi.fn(),
 	listConsumerDirectory: vi.fn(),
 }));
 vi.mock('#lib/api.js', async (importOriginal) => ({
@@ -37,6 +40,8 @@ vi.mock('#lib/api.js', async (importOriginal) => ({
 	getObjectValue: api.getObjectValue,
 	deleteObject: api.deleteObject,
 	createObject: api.createObject,
+	updateObject: api.updateObject,
+	patchObject: api.patchObject,
 	listConsumerDirectory: api.listConsumerDirectory,
 }));
 
@@ -64,6 +69,8 @@ beforeEach(() => {
 	api.getObjectValue.mockReset();
 	api.deleteObject.mockReset();
 	api.createObject.mockReset();
+	api.updateObject.mockReset();
+	api.patchObject.mockReset();
 	api.listConsumerDirectory.mockReset();
 	// The consumer picker reads the directory when the create dialog opens.
 	api.listConsumerDirectory.mockResolvedValue([]);
@@ -693,4 +700,141 @@ test('a card with many consumers offers them all in a dialog that counts them', 
 	await expect
 		.poll(() => dialog.getByRole('status').element().textContent?.trim())
 		.toBe('100 of 100 shown');
+});
+
+// alrayyes/hush-hush#784, #843: an edit that types no value and keeps the
+// consumers is a PATCH of just what changed, with no re-seal and no PUT.
+const editable = {
+	...secret('mattermost_deploy_webhook', ['homelab', 'prod']),
+	used_by: ['homelab'],
+	description: 'prod deploy webhook',
+};
+const editData = {
+	...data,
+	ownerPublicKey,
+	objects: [editable],
+};
+const openEdit = async (screen: Awaited<ReturnType<typeof render>>) => {
+	api.listConsumerDirectory.mockResolvedValue([
+		{ name: 'homelab', secret_count: 1, public_key: ownerPublicKey },
+		{ name: 'ci', secret_count: 0 },
+	]);
+	await cards(screen).getByRole('button', { name: 'Edit' }).click();
+
+	return screen.getByRole('dialog', {
+		name: 'Edit mattermost_deploy_webhook',
+	});
+};
+
+test('Edit opens with the secret’s id, description, tags and consumers', async () => {
+	const screen = await render(Overview, { data: editData });
+	const dialog = await openEdit(screen);
+
+	await expect
+		.element(dialog.getByLabelText('Id', { exact: true }))
+		.toHaveValue('mattermost_deploy_webhook');
+	await expect
+		.element(dialog.getByLabelText('Description'))
+		.toHaveValue('prod deploy webhook');
+	await expect
+		.element(dialog.getByLabelText('Tags'))
+		.toHaveValue('homelab, prod');
+	await expect
+		.element(dialog.getByRole('button', { name: 'Remove homelab' }))
+		.toBeVisible();
+});
+
+test('changing only the description PATCHes just the description, with no re-seal', async () => {
+	api.patchObject.mockResolvedValue(undefined);
+	const screen = await render(Overview, { data: editData });
+	const dialog = await openEdit(screen);
+	await dialog.getByLabelText('Description').fill('rotated by the on-call');
+
+	await dialog.getByRole('button', { name: 'Save' }).click();
+
+	await vi.waitFor(() =>
+		expect(api.patchObject).toHaveBeenCalledWith(
+			'mattermost_deploy_webhook',
+			editable.id,
+			{ description: 'rotated by the on-call' },
+		),
+	);
+	expect(api.updateObject).not.toHaveBeenCalled();
+});
+
+test('changing only the tags PATCHes just the tags, and emptying them clears them', async () => {
+	api.patchObject.mockResolvedValue(undefined);
+	const screen = await render(Overview, { data: editData });
+	const dialog = await openEdit(screen);
+	await dialog.getByLabelText('Tags').fill('ops, rotated');
+	await dialog.getByRole('button', { name: 'Save' }).click();
+	await vi.waitFor(() =>
+		expect(api.patchObject).toHaveBeenLastCalledWith(
+			'mattermost_deploy_webhook',
+			editable.id,
+			{ tags: ['ops', 'rotated'] },
+		),
+	);
+
+	const again = await openEdit(screen);
+	await again.getByLabelText('Tags').fill('');
+	await again.getByRole('button', { name: 'Save' }).click();
+
+	await vi.waitFor(() =>
+		expect(api.patchObject).toHaveBeenLastCalledWith(
+			'mattermost_deploy_webhook',
+			editable.id,
+			{ tags: [] },
+		),
+	);
+	expect(api.updateObject).not.toHaveBeenCalled();
+});
+
+test('a rename the server refuses shows its message and keeps the dialog', async () => {
+	api.patchObject.mockRejectedValue(new ApiError(400, 'slug is not valid'));
+	const screen = await render(Overview, { data: editData });
+	const dialog = await openEdit(screen);
+	await dialog.getByLabelText('Id', { exact: true }).fill('Not A Slug');
+
+	await dialog.getByRole('button', { name: 'Save' }).click();
+
+	await expect
+		.poll(() => dialog.getByRole('alert').element().textContent)
+		.toContain('slug is not valid');
+	await expect.element(dialog).toBeVisible();
+});
+
+test('a typed value is sealed and PUT with the consumers, then the tags PATCH if they changed', async () => {
+	api.updateObject.mockResolvedValue(undefined);
+	api.patchObject.mockResolvedValue(undefined);
+	const screen = await render(Overview, { data: editData });
+	const dialog = await openEdit(screen);
+	await dialog.getByLabelText('New value (optional)').fill('rotated');
+	await dialog.getByLabelText('Tags').fill('prod');
+
+	await dialog.getByRole('button', { name: 'Save' }).click();
+
+	await vi.waitFor(() => expect(api.updateObject).toHaveBeenCalled());
+	const [slug, sealed, usedBy, , , id] = api.updateObject.mock.calls[0] ?? [];
+	expect(slug).toBe('mattermost_deploy_webhook');
+	expect(usedBy).toEqual(['homelab']);
+	expect(id).toBe(editable.id);
+	expect(await unseal(sealed)).toBe('rotated');
+	await vi.waitFor(() =>
+		expect(api.patchObject).toHaveBeenCalledWith(
+			'mattermost_deploy_webhook',
+			editable.id,
+			{ tags: ['prod'] },
+		),
+	);
+});
+
+test('a consumer with no registered key is marked, and one with a key is not', async () => {
+	const screen = await render(Overview, { data: editData });
+	const dialog = await openEdit(screen);
+	await dialog.getByRole('combobox').fill('ci');
+	await screen.getByRole('option', { name: 'ci', exact: true }).click();
+
+	await expect.poll(() => dialog.element().textContent).toContain('(no key)');
+	expect(dialog.element().textContent?.match(/\(no key\)/g)).toHaveLength(1);
 });

@@ -570,18 +570,13 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		name: 'Edit mattermost_deploy_webhook',
 	});
 	await expect(editDialog.getByLabel('Remove homelab')).toBeVisible();
-	// The field opens with the secret's current tags.
-	await expect(editDialog.locator('#edit-tags')).toHaveValue('homelab, prod');
 	await editConsumersLoaded;
 	await editDialog.locator('#edit-used-by').fill('ci');
 	await editDialog.getByRole('listbox').waitFor();
 	await editDialog.getByRole('option', { name: 'Add "ci"' }).click();
-	// "ci" has no registered public key - specs/consumers/spec.md's
-	// "Picking a consumer with no registered public key resolves no
-	// recipient" scenario: the form indicates this next to its chip rather
-	// than silently sealing to fewer recipients than picked ("homelab",
-	// already keyed above, still resolves one, so Save stays enabled).
-	await expect(editDialog.getByText('(no key)')).toBeVisible();
+	// That "ci", with no registered key, is marked beside its chip, and that
+	// the dialog opens with the secret's tags and consumers, are
+	// overview.svelte.spec.ts's.
 	// #847: a dialog taller than the viewport stays inside it and scrolls, so
 	// Save is never pushed off-screen (the re-seal error adds a paragraph).
 	const originalViewport = page.viewportSize();
@@ -668,21 +663,9 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await editDialog.waitFor({ state: 'hidden' });
 	await expect(page.locator('[data-testid="tag"]:visible')).toHaveCount(0);
 
-	// #784: the description changes with no value typed, and without the
-	// passkey re-seal a blank value otherwise triggers. A PATCH carries
-	// only the description.
-	const patches: string[] = [];
-	page.on('request', (req) => {
-		if (req.method() === 'PATCH' && req.url().includes('/objects/')) {
-			patches.push(req.postData() ?? '');
-		}
-	});
-	const putsBefore: string[] = [];
-	page.on('request', (req) => {
-		if (req.method() === 'PUT' && req.url().includes('/objects/')) {
-			putsBefore.push(req.url());
-		}
-	});
+	// #784, #843: a description or tags change with no value typed is a PATCH of
+	// just that, with no re-seal and no PUT: overview.svelte.spec.ts's. Here the
+	// real server takes each one.
 	await page.getByRole('button', { name: 'Edit' }).click();
 	await expect(editDialog.getByLabel('Description')).toBeVisible();
 	await editDialog
@@ -695,10 +678,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 			.getByText('rotated by the on-call, see runbook')
 			.locator('visible=true'),
 	).toBeVisible();
-	expect(patches.map((body) => JSON.parse(body))).toEqual([
-		{ description: 'rotated by the on-call, see runbook' },
-	]);
-	expect(putsBefore).toEqual([]);
 
 	// #843: tags change with no value typed, as a PATCH of just the tags,
 	// so no passkey touch and no PUT either.
@@ -710,10 +689,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 		'ops',
 		'rotated',
 	]);
-	expect(patches.map((body) => JSON.parse(body)).at(-1)).toEqual({
-		tags: ['ops', 'rotated'],
-	});
-	expect(putsBefore).toEqual([]);
 
 	// A rename the server refuses shows its message and changes nothing.
 	await page.getByRole('button', { name: 'Edit' }).click();
@@ -748,7 +723,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	await renamedDialog.getByRole('button', { name: 'Save' }).click();
 	await renamedDialog.waitFor({ state: 'hidden' });
 	await expect(page.locator('[data-testid="tag"]:visible')).toHaveCount(0);
-	expect(putsBefore).toEqual([]);
 
 	// #790: a path no route matches shows the 404 page inside the signed-in
 	// shell, and a load that fails shows the 500 page with no internals.
