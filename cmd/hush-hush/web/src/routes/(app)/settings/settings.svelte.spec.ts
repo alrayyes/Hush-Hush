@@ -184,10 +184,13 @@ test('Delete permanently asks first, then purges that token and reloads the page
 		.getByRole('button', { name: 'Delete permanently' })
 		.click();
 	expect(stub.purgeToken).not.toHaveBeenCalled();
-	await screen
-		.getByRole('alertdialog', { name: 'Delete this token permanently?' })
-		.getByRole('button', { name: 'Delete permanently' })
-		.click();
+	const dialog = screen.getByRole('alertdialog', {
+		name: 'Delete this token permanently?',
+	});
+	await expect
+		.poll(() => dialog.element().textContent?.replace(/\s+/g, ' '))
+		.toContain('Audit-log entries referencing it will show as unresolvable');
+	await dialog.getByRole('button', { name: 'Delete permanently' }).click();
 
 	await vi.waitFor(() =>
 		expect(stub.purgeToken).toHaveBeenCalledWith('expired'),
