@@ -1,3 +1,4 @@
+import * as age from 'age-encryption';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Overview from './+page.svelte';
@@ -28,11 +29,15 @@ vi.mock('$app/state', () => ({
 const api = vi.hoisted(() => ({
 	getObjectValue: vi.fn(),
 	deleteObject: vi.fn(),
+	createObject: vi.fn(),
+	listConsumerDirectory: vi.fn(),
 }));
 vi.mock('#lib/api.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('#lib/api.js')>()),
 	getObjectValue: api.getObjectValue,
 	deleteObject: api.deleteObject,
+	createObject: api.createObject,
+	listConsumerDirectory: api.listConsumerDirectory,
 }));
 
 const objects = Array.from({ length: 21 }, (_, i) => ({
@@ -58,6 +63,10 @@ beforeEach(() => {
 	router.goto.mockReset();
 	api.getObjectValue.mockReset();
 	api.deleteObject.mockReset();
+	api.createObject.mockReset();
+	api.listConsumerDirectory.mockReset();
+	// The consumer picker reads the directory when the create dialog opens.
+	api.listConsumerDirectory.mockResolvedValue([]);
 	router.url = new URL('http://localhost/');
 });
 
@@ -578,6 +587,84 @@ test('Delete asks first, and Cancel deletes nothing', async () => {
 	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect.element(dialog).not.toBeInTheDocument();
 	expect(api.deleteObject).not.toHaveBeenCalled();
+});
+
+// alrayyes/hush-hush#523, #804, #386: the create dialog seals one plaintext in
+// the browser. The owner's own key is the recipient here (the readable-copy
+// checkbox), so no consumer needs picking; what reaches the API is read back
+// by decrypting it with that key.
+const ownerIdentity = await age.generateIdentity();
+const ownerPublicKey = await age.identityToRecipient(ownerIdentity);
+const openCreate = async (screen: Awaited<ReturnType<typeof render>>) => {
+	await screen.getByRole('button', { name: 'New secret' }).click();
+	const dialog = screen.getByRole('dialog', { name: 'Create a secret' });
+	await dialog.getByLabelText('Id').fill('mattermost_deploy_webhook');
+	await dialog.getByLabelText('Keep a readable copy for yourself').click();
+
+	return dialog;
+};
+const unseal = async (value: string) => {
+	const decrypter = new age.Decrypter();
+	decrypter.addIdentity(ownerIdentity);
+
+	return decrypter.decrypt(
+		Uint8Array.from(atob(value), (c) => c.charCodeAt(0)),
+		'text',
+	);
+};
+
+test('a value with stray whitespace is trimmed before it is sealed, and tags are normalised', async () => {
+	api.createObject.mockResolvedValue(undefined);
+	const screen = await render(Overview, {
+		data: { ...data, ownerPublicKey },
+	});
+	const dialog = await openCreate(screen);
+	const plaintext = 'prod deploy webhook secret,\nsealed client-side';
+	await dialog
+		.getByLabelText('Value', { exact: true })
+		.fill(`  \n${plaintext}\t \n`);
+	await dialog.getByLabelText('Tags').fill('Prod, homelab, prod');
+
+	await dialog.getByRole('button', { name: 'Create' }).click();
+
+	await vi.waitFor(() => expect(api.createObject).toHaveBeenCalled());
+	const sent = api.createObject.mock.calls[0]?.[0];
+	expect(sent.slug).toBe('mattermost_deploy_webhook');
+	expect(sent.tags).toEqual(['prod', 'homelab']);
+	expect(sent.keep_readable_copy).toBe(true);
+	expect(await unseal(sent.value)).toBe(plaintext);
+});
+
+test('a tag the API would refuse stops the submit and is named', async () => {
+	const screen = await render(Overview, {
+		data: { ...data, ownerPublicKey },
+	});
+	const dialog = await openCreate(screen);
+	await dialog.getByLabelText('Value', { exact: true }).fill('a value');
+	await dialog.getByLabelText('Tags').fill('prod, bad tag');
+
+	await dialog.getByRole('button', { name: 'Create' }).click();
+
+	await expect
+		.poll(() => dialog.element().textContent)
+		.toContain('"bad tag" is not a valid tag.');
+	expect(api.createObject).not.toHaveBeenCalled();
+	await expect.element(dialog).toBeVisible();
+});
+
+test('a value that is only whitespace counts as empty', async () => {
+	const screen = await render(Overview, {
+		data: { ...data, ownerPublicKey },
+	});
+	const dialog = await openCreate(screen);
+	await dialog.getByLabelText('Value', { exact: true }).fill(' \n\t ');
+
+	await dialog.getByRole('button', { name: 'Create' }).click();
+
+	await expect
+		.poll(() => dialog.getByRole('alert').element().textContent)
+		.toBe('Enter a value.');
+	expect(api.createObject).not.toHaveBeenCalled();
 });
 
 // A secret with a hundred consumers shows two, and a button opens them all.
