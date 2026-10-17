@@ -14,6 +14,8 @@ const stub = vi.hoisted(() => ({
 	revokeConsumerToken: vi.fn(),
 	rotateToken: vi.fn(),
 	rotateConsumerToken: vi.fn(),
+	createConsumerToken: vi.fn(),
+	listConsumerDirectory: vi.fn(),
 	invalidate: vi.fn(),
 	url: new URL('http://localhost/settings'),
 }));
@@ -37,6 +39,8 @@ vi.mock('#lib/api.js', async (importOriginal) => ({
 	revokeConsumerToken: stub.revokeConsumerToken,
 	rotateToken: stub.rotateToken,
 	rotateConsumerToken: stub.rotateConsumerToken,
+	createConsumerToken: stub.createConsumerToken,
+	listConsumerDirectory: stub.listConsumerDirectory,
 }));
 
 const token = (overrides: Partial<TokenMetadata>): TokenMetadata => ({
@@ -113,6 +117,8 @@ beforeEach(() => {
 		if (typeof value === 'function') value.mockReset();
 	}
 	stub.url = new URL('http://localhost/settings');
+	// The consumer picker reads the directory when it mounts.
+	stub.listConsumerDirectory.mockResolvedValue([]);
 });
 
 const row = (screen: Awaited<ReturnType<typeof render>>, name: RegExp) =>
@@ -527,4 +533,120 @@ test('the phone cards page the same way', async () => {
 			() => settingsPager(screen, 'Bearer tokens pages').element().textContent,
 		)
 		.toContain('Page 1 of 2');
+});
+
+// alrayyes/hush-hush#537: the create dialog's lifetime field takes its default
+// and limits from the API spec. The single-select picker (max 1, no key hint)
+// and the repeat warning (#711) are the page's.
+const openConsumerTokenDialog = async (
+	screen: Awaited<ReturnType<typeof render>>,
+) => {
+	await screen.getByRole('button', { name: 'New consumer token' }).click();
+
+	return screen.getByRole('dialog', { name: 'Create a consumer token' });
+};
+const pickConsumer = async (
+	screen: Awaited<ReturnType<typeof render>>,
+	name: string,
+) => {
+	await screen.getByLabelText('Consumer').fill(name);
+	await screen.getByRole('option', { name: `Add "${name}"` }).click();
+};
+
+test('the lifetime defaults to 90 days, between 1 and 365, and says so', async () => {
+	const screen = await render(Settings, { data });
+	const dialog = await openConsumerTokenDialog(screen);
+
+	const ttl = dialog.getByLabelText('Valid for (days)');
+	await expect.element(ttl).toHaveValue(90);
+	await expect.element(ttl).toHaveAttribute('min', '1');
+	await expect.element(ttl).toHaveAttribute('max', '365');
+	await expect
+		.poll(() => dialog.element().textContent)
+		.toContain('From 1 to 365 days.');
+	await ttl.fill('366');
+	expect((ttl.element() as HTMLInputElement).validity.rangeOverflow).toBe(true);
+});
+
+test('picking a consumer takes the picker away, with no key hint', async () => {
+	const screen = await render(Settings, { data });
+	const dialog = await openConsumerTokenDialog(screen);
+	expect(
+		(dialog.element().querySelector('button[type=submit]') as HTMLButtonElement)
+			.disabled,
+	).toBe(true);
+
+	await pickConsumer(screen, 'ci-runner');
+
+	await expect.poll(() => dialog.getByLabelText('Consumer').query()).toBeNull();
+	expect(dialog.element().textContent).toContain('ci-runner');
+	expect(dialog.element().textContent).not.toContain('(no key)');
+	expect(
+		(dialog.element().querySelector('button[type=submit]') as HTMLButtonElement)
+			.disabled,
+	).toBe(false);
+});
+
+test('repeating an active token warns, naming it, and Create becomes Create anyway', async () => {
+	const screen = await render(Settings, {
+		data: {
+			...data,
+			consumerTokens: [
+				consumerToken({
+					id: 'cccccccccccccccc',
+					consumer: 'ci-runner',
+					description: 'deploy read token',
+					status: 'active',
+					allowed_actions: ['rotate', 'revoke'],
+				}),
+			],
+		},
+	});
+	const dialog = await openConsumerTokenDialog(screen);
+	await pickConsumer(screen, 'ci-runner');
+	expect(dialog.getByRole('alert').query()).toBeNull();
+
+	await dialog.getByLabelText('Description').fill('deploy read token');
+
+	await expect
+		.poll(() => dialog.getByRole('alert').element().textContent)
+		.toContain('ci-runner already has an active token');
+	expect(dialog.getByRole('alert').element().textContent).toContain(
+		'ID cccccccccccccccc',
+	);
+	await expect
+		.element(dialog.getByRole('button', { name: 'Create anyway' }))
+		.toBeVisible();
+});
+
+test('creating sends the consumer, description and lifetime, and shows the value once', async () => {
+	stub.createConsumerToken.mockResolvedValue({
+		...consumerToken({ id: 'dddddddddddddddd', consumer: 'ci-runner' }),
+		value: 'hh_consumer_secret_value',
+	});
+	const writeText = vi.fn().mockResolvedValue(undefined);
+	vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+	const screen = await render(Settings, { data });
+	const dialog = await openConsumerTokenDialog(screen);
+	await pickConsumer(screen, 'ci-runner');
+	await dialog.getByLabelText('Description').fill('deploy read token');
+	await dialog.getByLabelText('Valid for (days)').fill('30');
+
+	await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+
+	await vi.waitFor(() =>
+		expect(stub.createConsumerToken).toHaveBeenCalledWith(
+			'ci-runner',
+			'deploy read token',
+			30 * 86_400,
+		),
+	);
+	const created = screen.getByRole('dialog', { name: 'Token created' });
+	await expect
+		.element(created.getByLabelText('Token value'))
+		.toHaveValue('hh_consumer_secret_value');
+	await created.getByRole('button', { name: 'Copy token' }).click();
+	await vi.waitFor(() =>
+		expect(writeText).toHaveBeenCalledWith('hh_consumer_secret_value'),
+	);
 });
