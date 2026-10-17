@@ -1192,12 +1192,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const newestFirst = await rowTexts();
 	expect(newestFirst.length).toBeGreaterThan(2);
 
-	// Fewer entries than a page, so no pager yet. It appears in the paging
-	// segment at the end of this section, once enough entries exist.
-	await expect(
-		page.getByRole('navigation', { name: 'Audit log pages' }),
-	).toHaveCount(0);
-
+	// That a log which fits a page has no pager, and which cursor Newer and
+	// Older send in either order, are audit-log.svelte.spec.ts's.
 	await orderButton.click();
 	await expect(timestampHeader).toHaveAttribute('aria-sort', 'ascending');
 	await expect(curlSnippet).toContainText('order=asc');
@@ -1273,41 +1269,11 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	);
 
 	const firstAuditPage = await rowTexts();
-	const olderRequest = page.waitForRequest(
-		(request) =>
-			request.url().includes('/audit-log?') &&
-			request.url().includes('order=desc') &&
-			/[?&]before=\d+/.test(request.url()) &&
-			!request.url().includes('after='),
-	);
 	await olderButton.click();
-	await olderRequest;
 	await expect(newerButton).toBeEnabled();
 	await expect.poll(rowTexts).not.toEqual(firstAuditPage);
 	await newerButton.click();
 	await expect.poll(rowTexts).toEqual(firstAuditPage);
-
-	// Oldest first, the two buttons swap what they step toward: Newer reads
-	// onward with the matching cursor and Older has nowhere to go back to.
-	await page
-		.getByRole('columnheader', { name: 'Timestamp' })
-		.getByRole('button', { name: /Timestamp/ })
-		.click();
-	await expect(
-		page.getByRole('columnheader', { name: 'Timestamp' }),
-	).toHaveAttribute('aria-sort', 'ascending');
-	await expect(newerButton).toBeEnabled();
-	await expect(olderButton).toBeDisabled();
-	const newerRequest = page.waitForRequest(
-		(request) =>
-			request.url().includes('/audit-log?') &&
-			request.url().includes('order=asc') &&
-			/[?&]after=\d+/.test(request.url()),
-	);
-	const oldestFirstPage = await rowTexts();
-	await newerButton.click();
-	await newerRequest;
-	await expect.poll(rowTexts).not.toEqual(oldestFirstPage);
 
 	// alrayyes/Hush-Hush#897: rows per page on the audit log.
 	await page.goto('/audit-log');

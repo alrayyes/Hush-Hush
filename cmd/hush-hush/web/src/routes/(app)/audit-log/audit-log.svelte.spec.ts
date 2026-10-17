@@ -407,3 +407,76 @@ test("the actor chip's button removes it and fetches without an actor", async ()
 		),
 	);
 });
+
+// alrayyes/Hush-Hush#895, #753: Newer and Older step through the log with the
+// cursor that matches the order. Which cursor and which side is audit-paging's;
+// these pin that the buttons are wired to it and to the fetch.
+const pagerNav = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('navigation', { name: 'Audit log pages' });
+const newerButton = (screen: Awaited<ReturnType<typeof render>>) =>
+	pagerNav(screen).getByRole('button', { name: 'Newer' });
+const olderButton = (screen: Awaited<ReturnType<typeof render>>) =>
+	pagerNav(screen).getByRole('button', { name: 'Older' });
+
+test('a log that fits one page has no pager to step with', async () => {
+	const screen = await render(AuditLog, { data });
+
+	await expect.element(screen.getByRole('table')).toBeVisible();
+	expect(pagerNav(screen).query()).toBeNull();
+});
+
+test('newest first, Older reads onward before the last entry and Newer comes back', async () => {
+	stub.queryAuditLog.mockResolvedValueOnce([entry(1, 'older_a')]);
+	const screen = await render(AuditLog, { data: morePages });
+	await expect.element(newerButton(screen)).toBeDisabled();
+	await expect.element(olderButton(screen)).toBeEnabled();
+
+	await olderButton(screen).click();
+
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenLastCalledWith(
+			expect.objectContaining({ order: 'desc', before: 2, limit: 26 }),
+		),
+	);
+	expect(stub.queryAuditLog.mock.lastCall?.[0]).not.toHaveProperty('after');
+	await expect
+		.element(screen.getByRole('cell', { name: 'older_a' }))
+		.toBeInTheDocument();
+	await expect.element(newerButton(screen)).toBeEnabled();
+	await expect.element(olderButton(screen)).toBeDisabled();
+
+	stub.queryAuditLog.mockResolvedValueOnce(newestFirst);
+	await newerButton(screen).click();
+
+	await expect
+		.element(screen.getByRole('cell', { name: 'newest_a' }))
+		.toBeInTheDocument();
+	// Back on the first page, with nothing older to read, the pager is gone.
+	expect(stub.queryAuditLog.mock.lastCall?.[0]).not.toHaveProperty('before');
+	expect(stub.queryAuditLog.mock.lastCall?.[0]).not.toHaveProperty('after');
+	await expect.poll(() => pagerNav(screen).query()).toBeNull();
+});
+
+test('oldest first, Newer reads onward after the last entry and Older has nowhere to go', async () => {
+	stub.queryAuditLog.mockResolvedValueOnce([...oldestFirst, entry(4, 'x')]);
+	const screen = await render(AuditLog, { data: { ...morePages, size: 2 } });
+	await orderButton(screen).click();
+	await expect
+		.element(screen.getByRole('cell', { name: 'oldest_a' }))
+		.toBeInTheDocument();
+	await expect.element(newerButton(screen)).toBeEnabled();
+	await expect.element(olderButton(screen)).toBeDisabled();
+
+	stub.queryAuditLog.mockResolvedValueOnce([entry(9, 'newer_a')]);
+	await newerButton(screen).click();
+
+	await vi.waitFor(() =>
+		expect(stub.queryAuditLog).toHaveBeenLastCalledWith(
+			expect.objectContaining({ order: 'asc', after: 3 }),
+		),
+	);
+	expect(stub.queryAuditLog.mock.lastCall?.[0]).not.toHaveProperty('before');
+	await expect
+		.element(screen.getByRole('cell', { name: 'newer_a' }))
+		.toBeInTheDocument();
+});
