@@ -40,10 +40,12 @@ test('a tag pill filters the real list, and the pills are 44px targets', async (
 		const allSecrets = (Array.isArray(listed) ? listed : (listed.objects ?? []))
 			.length;
 
+		// The phone cards page at 20, like the table.
+		const onOnePage = Math.min(allSecrets, 20);
 		await page.setViewportSize({ width: 390, height: 844 });
 		await page.goto('/');
 		const cardList = page.getByRole('list', { name: 'Secrets' });
-		await expect(cardList.getByRole('listitem')).toHaveCount(allSecrets);
+		await expect(cardList.getByRole('listitem')).toHaveCount(onOnePage);
 
 		const tagFilter = page.getByRole('group', { name: 'Filter by tag' });
 		for (const pill of await tagFilter.getByRole('button').all()) {
@@ -67,7 +69,7 @@ test('a tag pill filters the real list, and the pills are 44px targets', async (
 		await tagFilter
 			.getByRole('button', { name: `All (${allSecrets})` })
 			.click();
-		await expect(cardList.getByRole('listitem')).toHaveCount(allSecrets);
+		await expect(cardList.getByRole('listitem')).toHaveCount(onOnePage);
 	} finally {
 		const removed = await Promise.all(
 			slugs.map((slug) => page.request.delete(`/objects/${slug}`, { headers })),
