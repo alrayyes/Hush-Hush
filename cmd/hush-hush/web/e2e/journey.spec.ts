@@ -1031,18 +1031,8 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	const eventList = page.getByRole('list', { name: 'Audit events' });
 	const eventCards = eventList.getByRole('listitem');
 	await expect(eventCards).toHaveCount(tableRowCount);
-	await expect(eventCards.first()).toContainText('mattermost_deploy_webhook');
-	await expect(eventCards.first()).toContainText('admin');
-	await expect(eventCards.first().locator('time')).toBeVisible();
-
-	// Colour is never the only signal: every action carries its own word.
-	const actionPills = eventList.getByTestId('action-pill');
-	for (const action of await actionPills.allTextContents()) {
-		expect(action).toMatch(/^(create|read|update|delete)$/i);
-	}
-	await expect(actionPills.filter({ hasText: /create/i })).not.toHaveCount(0);
-	await expect(actionPills.filter({ hasText: /read/i })).not.toHaveCount(0);
-	await expect(actionPills.filter({ hasText: /update/i })).not.toHaveCount(0);
+	// What a card says, the action as a word and the curl command are
+	// audit-log.svelte.spec.ts's. The real log has to give the same count.
 
 	for (const control of [
 		page.getByRole('button', { name: 'Export CSV' }),
@@ -1055,13 +1045,6 @@ test('an authenticated visitor keeps the nav across pages, an anonymous one neve
 	}
 
 	const curlSnippet = page.getByRole('group', { name: 'Query with curl' });
-	await expect(curlSnippet).toContainText('curl');
-	await expect(curlSnippet).toContainText('/audit-log');
-	await page.getByRole('button', { name: 'Copy command' }).click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
-		'/audit-log',
-	);
-
 	const auditCardResults = await new AxeBuilder({ page })
 		.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 		.analyze();

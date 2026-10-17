@@ -480,3 +480,68 @@ test('oldest first, Newer reads onward after the last entry and Older has nowher
 		.element(screen.getByRole('cell', { name: 'newer_a' }))
 		.toBeInTheDocument();
 });
+
+// alrayyes/hush-hush#483: below md the log is one card per event, in the
+// table's order, with the action as a labelled pill, and a copyable curl
+// command for the query on screen.
+const actions: AuditLogEntry['action'][] = [
+	'create',
+	'read',
+	'update',
+	'delete',
+];
+const everyAction = {
+	...data,
+	entries: actions.map((action, i) => ({
+		...entry(actions.length - i, 'mattermost_deploy_webhook'),
+		action,
+		actor_type: 'session' as const,
+		actor_id: 'user-1',
+	})),
+};
+const eventCards = (screen: Awaited<ReturnType<typeof render>>) =>
+	screen.getByRole('list', { name: 'Audit events' }).getByRole('listitem');
+
+test('a card per event, in order, naming the object, the actor and the time', async () => {
+	const screen = await render(AuditLog, { data: everyAction });
+
+	await expect.poll(() => eventCards(screen).elements().length).toBe(4);
+	const first = eventCards(screen).first();
+	await expect
+		.poll(() => first.element().textContent)
+		.toContain('mattermost_deploy_webhook');
+	expect(first.element().textContent).toContain('admin');
+	expect(first.element().querySelector('time')).not.toBeNull();
+	expect(
+		eventCards(screen)
+			.elements()
+			.map(
+				(card) => card.querySelector('[data-testid=action-pill]')?.textContent,
+			),
+	).toEqual(actions);
+});
+
+test('every action is a word on the pill, never only a colour', async () => {
+	const screen = await render(AuditLog, { data: everyAction });
+
+	const pills = eventCards(screen).getByTestId('action-pill');
+	await expect.poll(() => pills.elements().length).toBe(4);
+	for (const pill of pills.elements()) {
+		expect(pill.textContent?.trim()).toMatch(/^(create|read|update|delete)$/);
+	}
+});
+
+test('the curl command names the log, and Copy command writes all of it', async () => {
+	const writeText = vi.fn().mockResolvedValue(undefined);
+	vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+	const screen = await render(AuditLog, { data });
+
+	const snippet = screen.getByRole('group', { name: 'Query with curl' });
+	await expect.poll(() => snippet.element().textContent).toContain('curl');
+	const shown = snippet.element().querySelector('pre')?.textContent ?? '';
+	expect(shown).toContain('/audit-log');
+
+	await screen.getByRole('button', { name: 'Copy command' }).click();
+
+	await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith(shown));
+});
