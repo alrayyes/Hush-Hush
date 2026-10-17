@@ -17,11 +17,12 @@ const stub = vi.hoisted(() => ({
 	createConsumerToken: vi.fn(),
 	listConsumerDirectory: vi.fn(),
 	invalidate: vi.fn(),
+	goto: vi.fn(),
 	url: new URL('http://localhost/settings'),
 }));
 
 vi.mock('$app/navigation', () => ({
-	goto: vi.fn(),
+	goto: stub.goto,
 	invalidate: stub.invalidate,
 }));
 vi.mock('$app/state', () => ({
@@ -649,4 +650,106 @@ test('creating sends the consumer, description and lifetime, and shows the value
 	await vi.waitFor(() =>
 		expect(writeText).toHaveBeenCalledWith('hh_consumer_secret_value'),
 	);
+});
+
+// alrayyes/hush-hush#484: the offline recovery notice shows at every width,
+// and each passkey says when it was added and last used.
+test('the recovery notice says the phrase was shown once and the server keeps no copy', async () => {
+	const screen = await render(Settings, { data });
+
+	const notice = screen.getByRole('complementary', { name: 'Recovery phrase' });
+	await expect.poll(() => notice.element().textContent).toContain('shown once');
+	expect(notice.element().textContent).toContain('keeps no copy');
+});
+
+test('a passkey card says when it was added, and "never" when it was not used', async () => {
+	const screen = await render(Settings, {
+		data: {
+			...data,
+			credentials: [
+				{
+					id: 'cred-1',
+					nickname: 'laptop',
+					created_at: '2026-01-01T00:00:00Z',
+				},
+			],
+		},
+	});
+
+	const card = screen
+		.getByRole('list', { name: 'Passkey list' })
+		.getByRole('listitem');
+	await expect.poll(() => card.element().textContent).toContain('Added');
+	expect(card.element().textContent).toContain('Last used');
+	expect(card.element().textContent).toMatch(/never/);
+	expect(card.element().querySelector('time')).not.toBeNull();
+});
+
+// The Consumers directory links here with ?consumer=<name>.
+test('a consumer filter shows as a chip, and its button takes it out of the address', async () => {
+	stub.url = new URL(
+		'http://localhost/settings?consumer=deploy-bot&consumer_token_page=2',
+	);
+	const screen = await render(Settings, { data });
+	await expect
+		.poll(() => screen.container.textContent)
+		.toContain('consumer: deploy-bot');
+
+	await screen.getByRole('button', { name: 'Remove consumer filter' }).click();
+
+	await vi.waitFor(() => expect(stub.goto).toHaveBeenCalled());
+	const [url, options] = stub.goto.mock.calls[0] ?? [];
+	expect((url as URL).pathname).toBe('/settings');
+	expect((url as URL).searchParams.has('consumer')).toBe(false);
+	expect((url as URL).searchParams.has('consumer_token_page')).toBe(false);
+	expect(options).toEqual({ replace: true, reset: false });
+});
+
+test('rotating a consumer token shows the new value once, and Copy writes it', async () => {
+	stub.rotateConsumerToken.mockResolvedValue({
+		...liveConsumerToken,
+		value: 'hh_rotated_value',
+	});
+	const writeText = vi.fn().mockResolvedValue(undefined);
+	vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+	const screen = await render(Settings, { data });
+	await screen
+		.getByRole('list', { name: 'Consumer token list' })
+		.getByRole('listitem')
+		.filter({ hasText: /live read token/ })
+		.getByRole('button', { name: 'Rotate' })
+		.click();
+	await screen
+		.getByRole('dialog', { name: 'Rotate this token?' })
+		.getByRole('button', { name: 'Rotate', exact: true })
+		.click();
+
+	const rotated = screen.getByRole('dialog', { name: 'Token rotated' });
+	await expect
+		.element(rotated.getByLabelText('Token value'))
+		.toHaveValue('hh_rotated_value');
+	await expect
+		.poll(() => rotated.element().textContent)
+		.toContain('shown once');
+	await rotated.getByRole('button', { name: 'Copy token' }).click();
+	await vi.waitFor(() =>
+		expect(writeText).toHaveBeenCalledWith('hh_rotated_value'),
+	);
+});
+
+test('deleting a dead consumer token permanently warns the audit log will not resolve it', async () => {
+	const screen = await render(Settings, { data });
+	await screen
+		.getByRole('list', { name: 'Consumer token list' })
+		.getByRole('listitem')
+		.filter({ hasText: /dead read token/ })
+		.getByRole('button', { name: 'Delete permanently' })
+		.click();
+
+	const dialog = screen.getByRole('alertdialog', {
+		name: 'Delete this token permanently?',
+	});
+	await expect
+		.poll(() => dialog.element().textContent?.replace(/\s+/g, ' '))
+		.toContain('Audit-log entries referencing it will show as unresolvable');
 });
